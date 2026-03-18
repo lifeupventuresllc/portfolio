@@ -42,7 +42,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
+            emailRedirectTo: `${window.location.origin}/api/auth/callback`,
           },
         })
         if (error) throw error

@@ -20,7 +20,7 @@ export default async function AdminPage() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'admin') redirect('/')
+  if (!profile?.role || !['admin', 'support'].includes(profile.role)) redirect('/')
 
-  return <AdminDashboard />
+  return <AdminDashboard userRole={profile.role} />
 }

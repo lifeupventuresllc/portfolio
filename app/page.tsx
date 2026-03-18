@@ -7,27 +7,23 @@ export default async function LandingPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Get the active product
+  // Get all active products
   const { data: products } = await supabase
     .from('products')
     .select('*')
     .eq('active', true)
-    .limit(1)
+    .order('sort_order', { ascending: true })
 
-  const product = products?.[0]
-
-  // Check if user has purchased
-  let purchased = false
-  if (user && product) {
-    const { data: purchase } = await supabase
+  // Check which products user has purchased
+  let purchasedIds: Set<string> = new Set()
+  if (user && products?.length) {
+    const { data: purchases } = await supabase
       .from('purchases')
-      .select('id')
+      .select('product_id')
       .eq('user_id', user.id)
-      .eq('product_id', product.id)
       .eq('status', 'completed')
-      .single()
 
-    purchased = !!purchase
+    purchasedIds = new Set((purchases || []).map(p => p.product_id))
   }
 
   return (
@@ -111,15 +107,18 @@ export default async function LandingPage() {
           <p className="text-gray-500 mb-12">
             No subscriptions. No hidden fees. Pay once and own it forever.
           </p>
-          <div className="flex justify-center">
-            {product ? (
-              <PricingCard
-                productId={product.id}
-                name={product.name}
-                description={product.description}
-                price={product.price}
-                purchased={purchased}
-              />
+          <div className="flex flex-wrap justify-center gap-8">
+            {products && products.length > 0 ? (
+              products.map((product) => (
+                <PricingCard
+                  key={product.id}
+                  productId={product.id}
+                  name={product.name}
+                  description={product.description}
+                  price={product.price}
+                  purchased={purchasedIds.has(product.id)}
+                />
+              ))
             ) : (
               <div className="text-gray-500">Product coming soon...</div>
             )}

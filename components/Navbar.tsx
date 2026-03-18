@@ -60,7 +60,7 @@ export default function Navbar() {
                 Program
               </Link>
             )}
-            {profile?.role === 'admin' && (
+            {(profile?.role === 'admin' || profile?.role === 'support') && (
               <Link href="/admin" className="text-gray-600 hover:text-gray-900">
                 Admin
               </Link>

@@ -42,6 +42,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Already purchased' }, { status: 400 })
     }
 
+    // Check for affiliate referral
+    const affiliateRef = request.cookies.get('affiliate_ref')?.value || ''
+
     // Create Stripe checkout session
     const session = await stripe().checkout.sessions.create({
       payment_method_types: ['card'],
@@ -65,6 +68,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         userId: user.id,
         productId: product.id,
+        affiliateCode: affiliateRef,
       },
     })
 

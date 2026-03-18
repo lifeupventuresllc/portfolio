@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createServiceClient } from '@/lib/supabase/server'
+import { sendPurchaseConfirmation, sendRefundConfirmation } from '@/lib/email'
+import { dispatchWebhooks } from '@/lib/webhooks'
 import Stripe from 'stripe'
 
 export async function POST(request: NextRequest) {
@@ -78,10 +80,64 @@ export async function POST(request: NextRequest) {
         }
 
         // Record purchase email
+        const customerEmail = session.customer_email || ''
         await supabase.from('emails').insert({
           user_id: userId,
-          email: session.customer_email || '',
+          email: customerEmail,
           type: 'purchase',
+        })
+
+        // Send purchase confirmation email
+        const { data: product } = await supabase
+          .from('products')
+          .select('name')
+          .eq('id', productId)
+          .single()
+
+        if (customerEmail) {
+          await sendPurchaseConfirmation(
+            customerEmail,
+            product?.name || 'FitPro Program',
+            session.amount_total || 0
+          )
+        }
+
+        // Process affiliate referral
+        const affiliateCode = session.metadata?.affiliateCode
+        if (affiliateCode) {
+          const { data: affiliate } = await supabase
+            .from('affiliates')
+            .select('id, commission_rate')
+            .eq('code', affiliateCode.toLowerCase())
+            .eq('active', true)
+            .single()
+
+          if (affiliate) {
+            const commissionAmount = Math.round((session.amount_total || 0) * affiliate.commission_rate / 100)
+
+            // Get the purchase we just created
+            const { data: newPurchase } = await supabase
+              .from('purchases')
+              .select('id')
+              .eq('stripe_session_id', session.id)
+              .single()
+
+            await supabase.from('referrals').insert({
+              affiliate_id: affiliate.id,
+              referred_user_id: userId,
+              purchase_id: newPurchase?.id || null,
+              commission_amount: commissionAmount,
+              status: 'earned',
+            })
+          }
+        }
+
+        // Dispatch outbound webhooks
+        await dispatchWebhooks('purchase.completed', {
+          userId,
+          productId,
+          amount: session.amount_total,
+          email: customerEmail,
         })
 
         break
@@ -91,10 +147,10 @@ export async function POST(request: NextRequest) {
         const charge = event.data.object as Stripe.Charge
         const paymentIntent = charge.payment_intent as string
 
-        // Find the purchase
+        // Find the purchase with product info
         const { data: purchase } = await supabase
           .from('purchases')
-          .select('id, user_id')
+          .select('id, user_id, product_id, amount')
           .eq('stripe_payment_intent', paymentIntent)
           .single()
 
@@ -120,11 +176,43 @@ export async function POST(request: NextRequest) {
               .eq('id', purchase.user_id)
           }
 
+          // Get user email and product name for notification
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', purchase.user_id)
+            .single()
+
+          const { data: product } = await supabase
+            .from('products')
+            .select('name')
+            .eq('id', purchase.product_id)
+            .single()
+
+          const userEmail = profile?.email || ''
+
           // Record refund email
           await supabase.from('emails').insert({
             user_id: purchase.user_id,
-            email: '',
+            email: userEmail,
             type: 'refund',
+          })
+
+          // Send refund confirmation email
+          if (userEmail) {
+            await sendRefundConfirmation(
+              userEmail,
+              product?.name || 'FitPro Program',
+              charge.amount_refunded || purchase.amount || 0
+            )
+          }
+
+          // Dispatch outbound webhooks
+          await dispatchWebhooks('purchase.refunded', {
+            userId: purchase.user_id,
+            productId: purchase.product_id,
+            amount: charge.amount_refunded,
+            email: userEmail,
           })
         }
 

@@ -34,6 +34,17 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // Capture affiliate referral code
+  const ref = request.nextUrl.searchParams.get('ref')
+  if (ref) {
+    response.cookies.set('affiliate_ref', ref, {
+      maxAge: 30 * 24 * 60 * 60,
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    })
+  }
+
   const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
@@ -45,7 +56,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Admin route protection
+  // Admin route protection (admin + support roles allowed)
   if (pathname.startsWith('/admin') && user) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -53,7 +64,7 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'admin') {
+    if (!profile?.role || !['admin', 'support'].includes(profile.role)) {
       return NextResponse.redirect(new URL('/', request.url))
     }
   }

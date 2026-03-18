@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { trackEvent } from '@/lib/track'
 
 type PricingCardProps = {
   productId: string
@@ -19,6 +20,7 @@ export default function PricingCard({ productId, name, description, price, purch
   async function handlePurchase() {
     setLoading(true)
     setError(null)
+    trackEvent('checkout_started', { productId })
 
     try {
       const { data: { user } } = await supabase.auth.getUser()

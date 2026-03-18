@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AdminTable from '@/components/AdminTable'
+import SimpleChart from '@/components/SimpleChart'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 type Profile = {
@@ -23,6 +24,38 @@ type Purchase = {
   profiles?: { email: string }
 }
 
+type EmailRecord = {
+  id: string
+  user_id: string
+  email: string
+  type: string
+  sent_at: string
+}
+
+type DailyMetric = {
+  date: string
+  total_users: number
+  total_customers: number
+  total_revenue: number
+  total_sales: number
+  total_refunds: number
+}
+
+type Affiliate = {
+  id: string
+  code: string
+  commission_rate: number
+  active: boolean
+  created_at: string
+  profiles?: { email: string }
+  referrals?: { id: string; commission_amount: number; status: string }[]
+}
+
+type EventRecord = {
+  event_type: string
+  count: number
+}
+
 type KPIs = {
   totalUsers: number
   totalCustomers: number
@@ -31,13 +64,22 @@ type KPIs = {
   totalRefunds: number
   conversionRate: number
   refundRate: number
+  retentionRate: number
 }
 
-export default function AdminDashboard() {
+type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates'
+
+export default function AdminDashboard({ userRole }: { userRole: string }) {
   const supabase = createClient()
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'payments'>('overview')
+  const isAdmin = userRole === 'admin'
+
+  const [activeTab, setActiveTab] = useState<TabName>('overview')
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [purchases, setPurchases] = useState<Purchase[]>([])
+  const [emailRecords, setEmailRecords] = useState<EmailRecord[]>([])
+  const [, setDailyMetrics] = useState<DailyMetric[]>([])
+  const [affiliates, setAffiliates] = useState<Affiliate[]>([])
+  const [funnelData, setFunnelData] = useState<EventRecord[]>([])
   const [kpis, setKpis] = useState<KPIs>({
     totalUsers: 0,
     totalCustomers: 0,
@@ -46,6 +88,7 @@ export default function AdminDashboard() {
     totalRefunds: 0,
     conversionRate: 0,
     refundRate: 0,
+    retentionRate: 0,
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -56,15 +99,23 @@ export default function AdminDashboard() {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [emailTypeFilter, setEmailTypeFilter] = useState<string>('all')
+
+  // Affiliate form
+  const [newAffUserId, setNewAffUserId] = useState('')
+  const [newAffCode, setNewAffCode] = useState('')
+  const [newAffRate, setNewAffRate] = useState('20')
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
 
     try {
-      const [profilesRes, purchasesRes] = await Promise.all([
+      const [profilesRes, purchasesRes, emailsRes, metricsRes] = await Promise.all([
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
         supabase.from('purchases').select('*, profiles(email)').order('created_at', { ascending: false }),
+        supabase.from('emails').select('*').order('sent_at', { ascending: false }),
+        supabase.from('daily_metrics').select('*').order('date', { ascending: true }).limit(30),
       ])
 
       if (profilesRes.error) throw profilesRes.error
@@ -75,6 +126,8 @@ export default function AdminDashboard() {
 
       setProfiles(allProfiles)
       setPurchases(allPurchases)
+      setEmailRecords(emailsRes.data || [])
+      setDailyMetrics(metricsRes.data || [])
 
       // Compute KPIs
       const totalUsers = allProfiles.length
@@ -85,6 +138,10 @@ export default function AdminDashboard() {
       const totalSales = completedPurchases.length
       const totalRefunds = refundedPurchases.length
 
+      const retentionRate = totalCustomers > 0 || totalRefunds > 0
+        ? (totalCustomers / (totalCustomers + totalRefunds)) * 100
+        : 0
+
       setKpis({
         totalUsers,
         totalCustomers,
@@ -93,14 +150,34 @@ export default function AdminDashboard() {
         totalRefunds,
         conversionRate: totalUsers > 0 ? (totalSales / totalUsers) * 100 : 0,
         refundRate: totalSales > 0 ? (totalRefunds / (totalSales + totalRefunds)) * 100 : 0,
+        retentionRate,
       })
+
+      // Fetch affiliates (admin only)
+      if (isAdmin) {
+        const affRes = await fetch('/api/admin/affiliates')
+        if (affRes.ok) setAffiliates(await affRes.json())
+      }
+
+      // Fetch funnel data
+      const { data: events } = await supabase
+        .from('events')
+        .select('event_type')
+
+      if (events) {
+        const counts: Record<string, number> = {}
+        events.forEach(e => {
+          counts[e.event_type] = (counts[e.event_type] || 0) + 1
+        })
+        setFunnelData(Object.entries(counts).map(([event_type, count]) => ({ event_type, count })))
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to load data'
       setError(msg)
     } finally {
       setLoading(false)
     }
-  }, [supabase])
+  }, [supabase, isAdmin])
 
   useEffect(() => {
     fetchData()
@@ -143,6 +220,38 @@ export default function AdminDashboard() {
     }
   }
 
+  async function handleCreateAffiliate(e: React.FormEvent) {
+    e.preventDefault()
+    try {
+      const res = await fetch('/api/admin/affiliates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: newAffUserId, code: newAffCode, commissionRate: parseInt(newAffRate) }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to create affiliate')
+      }
+      setNewAffUserId('')
+      setNewAffCode('')
+      setNewAffRate('20')
+      await fetchData()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed'
+      alert(msg)
+    }
+  }
+
+  async function handleDeactivateAffiliate(id: string) {
+    if (!confirm('Deactivate this affiliate?')) return
+    await fetch('/api/admin/affiliates', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    await fetchData()
+  }
+
   // Apply filters
   const filteredProfiles = profiles.filter(p => {
     if (userSearch && !p.email.toLowerCase().includes(userSearch.toLowerCase())) return false
@@ -157,9 +266,43 @@ export default function AdminDashboard() {
     return true
   })
 
+  const filteredEmails = emailRecords.filter(e => {
+    if (emailTypeFilter !== 'all' && e.type !== emailTypeFilter) return false
+    return true
+  })
+
   const filteredRevenue = filteredPurchases
     .filter(p => p.status === 'completed')
     .reduce((sum, p) => sum + p.amount, 0)
+
+  // Chart data
+  const signupsByDay = (() => {
+    const last14 = profiles
+      .map(p => p.created_at.split('T')[0])
+      .reduce((acc: Record<string, number>, d) => { acc[d] = (acc[d] || 0) + 1; return acc }, {})
+    return Object.entries(last14)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-14)
+      .map(([label, value]) => ({ label: label.slice(5), value }))
+  })()
+
+  const revenueByDay = (() => {
+    const byDay = purchases
+      .filter(p => p.status === 'completed')
+      .reduce((acc: Record<string, number>, p) => {
+        const d = p.created_at.split('T')[0]
+        acc[d] = (acc[d] || 0) + p.amount
+        return acc
+      }, {})
+    return Object.entries(byDay)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-14)
+      .map(([label, value]) => ({ label: label.slice(5), value }))
+  })()
+
+  const tabs: TabName[] = isAdmin
+    ? ['overview', 'users', 'payments', 'emails', 'affiliates']
+    : ['overview', 'users', 'payments', 'emails']
 
   if (loading) {
     return (
@@ -178,7 +321,14 @@ export default function AdminDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+        {!isAdmin && (
+          <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+            Support View (Read Only)
+          </span>
+        )}
+      </div>
 
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl">
@@ -217,16 +367,14 @@ export default function AdminDashboard() {
           <div className="text-2xl font-bold text-gray-900 mt-1">{kpis.refundRate.toFixed(1)}%</div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="text-sm text-gray-500">Free Users</div>
-          <div className="text-2xl font-bold text-gray-900 mt-1">
-            {kpis.totalUsers - kpis.totalCustomers}
-          </div>
+          <div className="text-sm text-gray-500">Retention Rate</div>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{kpis.retentionRate.toFixed(1)}%</div>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 mb-6">
-        {(['overview', 'users', 'payments'] as const).map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -244,6 +392,46 @@ export default function AdminDashboard() {
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Trends */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <SimpleChart
+              data={signupsByDay}
+              title="Signups (Last 14 Days)"
+            />
+            <SimpleChart
+              data={revenueByDay}
+              title="Revenue (Last 14 Days)"
+              formatValue={(v) => formatCurrency(v)}
+            />
+          </div>
+
+          {/* Funnel */}
+          {funnelData.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold mb-4">Funnel</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: 'Page Views', key: 'page_view_landing' },
+                  { label: 'Checkouts Started', key: 'checkout_started' },
+                  { label: 'Signups', type: 'profiles' },
+                  { label: 'Purchases', type: 'purchases' },
+                ].map((step, i) => {
+                  let count = 0
+                  if (step.type === 'profiles') count = kpis.totalUsers
+                  else if (step.type === 'purchases') count = kpis.totalSales
+                  else count = funnelData.find(f => f.event_type === step.key)?.count || 0
+                  return (
+                    <div key={i} className="text-center p-4 bg-gray-50 rounded-xl">
+                      <div className="text-2xl font-bold text-gray-900">{count}</div>
+                      <div className="text-xs text-gray-500 mt-1">{step.label}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Recent Signups */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="text-lg font-semibold mb-4">Recent Signups</h2>
             <AdminTable
@@ -252,6 +440,7 @@ export default function AdminDashboard() {
                 { key: 'role', label: 'Role', render: (item) => (
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     item.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                    item.role === 'support' ? 'bg-yellow-100 text-yellow-700' :
                     item.role === 'customer' ? 'bg-green-100 text-green-700' :
                     'bg-gray-100 text-gray-700'
                   }`}>{item.role}</span>
@@ -263,6 +452,7 @@ export default function AdminDashboard() {
             />
           </div>
 
+          {/* Recent Payments */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="text-lg font-semibold mb-4">Recent Payments</h2>
             <AdminTable
@@ -304,6 +494,7 @@ export default function AdminDashboard() {
             >
               <option value="all">All Roles</option>
               <option value="admin">Admin</option>
+              <option value="support">Support</option>
               <option value="customer">Customer</option>
               <option value="free">Free</option>
             </select>
@@ -315,22 +506,26 @@ export default function AdminDashboard() {
               { key: 'role', label: 'Role', render: (item) => (
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                   item.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                  item.role === 'support' ? 'bg-yellow-100 text-yellow-700' :
                   item.role === 'customer' ? 'bg-green-100 text-green-700' :
                   'bg-gray-100 text-gray-700'
                 }`}>{item.role}</span>
               )},
               { key: 'created_at', label: 'Joined', render: (item) => formatDate(item.created_at) },
-              { key: 'actions', label: 'Actions', render: (item) => (
-                <select
-                  value={item.role}
-                  onChange={(e) => handleRoleChange(item.id, e.target.value)}
-                  className="text-xs border border-gray-300 rounded px-2 py-1"
-                >
-                  <option value="free">Free</option>
-                  <option value="customer">Customer</option>
-                  <option value="admin">Admin</option>
-                </select>
-              )},
+              ...(isAdmin ? [{
+                key: 'actions', label: 'Actions', render: (item: Profile) => (
+                  <select
+                    value={item.role}
+                    onChange={(e) => handleRoleChange(item.id, e.target.value)}
+                    className="text-xs border border-gray-300 rounded px-2 py-1"
+                  >
+                    <option value="free">Free</option>
+                    <option value="customer">Customer</option>
+                    <option value="support">Support</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                ),
+              }] : []),
             ]}
             data={filteredProfiles}
             emptyMessage="No users found"
@@ -387,20 +582,143 @@ export default function AdminDashboard() {
                 }`}>{item.status}</span>
               )},
               { key: 'created_at', label: 'Date', render: (item) => formatDate(item.created_at) },
-              { key: 'actions', label: 'Actions', render: (item) => (
-                item.status === 'completed' ? (
-                  <button
-                    onClick={() => handleRefund(item.id, item.stripe_payment_intent)}
-                    className="text-xs text-red-600 hover:text-red-800 font-medium"
-                  >
-                    Refund
-                  </button>
-                ) : null
-              )},
+              ...(isAdmin ? [{
+                key: 'actions', label: 'Actions', render: (item: Purchase) => (
+                  item.status === 'completed' ? (
+                    <button
+                      onClick={() => handleRefund(item.id, item.stripe_payment_intent)}
+                      className="text-xs text-red-600 hover:text-red-800 font-medium"
+                    >
+                      Refund
+                    </button>
+                  ) : null
+                ),
+              }] : []),
             ]}
             data={filteredPurchases}
             emptyMessage="No payments found"
           />
+        </div>
+      )}
+
+      {/* Emails Tab (CRM) */}
+      {activeTab === 'emails' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex flex-wrap gap-4 mb-6">
+            <select
+              value={emailTypeFilter}
+              onChange={(e) => setEmailTypeFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+            >
+              <option value="all">All Types</option>
+              <option value="signup">Signup</option>
+              <option value="welcome">Welcome</option>
+              <option value="purchase">Purchase</option>
+              <option value="refund">Refund</option>
+              <option value="onboarding_day3">Onboarding Day 3</option>
+              <option value="onboarding_day7">Onboarding Day 7</option>
+            </select>
+            <span className="text-sm text-gray-500 self-center">
+              {filteredEmails.length} email{filteredEmails.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          <AdminTable
+            columns={[
+              { key: 'email', label: 'Recipient' },
+              { key: 'type', label: 'Type', render: (item) => (
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  item.type === 'purchase' ? 'bg-green-100 text-green-700' :
+                  item.type === 'refund' ? 'bg-red-100 text-red-700' :
+                  item.type === 'welcome' ? 'bg-blue-100 text-blue-700' :
+                  item.type.startsWith('onboarding') ? 'bg-purple-100 text-purple-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>{item.type}</span>
+              )},
+              { key: 'sent_at', label: 'Sent', render: (item) => formatDate(item.sent_at) },
+            ]}
+            data={filteredEmails}
+            emptyMessage="No emails sent yet"
+          />
+        </div>
+      )}
+
+      {/* Affiliates Tab (Admin only) */}
+      {activeTab === 'affiliates' && isAdmin && (
+        <div className="space-y-6">
+          {/* Create Affiliate */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold mb-4">Create Affiliate</h2>
+            <form onSubmit={handleCreateAffiliate} className="flex flex-wrap gap-4">
+              <select
+                value={newAffUserId}
+                onChange={(e) => setNewAffUserId(e.target.value)}
+                required
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="">Select User...</option>
+                {profiles.map(p => (
+                  <option key={p.id} value={p.id}>{p.email}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                placeholder="Referral code"
+                value={newAffCode}
+                onChange={(e) => setNewAffCode(e.target.value)}
+                required
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+              <input
+                type="number"
+                placeholder="Commission %"
+                value={newAffRate}
+                onChange={(e) => setNewAffRate(e.target.value)}
+                min="1"
+                max="100"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-28"
+              />
+              <button
+                type="submit"
+                className="bg-black text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-800"
+              >
+                Create
+              </button>
+            </form>
+          </div>
+
+          {/* Affiliate List */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold mb-4">Affiliates</h2>
+            <AdminTable
+              columns={[
+                { key: 'email', label: 'User', render: (item) => item.profiles?.email || 'Unknown' },
+                { key: 'code', label: 'Code', render: (item) => (
+                  <code className="text-xs bg-gray-100 px-2 py-1 rounded">{item.code}</code>
+                )},
+                { key: 'commission_rate', label: 'Rate', render: (item) => `${item.commission_rate}%` },
+                { key: 'referrals', label: 'Referrals', render: (item) => (item.referrals || []).length },
+                { key: 'earnings', label: 'Earnings', render: (item) =>
+                  formatCurrency((item.referrals || []).reduce((s: number, r: { commission_amount: number }) => s + r.commission_amount, 0))
+                },
+                { key: 'active', label: 'Status', render: (item) => (
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    item.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                  }`}>{item.active ? 'Active' : 'Inactive'}</span>
+                )},
+                { key: 'actions', label: '', render: (item) => item.active ? (
+                  <button
+                    onClick={() => handleDeactivateAffiliate(item.id)}
+                    className="text-xs text-red-600 hover:text-red-800"
+                  >
+                    Deactivate
+                  </button>
+                ) : null },
+              ]}
+              data={affiliates}
+              emptyMessage="No affiliates yet"
+            />
+          </div>
         </div>
       )}
     </div>
