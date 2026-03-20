@@ -15,8 +15,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "FitPro - Transform Your Fitness",
-  description: "A comprehensive 12-week fitness program designed to transform your body and build lasting habits.",
+  title: "Asa Luke — Content Editing | Audio Engineering | Fitness",
+  description: "Professional content editing, audio engineering, and fitness programs by Asa Luke. Services starting at $29.99.",
 };
 
 export default function RootLayout({
@@ -27,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-obsidian`}
       >
         <Navbar />
         <main>{children}</main>

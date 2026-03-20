@@ -14,6 +14,7 @@ export default function Navbar() {
   const supabase = createClient()
   const [user, setUser] = useState<{ email?: string } | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     async function getUser() {
@@ -48,51 +49,97 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-white border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          <div className="flex items-center space-x-8">
-            <Link href="/" className="text-xl font-bold text-gray-900">
-              FitPro
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-obsidian/80 backdrop-blur-xl border-b border-smoke/30">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex justify-between h-14 items-center">
+          {/* Logo */}
+          <Link href="/" className="text-base font-bold text-white tracking-[0.15em] uppercase">
+            Asa Luke
+          </Link>
+
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-8">
+            <Link href="/services/content-editing" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+              Content
             </Link>
+            <Link href="/services/audio-engineering" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+              Music
+            </Link>
+            <Link href="/#fitness" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+              Fitness
+            </Link>
+
             {user && (
-              <Link href="/content" className="text-gray-600 hover:text-gray-900">
-                Program
+              <Link href="/content" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+                My Purchases
               </Link>
             )}
             {(profile?.role === 'admin' || profile?.role === 'support') && (
-              <Link href="/admin" className="text-gray-600 hover:text-gray-900">
+              <Link href="/admin" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
                 Admin
+              </Link>
+            )}
+
+            {user ? (
+              <button
+                onClick={handleSignOut}
+                className="text-xs text-ivory/30 tracking-[0.15em] uppercase hover:text-gold transition-colors"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="text-xs text-gold tracking-[0.15em] uppercase hover:text-gold/70 transition-colors"
+              >
+                Login
               </Link>
             )}
           </div>
 
-          <div className="flex items-center space-x-4">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="md:hidden text-ivory/50 hover:text-gold transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {menuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 8h16M4 16h16" />
+              )}
+            </svg>
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        {menuOpen && (
+          <div className="md:hidden py-6 border-t border-smoke/30 space-y-4">
+            <Link href="/services/content-editing" onClick={() => setMenuOpen(false)} className="block text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+              Content
+            </Link>
+            <Link href="/services/audio-engineering" onClick={() => setMenuOpen(false)} className="block text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+              Music
+            </Link>
+            <Link href="/#fitness" onClick={() => setMenuOpen(false)} className="block text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+              Fitness
+            </Link>
             {user ? (
               <>
-                <span className="text-sm text-gray-500">{user.email}</span>
-                <button
-                  onClick={handleSignOut}
-                  className="text-sm text-gray-600 hover:text-gray-900"
-                >
+                <Link href="/content" onClick={() => setMenuOpen(false)} className="block text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+                  My Purchases
+                </Link>
+                <button onClick={() => { handleSignOut(); setMenuOpen(false); }} className="block text-xs text-ivory/30 tracking-[0.15em] uppercase hover:text-gold transition-colors">
                   Sign Out
                 </button>
               </>
             ) : (
-              <>
-                <Link href="/login" className="text-sm text-gray-600 hover:text-gray-900">
-                  Log In
-                </Link>
-                <Link
-                  href="/signup"
-                  className="text-sm bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800"
-                >
-                  Sign Up
-                </Link>
-              </>
+              <Link href="/login" onClick={() => setMenuOpen(false)} className="block text-xs text-gold tracking-[0.15em] uppercase">
+                Login
+              </Link>
             )}
           </div>
-        </div>
+        )}
       </div>
     </nav>
   )
