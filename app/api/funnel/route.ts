@@ -6,21 +6,21 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 const GUIDE_INFO = {
   content: {
-    label: 'Content Creator Blueprint',
+    label: 'Content Blueprint + AI Prompt',
     path: '/guides/content',
-    desc: 'The 7-step system to create scroll-stopping Reels',
+    desc: '7-step Reels system + AI prompt that writes your captions, on-screen text & headlines',
     packagePath: '/services/content-editing#pricing',
   },
   audio: {
-    label: 'Release-Ready Mix Checklist',
+    label: 'Vocal Chain Preset Template',
     path: '/guides/audio',
-    desc: 'The complete checklist to get your music release-ready',
+    desc: 'Plug-and-play vocal chain with exact settings for professional vocals',
     packagePath: '/services/audio-engineering#pricing',
   },
   fitness: {
-    label: '7-Day Fitness Kickstart',
+    label: '7-Day Fast Food Swap Guide',
     path: '/guides/fitness',
-    desc: 'A full week of workouts + nutrition to build momentum',
+    desc: 'Healthy high-protein alternatives to your favorite fast food meals',
     packagePath: '/#fitness',
   },
 } as Record<string, { label: string; path: string; desc: string; packagePath: string }>

@@ -5,20 +5,20 @@ import { useState } from 'react'
 const SERVICES = {
   content: {
     emoji: '🎬',
-    title: 'Content Creator Blueprint',
-    desc: '7-step system to create scroll-stopping Reels that grow your audience',
+    title: 'Content Blueprint + AI Prompt',
+    desc: '7-step Reels system + a copy-paste AI prompt that writes your captions, on-screen text & headlines',
     guideUrl: '/guides/content',
   },
   audio: {
     emoji: '🎵',
-    title: 'Release-Ready Mix Checklist',
-    desc: '15-point checklist to get your music release-ready on every platform',
+    title: 'Vocal Chain Preset Template',
+    desc: 'Plug-and-play vocal chain with exact settings for clean, professional vocals in any DAW',
     guideUrl: '/guides/audio',
   },
   fitness: {
     emoji: '💪',
-    title: '7-Day Fitness Kickstart',
-    desc: 'A full week of workouts + nutrition — no gym required',
+    title: '7-Day Fast Food Swap Guide',
+    desc: 'Healthy high-protein alternatives to your favorite fast food — same convenience, better macros',
     guideUrl: '/guides/fitness',
   },
 } as const
