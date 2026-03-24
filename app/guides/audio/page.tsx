@@ -1,8 +1,8 @@
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Free Vocal Chain Preset Guide — Asa Luke',
-  description: 'A plug-and-play vocal chain template to get clean, professional vocals in any DAW.',
+  title: 'Free: The Mix Fix — Asa Luke',
+  description: 'A universal vocal chain template with step-by-step instructions for any DAW. No specific plugins needed.',
 }
 
 export default function AudioGuide() {
@@ -11,222 +11,170 @@ export default function AudioGuide() {
       <div className="max-w-3xl mx-auto px-6 py-16">
         {/* Header */}
         <div className="text-center mb-16">
-          <p className="text-gold text-xs font-semibold tracking-[0.3em] uppercase mb-4">Free Template</p>
+          <p className="text-gold text-xs font-semibold tracking-[0.3em] uppercase mb-4">Free Digital Asset</p>
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 leading-tight">
-            The Vocal Chain<br /><span className="text-gold">Preset Template</span>
+            <span className="text-gold">The Mix Fix</span>
           </h1>
-          <p className="text-ivory/60 max-w-lg mx-auto">A plug-and-play vocal chain that works in any DAW. Use these exact settings as your starting point for clean, professional vocals. By Asa Luke.</p>
+          <p className="text-ivory/60 max-w-lg mx-auto">A universal vocal chain that works in any DAW. No specific plugins needed — just your stock tools. Each step is 1-2 actions max. By Asa Luke.</p>
         </div>
 
         {/* Intro */}
         <div className="bg-charcoal border border-smoke rounded-2xl p-8 mb-8">
-          <h2 className="text-lg font-bold text-white mb-3">How to Use This</h2>
-          <p className="text-ivory/60 leading-relaxed">Load these plugins in this exact order on your vocal track. Start with the settings below, then adjust to taste. This chain works for <span className="text-gold font-semibold">rap, R&B, pop, and singing vocals</span>. Every setting is a starting point — your voice and mic will need fine-tuning, but this gets you 80% there instantly.</p>
+          <h2 className="text-lg font-bold text-white mb-3">Before You Start</h2>
+          <p className="text-ivory/60 leading-relaxed mb-3">This works in <span className="text-gold font-semibold">Logic, FL Studio, Ableton, Pro Tools, GarageBand, Studio One</span> — any DAW. Every DAW comes with the tools you need built in. No paid plugins required.</p>
+          <p className="text-ivory/60 leading-relaxed">Load these in order on your vocal track. Each step is <span className="text-gold font-semibold">1-2 actions</span>. That&apos;s it. Don&apos;t overthink it.</p>
         </div>
 
         {/* Chain Steps */}
         <div className="space-y-6">
-          {/* 1. Gain Staging */}
+          {/* Step 1 */}
           <section className="bg-charcoal border border-smoke rounded-2xl p-8">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-sm">1</div>
+              <div className="w-12 h-12 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-lg">1</div>
               <div>
-                <h2 className="text-white font-bold">Gain Staging</h2>
-                <p className="text-ivory/40 text-xs">Before any plugin</p>
+                <h2 className="text-xl font-bold text-white">Turn It Down</h2>
+                <p className="text-gold text-xs font-semibold uppercase tracking-wider">Gain Staging</p>
               </div>
             </div>
-            <div className="bg-obsidian rounded-xl p-5 border border-smoke/50">
-              <p className="text-ivory/60 text-sm leading-relaxed mb-3">Set your vocal fader so peaks hit around <span className="text-gold font-semibold">-18dBFS to -12dBFS</span>. This gives every plugin after it the headroom it needs to work properly.</p>
-              <p className="text-gold/60 text-xs italic">If your vocal is already recorded too hot (peaking above -6dB), use a gain/trim plugin first to bring it down.</p>
+            <div className="bg-obsidian rounded-xl p-5 border border-gold/20">
+              <p className="text-white font-semibold text-sm mb-2">Action:</p>
+              <p className="text-ivory/70 text-sm">Pull your vocal fader down until the loudest parts peak around <span className="text-gold font-bold">-12 dB</span>. That&apos;s it.</p>
+            </div>
+            <p className="text-ivory/40 text-xs mt-3 italic">Why: Every plugin after this needs headroom to work. If your vocal is already slamming 0 dB, nothing else will sound right.</p>
+          </section>
+
+          {/* Step 2 */}
+          <section className="bg-charcoal border border-smoke rounded-2xl p-8">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-12 h-12 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-lg">2</div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Cut the Junk</h2>
+                <p className="text-gold text-xs font-semibold uppercase tracking-wider">Stock EQ — Subtractive</p>
+              </div>
+            </div>
+            <div className="bg-obsidian rounded-xl p-5 border border-gold/20 space-y-3">
+              <div>
+                <p className="text-white font-semibold text-sm mb-1">Action 1:</p>
+                <p className="text-ivory/70 text-sm">Add your stock EQ. Turn on a <span className="text-gold font-bold">high-pass filter at 80 Hz</span>. This removes rumble and room noise you can&apos;t even hear but muddies your mix.</p>
+              </div>
+              <div>
+                <p className="text-white font-semibold text-sm mb-1">Action 2:</p>
+                <p className="text-ivory/70 text-sm">Find the muddy range (<span className="text-gold font-bold">200-400 Hz</span>). Make a narrow cut of <span className="text-gold font-bold">-2 to -3 dB</span>. Sweep slowly — when it sounds cleaner, stop there.</p>
+              </div>
             </div>
           </section>
 
-          {/* 2. Subtractive EQ */}
+          {/* Step 3 */}
           <section className="bg-charcoal border border-smoke rounded-2xl p-8">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-sm">2</div>
+              <div className="w-12 h-12 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-lg">3</div>
               <div>
-                <h2 className="text-white font-bold">Subtractive EQ (Clean Up)</h2>
-                <p className="text-ivory/40 text-xs">Stock EQ or FabFilter Pro-Q 3</p>
+                <h2 className="text-xl font-bold text-white">Tame the S Sounds</h2>
+                <p className="text-gold text-xs font-semibold uppercase tracking-wider">Stock De-Esser</p>
               </div>
             </div>
-            <div className="bg-obsidian rounded-xl p-5 border border-smoke/50 space-y-3">
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">High-pass filter</span>
-                <span className="text-gold font-semibold text-sm">80-100 Hz, 18dB/oct</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">Cut muddiness</span>
-                <span className="text-gold font-semibold text-sm">200-350 Hz, -2 to -4 dB, narrow Q</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">Cut boxiness</span>
-                <span className="text-gold font-semibold text-sm">400-600 Hz, -1 to -3 dB, narrow Q</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-ivory/60 text-sm">Tame harshness</span>
-                <span className="text-gold font-semibold text-sm">2.5-4 kHz, -1 to -3 dB, narrow Q</span>
-              </div>
-              <p className="text-gold/60 text-xs italic pt-2">Sweep each band slowly while the vocal plays. When it sounds bad, that&apos;s your problem frequency. Cut it.</p>
+            <div className="bg-obsidian rounded-xl p-5 border border-gold/20">
+              <p className="text-white font-semibold text-sm mb-1">Action:</p>
+              <p className="text-ivory/70 text-sm">Add your stock de-esser. Set the frequency to <span className="text-gold font-bold">6-7 kHz</span>. Turn the threshold down until the harsh &quot;S&quot; and &quot;T&quot; sounds smooth out — but the vocal still sounds natural, not lispy.</p>
             </div>
+            <p className="text-ivory/40 text-xs mt-3 italic">No de-esser in your DAW? Use an EQ with a narrow cut at 6-7 kHz, automated only on the S sounds. Or just skip this step — it&apos;s better to skip than overdo it.</p>
           </section>
 
-          {/* 3. De-Esser */}
+          {/* Step 4 */}
           <section className="bg-charcoal border border-smoke rounded-2xl p-8">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-sm">3</div>
+              <div className="w-12 h-12 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-lg">4</div>
               <div>
-                <h2 className="text-white font-bold">De-Esser</h2>
-                <p className="text-ivory/40 text-xs">FabFilter Pro-DS, Stock De-Esser, or Waves Sibilance</p>
+                <h2 className="text-xl font-bold text-white">Even It Out</h2>
+                <p className="text-gold text-xs font-semibold uppercase tracking-wider">Stock Compressor</p>
               </div>
             </div>
-            <div className="bg-obsidian rounded-xl p-5 border border-smoke/50 space-y-3">
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">Frequency target</span>
-                <span className="text-gold font-semibold text-sm">5-8 kHz</span>
+            <div className="bg-obsidian rounded-xl p-5 border border-gold/20 space-y-3">
+              <div>
+                <p className="text-white font-semibold text-sm mb-1">Action 1:</p>
+                <p className="text-ivory/70 text-sm">Add your stock compressor. Set ratio to <span className="text-gold font-bold">3:1</span>, attack to <span className="text-gold font-bold">10-15ms</span>, release to <span className="text-gold font-bold">100ms</span>.</p>
               </div>
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">Threshold</span>
-                <span className="text-gold font-semibold text-sm">Reduce 3-6 dB on harsh S sounds</span>
+              <div>
+                <p className="text-white font-semibold text-sm mb-1">Action 2:</p>
+                <p className="text-ivory/70 text-sm">Lower the threshold until you see <span className="text-gold font-bold">3-5 dB of gain reduction</span> on the loudest parts. Turn up the makeup gain to match the original volume.</p>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-ivory/60 text-sm">Mode</span>
-                <span className="text-gold font-semibold text-sm">Split-band (not wideband)</span>
-              </div>
-              <p className="text-gold/60 text-xs italic pt-2">You want S sounds to be smooth, not gone. If the vocal sounds lispy, you went too far.</p>
             </div>
+            <p className="text-ivory/40 text-xs mt-3 italic">The vocal should sound more consistent and upfront — not squashed or pumping. If it sounds worse, your threshold is too low.</p>
           </section>
 
-          {/* 4. Compression */}
+          {/* Step 5 */}
           <section className="bg-charcoal border border-smoke rounded-2xl p-8">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-sm">4</div>
+              <div className="w-12 h-12 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-lg">5</div>
               <div>
-                <h2 className="text-white font-bold">Compression</h2>
-                <p className="text-ivory/40 text-xs">CLA-2A, LA-2A, Stock Compressor, or TDR Kotelnikov (free)</p>
+                <h2 className="text-xl font-bold text-white">Add the Shine</h2>
+                <p className="text-gold text-xs font-semibold uppercase tracking-wider">Stock EQ — Additive</p>
               </div>
             </div>
-            <div className="bg-obsidian rounded-xl p-5 border border-smoke/50 space-y-3">
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">Ratio</span>
-                <span className="text-gold font-semibold text-sm">3:1 to 4:1</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">Attack</span>
-                <span className="text-gold font-semibold text-sm">10-15ms (let transients through)</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">Release</span>
-                <span className="text-gold font-semibold text-sm">80-120ms (smooth, musical)</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-ivory/60 text-sm">Gain reduction</span>
-                <span className="text-gold font-semibold text-sm">3-6 dB on loudest parts</span>
-              </div>
-              <p className="text-gold/60 text-xs italic pt-2">The vocal should sound more consistent and upfront, not squashed. If you hear pumping, your attack is too fast or ratio is too high.</p>
+            <div className="bg-obsidian rounded-xl p-5 border border-gold/20">
+              <p className="text-white font-semibold text-sm mb-1">Action:</p>
+              <p className="text-ivory/70 text-sm">Add another stock EQ (or use a second band on the same one). Add a gentle <span className="text-gold font-bold">high shelf at 10 kHz, +1 to +2 dB</span>. This adds air and presence — the vocal will feel closer and more &quot;expensive.&quot;</p>
             </div>
+            <p className="text-ivory/40 text-xs mt-3 italic">Optional: boost 4-5 kHz by +1 dB for more presence/clarity. But only if the vocal needs it — less is more.</p>
           </section>
 
-          {/* 5. Additive EQ */}
+          {/* Step 6 */}
           <section className="bg-charcoal border border-smoke rounded-2xl p-8">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-sm">5</div>
+              <div className="w-12 h-12 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-lg">6</div>
               <div>
-                <h2 className="text-white font-bold">Additive EQ (Character)</h2>
-                <p className="text-ivory/40 text-xs">Stock EQ, Pultec, or Maag EQ</p>
+                <h2 className="text-xl font-bold text-white">Add Space</h2>
+                <p className="text-gold text-xs font-semibold uppercase tracking-wider">Stock Reverb — on a Send/Bus</p>
               </div>
             </div>
-            <div className="bg-obsidian rounded-xl p-5 border border-smoke/50 space-y-3">
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">Presence / clarity</span>
-                <span className="text-gold font-semibold text-sm">4-6 kHz, +1 to +3 dB, wide Q</span>
+            <div className="bg-obsidian rounded-xl p-5 border border-gold/20 space-y-3">
+              <div>
+                <p className="text-white font-semibold text-sm mb-1">Action 1:</p>
+                <p className="text-ivory/70 text-sm">Create a <span className="text-gold font-bold">send/bus</span> from your vocal track. Add your stock reverb on that bus. Set it to <span className="text-gold font-bold">100% wet</span>. Choose &quot;Plate&quot; or &quot;Room&quot; preset.</p>
               </div>
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">Air / sparkle</span>
-                <span className="text-gold font-semibold text-sm">10-12 kHz shelf, +1 to +2 dB</span>
+              <div>
+                <p className="text-white font-semibold text-sm mb-1">Action 2:</p>
+                <p className="text-ivory/70 text-sm">Set decay to <span className="text-gold font-bold">1.2-1.5 seconds</span>. Blend using the send fader — start low and raise until you hear space without the vocal sounding distant.</p>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-ivory/60 text-sm">Body (if needed)</span>
-                <span className="text-gold font-semibold text-sm">150-200 Hz, +1 dB, wide Q</span>
-              </div>
-              <p className="text-gold/60 text-xs italic pt-2">Less is more here. Boost gently. If it sounds harsh after boosting presence, go back to step 2 and cut more at 2.5-4kHz first.</p>
             </div>
+            <p className="text-ivory/40 text-xs mt-3 italic">Never put reverb directly on the vocal track. Always use a send. This keeps the dry vocal clean and lets you control how much space to add.</p>
           </section>
 
-          {/* 6. Reverb */}
+          {/* Step 7 */}
           <section className="bg-charcoal border border-smoke rounded-2xl p-8">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-sm">6</div>
+              <div className="w-12 h-12 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-lg">7</div>
               <div>
-                <h2 className="text-white font-bold">Reverb (Send/Bus)</h2>
-                <p className="text-ivory/40 text-xs">Valhalla Room, Stock Reverb, or RC-20</p>
+                <h2 className="text-xl font-bold text-white">Add Movement</h2>
+                <p className="text-gold text-xs font-semibold uppercase tracking-wider">Stock Delay — on a Send/Bus</p>
               </div>
             </div>
-            <div className="bg-obsidian rounded-xl p-5 border border-smoke/50 space-y-3">
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">Type</span>
-                <span className="text-gold font-semibold text-sm">Plate or Room</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">Decay</span>
-                <span className="text-gold font-semibold text-sm">1.2-1.8 seconds</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">Pre-delay</span>
-                <span className="text-gold font-semibold text-sm">20-40ms</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-ivory/60 text-sm">Mix (on send)</span>
-                <span className="text-gold font-semibold text-sm">100% wet, blend with fader</span>
-              </div>
-              <p className="text-gold/60 text-xs italic pt-2">Always use reverb on a send/bus, never directly on the vocal track. EQ the reverb return — cut below 300Hz and above 8kHz to keep it clean.</p>
+            <div className="bg-obsidian rounded-xl p-5 border border-gold/20">
+              <p className="text-white font-semibold text-sm mb-1">Action:</p>
+              <p className="text-ivory/70 text-sm">Create another send/bus. Add stock delay. Set to <span className="text-gold font-bold">1/4 note, sync to BPM, feedback 15-20%</span>. Blend low — you should barely hear the repeats. It fills gaps between phrases.</p>
             </div>
-          </section>
-
-          {/* 7. Delay */}
-          <section className="bg-charcoal border border-smoke rounded-2xl p-8">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-sm">7</div>
-              <div>
-                <h2 className="text-white font-bold">Delay (Send/Bus)</h2>
-                <p className="text-ivory/40 text-xs">Stock Delay, H-Delay, or EchoBoy</p>
-              </div>
-            </div>
-            <div className="bg-obsidian rounded-xl p-5 border border-smoke/50 space-y-3">
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">Type</span>
-                <span className="text-gold font-semibold text-sm">1/4 note or 1/8 note (sync to BPM)</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-smoke/30 pb-2">
-                <span className="text-ivory/60 text-sm">Feedback</span>
-                <span className="text-gold font-semibold text-sm">15-25%</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-ivory/60 text-sm">Mix</span>
-                <span className="text-gold font-semibold text-sm">Subtle — blend until you miss it when off</span>
-              </div>
-              <p className="text-gold/60 text-xs italic pt-2">Delay fills space between phrases. It shouldn&apos;t be obvious — if you can clearly hear the repeats, turn it down.</p>
-            </div>
+            <p className="text-ivory/40 text-xs mt-3 italic">If you can clearly hear the delay repeating, it&apos;s too loud. Turn it down. It should be felt, not heard.</p>
           </section>
         </div>
 
-        {/* Signal Flow Summary */}
-        <div className="mt-12 bg-charcoal border border-gold/30 rounded-2xl p-8">
-          <h2 className="text-xl font-bold text-white mb-4 text-center">Complete Signal Flow</h2>
+        {/* Signal Flow */}
+        <div className="mt-10 bg-charcoal border border-gold/30 rounded-2xl p-8">
+          <h2 className="text-lg font-bold text-white mb-4 text-center">Your Complete Chain</h2>
           <div className="flex flex-wrap justify-center gap-2 text-sm">
-            {['Gain Stage', 'Subtractive EQ', 'De-Esser', 'Compressor', 'Additive EQ', 'Reverb (Send)', 'Delay (Send)'].map((step, i) => (
+            {['Gain Stage', 'Cut EQ', 'De-Esser', 'Compressor', 'Shine EQ', 'Reverb', 'Delay'].map((step, i) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="bg-gold/10 border border-gold/30 text-gold px-3 py-1.5 rounded-lg font-semibold text-xs">{step}</span>
                 {i < 6 && <span className="text-gold/40">&rarr;</span>}
               </div>
             ))}
           </div>
+          <p className="text-center text-ivory/40 text-xs mt-4">All stock plugins. Any DAW. 7 steps. Done.</p>
         </div>
 
         {/* CTA */}
         <div className="mt-16 text-center bg-gradient-to-br from-charcoal to-gold/5 border border-gold/30 rounded-2xl p-10">
           <h3 className="text-2xl font-bold text-white mb-3">Want a Professional Mix?</h3>
-          <p className="text-ivory/60 mb-8 max-w-md mx-auto">This template gets you started. I take it to the finish line. 10+ years mixing Hip-Hop, R&B, Pop, Gospel. Send me your stems.</p>
+          <p className="text-ivory/60 mb-8 max-w-md mx-auto">The Mix Fix gets you started. I take it to the finish line. 10+ years mixing Hip-Hop, R&B, Pop, Gospel. Send me your stems.</p>
           <Link href="/services/audio-engineering#pricing" className="inline-block bg-gold text-obsidian px-10 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
             View Audio Packages
           </Link>
