@@ -17,6 +17,8 @@ const TIERS = [
       'Scroll-stopping hooks (first 2 seconds optimized)',
       'Trending audio recommendations',
       'Optimal posting times for your audience',
+      'Basic hashtag strategy for discovery',
+      'Bio optimization guide (make your profile convert visitors to followers)',
       '1 revision per video',
       '72-hour turnaround',
     ],
@@ -34,6 +36,9 @@ const TIERS = [
       'Optimal posting times for your audience',
       'Cover image design for every Reel',
       'Monthly analytics review (what\'s working & what to adjust)',
+      'Bio optimization guide (make your profile convert visitors to followers)',
+      'CTA strategy for every post (turn viewers into customers)',
+      'Link-in-bio setup and optimization',
       '2 revisions per video',
       '48-hour turnaround',
     ],
@@ -55,6 +60,10 @@ const TIERS = [
       'Cover image design for every Reel',
       'Monthly analytics review + growth report',
       'Competitor content analysis',
+      'Bio optimization guide (make your profile convert visitors to followers)',
+      'CTA strategy for every post (turn viewers into customers)',
+      'Link-in-bio setup and optimization',
+      'Monthly follower-to-customer conversion review',
       'Priority DM support (same-day replies)',
       'Unlimited revisions',
       '24-hour priority turnaround',
@@ -72,6 +81,8 @@ const VALUE_STACK = [
   { name: 'Hashtag & Posting Strategy', desc: 'Optimized for discovery. Right hashtags, right times, right platforms.', value: '$150' },
   { name: 'Unlimited Revisions', desc: 'Not happy with an edit? We revise until you are. No limits, no extra charges.', value: '$200' },
   { name: '24-Hour Priority Turnaround', desc: 'Full Engine clients get priority. Your content is delivered first, always.', value: '$250' },
+  { name: 'Bio Optimization Guide', desc: 'Your bio is your storefront. I optimize it to convert visitors into followers and followers into customers.', value: '$150' },
+  { name: 'CTA Strategy for Every Post', desc: 'Every video ends with a clear next step for your audience. No more "nice video" comments with zero action.', value: '$200' },
 ]
 
 const BONUSES = [
@@ -189,7 +200,7 @@ export default async function ContentEditingPage() {
 
             <div className="flex justify-between items-center bg-gold/10 border-2 border-gold rounded-lg p-5 mt-4">
               <h3 className="text-white font-bold text-lg">Total Value</h3>
-              <span className="text-gold font-bold text-2xl">$4,460</span>
+              <span className="text-gold font-bold text-2xl">$4,810</span>
             </div>
           </div>
         </div>
