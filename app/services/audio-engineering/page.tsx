@@ -5,6 +5,7 @@ import { useState } from 'react'
 const PACKAGES = [
   {
     name: 'Single',
+    slug: 'audio-single',
     tagline: '1 track, professional quality',
     price: '$150',
     billing: '/track',
@@ -23,6 +24,7 @@ const PACKAGES = [
   },
   {
     name: 'EP Package',
+    slug: 'audio-ep',
     tagline: 'Consistent sound across your project',
     price: '$500',
     billing: '/project',
@@ -43,6 +45,7 @@ const PACKAGES = [
   },
   {
     name: 'Album',
+    slug: 'audio-album',
     tagline: 'Full project with creative direction',
     price: '$1,000',
     billing: '/project',
@@ -66,6 +69,25 @@ const PACKAGES = [
 
 export default function AudioEngineeringPage() {
   const [selected, setSelected] = useState<number | null>(null)
+  const [checkoutEmail, setCheckoutEmail] = useState('')
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+
+  async function handleCheckout(slug: string) {
+    if (!checkoutEmail) return
+    setCheckoutLoading(true)
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ packageSlug: slug, email: checkoutEmail }),
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+    } catch {
+      alert('Something went wrong. Please try again.')
+    }
+    setCheckoutLoading(false)
+  }
 
   return (
     <div className="min-h-screen bg-obsidian">
@@ -153,12 +175,24 @@ export default function AudioEngineeringPage() {
                 <p className="text-ivory/70 text-sm leading-relaxed">{PACKAGES[selected].guarantee}</p>
               </div>
 
-              <div className="text-center">
-                <a href="https://instagram.com/1AsaLuke" target="_blank" rel="noopener noreferrer"
-                  className="inline-block bg-gold text-obsidian px-10 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
-                  Get Started — DM @1AsaLuke
-                </a>
-                <p className="text-ivory/30 text-xs mt-3">No long-term contracts.</p>
+              <div className="max-w-md mx-auto">
+                <div className="flex gap-3">
+                  <input
+                    type="email"
+                    placeholder="Your email"
+                    value={checkoutEmail}
+                    onChange={e => setCheckoutEmail(e.target.value)}
+                    className="flex-1 px-5 py-4 bg-obsidian border border-smoke rounded-2xl text-white text-sm placeholder-ivory/30 focus:outline-none focus:border-gold transition-colors"
+                  />
+                  <button
+                    onClick={() => handleCheckout(PACKAGES[selected].slug)}
+                    disabled={checkoutLoading || !checkoutEmail}
+                    className="bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {checkoutLoading ? 'Loading...' : 'Get Started'}
+                  </button>
+                </div>
+                <p className="text-ivory/30 text-xs mt-3 text-center">Secure payment via Stripe.</p>
               </div>
             </div>
           )}
