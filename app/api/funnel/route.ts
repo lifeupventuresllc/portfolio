@@ -44,13 +44,16 @@ export async function POST(request: Request) {
     const packageUrl = `${baseUrl}${guide.packagePath}`
 
     // Save lead to funnel_leads CRM table
-    await supabase.from('funnel_leads').insert({
+    const { error: leadError } = await supabase.from('funnel_leads').insert({
       name,
       email,
       service,
       status: 'new',
       source: 'funnel',
     })
+    if (leadError) {
+      console.error('Failed to save lead:', leadError)
+    }
 
     // Also log to events for analytics
     await supabase.from('events').insert({
