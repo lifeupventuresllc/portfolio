@@ -84,7 +84,10 @@ export default function FitnessGuide() {
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
             <span className="text-gold">The Compound Comeback</span>
           </h1>
-          <p className="text-ivory/60 max-w-lg mx-auto">7-day healthy fast food swaps + a 7-day progressive overload program built on compound movements. By Asa Luke.</p>
+          <p className="text-ivory/60 max-w-lg mx-auto mb-8">7-day healthy fast food swaps + a 7-day progressive overload program built on compound movements. By Asa Luke.</p>
+          <Link href="/#fitness" className="inline-block bg-gold text-obsidian px-8 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
+            Want the Full 12-Week Program? View Now
+          </Link>
         </div>
 
         {/* ═══════════════════════════════════════ */}

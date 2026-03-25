@@ -15,7 +15,10 @@ export default function AudioGuide() {
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 leading-tight">
             <span className="text-gold">The Mix Fix</span>
           </h1>
-          <p className="text-ivory/60 max-w-lg mx-auto">A universal vocal chain that works in any DAW. No specific plugins needed — just your stock tools. Each step is 1-2 actions max. By Asa Luke.</p>
+          <p className="text-ivory/60 max-w-lg mx-auto mb-8">A universal vocal chain that works in any DAW. No specific plugins needed — just your stock tools. Each step is 1-2 actions max. By Asa Luke.</p>
+          <Link href="/services/audio-engineering#pricing" className="inline-block bg-gold text-obsidian px-8 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
+            Want a Pro Mix? View Packages
+          </Link>
         </div>
 
         {/* Intro */}
