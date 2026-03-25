@@ -4,67 +4,75 @@ import { useState } from 'react'
 
 const PACKAGES = [
   {
-    name: 'Single',
-    slug: 'audio-single',
-    tagline: '1 track, professional quality',
+    name: 'Mix Monthly',
+    slug: 'audio-monthly-1',
+    tagline: '1 track per month — consistent releases',
     price: '$150',
-    billing: '/track',
-    tracks: '1 Track',
+    billing: '/mo',
+    tracks: '1 Track/Month',
     turnaround: '48-hour turnaround',
     revisions: '2 revisions',
     features: [
-      '1 track mix & master',
+      '1 track mix & master per month',
       'Mixing: EQ, compression, effects, reference matching',
       'Delivery: WAV 24-bit + MP3 320kbps, streaming-ready',
       'Support: file prep guide',
       '2 revisions included',
       '48-hour turnaround',
+      'Rollover: unused track carries to next month',
     ],
-    guarantee: "Not happy? I'll revise until you are. Full refund if I can't get the sound you want.",
+    guarantee: "Not happy? I'll revise until you are. Full refund if I can't get the sound you want. Cancel anytime.",
   },
   {
-    name: 'EP Package',
-    slug: 'audio-ep',
-    tagline: 'Consistent sound across your project',
-    price: '$500',
-    billing: '/project',
-    tracks: '3-5 Tracks',
+    name: 'Mix Pro',
+    slug: 'audio-monthly-3',
+    tagline: 'For artists dropping consistently',
+    price: '$400',
+    billing: '/mo',
+    tracks: '3 Tracks/Month',
     turnaround: '5-day turnaround',
     revisions: '2 revisions per track',
     featured: true,
     features: [
-      '3-5 tracks mix & master',
+      '3 tracks mix & master per month',
       'Mixing: EQ, compression, effects, vocal tuning, reference matching',
       'Consistency: matched sound across all tracks',
       'Delivery: WAV 24-bit + MP3 320kbps, streaming-ready',
       'Release: distribution checklist + release day promo plan',
       'Support: file prep guide, 2 revisions per track',
       '5-day turnaround',
+      'Rollover: unused tracks carry to next month',
     ],
-    guarantee: "Unlimited revisions until you love it. Full refund if I can't match your reference. Plus: 1 free bonus mix if not satisfied.",
+    guarantee: "Unlimited revisions until you love it. Full refund if I can't match your reference. Plus: 1 free bonus mix if not satisfied. Cancel anytime.",
   },
   {
-    name: 'Album',
-    slug: 'audio-album',
-    tagline: 'Full project with creative direction',
-    price: '$1,000',
-    billing: '/project',
-    tracks: '6-12 Tracks',
-    turnaround: '10-day turnaround',
+    name: 'Mix Elite',
+    slug: 'audio-monthly-6',
+    tagline: 'Full album pipeline — your dedicated engineer',
+    price: '$750',
+    billing: '/mo',
+    tracks: '6 Tracks/Month',
+    turnaround: '48-hour priority',
     revisions: 'Unlimited revisions',
     features: [
-      '6-12 tracks mix & master',
-      'Direction: 1-hour creative direction session',
+      '6 tracks mix & master per month',
+      'Direction: 1-hour monthly creative direction session',
       'Mixing: EQ, compression, effects, vocal tuning, sound design',
       'Consistency: full project cohesion across every track',
       'Delivery: WAV 24-bit + MP3 320kbps, streaming-ready',
       'Release: distribution checklist, promo plan, pre-save campaign',
       'Sequencing: album track order consultation',
-      'Unlimited revisions',
-      '10-day turnaround',
+      'Unlimited revisions — 48-hour priority turnaround',
+      'Rollover: unused tracks carry to next month',
     ],
-    guarantee: "100% money-back guarantee, no questions asked. Unlimited revisions. If it doesn't match industry quality, you don't pay. Plus: 2 free bonus mixes if not completely satisfied.",
+    guarantee: "100% money-back guarantee, no questions asked. Unlimited revisions. If it doesn't match industry quality, you don't pay. Cancel anytime.",
   },
+]
+
+const ONE_TIME = [
+  { name: 'Single', slug: 'audio-single', price: '$150', desc: '1 track mix & master' },
+  { name: 'EP (3-5 tracks)', slug: 'audio-ep', price: '$500', desc: 'Consistent sound across your project' },
+  { name: 'Album (6-12 tracks)', slug: 'audio-album', price: '$1,000', desc: 'Full project with creative direction' },
 ]
 
 export default function AudioEngineeringPage() {
@@ -100,8 +108,8 @@ export default function AudioEngineeringPage() {
             YOUR MUSIC DESERVES A{' '}
             <span className="text-gold">PROFESSIONAL MIX</span>
           </h1>
-          <p className="text-ivory/60 mb-2">Packages from <span className="text-gold font-bold">$150 — $1,000</span></p>
-          <p className="text-ivory/40 text-sm">10+ years experience. Singles to full albums. Pick your package below.</p>
+          <p className="text-ivory/60 mb-2">Monthly plans from <span className="text-gold font-bold">$150/mo</span> — or pay per project</p>
+          <p className="text-ivory/40 text-sm">10+ years experience. Singles to full albums. Cancel anytime.</p>
         </div>
       </section>
 
@@ -196,6 +204,40 @@ export default function AudioEngineeringPage() {
               </div>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* ── ONE-TIME PROJECTS ── */}
+      <section className="px-4 pb-16">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <p className="text-ivory/40 text-xs uppercase tracking-wider mb-2">Prefer to pay per project?</p>
+            <h3 className="text-xl font-bold text-white">One-Time Packages</h3>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {ONE_TIME.map((pkg) => (
+              <div key={pkg.slug} className="bg-charcoal border border-smoke rounded-2xl p-6 text-center hover:border-gold/40 transition-all duration-300">
+                <h4 className="text-white font-bold mb-1">{pkg.name}</h4>
+                <p className="text-ivory/40 text-xs mb-3">{pkg.desc}</p>
+                <p className="text-gold text-2xl font-bold mb-4">{pkg.price}</p>
+                <button
+                  onClick={() => {
+                    const email = prompt('Enter your email to continue to checkout:')
+                    if (email) {
+                      fetch('/api/checkout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ packageSlug: pkg.slug, email }),
+                      }).then(r => r.json()).then(d => { if (d.url) window.location.href = d.url })
+                    }
+                  }}
+                  className="text-gold text-xs font-semibold uppercase tracking-wider hover:text-white transition-colors"
+                >
+                  Pay Once →
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
