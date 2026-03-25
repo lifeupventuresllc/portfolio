@@ -105,19 +105,20 @@ export default function FitnessGuide() {
           </div>
 
           {/* Weight Class Selector */}
-          <div className="grid grid-cols-3 gap-3 mb-8">
+          <div className="grid grid-cols-3 gap-4 mb-10">
             {CLASSES.map((cls) => (
               <button
                 key={cls.id}
                 onClick={() => setWeightClass(cls.id)}
-                className={`p-4 rounded-2xl border text-center transition-all duration-300 hover:-translate-y-1 ${
+                className={`p-6 sm:p-8 rounded-3xl border-2 text-center transition-all duration-500 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_0_60px_rgba(201,168,76,0.3)] ${
                   weightClass === cls.id
-                    ? 'border-gold bg-gold/10 shadow-[0_0_30px_rgba(201,168,76,0.15)]'
-                    : 'border-smoke bg-charcoal hover:border-gold/40'
+                    ? 'border-gold bg-gold/15 shadow-[0_0_50px_rgba(201,168,76,0.25)] scale-[1.03]'
+                    : 'border-smoke bg-charcoal hover:border-gold/60'
                 }`}
               >
-                <p className="text-white font-bold text-sm">{cls.label}</p>
-                <p className="text-ivory/40 text-xs">{cls.desc}</p>
+                <p className="text-gold text-3xl sm:text-4xl font-bold mb-2">{cls.id}</p>
+                <p className="text-white font-bold text-base sm:text-lg">{cls.label}</p>
+                <p className="text-ivory/40 text-sm mt-1">{cls.desc}</p>
               </button>
             ))}
           </div>
