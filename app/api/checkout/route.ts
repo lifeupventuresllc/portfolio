@@ -12,17 +12,17 @@ export async function POST(request: NextRequest) {
     // Direct checkout by slug (from service pages — no login required)
     if (packageSlug) {
       const PACKAGES: Record<string, { name: string; description: string; price: number; mode: 'payment' | 'subscription'; category: string }> = {
-        'content-starter':    { name: 'Content Editing - Starter', description: '4 professionally edited Reels per month', price: 29700, mode: 'subscription', category: 'content-editing' },
-        'content-growth':     { name: 'Content Editing - Growth', description: '8 professionally edited Reels per month', price: 59700, mode: 'subscription', category: 'content-editing' },
-        'content-full-engine':{ name: 'Content Editing - Full Engine', description: '12+ professionally edited Reels per month', price: 99700, mode: 'subscription', category: 'content-editing' },
-        'audio-single':       { name: 'Audio Engineering - Single', description: '1 track mix & master', price: 15000, mode: 'payment', category: 'audio-engineering' },
-        'audio-ep':           { name: 'Audio Engineering - EP', description: '3-5 tracks mix & master', price: 50000, mode: 'payment', category: 'audio-engineering' },
-        'audio-album':        { name: 'Audio Engineering - Album', description: '6-12 tracks mix & master', price: 100000, mode: 'payment', category: 'audio-engineering' },
-        'audio-monthly-1':    { name: 'Audio Engineering - Mix Monthly', description: '1 track mix & master per month', price: 15000, mode: 'subscription', category: 'audio-engineering' },
-        'audio-monthly-3':    { name: 'Audio Engineering - Mix Pro', description: '3 tracks mix & master per month', price: 40000, mode: 'subscription', category: 'audio-engineering' },
-        'audio-monthly-6':    { name: 'Audio Engineering - Mix Elite', description: '6 tracks mix & master per month', price: 75000, mode: 'subscription', category: 'audio-engineering' },
-        'bundle-creator':     { name: 'The Creator Package', description: 'Content + Audio + Fitness bundle', price: 69700, mode: 'subscription', category: 'content-editing' },
-        'bundle-empire':      { name: 'The Empire Package', description: 'Full Engine + Mix Pro + Fitness + Strategy', price: 149700, mode: 'subscription', category: 'content-editing' },
+        'content-starter':    { name: 'Content Editing - Starter', description: '6 professionally edited Reels per month', price: 24700, mode: 'subscription', category: 'content-editing' },
+        'content-growth':     { name: 'Content Editing - Growth', description: '12 professionally edited Reels per month', price: 49700, mode: 'subscription', category: 'content-editing' },
+        'content-full-engine':{ name: 'Content Editing - Scale', description: '24 professionally edited Reels per month', price: 89700, mode: 'subscription', category: 'content-editing' },
+        'audio-single':       { name: 'Audio Engineering - Single', description: '1 track mix & master', price: 9900, mode: 'payment', category: 'audio-engineering' },
+        'audio-ep':           { name: 'Audio Engineering - EP', description: '5 tracks mix & master', price: 39900, mode: 'payment', category: 'audio-engineering' },
+        'audio-album':        { name: 'Audio Engineering - Album', description: '10+ tracks mix & master', price: 69900, mode: 'payment', category: 'audio-engineering' },
+        'audio-monthly-1':    { name: 'Audio Engineering - Mix Monthly', description: '2 tracks mix & master per month', price: 17500, mode: 'subscription', category: 'audio-engineering' },
+        'audio-monthly-3':    { name: 'Audio Engineering - Mix Pro', description: '4 tracks mix & master per month', price: 42500, mode: 'subscription', category: 'audio-engineering' },
+        'audio-monthly-6':    { name: 'Audio Engineering - Mix Elite', description: '8 tracks mix & master per month', price: 79900, mode: 'subscription', category: 'audio-engineering' },
+        'bundle-creator':     { name: 'The Creator Package', description: 'Content + Audio + Fitness bundle', price: 59700, mode: 'subscription', category: 'content-editing' },
+        'bundle-empire':      { name: 'The Empire Package', description: 'Scale + Mix Pro + Fitness + Strategy', price: 99700, mode: 'subscription', category: 'content-editing' },
       }
 
       const pkg = PACKAGES[packageSlug]

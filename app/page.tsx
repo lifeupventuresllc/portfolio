@@ -97,7 +97,7 @@ export default function LandingPage() {
               <p className="text-ivory/40 text-sm uppercase tracking-wider">Turnaround</p>
             </div>
             <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-3xl font-bold mb-2">$297</p>
+              <p className="text-gold text-3xl font-bold mb-2">$247</p>
               <p className="text-ivory/40 text-sm uppercase tracking-wider">Starting At</p>
             </div>
             <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
@@ -121,7 +121,7 @@ export default function LandingPage() {
               <p className="text-ivory/40 text-sm uppercase tracking-wider">Turnaround</p>
             </div>
             <div className="bg-obsidian border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-3xl font-bold mb-2">$150</p>
+              <p className="text-gold text-3xl font-bold mb-2">$99</p>
               <p className="text-ivory/40 text-sm uppercase tracking-wider">Starting At</p>
             </div>
             <div className="bg-obsidian border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>

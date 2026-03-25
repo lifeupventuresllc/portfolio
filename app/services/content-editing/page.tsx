@@ -7,13 +7,13 @@ const PACKAGES = [
     name: 'Starter',
     slug: 'content-starter',
     tagline: 'Get consistent, polished content',
-    price: '$297',
+    price: '$247',
     billing: '/mo',
-    reels: '4 Reels/Month',
+    reels: '6 Reels/Month',
     turnaround: '72-hour turnaround',
     revisions: '1 revision per video',
     features: [
-      '4 Professionally Edited Reels/Month',
+      '6 Professionally Edited Reels/Month',
       'Editing: color grading, captions, hooks, transitions',
       'Growth: hashtag strategy, posting times, trending audio',
       'Profile: bio optimization guide',
@@ -26,14 +26,14 @@ const PACKAGES = [
     name: 'Growth',
     slug: 'content-growth',
     tagline: 'For creators ready to break through',
-    price: '$597',
+    price: '$497',
     billing: '/mo',
-    reels: '8 Reels/Month',
+    reels: '12 Reels/Month',
     turnaround: '48-hour turnaround',
     revisions: '2 revisions per video',
     featured: true,
     features: [
-      '8 Professionally Edited Reels/Month',
+      '12 Professionally Edited Reels/Month',
       'Editing: color grading, captions, hooks, cover images',
       'Strategy: content calendar, hashtag & posting strategy',
       'Growth: analytics review, trending audio, posting times',
@@ -47,13 +47,13 @@ const PACKAGES = [
     name: 'Full Engine',
     slug: 'content-full-engine',
     tagline: 'Your entire content operation, handled',
-    price: '$997',
+    price: '$897',
     billing: '/mo',
-    reels: '12+ Reels/Month',
+    reels: '24 Reels/Month',
     turnaround: '24-hour priority',
     revisions: 'Unlimited revisions',
     features: [
-      '12+ Professionally Edited Reels/Month',
+      '24 Professionally Edited Reels/Month',
       'Editing: color grading, captions, hooks, cover images',
       'Strategy: 1-hour monthly session, content calendar, shot list',
       'Writing: captions for all posts, CTA strategy',
@@ -113,7 +113,7 @@ export default function ContentEditingPage() {
             YOUR CONTENT SHOULD{' '}
             <span className="text-gold">STOP THE SCROLL</span>
           </h1>
-          <p className="text-ivory/60 mb-2">Packages from <span className="text-gold font-bold">$297 — $997/month</span></p>
+          <p className="text-ivory/60 mb-2">Packages from <span className="text-gold font-bold">$247 — $897/month</span></p>
           <p className="text-ivory/40 text-sm">No contract. Cancel anytime. Pick your package below.</p>
         </div>
       </section>
@@ -220,7 +220,7 @@ export default function ContentEditingPage() {
       <section className="py-20 px-4 border-t border-smoke">
         <div className="max-w-3xl mx-auto">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase text-center mb-3">Full Engine Breakdown</p>
-          <h2 className="text-3xl font-bold text-center text-white mb-4">What&apos;s in the $997 Package</h2>
+          <h2 className="text-3xl font-bold text-center text-white mb-4">What&apos;s in the $897 Package</h2>
           <div className="w-16 h-0.5 bg-gold/50 mx-auto mb-10" />
 
           <div className="space-y-3">
@@ -263,9 +263,9 @@ export default function ContentEditingPage() {
             <div className="bg-gold/5 border-2 border-gold rounded-2xl p-6 text-center">
               <h4 className="text-gold text-xs tracking-widest uppercase mb-4">Content Engine</h4>
               <ul className="text-left space-y-2 text-sm text-white mb-4">
-                <li>4-12+ Reels/month</li><li>Strategy included</li><li>24-48 hour turnaround</li>
+                <li>6-24 Reels/month</li><li>Strategy included</li><li>24-48 hour turnaround</li>
               </ul>
-              <p className="text-gold font-bold text-lg">$297-$997/mo</p>
+              <p className="text-gold font-bold text-lg">$247-$897/mo</p>
             </div>
           </div>
         </div>

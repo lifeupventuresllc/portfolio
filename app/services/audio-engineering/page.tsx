@@ -7,13 +7,13 @@ const PACKAGES = [
     name: 'Mix Monthly',
     slug: 'audio-monthly-1',
     tagline: '1 track per month — consistent releases',
-    price: '$150',
+    price: '$175',
     billing: '/mo',
-    tracks: '1 Track/Month',
+    tracks: '2 Tracks/Month',
     turnaround: '48-hour turnaround',
     revisions: '2 revisions',
     features: [
-      '1 track mix & master per month',
+      '2 tracks mix & master per month',
       'Mixing: EQ, compression, effects, reference matching',
       'Delivery: WAV 24-bit + MP3 320kbps, streaming-ready',
       'Support: file prep guide',
@@ -27,14 +27,14 @@ const PACKAGES = [
     name: 'Mix Pro',
     slug: 'audio-monthly-3',
     tagline: 'For artists dropping consistently',
-    price: '$400',
+    price: '$425',
     billing: '/mo',
-    tracks: '3 Tracks/Month',
+    tracks: '4 Tracks/Month',
     turnaround: '5-day turnaround',
     revisions: '2 revisions per track',
     featured: true,
     features: [
-      '3 tracks mix & master per month',
+      '4 tracks mix & master per month',
       'Mixing: EQ, compression, effects, vocal tuning, reference matching',
       'Consistency: matched sound across all tracks',
       'Delivery: WAV 24-bit + MP3 320kbps, streaming-ready',
@@ -49,13 +49,13 @@ const PACKAGES = [
     name: 'Mix Elite',
     slug: 'audio-monthly-6',
     tagline: 'Full album pipeline — your dedicated engineer',
-    price: '$750',
+    price: '$799',
     billing: '/mo',
-    tracks: '6 Tracks/Month',
+    tracks: '8 Tracks/Month',
     turnaround: '48-hour priority',
     revisions: 'Unlimited revisions',
     features: [
-      '6 tracks mix & master per month',
+      '8 tracks mix & master per month',
       'Direction: 1-hour monthly creative direction session',
       'Mixing: EQ, compression, effects, vocal tuning, sound design',
       'Consistency: full project cohesion across every track',
@@ -70,9 +70,9 @@ const PACKAGES = [
 ]
 
 const ONE_TIME = [
-  { name: 'Single', slug: 'audio-single', price: '$150', desc: '1 track mix & master' },
-  { name: 'EP (3-5 tracks)', slug: 'audio-ep', price: '$500', desc: 'Consistent sound across your project' },
-  { name: 'Album (6-12 tracks)', slug: 'audio-album', price: '$1,000', desc: 'Full project with creative direction' },
+  { name: 'Single', slug: 'audio-single', price: '$99', desc: '1 track mix & master' },
+  { name: 'EP (5 tracks)', slug: 'audio-ep', price: '$399', desc: 'Consistent sound across your project' },
+  { name: 'Album (10+ tracks)', slug: 'audio-album', price: '$699', desc: 'Full project with creative direction' },
 ]
 
 export default function AudioEngineeringPage() {
@@ -108,7 +108,7 @@ export default function AudioEngineeringPage() {
             YOUR MUSIC DESERVES A{' '}
             <span className="text-gold">PROFESSIONAL MIX</span>
           </h1>
-          <p className="text-ivory/60 mb-2">Monthly plans from <span className="text-gold font-bold">$150/mo</span> — or pay per project</p>
+          <p className="text-ivory/60 mb-2">Monthly plans from <span className="text-gold font-bold">$175/mo</span> — or pay per project</p>
           <p className="text-ivory/40 text-sm">10+ years experience. Singles to full albums. Cancel anytime.</p>
         </div>
       </section>

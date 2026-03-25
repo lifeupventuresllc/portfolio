@@ -7,10 +7,10 @@ const BUNDLES = [
     name: 'The Creator Package',
     slug: 'bundle-creator',
     tagline: 'Everything you need to launch as a creator',
-    price: '$697',
+    price: '$597',
     billing: '/mo',
-    separatePrice: 926,
-    savings: 229,
+    separatePrice: 822,
+    savings: 225,
     featured: false,
     highlights: [
       '4 Reels/Month (Content Editing)',
@@ -54,10 +54,10 @@ const BUNDLES = [
     name: 'The Empire Package',
     slug: 'bundle-empire',
     tagline: 'For creators building a brand empire',
-    price: '$1,497',
+    price: '$997',
     billing: '/mo',
-    separatePrice: 2126,
-    savings: 629,
+    separatePrice: 1322,
+    savings: 325,
     featured: true,
     highlights: [
       '12+ Reels/Month (Full Engine)',
@@ -114,10 +114,10 @@ const BUNDLES = [
 ]
 
 const PRICE_COMPARISON = [
-  { service: 'Content Editing — Starter (4 Reels/mo)', individual: '$297', bundle: 'Creator' },
-  { service: 'Content Editing — Full Engine (12+ Reels/mo)', individual: '$997', bundle: 'Empire' },
-  { service: 'Audio Engineering — 1 Track/mo', individual: '$599', bundle: 'Creator' },
-  { service: 'Audio Engineering — 3 Tracks/mo', individual: '$1,099', bundle: 'Empire' },
+  { service: 'Content Editing — Starter (6 Reels/mo)', individual: '$247', bundle: 'Creator' },
+  { service: 'Content Editing — Scale (24 Reels/mo)', individual: '$897', bundle: 'Empire' },
+  { service: 'Audio Engineering — 2 Tracks/mo', individual: '$175', bundle: 'Creator' },
+  { service: 'Audio Engineering — 4 Tracks/mo', individual: '$425', bundle: 'Empire' },
   { service: '12-Week Fitness Program', individual: '$30', bundle: 'Both' },
 ]
 
@@ -154,7 +154,7 @@ export default function BundlesPage() {
           </p>
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
             BUNDLE &amp; SAVE{' '}
-            <span className="text-gold">UP TO $629/MO</span>
+            <span className="text-gold">UP TO $325/MO</span>
           </h1>
           <p className="text-ivory/60 mb-3 max-w-2xl mx-auto leading-relaxed">
             Why hire 3 separate people when you can get content editing, audio engineering, and a
@@ -404,7 +404,7 @@ export default function BundlesPage() {
               },
               {
                 title: 'Save Thousands',
-                desc: 'Hiring separate editors, engineers, and trainers adds up fast. Bundles save you up to $629/mo.',
+                desc: 'Hiring separate editors, engineers, and trainers adds up fast. Bundles save you up to $325/mo.',
               },
               {
                 title: 'One Point of Contact',
