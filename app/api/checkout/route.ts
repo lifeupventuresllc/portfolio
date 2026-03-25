@@ -21,6 +21,8 @@ export async function POST(request: NextRequest) {
         'audio-monthly-1':    { name: 'Audio Engineering - Mix Monthly', description: '1 track mix & master per month', price: 15000, mode: 'subscription', category: 'audio-engineering' },
         'audio-monthly-3':    { name: 'Audio Engineering - Mix Pro', description: '3 tracks mix & master per month', price: 40000, mode: 'subscription', category: 'audio-engineering' },
         'audio-monthly-6':    { name: 'Audio Engineering - Mix Elite', description: '6 tracks mix & master per month', price: 75000, mode: 'subscription', category: 'audio-engineering' },
+        'bundle-creator':     { name: 'The Creator Package', description: 'Content + Audio + Fitness bundle', price: 69700, mode: 'subscription', category: 'content-editing' },
+        'bundle-empire':      { name: 'The Empire Package', description: 'Full Engine + Mix Pro + Fitness + Strategy', price: 149700, mode: 'subscription', category: 'content-editing' },
       }
 
       const pkg = PACKAGES[packageSlug]
