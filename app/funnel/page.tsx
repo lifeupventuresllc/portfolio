@@ -132,67 +132,53 @@ export default function FunnelPage() {
         )}
 
         {step === 2 && selected && (
-          <div className="text-center">
-            <div className="w-20 h-20 bg-gold/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-gold text-3xl">✓</span>
-            </div>
-            <h2 className="text-3xl font-bold text-white mb-4">Your Guide is Ready!</h2>
-            <p className="text-ivory/60 mb-10 max-w-md mx-auto leading-relaxed">
-              Thanks, {name}! I also sent a copy to your email. Here&apos;s your instant access:
-            </p>
-
-            {/* Download Card */}
-            <a
-              href={selected.guideUrl}
-              className="block max-w-sm mx-auto bg-gradient-to-br from-charcoal to-gold/5 border-2 border-gold/40 rounded-2xl p-8 mb-10 transition-all duration-500 hover:scale-105 hover:shadow-[0_0_60px_rgba(201,168,76,0.2)] hover:border-gold"
-            >
-              <p className="text-4xl mb-3">{selected.emoji}</p>
-              <h3 className="text-white font-bold text-lg mb-2">{selected.title}</h3>
-              <p className="text-ivory/50 text-sm mb-4">{selected.desc}</p>
-              <span className="inline-block bg-gold text-obsidian px-6 py-2 font-bold text-xs uppercase tracking-wider rounded-xl">
-                Read Now &rarr;
-              </span>
-            </a>
-
-            {/* Next Steps */}
-            <div className="max-w-sm mx-auto text-left space-y-4 mb-10">
-              <p className="text-ivory/40 text-xs uppercase tracking-wider text-center mb-2">What happens next</p>
-              <div className="flex gap-4 items-start">
-                <div className="w-8 h-8 bg-gold text-obsidian rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold">1</div>
-                <div>
-                  <p className="text-white text-sm font-semibold">Read your free guide</p>
-                  <p className="text-ivory/40 text-xs">Actionable strategies you can use right now</p>
-                </div>
+          <div>
+            {/* Success Header */}
+            <div className="text-center mb-10">
+              <div className="w-16 h-16 bg-gold/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-gold text-2xl">✓</span>
               </div>
-              <div className="flex gap-4 items-start">
-                <div className="w-8 h-8 bg-gold text-obsidian rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold">2</div>
-                <div>
-                  <p className="text-white text-sm font-semibold">Want it done for you?</p>
-                  <p className="text-ivory/40 text-xs">Check out my packages — I do all of this and more</p>
-                </div>
-              </div>
-              <div className="flex gap-4 items-start">
-                <div className="w-8 h-8 bg-gold text-obsidian rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold">3</div>
-                <div>
-                  <p className="text-white text-sm font-semibold">I&apos;ll follow up</p>
-                  <p className="text-ivory/40 text-xs">I may reach out to see if I can help further</p>
-                </div>
-              </div>
+              <h2 className="text-3xl font-bold text-white mb-2">Here&apos;s Your Free Guide, {name}!</h2>
+              <p className="text-ivory/50 text-sm">I also sent a copy to your email. Scroll down to read it now.</p>
             </div>
 
-            <a
-              href={selectedService === 'content' ? '/services/content-editing#pricing' : selectedService === 'audio' ? '/services/audio-engineering#pricing' : '/#fitness'}
-              className="inline-block bg-gold text-obsidian px-8 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
-            >
-              Browse My Packages
-            </a>
-
-            <p className="text-ivory/20 text-xs mt-8">
-              Questions? DM me{' '}
-              <a href="https://instagram.com/1AsaLuke" target="_blank" rel="noopener noreferrer" className="text-gold/50 hover:text-gold">
-                @1AsaLuke
+            {/* Offer CTA — Top */}
+            <div className="text-center mb-8">
+              <a
+                href={selectedService === 'content' ? '/services/content-editing#pricing' : selectedService === 'audio' ? '/services/audio-engineering#pricing' : '/#fitness'}
+                className="inline-block bg-gold text-obsidian px-8 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
+              >
+                Want This Done For You? View Packages
               </a>
-            </p>
+            </div>
+
+            {/* Embedded Guide — No Click Away */}
+            <div className="rounded-2xl overflow-hidden border-2 border-gold/20">
+              <iframe
+                src={selected.guideUrl}
+                className="w-full border-0"
+                style={{ height: '80vh', minHeight: '600px' }}
+                title={selected.title}
+              />
+            </div>
+
+            {/* Offer CTA — Bottom */}
+            <div className="text-center mt-10 bg-gradient-to-br from-charcoal to-gold/5 border border-gold/30 rounded-2xl p-8">
+              <h3 className="text-xl font-bold text-white mb-3">Ready to Level Up?</h3>
+              <p className="text-ivory/60 text-sm mb-6">This guide shows you the strategy. I do all of this and more — done for you.</p>
+              <a
+                href={selectedService === 'content' ? '/services/content-editing#pricing' : selectedService === 'audio' ? '/services/audio-engineering#pricing' : '/#fitness'}
+                className="inline-block bg-gold text-obsidian px-10 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
+              >
+                Browse My Packages
+              </a>
+              <p className="text-ivory/20 text-xs mt-6">
+                Questions? DM me{' '}
+                <a href="https://instagram.com/1AsaLuke" target="_blank" rel="noopener noreferrer" className="text-gold/50 hover:text-gold">
+                  @1AsaLuke
+                </a>
+              </p>
+            </div>
           </div>
         )}
 
