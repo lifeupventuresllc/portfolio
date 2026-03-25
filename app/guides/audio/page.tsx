@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { SaveGuideButton } from './save-button'
 
 export const metadata = {
   title: 'Free: The Mix Fix — Asa Luke',
@@ -11,14 +12,18 @@ export default function AudioGuide() {
       <div className="max-w-3xl mx-auto px-6 py-16">
         {/* Header */}
         <div className="text-center mb-16">
+          <span className="inline-block bg-emerald-500 text-white text-xs font-bold uppercase px-4 py-1 rounded-full tracking-wider mb-4">100% FREE</span>
           <p className="text-gold text-xs font-semibold tracking-[0.3em] uppercase mb-4">Free Digital Asset</p>
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 leading-tight">
             <span className="text-gold">The Mix Fix</span>
           </h1>
-          <p className="text-ivory/60 max-w-lg mx-auto mb-8">A universal vocal chain that works in any DAW. No specific plugins needed — just your stock tools. Each step is 1-2 actions max. By Asa Luke.</p>
-          <Link href="/services/audio-engineering#pricing" className="inline-block bg-gold text-obsidian px-8 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
-            Want a Pro Mix? View Packages
-          </Link>
+          <p className="text-ivory/60 max-w-lg mx-auto mb-6">A universal vocal chain that works in any DAW. No specific plugins needed — just your stock tools. Each step is 1-2 actions max. By Asa Luke.</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4">
+            <SaveGuideButton />
+            <Link href="/services/audio-engineering" className="inline-block bg-gold text-obsidian px-6 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
+              Want a Pro Mix? View Packages
+            </Link>
+          </div>
         </div>
 
         {/* Intro */}

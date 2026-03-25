@@ -74,6 +74,7 @@ export default function FitnessGuide() {
       <div className="max-w-3xl mx-auto px-6 py-16">
         {/* Header */}
         <div className="text-center mb-16">
+          <span className="inline-block bg-emerald-500 text-white text-xs font-bold uppercase px-4 py-1 rounded-full tracking-wider mb-4">100% FREE</span>
           <p className="text-gold text-xs font-semibold tracking-[0.3em] uppercase mb-4">2 Free Digital Assets</p>
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-2 leading-tight">
             <span className="text-gold">The Fast Food Flip</span>
@@ -82,10 +83,16 @@ export default function FitnessGuide() {
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
             <span className="text-gold">The Compound Comeback</span>
           </h1>
-          <p className="text-ivory/60 max-w-lg mx-auto mb-8">5-day fast food meal plans for 3 weight classes + a 7-day progressive overload program. By Asa Luke.</p>
-          <Link href="/#fitness" className="inline-block bg-gold text-obsidian px-8 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
-            Want the Full 12-Week Program? View Now
-          </Link>
+          <p className="text-ivory/60 max-w-lg mx-auto mb-6">5-day fast food meal plans for 3 weight classes + a 7-day progressive overload program. By Asa Luke.</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4">
+            <button onClick={() => window.print()} className="inline-flex items-center gap-2 border-2 border-gold text-gold px-6 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl hover:bg-gold/10 transition-all">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              Save / Download Guide
+            </button>
+            <Link href="/services/bundles" className="inline-block bg-gold text-obsidian px-6 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
+              Want the Full 12-Week Program? View Now
+            </Link>
+          </div>
         </div>
 
         {/* ═══════════════════════════════════════ */}
