@@ -1,19 +1,15 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 
-export const metadata = {
-  title: 'Free: The Fast Food Flip + The Compound Comeback — Asa Luke',
-  description: 'Two free fitness assets: 7-day healthy fast food swaps and a 7-day progressive overload compound movement program.',
-}
-
-const SWAPS = [
-  { day: 'Day 1', craving: "McDonald's Big Mac Meal", swap: 'Chipotle Chicken Bowl', details: 'Chicken, white rice, black beans, fajita veggies, fresh tomato salsa, lettuce', macros: '665 cal | 52g protein', tip: 'Skip tortilla, sour cream, cheese. Add double protein for $3 more = 80g+ protein.' },
-  { day: 'Day 2', craving: "Chick-fil-A Deluxe Meal", swap: 'Chick-fil-A Grilled Nuggets + Side', details: '12-count grilled nuggets, fruit cup, side salad with light dressing', macros: '380 cal | 42g protein', tip: 'Grilled nuggets = best fast food protein source. 25g protein for 140 cal.' },
-  { day: 'Day 3', craving: 'Taco Bell Crunchwrap', swap: 'Taco Bell Power Bowl', details: 'Chicken power bowl with black beans, lettuce, tomato, guac', macros: '470 cal | 26g protein', tip: 'Add extra chicken ($1.50). Only item on the menu worth eating for macros.' },
-  { day: 'Day 4', craving: "Wendy's Baconator", swap: "Wendy's Grilled Chicken Wrap + Chili", details: 'Grilled chicken wrap (light sauce) + small chili', macros: '520 cal | 43g protein', tip: "Wendy's chili = underrated. 23g protein for 250 cal." },
-  { day: 'Day 5', craving: 'Subway Footlong Meatball', swap: 'Subway Protein Bowl', details: 'Double chicken breast, all veggies, mustard or oil & vinegar. No bread.', macros: '350 cal | 46g protein', tip: 'Protein bowls = cheat code. Double meat, all veggies, skip 200+ bread calories.' },
-  { day: 'Day 6', craving: 'Panda Express Orange Chicken', swap: 'Panda Grilled Teriyaki + Super Greens', details: 'Grilled teriyaki chicken, super greens, half white rice', macros: '420 cal | 36g protein', tip: 'Orange chicken = 490 cal with 25g sugar. Teriyaki grilled = half the calories.' },
-  { day: 'Day 7', craving: 'Pizza (2 slices pepperoni)', swap: 'Build-Your-Own Cauliflower Crust', details: 'Cauliflower or keto crust, red sauce, grilled chicken, veggies, light cheese', macros: '480 cal | 32g protein', tip: "Build your own. Load protein, go light on cheese. Or just eat the pizza — one meal won't ruin you if the other 20 that week are locked in." },
-]
+const DAYS = [1, 2, 3, 4, 5] as const
+const CLASSES = [
+  { id: 1, label: 'Class 1', desc: 'Under 150 lbs' },
+  { id: 2, label: 'Class 2', desc: '150-200 lbs' },
+  { id: 3, label: 'Class 3', desc: '200+ lbs' },
+] as const
 
 const WORKOUTS = [
   {
@@ -21,7 +17,7 @@ const WORKOUTS = [
     exercises: [
       { name: 'Barbell Bench Press', sets: '4 x 8', note: 'Compound. Flat bench, full range of motion. Start with a weight you can do for 8 clean reps.' },
       { name: 'Overhead Press', sets: '3 x 10', note: 'Compound. Standing or seated. Builds shoulder mass and pressing strength.' },
-      { name: 'Dips', sets: '3 x max', note: 'Compound. Bodyweight or weighted. Leans forward = more chest, upright = more triceps.' },
+      { name: 'Dips', sets: '3 x max', note: 'Compound. Bodyweight or weighted. Lean forward = more chest, upright = more triceps.' },
     ],
   },
   {
@@ -71,6 +67,8 @@ const WORKOUTS = [
 ]
 
 export default function FitnessGuide() {
+  const [weightClass, setWeightClass] = useState(1)
+
   return (
     <div className="min-h-screen bg-obsidian">
       <div className="max-w-3xl mx-auto px-6 py-16">
@@ -84,7 +82,7 @@ export default function FitnessGuide() {
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
             <span className="text-gold">The Compound Comeback</span>
           </h1>
-          <p className="text-ivory/60 max-w-lg mx-auto mb-8">7-day healthy fast food swaps + a 7-day progressive overload program built on compound movements. By Asa Luke.</p>
+          <p className="text-ivory/60 max-w-lg mx-auto mb-8">5-day fast food meal plans for 3 weight classes + a 7-day progressive overload program. By Asa Luke.</p>
           <Link href="/#fitness" className="inline-block bg-gold text-obsidian px-8 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
             Want the Full 12-Week Program? View Now
           </Link>
@@ -98,28 +96,45 @@ export default function FitnessGuide() {
             <div className="w-10 h-10 bg-gold text-obsidian rounded-xl flex items-center justify-center font-bold text-sm">1</div>
             <div>
               <h2 className="text-2xl font-bold text-white">The Fast Food Flip</h2>
-              <p className="text-ivory/40 text-sm">Same restaurants. Way better macros.</p>
+              <p className="text-ivory/40 text-sm">No time to cook? No problem.</p>
             </div>
           </div>
 
           <div className="bg-charcoal border border-smoke rounded-2xl p-6 mb-6">
-            <p className="text-ivory/60 text-sm leading-relaxed">Every swap below hits <span className="text-gold font-semibold">26g+ protein</span> and stays under <span className="text-gold font-semibold">700 calories</span>. No cooking. Same drive-throughs you already go to.</p>
+            <p className="text-ivory/60 text-sm leading-relaxed">5 days of fast food alternatives customized for your weight class. Breakfast, lunch, snack, and dinner — all from places you already eat at. Pick your weight class below.</p>
           </div>
 
-          <div className="space-y-4">
-            {SWAPS.map((day, i) => (
-              <section key={i} className="bg-charcoal border border-smoke rounded-2xl p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 bg-gold text-obsidian rounded-full flex items-center justify-center font-bold text-xs">{i + 1}</div>
-                  <div>
-                    <h3 className="text-white font-bold text-sm">{day.day}: {day.swap}</h3>
-                    <p className="text-ivory/40 text-xs">Instead of: {day.craving}</p>
-                  </div>
-                </div>
-                <p className="text-ivory/50 text-sm mb-2">{day.details}</p>
-                <p className="text-gold/80 text-xs font-semibold mb-2">{day.macros}</p>
-                <p className="text-ivory/30 text-xs italic">* {day.tip}</p>
-              </section>
+          {/* Weight Class Selector */}
+          <div className="grid grid-cols-3 gap-3 mb-8">
+            {CLASSES.map((cls) => (
+              <button
+                key={cls.id}
+                onClick={() => setWeightClass(cls.id)}
+                className={`p-4 rounded-2xl border text-center transition-all duration-300 hover:-translate-y-1 ${
+                  weightClass === cls.id
+                    ? 'border-gold bg-gold/10 shadow-[0_0_30px_rgba(201,168,76,0.15)]'
+                    : 'border-smoke bg-charcoal hover:border-gold/40'
+                }`}
+              >
+                <p className="text-white font-bold text-sm">{cls.label}</p>
+                <p className="text-ivory/40 text-xs">{cls.desc}</p>
+              </button>
+            ))}
+          </div>
+
+          {/* Meal Plan Images */}
+          <div className="space-y-6">
+            {DAYS.map((day) => (
+              <div key={day} className="rounded-2xl overflow-hidden border border-smoke/50">
+                <Image
+                  src={`/guides/meal-plan/day${day}-class${weightClass}.png`}
+                  alt={`Day ${day} - Weight Class ${weightClass} meal plan`}
+                  width={800}
+                  height={1200}
+                  className="w-full h-auto"
+                  priority={day <= 2}
+                />
+              </div>
             ))}
           </div>
         </div>
@@ -138,7 +153,7 @@ export default function FitnessGuide() {
 
           <div className="bg-charcoal border border-smoke rounded-2xl p-6 mb-6">
             <h3 className="text-white font-bold text-sm mb-2">The Progressive Overload Rule</h3>
-            <p className="text-ivory/60 text-sm leading-relaxed">Every week, increase by ONE of these: <span className="text-gold font-semibold">+5 lbs</span>, <span className="text-gold font-semibold">+1 rep</span>, or <span className="text-gold font-semibold">+1 set</span>. Small jumps compound into massive gains. This is how muscle is actually built — not by going heavy once, but by going heavier over time.</p>
+            <p className="text-ivory/60 text-sm leading-relaxed">Every week, increase by ONE of these: <span className="text-gold font-semibold">+5 lbs</span>, <span className="text-gold font-semibold">+1 rep</span>, or <span className="text-gold font-semibold">+1 set</span>. Small jumps compound into massive gains.</p>
           </div>
 
           <div className="space-y-6">
