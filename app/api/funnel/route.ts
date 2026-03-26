@@ -36,6 +36,72 @@ const GUIDE_INFO = {
   },
 } as Record<string, { label: string; path: string; desc: string; packagePath: string; assets: { name: string; desc: string }[] }>
 
+const EMAIL_GUIDE_CONTENT: Record<string, string> = {
+  content: `
+    <div style="background:#f9f9f9; border:1px solid #ddd; border-radius:12px; padding:24px; margin:20px 0;">
+      <h3 style="color:#C9A84C; margin:0 0 12px;">Asset 1: Caption Traction</h3>
+      <p style="font-size:13px; color:#555; margin-bottom:12px;">Copy this prompt into ChatGPT, Claude, or any AI. Replace the [BRACKETS] with your details.</p>
+      <div style="background:#fff; border:1px solid #e0e0e0; border-radius:8px; padding:16px; font-family:monospace; font-size:12px; line-height:1.6; color:#333;">
+        <p>You are a viral content strategist for short-form video (Reels, TikTok, Shorts). I'm making a video about <strong>[DESCRIBE VIDEO]</strong> in the <strong>[YOUR NICHE]</strong> niche for <strong>[TARGET CUSTOMER]</strong>. My tone is <strong>[YOUR TONE]</strong>. Generate:</p>
+        <p><strong>1. TABLOID-STYLE HEADLINE & CAPTION</strong> — Bold headline playing on my target market's #1 fear. Open with fear, build tension, end with relief/solution.</p>
+        <p><strong>2. THREE THUMBNAIL/ON-SCREEN TEXT OPTIONS:</strong><br>A) Curiosity Gap — makes them NEED to watch<br>B) Bold Claim — a specific, surprising statement<br>C) Pattern Interrupt — breaks expectations</p>
+        <p><strong>3. THREE CAPTION VARIATIONS:</strong><br>A) Story-based — personal hook → lesson → CTA<br>B) Value-first — lead with the tip → expand → CTA<br>C) Controversial — hot take → defend it → CTA</p>
+        <p><strong>4. 15 HASHTAGS:</strong> 3 broad (500K+), 5 mid-range (50K-500K), 7 niche (under 50K)</p>
+      </div>
+    </div>
+    <div style="background:#f9f9f9; border:1px solid #ddd; border-radius:12px; padding:24px; margin:20px 0;">
+      <h3 style="color:#C9A84C; margin:0 0 12px;">Asset 2: Reel Appeal — 7-Step System</h3>
+      <div style="font-size:13px; color:#333; line-height:1.8;">
+        <p><strong>1. Hook in 0.5 seconds</strong> — Use open loops: "Nobody talks about this..." / "Stop scrolling if you..."</p>
+        <p><strong>2. Film in natural light</strong> — 4K 30fps, face the window, golden hour is best</p>
+        <p><strong>3. 3-Pillar content strategy</strong> — Educate (30%), Entertain (40%), Connect (30%)</p>
+        <p><strong>4. Caption = Second hook</strong> — First line must stop the scroll. Use story, value, or controversy</p>
+        <p><strong>5. Post at peak hours</strong> — Weekdays: 7-9 AM, 12-1 PM, 7-9 PM. Weekends: 9-11 AM</p>
+        <p><strong>6. Hashtag strategy</strong> — 5-15 tags: mix of broad, mid-range, and niche</p>
+        <p><strong>7. Optimize your bio</strong> — Line 1: What you do. Line 2: Who it's for. Line 3: CTA + link</p>
+      </div>
+    </div>
+  `,
+  audio: `
+    <div style="background:#f9f9f9; border:1px solid #ddd; border-radius:12px; padding:24px; margin:20px 0;">
+      <h3 style="color:#C9A84C; margin:0 0 12px;">The Mix Fix — 7-Step Vocal Chain</h3>
+      <p style="font-size:12px; color:#888; margin-bottom:16px;">Works in Logic, FL Studio, Ableton, Pro Tools, GarageBand, Studio One — stock plugins only.</p>
+      <div style="font-size:13px; color:#333; line-height:1.8;">
+        <p><strong>Step 1: Turn It Down (Gain Staging)</strong><br>Pull vocal fader to <strong>-12 dB</strong> peak. Gives plugins headroom to work.</p>
+        <p><strong>Step 2: Cut the Junk (Subtractive EQ)</strong><br>High-pass filter at <strong>80 Hz</strong>. Narrow cut at 200-400 Hz (<strong>-2 to -3 dB</strong>).</p>
+        <p><strong>Step 3: Tame the S Sounds (De-Esser)</strong><br>Target <strong>6-7 kHz</strong>. Set threshold so it only catches harsh sibilance.</p>
+        <p><strong>Step 4: Even It Out (Compressor)</strong><br><strong>3:1 ratio</strong>, 10-15ms attack, 100ms release, 3-5 dB gain reduction.</p>
+        <p><strong>Step 5: Add the Shine (Additive EQ)</strong><br>High shelf at <strong>10 kHz (+1 to +2 dB)</strong>. Optional: small boost at 4-5 kHz for presence.</p>
+        <p><strong>Step 6: Add Space (Reverb)</strong><br>Send/bus only. Plate or Room preset. <strong>1.2-1.5s decay</strong>. Blend low.</p>
+        <p><strong>Step 7: Add Movement (Delay)</strong><br>Send/bus only. <strong>1/4 note sync</strong>, 15-20% feedback. Should be barely audible.</p>
+        <p style="margin-top:12px; padding:12px; background:#fff; border:1px solid #C9A84C; border-radius:8px; text-align:center; font-weight:bold; color:#C9A84C;">
+          Chain: Gain Stage → Cut EQ → De-Esser → Compressor → Shine EQ → Reverb → Delay
+        </p>
+      </div>
+    </div>
+  `,
+  fitness: `
+    <div style="background:#f9f9f9; border:1px solid #ddd; border-radius:12px; padding:24px; margin:20px 0;">
+      <h3 style="color:#C9A84C; margin:0 0 12px;">Asset 1: The Fast Food Flip</h3>
+      <p style="font-size:13px; color:#555;">5 days of fast food alternatives for 3 weight classes. View the full meal plans with images on the guide page — click the button below to access your weight class.</p>
+      <p style="font-size:12px; color:#888;">Classes: Under 150 lbs | 150-200 lbs | 200+ lbs<br>Includes: Breakfast, Lunch, Snack & Dinner for each day</p>
+    </div>
+    <div style="background:#f9f9f9; border:1px solid #ddd; border-radius:12px; padding:24px; margin:20px 0;">
+      <h3 style="color:#C9A84C; margin:0 0 12px;">Asset 2: The Compound Comeback — 7-Day Program</h3>
+      <p style="font-size:12px; color:#888; margin-bottom:12px;">Rule: Add +5 lbs, +1 rep, or +1 set each week (progressive overload)</p>
+      <div style="font-size:13px; color:#333; line-height:1.8;">
+        <p><strong>Day 1: Push</strong> — Barbell Bench Press (4x8), Overhead Press (3x10), Dips (3x max)</p>
+        <p><strong>Day 2: Pull</strong> — Deadlift (4x6), Pull-ups/Lat Pulldown (4x8), Barbell Row (3x10)</p>
+        <p><strong>Day 3: Legs</strong> — Barbell Squat (4x8), Romanian Deadlift (3x10), Walking Lunges (3x12 each)</p>
+        <p><strong>Day 4: Rest</strong> — Active recovery. Walk, stretch, foam roll. 20-30 min.</p>
+        <p><strong>Day 5: Upper Body</strong> — Incline DB Press (4x10), Weighted Pull-ups/Rows (4x8), DB Overhead Press (3x10)</p>
+        <p><strong>Day 6: Legs + Core</strong> — Front Squat (4x8), Hip Thrust (3x12), Hanging Leg Raises (3x15)</p>
+        <p><strong>Day 7: Full Rest</strong> — No gym. Eat well, sleep 7-9 hours, hydrate.</p>
+      </div>
+    </div>
+  `,
+}
+
 export async function POST(request: Request) {
   try {
     const { name, email, service } = await request.json()
@@ -74,7 +140,7 @@ export async function POST(request: Request) {
 
     // Notify Asa
     await resend.emails.send({
-      from: process.env.FROM_EMAIL!,
+      from: `Asa Luke <${process.env.FROM_EMAIL!}>`,
       to: 'info.lifeupventures@gmail.com',
       subject: `New Lead: ${name} downloaded ${guide.label}`,
       html: `
@@ -109,7 +175,7 @@ export async function POST(request: Request) {
 
     // Auto-reply to lead with guide content + links
     await resend.emails.send({
-      from: process.env.FROM_EMAIL!,
+      from: `Asa Luke <${process.env.FROM_EMAIL!}>`,
       to: email,
       subject: `Your free ${guide.label} is ready, ${name}!`,
       html: `
@@ -133,11 +199,13 @@ export async function POST(request: Request) {
             `).join('')}
           </div>
 
+          ${EMAIL_GUIDE_CONTENT[service] || ''}
+
           <div style="text-align: center; margin: 24px 0;">
             <a href="${guideUrl}" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 14px 36px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
-              View & Download Your Free Guide${guide.assets.length > 1 ? 's' : ''} →
+              View Full Guide on Web →
             </a>
-            <p style="color: #999; font-size: 11px; margin-top: 8px;">Click above to view on the web. Use the "Save / Download" button on the page to save as PDF.</p>
+            <p style="color: #999; font-size: 11px; margin-top: 8px;">View the full interactive version with images. Use "Save / Download" to save as PDF.</p>
           </div>
 
           <div style="border-top: 1px solid #eee; padding-top: 16px; margin-top: 16px;">
