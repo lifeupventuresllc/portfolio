@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -18,6 +18,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
   const router = useRouter()
   const supabase = createClient()
+
+  // Clear any stale/invalid auth session on page load
+  useEffect(() => {
+    supabase.auth.signOut().catch(() => {})
+  }, [supabase])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

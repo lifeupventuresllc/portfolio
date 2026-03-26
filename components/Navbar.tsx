@@ -18,8 +18,9 @@ export default function Navbar() {
 
   useEffect(() => {
     async function getUser() {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        setUser(user)
 
       if (user) {
         const { data } = await supabase
@@ -28,6 +29,10 @@ export default function Navbar() {
           .eq('id', user.id)
           .single()
         setProfile(data)
+      }
+      } catch {
+        // Invalid token — sign out to clear it
+        await supabase.auth.signOut().catch(() => {})
       }
     }
     getUser()
