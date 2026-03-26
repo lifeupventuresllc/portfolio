@@ -160,19 +160,6 @@ export async function POST(request: Request) {
       `,
     })
 
-    // Build asset list HTML
-    const assetListHtml = guide.assets.map((asset, i) => `
-      <div style="background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
-        <div style="display: flex; align-items: flex-start;">
-          <div style="background: #C9A84C; color: #0A0A0F; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-weight: bold; font-size: 14px; margin-right: 12px; flex-shrink: 0;">${i + 1}</div>
-          <div>
-            <p style="margin: 0 0 4px; font-weight: bold; font-size: 16px; color: #1a1a1a;">${asset.name}</p>
-            <p style="margin: 0; color: #666; font-size: 13px; line-height: 1.5;">${asset.desc}</p>
-          </div>
-        </div>
-      </div>
-    `).join('')
-
     // Auto-reply to lead with guide content + links
     await resend.emails.send({
       from: `Asa Luke <${process.env.FROM_EMAIL!}>`,
@@ -186,7 +173,7 @@ export async function POST(request: Request) {
           <div style="background: #0A0A0F; border: 2px solid #C9A84C; border-radius: 12px; padding: 20px; margin: 20px 0;">
             <p style="color: #4ade80; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 4px;">100% FREE</p>
             <p style="color: #fff; font-size: 18px; font-weight: bold; margin: 0 0 16px;">${guide.label}</p>
-            ${guide.assets.map((asset, i) => `
+            ${guide.assets.map((asset) => `
               <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;">
                 <table style="width: 100%;"><tr>
                   <td style="color: #C9A84C; font-size: 12px; width: 20px; vertical-align: top; padding-right: 8px;">&#10003;</td>
