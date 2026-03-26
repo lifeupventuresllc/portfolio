@@ -163,6 +163,7 @@ export default function FunnelPage() {
               </div>
               <h2 className="text-3xl font-bold text-white mb-2">You&apos;re In, {name}!</h2>
               <p className="text-ivory/50 text-sm mb-1">Your free guides are ready below. A copy was also sent to your email.</p>
+              <p className="text-ivory/40 text-xs">Don&apos;t see it? Check your <strong className="text-ivory/60">Spam</strong> or <strong className="text-ivory/60">Junk</strong> folder — look for an email from <strong className="text-gold">Asa Luke</strong>.</p>
             </div>
 
             {/* Your Free Assets */}
