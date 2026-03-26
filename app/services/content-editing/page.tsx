@@ -294,10 +294,12 @@ export default function ContentEditingPage() {
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-white mb-4">Ready to Level Up Your Content?</h2>
           <p className="text-ivory/60 mb-8">Limited spots each month. Reach out now to lock yours in.</p>
-          <a href="https://instagram.com/1AsaLuke" target="_blank" rel="noopener noreferrer"
-            className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
-            Get Started — DM @1AsaLuke
-          </a>
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] cursor-pointer"
+          >
+            Get Started — Pick Your Package
+          </button>
         </div>
       </section>
 

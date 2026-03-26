@@ -466,14 +466,12 @@ export default function BundlesPage() {
           <p className="text-ivory/60 mb-8">
             Limited bundle spots each month. Lock yours in now.
           </p>
-          <a
-            href="https://instagram.com/1AsaLuke"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] cursor-pointer"
           >
-            Get Started — DM @1AsaLuke
-          </a>
+            Get Started — Pick Your Package
+          </button>
         </div>
       </section>
 
