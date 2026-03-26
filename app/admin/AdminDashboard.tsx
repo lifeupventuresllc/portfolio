@@ -371,10 +371,10 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
     return (
       <div className="max-w-7xl mx-auto py-12 px-4">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-48" />
+          <div className="h-8 bg-smoke rounded w-48" />
           <div className="grid grid-cols-4 gap-4">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-24 bg-gray-200 rounded-xl" />
+              <div key={i} className="h-24 bg-smoke rounded-xl" />
             ))}
           </div>
         </div>
@@ -385,66 +385,66 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
   return (
     <div className="max-w-7xl mx-auto py-8 px-4">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
         {!isAdmin && (
-          <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+          <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-medium">
             Support View (Read Only)
           </span>
         )}
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl">
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl">
           {error}
         </div>
       )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="text-sm text-gray-500">Total Users</div>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{kpis.totalUsers}</div>
+        <div className="bg-charcoal rounded-xl border border-smoke p-5">
+          <div className="text-sm text-ivory/50">Total Users</div>
+          <div className="text-2xl font-bold text-white mt-1">{kpis.totalUsers}</div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="text-sm text-gray-500">Total Sales</div>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{kpis.totalSales}</div>
+        <div className="bg-charcoal rounded-xl border border-smoke p-5">
+          <div className="text-sm text-ivory/50">Total Sales</div>
+          <div className="text-2xl font-bold text-white mt-1">{kpis.totalSales}</div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="text-sm text-gray-500">Total Revenue</div>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(kpis.totalRevenue)}</div>
+        <div className="bg-charcoal rounded-xl border border-smoke p-5">
+          <div className="text-sm text-ivory/50">Total Revenue</div>
+          <div className="text-2xl font-bold text-white mt-1">{formatCurrency(kpis.totalRevenue)}</div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="text-sm text-gray-500">Conversion Rate</div>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{kpis.conversionRate.toFixed(1)}%</div>
+        <div className="bg-charcoal rounded-xl border border-smoke p-5">
+          <div className="text-sm text-ivory/50">Conversion Rate</div>
+          <div className="text-2xl font-bold text-white mt-1">{kpis.conversionRate.toFixed(1)}%</div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="text-sm text-gray-500">Customers</div>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{kpis.totalCustomers}</div>
+        <div className="bg-charcoal rounded-xl border border-smoke p-5">
+          <div className="text-sm text-ivory/50">Customers</div>
+          <div className="text-2xl font-bold text-white mt-1">{kpis.totalCustomers}</div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="text-sm text-gray-500">Refunds</div>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{kpis.totalRefunds}</div>
+        <div className="bg-charcoal rounded-xl border border-smoke p-5">
+          <div className="text-sm text-ivory/50">Refunds</div>
+          <div className="text-2xl font-bold text-white mt-1">{kpis.totalRefunds}</div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="text-sm text-gray-500">Refund Rate</div>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{kpis.refundRate.toFixed(1)}%</div>
+        <div className="bg-charcoal rounded-xl border border-smoke p-5">
+          <div className="text-sm text-ivory/50">Refund Rate</div>
+          <div className="text-2xl font-bold text-white mt-1">{kpis.refundRate.toFixed(1)}%</div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="text-sm text-gray-500">Retention Rate</div>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{kpis.retentionRate.toFixed(1)}%</div>
+        <div className="bg-charcoal rounded-xl border border-smoke p-5">
+          <div className="text-sm text-ivory/50">Retention Rate</div>
+          <div className="text-2xl font-bold text-white mt-1">{kpis.retentionRate.toFixed(1)}%</div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="flex border-b border-smoke mb-6">
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab
-                ? 'border-black text-gray-900'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-gold text-white'
+                : 'border-transparent text-ivory/50 hover:text-ivory/70'
             }`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -470,7 +470,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
 
           {/* Funnel */}
           {funnelData.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="bg-charcoal rounded-xl border border-smoke p-6">
               <h2 className="text-lg font-semibold mb-4">Funnel</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
@@ -484,9 +484,9 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
                   else if (step.type === 'purchases') count = kpis.totalSales
                   else count = funnelData.find(f => f.event_type === step.key)?.count || 0
                   return (
-                    <div key={i} className="text-center p-4 bg-gray-50 rounded-xl">
-                      <div className="text-2xl font-bold text-gray-900">{count}</div>
-                      <div className="text-xs text-gray-500 mt-1">{step.label}</div>
+                    <div key={i} className="text-center p-4 bg-obsidian rounded-xl">
+                      <div className="text-2xl font-bold text-white">{count}</div>
+                      <div className="text-xs text-ivory/50 mt-1">{step.label}</div>
                     </div>
                   )
                 })}
@@ -495,17 +495,17 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
           )}
 
           {/* Recent Signups */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="bg-charcoal rounded-xl border border-smoke p-6">
             <h2 className="text-lg font-semibold mb-4">Recent Signups</h2>
             <AdminTable
               columns={[
                 { key: 'email', label: 'Email' },
                 { key: 'role', label: 'Role', render: (item) => (
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    item.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                    item.role === 'support' ? 'bg-yellow-100 text-yellow-700' :
-                    item.role === 'customer' ? 'bg-green-100 text-green-700' :
-                    'bg-gray-100 text-gray-700'
+                    item.role === 'admin' ? 'bg-purple-500/20 text-purple-400' :
+                    item.role === 'support' ? 'bg-yellow-500/20 text-yellow-400' :
+                    item.role === 'customer' ? 'bg-emerald-500/20 text-emerald-400' :
+                    'bg-smoke text-ivory/70'
                   }`}>{item.role}</span>
                 )},
                 { key: 'created_at', label: 'Joined', render: (item) => formatDate(item.created_at) },
@@ -516,7 +516,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
           </div>
 
           {/* Recent Payments */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="bg-charcoal rounded-xl border border-smoke p-6">
             <h2 className="text-lg font-semibold mb-4">Recent Payments</h2>
             <AdminTable
               columns={[
@@ -524,10 +524,10 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
                 { key: 'amount', label: 'Amount', render: (item) => formatCurrency(item.amount) },
                 { key: 'status', label: 'Status', render: (item) => (
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    item.status === 'completed' ? 'bg-green-100 text-green-700' :
-                    item.status === 'refunded' ? 'bg-red-100 text-red-700' :
-                    item.status === 'failed' ? 'bg-red-100 text-red-700' :
-                    'bg-yellow-100 text-yellow-700'
+                    item.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
+                    item.status === 'refunded' ? 'bg-red-500/20 text-red-400' :
+                    item.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                    'bg-yellow-500/20 text-yellow-400'
                   }`}>{item.status}</span>
                 )},
                 { key: 'created_at', label: 'Date', render: (item) => formatDate(item.created_at) },
@@ -541,19 +541,19 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
 
       {/* Users Tab */}
       {activeTab === 'users' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-charcoal rounded-xl border border-smoke p-6">
           <div className="flex flex-wrap gap-4 mb-6">
             <input
               type="text"
               placeholder="Search by email..."
               value={userSearch}
               onChange={(e) => setUserSearch(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              className="px-3 py-2 border border-smoke rounded-lg text-sm focus:outline-none focus:border-gold"
             />
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              className="px-3 py-2 border border-smoke rounded-lg text-sm focus:outline-none focus:border-gold"
             >
               <option value="all">All Roles</option>
               <option value="admin">Admin</option>
@@ -568,10 +568,10 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
               { key: 'email', label: 'Email' },
               { key: 'role', label: 'Role', render: (item) => (
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  item.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                  item.role === 'support' ? 'bg-yellow-100 text-yellow-700' :
-                  item.role === 'customer' ? 'bg-green-100 text-green-700' :
-                  'bg-gray-100 text-gray-700'
+                  item.role === 'admin' ? 'bg-purple-500/20 text-purple-400' :
+                  item.role === 'support' ? 'bg-yellow-500/20 text-yellow-400' :
+                  item.role === 'customer' ? 'bg-emerald-500/20 text-emerald-400' :
+                  'bg-smoke text-ivory/70'
                 }`}>{item.role}</span>
               )},
               { key: 'created_at', label: 'Joined', render: (item) => formatDate(item.created_at) },
@@ -580,7 +580,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
                   <select
                     value={item.role}
                     onChange={(e) => handleRoleChange(item.id, e.target.value)}
-                    className="text-xs border border-gray-300 rounded px-2 py-1"
+                    className="text-xs border border-smoke rounded px-2 py-1"
                   >
                     <option value="free">Free</option>
                     <option value="customer">Customer</option>
@@ -598,12 +598,12 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
 
       {/* Payments Tab */}
       {activeTab === 'payments' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-charcoal rounded-xl border border-smoke p-6">
           <div className="flex flex-wrap gap-4 mb-6">
             <select
               value={paymentStatusFilter}
               onChange={(e) => setPaymentStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              className="px-3 py-2 border border-smoke rounded-lg text-sm focus:outline-none focus:border-gold"
             >
               <option value="all">All Statuses</option>
               <option value="completed">Completed</option>
@@ -615,18 +615,18 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="px-3 py-2 border border-smoke rounded-lg text-sm"
               placeholder="From"
             />
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="px-3 py-2 border border-smoke rounded-lg text-sm"
               placeholder="To"
             />
             {(dateFrom || dateTo) && (
-              <div className="text-sm text-gray-500 self-center">
+              <div className="text-sm text-ivory/50 self-center">
                 Filtered revenue: <strong>{formatCurrency(filteredRevenue)}</strong>
               </div>
             )}
@@ -638,10 +638,10 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
               { key: 'amount', label: 'Amount', render: (item) => formatCurrency(item.amount) },
               { key: 'status', label: 'Status', render: (item) => (
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  item.status === 'completed' ? 'bg-green-100 text-green-700' :
-                  item.status === 'refunded' ? 'bg-red-100 text-red-700' :
-                  item.status === 'failed' ? 'bg-red-100 text-red-700' :
-                  'bg-yellow-100 text-yellow-700'
+                  item.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
+                  item.status === 'refunded' ? 'bg-red-500/20 text-red-400' :
+                  item.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                  'bg-yellow-500/20 text-yellow-400'
                 }`}>{item.status}</span>
               )},
               { key: 'created_at', label: 'Date', render: (item) => formatDate(item.created_at) },
@@ -666,12 +666,12 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
 
       {/* Emails Tab (CRM) */}
       {activeTab === 'emails' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-charcoal rounded-xl border border-smoke p-6">
           <div className="flex flex-wrap gap-4 mb-6">
             <select
               value={emailTypeFilter}
               onChange={(e) => setEmailTypeFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              className="px-3 py-2 border border-smoke rounded-lg text-sm focus:outline-none focus:border-gold"
             >
               <option value="all">All Types</option>
               <option value="signup">Signup</option>
@@ -681,7 +681,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
               <option value="onboarding_day3">Onboarding Day 3</option>
               <option value="onboarding_day7">Onboarding Day 7</option>
             </select>
-            <span className="text-sm text-gray-500 self-center">
+            <span className="text-sm text-ivory/50 self-center">
               {filteredEmails.length} email{filteredEmails.length !== 1 ? 's' : ''}
             </span>
           </div>
@@ -691,11 +691,11 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
               { key: 'email', label: 'Recipient' },
               { key: 'type', label: 'Type', render: (item) => (
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  item.type === 'purchase' ? 'bg-green-100 text-green-700' :
-                  item.type === 'refund' ? 'bg-red-100 text-red-700' :
-                  item.type === 'welcome' ? 'bg-blue-100 text-blue-700' :
-                  item.type.startsWith('onboarding') ? 'bg-purple-100 text-purple-700' :
-                  'bg-gray-100 text-gray-700'
+                  item.type === 'purchase' ? 'bg-emerald-500/20 text-emerald-400' :
+                  item.type === 'refund' ? 'bg-red-500/20 text-red-400' :
+                  item.type === 'welcome' ? 'bg-blue-500/20 text-blue-400' :
+                  item.type.startsWith('onboarding') ? 'bg-purple-500/20 text-purple-400' :
+                  'bg-smoke text-ivory/70'
                 }`}>{item.type}</span>
               )},
               { key: 'sent_at', label: 'Sent', render: (item) => formatDate(item.sent_at) },
@@ -712,21 +712,21 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
           {/* Lead Stats */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {['new', 'contacted', 'qualified', 'converted', 'lost'].map(status => (
-              <div key={status} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-                <div className="text-2xl font-bold text-gray-900">
+              <div key={status} className="bg-charcoal rounded-xl border border-smoke p-4 text-center">
+                <div className="text-2xl font-bold text-white">
                   {leads.filter(l => l.status === status).length}
                 </div>
-                <div className="text-xs text-gray-500 capitalize mt-1">{status}</div>
+                <div className="text-xs text-ivory/50 capitalize mt-1">{status}</div>
               </div>
             ))}
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="bg-charcoal rounded-xl border border-smoke p-6">
             <div className="flex flex-wrap gap-4 mb-6">
               <select
                 value={leadStatusFilter}
                 onChange={(e) => setLeadStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="px-3 py-2 border border-smoke rounded-lg text-sm"
               >
                 <option value="all">All Statuses</option>
                 <option value="new">New</option>
@@ -735,7 +735,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
                 <option value="converted">Converted</option>
                 <option value="lost">Lost</option>
               </select>
-              <span className="text-sm text-gray-500 self-center">
+              <span className="text-sm text-ivory/50 self-center">
                 {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -746,9 +746,9 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
                 { key: 'email', label: 'Email' },
                 { key: 'service', label: 'Service', render: (item) => (
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    item.service === 'content' ? 'bg-blue-100 text-blue-700' :
-                    item.service === 'audio' ? 'bg-purple-100 text-purple-700' :
-                    'bg-green-100 text-green-700'
+                    item.service === 'content' ? 'bg-blue-500/20 text-blue-400' :
+                    item.service === 'audio' ? 'bg-purple-500/20 text-purple-400' :
+                    'bg-emerald-500/20 text-emerald-400'
                   }`}>{item.service}</span>
                 )},
                 { key: 'lead_score', label: 'Score', render: (item) => (
@@ -761,7 +761,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
                     className={`text-xs border rounded px-2 py-1 ${
                       item.status === 'converted' ? 'border-green-300 bg-green-50' :
                       item.status === 'lost' ? 'border-red-300 bg-red-50' :
-                      'border-gray-300'
+                      'border-smoke'
                     }`}
                   >
                     <option value="new">New</option>
@@ -772,7 +772,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
                   </select>
                 )},
                 { key: 'follow_up_stage', label: 'Follow-Up', render: (item) => (
-                  <span className="text-xs text-gray-500">Stage {item.follow_up_stage || 0}/3</span>
+                  <span className="text-xs text-ivory/50">Stage {item.follow_up_stage || 0}/3</span>
                 )},
                 { key: 'created_at', label: 'Date', render: (item) => formatDate(item.created_at) },
               ]}
@@ -789,21 +789,21 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
           {/* Prospect Stats */}
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             {['new', 'contacted', 'replied', 'free-sample', 'pitched', 'closed'].map(status => (
-              <div key={status} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-                <div className="text-2xl font-bold text-gray-900">
+              <div key={status} className="bg-charcoal rounded-xl border border-smoke p-4 text-center">
+                <div className="text-2xl font-bold text-white">
                   {prospects.filter(p => p.status === status).length}
                 </div>
-                <div className="text-xs text-gray-500 capitalize mt-1">{status.replace('-', ' ')}</div>
+                <div className="text-xs text-ivory/50 capitalize mt-1">{status.replace('-', ' ')}</div>
               </div>
             ))}
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="bg-charcoal rounded-xl border border-smoke p-6">
             <div className="flex flex-wrap gap-4 mb-6">
               <select
                 value={prospectStatusFilter}
                 onChange={(e) => setProspectStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="px-3 py-2 border border-smoke rounded-lg text-sm"
               >
                 <option value="all">All Statuses</option>
                 <option value="new">New</option>
@@ -814,7 +814,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
                 <option value="closed">Closed</option>
                 <option value="lost">Lost</option>
               </select>
-              <span className="text-sm text-gray-500 self-center">
+              <span className="text-sm text-ivory/50 self-center">
                 {filteredProspects.length} prospect{filteredProspects.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -824,7 +824,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
                 { key: 'name', label: 'Name' },
                 { key: 'email', label: 'Email', render: (item) => item.email || '—' },
                 { key: 'platform', label: 'Platform', render: (item) => (
-                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 capitalize">
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-smoke text-ivory/70 capitalize">
                     {item.platform}
                   </span>
                 )},
@@ -840,7 +840,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
                   <select
                     value={item.status}
                     onChange={(e) => handleProspectStatusChange(item.id, e.target.value)}
-                    className="text-xs border border-gray-300 rounded px-2 py-1"
+                    className="text-xs border border-smoke rounded px-2 py-1"
                   >
                     <option value="new">New</option>
                     <option value="contacted">Contacted</option>
@@ -865,14 +865,14 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
       {activeTab === 'affiliates' && isAdmin && (
         <div className="space-y-6">
           {/* Create Affiliate */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="bg-charcoal rounded-xl border border-smoke p-6">
             <h2 className="text-lg font-semibold mb-4">Create Affiliate</h2>
             <form onSubmit={handleCreateAffiliate} className="flex flex-wrap gap-4">
               <select
                 value={newAffUserId}
                 onChange={(e) => setNewAffUserId(e.target.value)}
                 required
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="px-3 py-2 border border-smoke rounded-lg text-sm"
               >
                 <option value="">Select User...</option>
                 {profiles.map(p => (
@@ -885,7 +885,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
                 value={newAffCode}
                 onChange={(e) => setNewAffCode(e.target.value)}
                 required
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="px-3 py-2 border border-smoke rounded-lg text-sm"
               />
               <input
                 type="number"
@@ -894,11 +894,11 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
                 onChange={(e) => setNewAffRate(e.target.value)}
                 min="1"
                 max="100"
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-28"
+                className="px-3 py-2 border border-smoke rounded-lg text-sm w-28"
               />
               <button
                 type="submit"
-                className="bg-black text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-800"
+                className="bg-gold text-obsidian px-4 py-2 rounded-lg text-sm hover:bg-gold/90"
               >
                 Create
               </button>
@@ -906,13 +906,13 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
           </div>
 
           {/* Affiliate List */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="bg-charcoal rounded-xl border border-smoke p-6">
             <h2 className="text-lg font-semibold mb-4">Affiliates</h2>
             <AdminTable
               columns={[
                 { key: 'email', label: 'User', render: (item) => item.profiles?.email || 'Unknown' },
                 { key: 'code', label: 'Code', render: (item) => (
-                  <code className="text-xs bg-gray-100 px-2 py-1 rounded">{item.code}</code>
+                  <code className="text-xs bg-smoke px-2 py-1 rounded">{item.code}</code>
                 )},
                 { key: 'commission_rate', label: 'Rate', render: (item) => `${item.commission_rate}%` },
                 { key: 'referrals', label: 'Referrals', render: (item) => (item.referrals || []).length },
@@ -921,7 +921,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
                 },
                 { key: 'active', label: 'Status', render: (item) => (
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    item.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                    item.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-smoke text-ivory/70'
                   }`}>{item.active ? 'Active' : 'Inactive'}</span>
                 )},
                 { key: 'actions', label: '', render: (item) => item.active ? (

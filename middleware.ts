@@ -45,7 +45,13 @@ export async function middleware(request: NextRequest) {
     })
   }
 
-  const { data: { user } } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch {
+    // Invalid/stale token — clear it and continue as unauthenticated
+  }
   const pathname = request.nextUrl.pathname
 
   // Redirect unauthenticated users away from protected routes

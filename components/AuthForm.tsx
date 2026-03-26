@@ -27,6 +27,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
     try {
       if (mode === 'login') {
+        // Clear any stale session before attempting login
+        await supabase.auth.signOut()
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
 
