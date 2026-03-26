@@ -7,7 +7,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-obsidian">
 
       {/* ── HERO ── */}
-      <section className="min-h-[100vh] flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
+      <section className="min-h-[100vh] flex flex-col items-center justify-center text-center px-6 pt-14 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_45%,rgba(201,168,76,0.06),transparent_70%)]" />
 
         <div className="relative z-10 flex flex-col items-center">
@@ -22,7 +22,7 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row gap-8 justify-center" style={{ perspective: '1200px' }}>
             <Link
               href="/services/content-editing#pricing"
-              className="group relative px-20 py-10 bg-charcoal/80 border-2 border-smoke/80 rounded-3xl overflow-hidden transition-all duration-500 hover:border-gold hover:scale-[1.2] hover:-translate-y-6 hover:shadow-[0_0_80px_rgba(201,168,76,0.5),0_40px_80px_rgba(201,168,76,0.3)]"
+              className="group relative px-10 sm:px-20 py-8 sm:py-10 bg-charcoal/80 border-2 border-smoke/80 rounded-3xl overflow-hidden transition-all duration-500 hover:border-gold hover:scale-[1.08] hover:-translate-y-4 hover:shadow-[0_0_60px_rgba(201,168,76,0.4),0_30px_60px_rgba(201,168,76,0.25)]"
               style={{ transformStyle: 'preserve-3d' }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-gold to-gold/80 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
@@ -34,7 +34,7 @@ export default function LandingPage() {
 
             <Link
               href="/services/audio-engineering#pricing"
-              className="group relative px-20 py-10 bg-charcoal/80 border-2 border-smoke/80 rounded-3xl overflow-hidden transition-all duration-500 hover:border-gold hover:scale-[1.2] hover:-translate-y-6 hover:shadow-[0_0_80px_rgba(201,168,76,0.5),0_40px_80px_rgba(201,168,76,0.3)]"
+              className="group relative px-10 sm:px-20 py-8 sm:py-10 bg-charcoal/80 border-2 border-smoke/80 rounded-3xl overflow-hidden transition-all duration-500 hover:border-gold hover:scale-[1.08] hover:-translate-y-4 hover:shadow-[0_0_60px_rgba(201,168,76,0.4),0_30px_60px_rgba(201,168,76,0.25)]"
               style={{ transformStyle: 'preserve-3d' }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-gold to-gold/80 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
@@ -46,7 +46,7 @@ export default function LandingPage() {
 
             <Link
               href="/#fitness"
-              className="group relative px-20 py-10 bg-charcoal/80 border-2 border-smoke/80 rounded-3xl overflow-hidden transition-all duration-500 hover:border-gold hover:scale-[1.2] hover:-translate-y-6 hover:shadow-[0_0_80px_rgba(201,168,76,0.5),0_40px_80px_rgba(201,168,76,0.3)]"
+              className="group relative px-10 sm:px-20 py-8 sm:py-10 bg-charcoal/80 border-2 border-smoke/80 rounded-3xl overflow-hidden transition-all duration-500 hover:border-gold hover:scale-[1.08] hover:-translate-y-4 hover:shadow-[0_0_60px_rgba(201,168,76,0.4),0_30px_60px_rgba(201,168,76,0.25)]"
               style={{ transformStyle: 'preserve-3d' }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-gold to-gold/80 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
@@ -64,7 +64,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── CONTENT EDITING ── */}
-      <section className="py-44 px-6 border-t border-smoke/50">
+      <section className="py-24 sm:py-32 px-6 border-t border-smoke/50">
         <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-24 items-center">
           <div>
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Content Editing</p>
@@ -109,7 +109,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── AUDIO ENGINEERING ── */}
-      <section className="py-44 px-6 border-t border-smoke/50 bg-charcoal/40">
+      <section className="py-24 sm:py-32 px-6 border-t border-smoke/50 bg-charcoal/40">
         <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-24 items-center">
           <div className="order-2 md:order-1 grid grid-cols-2 gap-4" style={{ perspective: '800px' }}>
             <div className="bg-obsidian border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
@@ -154,7 +154,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── FITNESS ── */}
-      <section id="fitness" className="py-44 px-6 border-t border-smoke/50">
+      <section id="fitness" className="py-24 sm:py-32 px-6 border-t border-smoke/50">
         <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-24 items-center">
           <div>
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Fitness</p>

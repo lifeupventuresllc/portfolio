@@ -146,7 +146,7 @@ export default function BundlesPage() {
   return (
     <div className="min-h-screen bg-obsidian">
       {/* Hero */}
-      <section className="relative py-20 px-4 overflow-hidden">
+      <section className="relative pt-32 pb-20 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(201,168,76,0.08),transparent_70%)]" />
         <div className="max-w-4xl mx-auto text-center relative">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">

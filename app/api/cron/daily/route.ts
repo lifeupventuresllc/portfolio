@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendOnboardingDay3Email, sendOnboardingDay7Email } from '@/lib/email'
+import { sendFollowUpEmail, FUNNEL_NURTURE_SEQUENCE } from '@/lib/follow-up-emails'
 
 export async function GET(request: NextRequest) {
   // Verify cron secret
@@ -90,5 +91,77 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, date: today })
+  // --- 3. Process funnel follow-up sequences ---
+  let followUpsSent = 0
+  const { data: pendingFollowUps } = await supabase
+    .from('follow_up_queue')
+    .select('id, lead_id, step, sequence_type')
+    .eq('status', 'pending')
+    .lte('scheduled_for', now.toISOString())
+    .limit(50)
+
+  for (const item of pendingFollowUps || []) {
+    if (item.sequence_type !== 'funnel-nurture') continue
+
+    const { data: lead } = await supabase
+      .from('funnel_leads')
+      .select('name, email, service, status')
+      .eq('id', item.lead_id)
+      .single()
+
+    if (!lead || lead.status === 'converted' || lead.status === 'lost') {
+      await supabase.from('follow_up_queue').update({ status: 'skipped' }).eq('id', item.id)
+      continue
+    }
+
+    const firstName = lead.name.split(' ')[0]
+    const sent = await sendFollowUpEmail(lead.email, firstName, lead.service, item.step)
+
+    await supabase.from('follow_up_queue').update({
+      status: sent ? 'sent' : 'skipped',
+      sent_at: sent ? now.toISOString() : null,
+    }).eq('id', item.id)
+
+    if (sent) {
+      await supabase.from('funnel_leads').update({
+        last_email_at: now.toISOString(),
+        follow_up_stage: item.step + 1,
+        lead_score: lead.status === 'new' ? 10 + (item.step * 5) : undefined,
+      }).eq('id', item.lead_id)
+
+      followUpsSent++
+    }
+  }
+
+  // --- 4. Auto-schedule follow-ups for new funnel leads ---
+  const { data: newLeads } = await supabase
+    .from('funnel_leads')
+    .select('id, created_at')
+    .eq('follow_up_stage', 0)
+    .eq('status', 'new')
+
+  for (const lead of newLeads || []) {
+    const leadDate = new Date(lead.created_at)
+
+    for (let i = 0; i < FUNNEL_NURTURE_SEQUENCE.length; i++) {
+      const step = FUNNEL_NURTURE_SEQUENCE[i]
+      const scheduledFor = new Date(leadDate.getTime() + step.delayDays * 24 * 60 * 60 * 1000)
+
+      // Only schedule if in the future
+      if (scheduledFor > now) {
+        await supabase.from('follow_up_queue').insert({
+          lead_id: lead.id,
+          sequence_type: 'funnel-nurture',
+          step: i,
+          scheduled_for: scheduledFor.toISOString(),
+          status: 'pending',
+        })
+      }
+    }
+
+    // Mark as scheduled
+    await supabase.from('funnel_leads').update({ follow_up_stage: 1 }).eq('id', lead.id)
+  }
+
+  return NextResponse.json({ ok: true, date: today, followUpsSent })
 }

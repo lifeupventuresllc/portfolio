@@ -67,7 +67,32 @@ type KPIs = {
   retentionRate: number
 }
 
-type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates'
+type FunnelLead = {
+  id: string
+  name: string
+  email: string
+  service: string
+  status: string
+  lead_score: number
+  follow_up_stage: number
+  notes: string | null
+  created_at: string
+}
+
+type Prospect = {
+  id: string
+  name: string
+  email: string | null
+  platform: string
+  prospect_type: string
+  instagram: string | null
+  notes: string | null
+  status: string
+  touch_count: number
+  created_at: string
+}
+
+type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates' | 'leads' | 'outreach'
 
 export default function AdminDashboard({ userRole }: { userRole: string }) {
   const supabase = createClient()
@@ -90,6 +115,10 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
     refundRate: 0,
     retentionRate: 0,
   })
+  const [leads, setLeads] = useState<FunnelLead[]>([])
+  const [prospects, setProspects] = useState<Prospect[]>([])
+  const [leadStatusFilter, setLeadStatusFilter] = useState('all')
+  const [prospectStatusFilter, setProspectStatusFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -158,6 +187,14 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
         const affRes = await fetch('/api/admin/affiliates')
         if (affRes.ok) setAffiliates(await affRes.json())
       }
+
+      // Fetch CRM leads
+      const leadsRes = await fetch('/api/admin/leads')
+      if (leadsRes.ok) setLeads(await leadsRes.json())
+
+      // Fetch outreach prospects
+      const prospectsRes = await fetch('/api/admin/prospects')
+      if (prospectsRes.ok) setProspects(await prospectsRes.json())
 
       // Fetch funnel data
       const { data: events } = await supabase
@@ -300,9 +337,35 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
       .map(([label, value]) => ({ label: label.slice(5), value }))
   })()
 
+  async function handleLeadStatusChange(id: string, status: string) {
+    await fetch('/api/admin/leads', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status }),
+    })
+    await fetchData()
+  }
+
+  async function handleProspectStatusChange(id: string, status: string) {
+    await fetch('/api/admin/prospects', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status }),
+    })
+    await fetchData()
+  }
+
+  const filteredLeads = leads.filter(l =>
+    leadStatusFilter === 'all' || l.status === leadStatusFilter
+  )
+
+  const filteredProspects = prospects.filter(p =>
+    prospectStatusFilter === 'all' || p.status === prospectStatusFilter
+  )
+
   const tabs: TabName[] = isAdmin
-    ? ['overview', 'users', 'payments', 'emails', 'affiliates']
-    : ['overview', 'users', 'payments', 'emails']
+    ? ['overview', 'leads', 'outreach', 'users', 'payments', 'emails', 'affiliates']
+    : ['overview', 'leads', 'outreach', 'users', 'payments', 'emails']
 
   if (loading) {
     return (
@@ -640,6 +703,161 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
             data={filteredEmails}
             emptyMessage="No emails sent yet"
           />
+        </div>
+      )}
+
+      {/* CRM Leads Tab */}
+      {activeTab === 'leads' && (
+        <div className="space-y-6">
+          {/* Lead Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {['new', 'contacted', 'qualified', 'converted', 'lost'].map(status => (
+              <div key={status} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+                <div className="text-2xl font-bold text-gray-900">
+                  {leads.filter(l => l.status === status).length}
+                </div>
+                <div className="text-xs text-gray-500 capitalize mt-1">{status}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="flex flex-wrap gap-4 mb-6">
+              <select
+                value={leadStatusFilter}
+                onChange={(e) => setLeadStatusFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Statuses</option>
+                <option value="new">New</option>
+                <option value="contacted">Contacted</option>
+                <option value="qualified">Qualified</option>
+                <option value="converted">Converted</option>
+                <option value="lost">Lost</option>
+              </select>
+              <span className="text-sm text-gray-500 self-center">
+                {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            <AdminTable
+              columns={[
+                { key: 'name', label: 'Name' },
+                { key: 'email', label: 'Email' },
+                { key: 'service', label: 'Service', render: (item) => (
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    item.service === 'content' ? 'bg-blue-100 text-blue-700' :
+                    item.service === 'audio' ? 'bg-purple-100 text-purple-700' :
+                    'bg-green-100 text-green-700'
+                  }`}>{item.service}</span>
+                )},
+                { key: 'lead_score', label: 'Score', render: (item) => (
+                  <span className="text-sm font-medium">{item.lead_score || 0}</span>
+                )},
+                { key: 'status', label: 'Status', render: (item: FunnelLead) => (
+                  <select
+                    value={item.status}
+                    onChange={(e) => handleLeadStatusChange(item.id, e.target.value)}
+                    className={`text-xs border rounded px-2 py-1 ${
+                      item.status === 'converted' ? 'border-green-300 bg-green-50' :
+                      item.status === 'lost' ? 'border-red-300 bg-red-50' :
+                      'border-gray-300'
+                    }`}
+                  >
+                    <option value="new">New</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="qualified">Qualified</option>
+                    <option value="converted">Converted</option>
+                    <option value="lost">Lost</option>
+                  </select>
+                )},
+                { key: 'follow_up_stage', label: 'Follow-Up', render: (item) => (
+                  <span className="text-xs text-gray-500">Stage {item.follow_up_stage || 0}/3</span>
+                )},
+                { key: 'created_at', label: 'Date', render: (item) => formatDate(item.created_at) },
+              ]}
+              data={filteredLeads}
+              emptyMessage="No leads yet — share your funnel to start capturing leads"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Outreach / SDR Tab */}
+      {activeTab === 'outreach' && (
+        <div className="space-y-6">
+          {/* Prospect Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+            {['new', 'contacted', 'replied', 'free-sample', 'pitched', 'closed'].map(status => (
+              <div key={status} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+                <div className="text-2xl font-bold text-gray-900">
+                  {prospects.filter(p => p.status === status).length}
+                </div>
+                <div className="text-xs text-gray-500 capitalize mt-1">{status.replace('-', ' ')}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="flex flex-wrap gap-4 mb-6">
+              <select
+                value={prospectStatusFilter}
+                onChange={(e) => setProspectStatusFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Statuses</option>
+                <option value="new">New</option>
+                <option value="contacted">Contacted</option>
+                <option value="replied">Replied</option>
+                <option value="free-sample">Free Sample</option>
+                <option value="pitched">Pitched</option>
+                <option value="closed">Closed</option>
+                <option value="lost">Lost</option>
+              </select>
+              <span className="text-sm text-gray-500 self-center">
+                {filteredProspects.length} prospect{filteredProspects.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            <AdminTable
+              columns={[
+                { key: 'name', label: 'Name' },
+                { key: 'email', label: 'Email', render: (item) => item.email || '—' },
+                { key: 'platform', label: 'Platform', render: (item) => (
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 capitalize">
+                    {item.platform}
+                  </span>
+                )},
+                { key: 'prospect_type', label: 'Type', render: (item) => (
+                  <span className="text-xs capitalize">{item.prospect_type}</span>
+                )},
+                { key: 'instagram', label: 'IG', render: (item) => item.instagram ? (
+                  <a href={`https://instagram.com/${item.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                    {item.instagram}
+                  </a>
+                ) : '—' },
+                { key: 'status', label: 'Status', render: (item: Prospect) => (
+                  <select
+                    value={item.status}
+                    onChange={(e) => handleProspectStatusChange(item.id, e.target.value)}
+                    className="text-xs border border-gray-300 rounded px-2 py-1"
+                  >
+                    <option value="new">New</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="replied">Replied</option>
+                    <option value="free-sample">Free Sample</option>
+                    <option value="pitched">Pitched</option>
+                    <option value="closed">Closed</option>
+                    <option value="lost">Lost</option>
+                  </select>
+                )},
+                { key: 'touch_count', label: 'Touches', render: (item) => item.touch_count },
+                { key: 'created_at', label: 'Added', render: (item) => formatDate(item.created_at) },
+              ]}
+              data={filteredProspects}
+              emptyMessage="No prospects yet — add prospects via the API or CSV import"
+            />
+          </div>
         </div>
       )}
 

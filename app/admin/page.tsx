@@ -5,7 +5,7 @@ import AdminDashboard from './AdminDashboard'
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
-  title: 'Admin Dashboard - FitPro',
+  title: 'Admin Dashboard - Asa Luke',
 }
 
 export default async function AdminPage() {

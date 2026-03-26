@@ -86,13 +86,13 @@ export default function PricingCard({
   const displayFeatures = features || defaultFeatures
 
   return (
-    <div className={`w-full max-w-sm rounded-xl p-8 text-center flex flex-col relative transition-all duration-300 hover:-translate-y-1 ${
+    <div className={`w-full max-w-sm rounded-2xl p-8 text-center flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(201,168,76,0.15)] ${
       featured
         ? 'bg-gradient-to-b from-gold/10 to-charcoal border-2 border-gold'
         : 'bg-charcoal border border-smoke hover:border-gold/40'
     }`}>
       {featured && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gold text-obsidian text-xs font-bold uppercase tracking-wider px-4 py-1 rounded-sm">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gold text-obsidian text-xs font-bold uppercase tracking-wider px-4 py-1 rounded-full">
           Most Popular
         </div>
       )}

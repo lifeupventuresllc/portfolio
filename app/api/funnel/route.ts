@@ -161,53 +161,81 @@ export async function POST(request: Request) {
     })
 
     // Auto-reply to lead with guide content + links
+    const firstName = name.split(' ')[0]
+    const plainText = `Hey ${firstName},\n\nYour free ${guide.label} guide is ready.\n\n${guide.assets.map(a => `- ${a.name}: ${a.desc}`).join('\n')}\n\nView your guide: ${guideUrl}\n\nWant this done for you? View my packages: ${packageUrl}\n\nTalk soon,\nAsa Luke\n\nIG: @1AsaLuke | info.lifeupventures@gmail.com\n\nTo unsubscribe, reply with "unsubscribe".`
+
     await resend.emails.send({
       from: `Asa Luke <${process.env.FROM_EMAIL!}>`,
       to: email,
-      subject: `Your free ${guide.label} is ready, ${name}!`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 540px; margin: 0 auto; color: #333;">
-          <h2 style="color: #C9A84C; margin-bottom: 4px;">Hey ${name}!</h2>
-          <p style="margin-top: 0;">Your free guide${guide.assets.length > 1 ? 's are' : ' is'} ready. Here's everything you got:</p>
+      replyTo: 'info.lifeupventures@gmail.com',
+      subject: `${firstName}, your free ${guide.label} is ready`,
+      text: plainText,
+      headers: {
+        'List-Unsubscribe': '<mailto:info.lifeupventures@gmail.com?subject=Unsubscribe>',
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
+      html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0; padding:0; background-color:#ffffff;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
+<tr><td align="center" style="padding:20px;">
+<table role="presentation" width="540" cellpadding="0" cellspacing="0" style="max-width:540px; font-family:Arial,sans-serif; color:#333333;">
+  <tr><td>
+    <h2 style="color:#C9A84C; margin-bottom:4px;">Hey ${firstName},</h2>
+    <p style="margin-top:0;">Your free guide${guide.assets.length > 1 ? 's are' : ' is'} ready. Here's everything you got:</p>
 
-          <div style="background: #0A0A0F; border: 2px solid #C9A84C; border-radius: 12px; padding: 20px; margin: 20px 0;">
-            <p style="color: #4ade80; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 4px;">100% FREE</p>
-            <p style="color: #fff; font-size: 18px; font-weight: bold; margin: 0 0 16px;">${guide.label}</p>
-            ${guide.assets.map((asset) => `
-              <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;">
-                <table style="width: 100%;"><tr>
-                  <td style="color: #C9A84C; font-size: 12px; width: 20px; vertical-align: top; padding-right: 8px;">&#10003;</td>
-                  <td>
-                    <p style="color: #fff; font-weight: bold; margin: 0 0 2px; font-size: 14px;">${asset.name}</p>
-                    <p style="color: #999; margin: 0; font-size: 12px; line-height: 1.4;">${asset.desc}</p>
-                  </td>
-                </tr></table>
-              </div>
-            `).join('')}
-          </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0F; border:2px solid #C9A84C; border-radius:12px; margin:20px 0;">
+      <tr><td style="padding:20px;">
+        <p style="color:#4ade80; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:2px; margin:0 0 4px;">Included Free</p>
+        <p style="color:#ffffff; font-size:18px; font-weight:bold; margin:0 0 16px;">${guide.label}</p>
+        ${guide.assets.map((asset) => `
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a2e; border:1px solid #333333; border-radius:8px; margin-bottom:8px;">
+            <tr>
+              <td style="color:#C9A84C; font-size:12px; width:20px; vertical-align:top; padding:12px 8px 12px 16px;">&#10003;</td>
+              <td style="padding:12px 16px 12px 0;">
+                <p style="color:#ffffff; font-weight:bold; margin:0 0 2px; font-size:14px;">${asset.name}</p>
+                <p style="color:#999999; margin:0; font-size:12px; line-height:1.4;">${asset.desc}</p>
+              </td>
+            </tr>
+          </table>
+        `).join('')}
+      </td></tr>
+    </table>
 
-          ${EMAIL_GUIDE_CONTENT[service] || ''}
+    ${EMAIL_GUIDE_CONTENT[service] || ''}
 
-          <div style="text-align: center; margin: 24px 0;">
-            <a href="${guideUrl}" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 14px 36px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
-              View Full Guide on Web →
-            </a>
-            <p style="color: #999; font-size: 11px; margin-top: 8px;">View the full interactive version with images. Use "Save / Download" to save as PDF.</p>
-          </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+      <tr><td align="center">
+        <a href="${guideUrl}" style="display:inline-block; background:#C9A84C; color:#0A0A0F; padding:14px 36px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:15px;">
+          View Full Guide on Web
+        </a>
+        <p style="color:#999999; font-size:11px; margin-top:8px;">View the full interactive version with images. Use "Save / Download" to save as PDF.</p>
+      </td></tr>
+    </table>
 
-          <div style="border-top: 1px solid #eee; padding-top: 16px; margin-top: 16px;">
-            <p style="margin-bottom: 4px;"><strong>Want this done for you?</strong></p>
-            <p>These guides show you the strategy. I do all of this and more — professionally, every month.</p>
-            <p><a href="${packageUrl}" style="color: #C9A84C; font-weight: bold; font-size: 15px;">View My Packages →</a></p>
-          </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eeeeee; margin-top:16px;">
+      <tr><td style="padding-top:16px;">
+        <p style="margin-bottom:4px;"><strong>Want this done for you?</strong></p>
+        <p>These guides show you the strategy. I do all of this and more, professionally, every month.</p>
+        <p><a href="${packageUrl}" style="color:#C9A84C; font-weight:bold; font-size:15px;">View My Packages</a></p>
+      </td></tr>
+    </table>
 
-          <br>
-          <p>Talk soon,<br><strong>Asa Luke</strong></p>
-          <p style="color: #999; font-size: 12px;">
-            IG: <a href="https://instagram.com/1AsaLuke" style="color: #C9A84C;">@1AsaLuke</a> | info.lifeupventures@gmail.com
-          </p>
-        </div>
-      `,
+    <br>
+    <p>Talk soon,<br><strong>Asa Luke</strong></p>
+    <p style="color:#999999; font-size:12px;">
+      IG: <a href="https://instagram.com/1AsaLuke" style="color:#C9A84C;">@1AsaLuke</a> | info.lifeupventures@gmail.com
+    </p>
+    <p style="color:#cccccc; font-size:10px; margin-top:24px; border-top:1px solid #eeeeee; padding-top:12px;">
+      You received this because you requested a free guide from asaluke.io. To unsubscribe, reply with "unsubscribe" or email info.lifeupventures@gmail.com.
+    </p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`,
     })
 
     return NextResponse.json({ success: true })

@@ -17,6 +17,15 @@ const config: Config = {
         ivory: '#D4C5A0',
         smoke: '#2A2A35',
       },
+      animation: {
+        'slide-down': 'slide-down 0.2s ease-out',
+      },
+      keyframes: {
+        'slide-down': {
+          '0%': { opacity: '0', transform: 'translateY(-8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
     },
   },
   plugins: [],

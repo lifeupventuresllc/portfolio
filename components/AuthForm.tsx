@@ -69,25 +69,25 @@ export default function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-sm border border-gray-200">
-        <h1 className="text-2xl font-bold text-center mb-6">{titles[mode]}</h1>
+    <div className="min-h-screen flex items-center justify-center pt-20 px-6">
+      <div className="w-full max-w-md p-8 bg-charcoal rounded-2xl border border-smoke">
+        <h1 className="text-2xl font-bold text-center text-white mb-6">{titles[mode]}</h1>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-sm">
             {error}
           </div>
         )}
 
         {message && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+          <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-sm">
             {message}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-ivory/60 mb-1">
               Email
             </label>
             <input
@@ -96,14 +96,14 @@ export default function AuthForm({ mode }: AuthFormProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              className="w-full px-4 py-3 bg-obsidian border border-smoke rounded-xl text-white placeholder-ivory/30 focus:outline-none focus:border-gold transition-colors"
               placeholder="you@example.com"
             />
           </div>
 
           {mode !== 'reset' && (
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-ivory/60 mb-1">
                 Password
               </label>
               <input
@@ -113,7 +113,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                className="w-full px-4 py-3 bg-obsidian border border-smoke rounded-xl text-white placeholder-ivory/30 focus:outline-none focus:border-gold transition-colors"
                 placeholder="••••••••"
               />
             </div>
@@ -122,21 +122,21 @@ export default function AuthForm({ mode }: AuthFormProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-black text-white py-2.5 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full bg-gold text-obsidian py-3 rounded-xl font-bold uppercase tracking-wider hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? 'Loading...' : titles[mode]}
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-500 space-y-2">
+        <div className="mt-6 text-center text-sm text-ivory/40 space-y-2">
           {mode === 'login' && (
             <>
               <p>
                 Don&apos;t have an account?{' '}
-                <Link href="/signup" className="text-black hover:underline">Sign up</Link>
+                <Link href="/signup" className="text-gold hover:text-gold/70 transition-colors">Sign up</Link>
               </p>
               <p>
-                <Link href="/reset-password" className="text-black hover:underline">
+                <Link href="/reset-password" className="text-gold hover:text-gold/70 transition-colors">
                   Forgot password?
                 </Link>
               </p>
@@ -145,12 +145,12 @@ export default function AuthForm({ mode }: AuthFormProps) {
           {mode === 'signup' && (
             <p>
               Already have an account?{' '}
-              <Link href="/login" className="text-black hover:underline">Log in</Link>
+              <Link href="/login" className="text-gold hover:text-gold/70 transition-colors">Log in</Link>
             </p>
           )}
           {mode === 'reset' && (
             <p>
-              <Link href="/login" className="text-black hover:underline">Back to login</Link>
+              <Link href="/login" className="text-gold hover:text-gold/70 transition-colors">Back to login</Link>
             </p>
           )}
         </div>
