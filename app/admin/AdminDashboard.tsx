@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AdminTable from '@/components/AdminTable'
 import SimpleChart from '@/components/SimpleChart'
+import CsvImporter from '@/components/CsvImporter'
+import ProjectBoard from '@/components/ProjectBoard'
+import Templates from '@/components/Templates'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 type Profile = {
@@ -92,7 +95,7 @@ type Prospect = {
   created_at: string
 }
 
-type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates' | 'leads' | 'outreach'
+type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates' | 'leads' | 'outreach' | 'projects' | 'templates'
 
 export default function AdminDashboard({ userRole }: { userRole: string }) {
   const supabase = createClient()
@@ -364,8 +367,8 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
   )
 
   const tabs: TabName[] = isAdmin
-    ? ['overview', 'leads', 'outreach', 'users', 'payments', 'emails', 'affiliates']
-    : ['overview', 'leads', 'outreach', 'users', 'payments', 'emails']
+    ? ['overview', 'leads', 'outreach', 'projects', 'templates', 'users', 'payments', 'emails', 'affiliates']
+    : ['overview', 'leads', 'outreach', 'projects', 'templates', 'users', 'payments', 'emails']
 
   if (loading) {
     return (
@@ -798,6 +801,9 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
             ))}
           </div>
 
+          {/* CSV Import */}
+          <CsvImporter onImported={fetchData} />
+
           <div className="bg-charcoal rounded-xl border border-smoke p-6">
             <div className="flex flex-wrap gap-4 mb-6">
               <select
@@ -860,6 +866,12 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
           </div>
         </div>
       )}
+
+      {/* Projects Tab */}
+      {activeTab === 'projects' && <ProjectBoard />}
+
+      {/* Templates Tab */}
+      {activeTab === 'templates' && <Templates />}
 
       {/* Affiliates Tab (Admin only) */}
       {activeTab === 'affiliates' && isAdmin && (
