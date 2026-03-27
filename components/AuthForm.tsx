@@ -21,8 +21,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const supabase = createClient()
 
   useEffect(() => {
-    // Sign out any stale session before showing the login form
-    supabase.auth.signOut().catch(() => {}).finally(() => setReady(true))
+    // Clear stale session locally only (no API call that could fail with bad token)
+    supabase.auth.signOut({ scope: 'local' }).catch(() => {}).finally(() => setReady(true))
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
