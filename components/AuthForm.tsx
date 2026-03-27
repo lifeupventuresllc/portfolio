@@ -15,6 +15,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
+  // Fresh non-singleton client to avoid any cached state
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { isSingleton: false }
+  )
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -23,30 +30,16 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
     try {
       if (mode === 'login') {
-        // Login via server-side API route — bypasses stale browser tokens entirely
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        })
-
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Login failed')
+        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) throw error
 
         const params = new URLSearchParams(window.location.search)
         const redirect = params.get('redirect') || '/'
-        // Full page reload to pick up the fresh server-set cookies
         window.location.href = redirect
       } else if (mode === 'signup') {
         if (password.length < 6) {
           throw new Error('Password must be at least 6 characters')
         }
-        // Signup still uses browser client (no stale token issue for new accounts)
-        const supabase = createBrowserClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          { isSingleton: false }
-        )
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -57,11 +50,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
         if (error) throw error
         setMessage('Check your email to confirm your account.')
       } else if (mode === 'reset') {
-        const supabase = createBrowserClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          { isSingleton: false }
-        )
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password?step=update`,
         })
