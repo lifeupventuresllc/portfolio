@@ -8,10 +8,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Email and password required' }, { status: 400 })
   }
 
-  // Start with a response we can attach cookies to
-  const response = NextResponse.json({ success: true })
+  // Create the response we'll return — cookies get set directly on this
+  const response = NextResponse.json({ success: true, redirect: '/' })
 
-  // First, clear ALL existing auth cookies to nuke any stale tokens
+  // Clear ALL existing auth cookies to nuke any stale tokens
   const allCookies = request.cookies.getAll()
   for (const cookie of allCookies) {
     if (cookie.name.startsWith('sb-') || cookie.name.includes('supabase') || cookie.name.includes('auth')) {
@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          // Return empty — we just nuked everything, start fresh
           return []
         },
         setAll(cookiesToSet) {
@@ -44,9 +43,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 401 })
   }
 
-  // Return success — the response already has fresh auth cookies set by Supabase
-  return NextResponse.json({ success: true, redirect: '/' }, {
-    status: 200,
-    headers: response.headers,
-  })
+  // Return the same response object that has the cookies attached
+  return response
 }
