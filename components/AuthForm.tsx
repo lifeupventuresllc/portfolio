@@ -20,24 +20,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter()
   const supabase = createClient()
 
-  // Force-clear any stale auth data on page load (before Supabase can use it)
   useEffect(() => {
-    // Clear all Supabase auth keys from localStorage directly
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('sb-') || key.includes('supabase')) {
-        localStorage.removeItem(key)
-      }
-    })
-    // Clear auth cookies directly
-    document.cookie.split(';').forEach(c => {
-      const name = c.trim().split('=')[0]
-      if (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth-token')) {
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.asaluke.io;`
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=asaluke.io;`
-      }
-    })
-    setReady(true)
+    // Sign out any stale session before showing the login form
+    supabase.auth.signOut().catch(() => {}).finally(() => setReady(true))
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -48,8 +33,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
     try {
       if (mode === 'login') {
-        // Clear any stale session before attempting login
-        await supabase.auth.signOut().catch(() => {})
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
 
