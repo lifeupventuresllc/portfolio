@@ -47,10 +47,17 @@ export async function middleware(request: NextRequest) {
 
   let user = null
   try {
-    const { data } = await supabase.auth.getUser()
+    const { data, error } = await supabase.auth.getUser()
+    if (error) throw error
     user = data.user
   } catch {
-    // Invalid/stale token — clear it and continue as unauthenticated
+    // Invalid/stale token — clear ALL auth cookies so this doesn't repeat
+    const cookieNames = request.cookies.getAll().map(c => c.name)
+    for (const name of cookieNames) {
+      if (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth')) {
+        response.cookies.set(name, '', { maxAge: 0, path: '/' })
+      }
+    }
   }
   const pathname = request.nextUrl.pathname
 
