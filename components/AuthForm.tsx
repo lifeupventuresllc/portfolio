@@ -15,14 +15,30 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [ready, setReady] = useState(false)
 
   const router = useRouter()
   const supabase = createClient()
 
-  // Clear any stale/invalid auth session on page load
+  // Force-clear any stale auth data on page load (before Supabase can use it)
   useEffect(() => {
-    supabase.auth.signOut().catch(() => {})
-  }, [supabase])
+    // Clear all Supabase auth keys from localStorage directly
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-') || key.includes('supabase')) {
+        localStorage.removeItem(key)
+      }
+    })
+    // Clear auth cookies directly
+    document.cookie.split(';').forEach(c => {
+      const name = c.trim().split('=')[0]
+      if (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth-token')) {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.asaluke.io;`
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=asaluke.io;`
+      }
+    })
+    setReady(true)
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -33,7 +49,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
     try {
       if (mode === 'login') {
         // Clear any stale session before attempting login
-        await supabase.auth.signOut()
+        await supabase.auth.signOut().catch(() => {})
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
 
@@ -73,6 +89,14 @@ export default function AuthForm({ mode }: AuthFormProps) {
     login: 'Log In',
     signup: 'Create Account',
     reset: 'Reset Password',
+  }
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-obsidian">
+        <p className="text-ivory/50">Loading...</p>
+      </div>
+    )
   }
 
   return (
