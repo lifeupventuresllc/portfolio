@@ -31,8 +31,8 @@ export default function Navbar() {
         setProfile(data)
       }
       } catch {
-        // Invalid token — sign out to clear it
-        await supabase.auth.signOut().catch(() => {})
+        // Invalid token — clear locally only (API call with stale token would fail too)
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
       }
     }
     getUser()

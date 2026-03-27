@@ -1,12 +1,31 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState, useEffect, useRef } from 'react'
+import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 type AuthFormProps = {
   mode: 'login' | 'signup' | 'reset'
+}
+
+function clearAllAuthData() {
+  // Clear all Supabase keys from localStorage
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('sb-') || key.includes('supabase')) {
+      localStorage.removeItem(key)
+    }
+  })
+  // Clear auth cookies on all possible domain variants
+  document.cookie.split(';').forEach(c => {
+    const name = c.trim().split('=')[0]
+    if (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth-token')) {
+      // Clear with no domain, with .asaluke.io, and with asaluke.io
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.asaluke.io;`
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=asaluke.io;`
+    }
+  })
 }
 
 export default function AuthForm({ mode }: AuthFormProps) {
@@ -16,20 +35,33 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+  const clientRef = useRef<ReturnType<typeof createBrowserClient> | null>(null)
 
   const router = useRouter()
-  const supabase = createClient()
 
   useEffect(() => {
-    // Clear stale session locally only (no API call that could fail with bad token)
-    supabase.auth.signOut({ scope: 'local' }).catch(() => {}).finally(() => setReady(true))
+    // Step 1: Nuke ALL stale auth data from cookies and localStorage
+    clearAllAuthData()
+
+    // Step 2: Create a FRESH non-singleton Supabase client (bypasses the poisoned singleton)
+    clientRef.current = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { isSingleton: false }
+    )
+
+    setReady(true)
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!clientRef.current) return
+
     setLoading(true)
     setError(null)
     setMessage(null)
+
+    const supabase = clientRef.current
 
     try {
       if (mode === 'login') {
