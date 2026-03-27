@@ -65,10 +65,10 @@ export default function LandingPage() {
 
       {/* ── CONTENT EDITING ── */}
       <section className="py-24 sm:py-32 px-6 border-t border-smoke/50">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-24 items-center">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div>
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Content Editing</p>
-            <h2 className="text-5xl sm:text-6xl font-bold text-white mb-8 leading-[1.1]">
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-white mb-8 leading-[1.1]">
               Your content,<br />professionally edited.
             </h2>
             <p className="text-ivory/50 text-lg leading-relaxed mb-10">
@@ -110,7 +110,7 @@ export default function LandingPage() {
 
       {/* ── AUDIO ENGINEERING ── */}
       <section className="py-24 sm:py-32 px-6 border-t border-smoke/50 bg-charcoal/40">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-24 items-center">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div className="order-2 md:order-1 grid grid-cols-2 gap-4" style={{ perspective: '800px' }}>
             <div className="bg-obsidian border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
               <p className="text-gold text-3xl font-bold mb-2">10+</p>
@@ -131,7 +131,7 @@ export default function LandingPage() {
           </div>
           <div className="order-1 md:order-2">
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Audio Engineering</p>
-            <h2 className="text-5xl sm:text-6xl font-bold text-white mb-8 leading-[1.1]">
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-white mb-8 leading-[1.1]">
               Your music,<br />professionally mixed.
             </h2>
             <p className="text-ivory/50 text-lg leading-relaxed mb-10">
@@ -155,10 +155,10 @@ export default function LandingPage() {
 
       {/* ── FITNESS ── */}
       <section id="fitness" className="py-24 sm:py-32 px-6 border-t border-smoke/50">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-24 items-center">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div>
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Fitness</p>
-            <h2 className="text-5xl sm:text-6xl font-bold text-white mb-8 leading-[1.1]">
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-white mb-8 leading-[1.1]">
               Your body,<br />transformed.
             </h2>
             <p className="text-ivory/50 text-lg leading-relaxed mb-10">
@@ -240,9 +240,9 @@ export default function LandingPage() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="py-8 px-6 border-t border-smoke/30">
-        <div className="max-w-6xl mx-auto text-center text-xs text-ivory/20 tracking-wider">
-          &copy; {new Date().getFullYear()} ASA LUKE. ALL RIGHTS RESERVED.
+      <footer className="py-8 px-6 border-t border-smoke">
+        <div className="max-w-6xl mx-auto text-center text-sm text-ivory/40">
+          &copy; {new Date().getFullYear()} Asa Luke. All rights reserved.
         </div>
       </footer>
     </div>

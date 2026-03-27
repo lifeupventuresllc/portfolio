@@ -85,7 +85,7 @@ export default function FunnelPage() {
             </p>
 
             {/* Service Cards */}
-            <div className="grid sm:grid-cols-3 gap-4 mb-12">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
               {(Object.keys(SERVICES) as ServiceKey[]).map((key) => {
                 const svc = SERVICES[key]
                 return (
@@ -246,6 +246,12 @@ export default function FunnelPage() {
         )}
 
       </div>
+
+      <footer className="py-8 px-6 border-t border-smoke mt-16">
+        <div className="max-w-6xl mx-auto text-center text-sm text-ivory/40">
+          &copy; {new Date().getFullYear()} Asa Luke. All rights reserved.
+        </div>
+      </footer>
     </div>
   )
 }
