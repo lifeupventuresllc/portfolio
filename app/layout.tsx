@@ -15,8 +15,26 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Asa Luke — Content Editing | Audio Engineering | Fitness",
-  description: "Professional content editing, audio engineering, and fitness programs by Asa Luke. Services starting at $29.99.",
+  metadataBase: new URL('https://www.asaluke.io'),
+  title: {
+    default: 'Asa Luke — Content Editing | Audio Engineering | Fitness',
+    template: '%s | Asa Luke',
+  },
+  description: 'I edit your content. I mix your music. I build your body. Professional content editing, audio engineering, and fitness coaching by Asa Luke.',
+  keywords: ['content editing', 'video editing', 'audio engineering', 'mixing', 'mastering', 'fitness coaching', 'reels editing', 'social media content', 'Asa Luke', 'Los Angeles'],
+  openGraph: {
+    title: 'Asa Luke — Content Editing | Audio Engineering | Fitness',
+    description: 'I edit your content. I mix your music. I build your body.',
+    url: 'https://www.asaluke.io',
+    siteName: 'Asa Luke',
+    type: 'website',
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Asa Luke — Content Editing | Audio Engineering | Fitness',
+    description: 'I edit your content. I mix your music. I build your body.',
+  },
 };
 
 export default function RootLayout({

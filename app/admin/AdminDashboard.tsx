@@ -97,6 +97,74 @@ type Prospect = {
 
 type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates' | 'leads' | 'outreach' | 'projects' | 'templates'
 
+function DailyOutreachTracker() {
+  const today = new Date().toISOString().split('T')[0]
+  const storageKey = `outreach_${today}`
+
+  const [count, setCount] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return parseInt(localStorage.getItem(storageKey) || '0', 10)
+    }
+    return 0
+  })
+
+  function updateCount(newCount: number) {
+    const val = Math.max(0, newCount)
+    setCount(val)
+    localStorage.setItem(storageKey, val.toString())
+  }
+
+  const goal = 25
+  const progress = Math.min((count / goal) * 100, 100)
+  const isOnTrack = count >= 15
+
+  return (
+    <div className="bg-charcoal rounded-xl border border-smoke p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-semibold text-white">Daily Outreach</h2>
+          <p className="text-xs text-ivory/40">{today}</p>
+        </div>
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+          isOnTrack ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'
+        }`}>
+          {isOnTrack ? 'On Track' : 'Keep Going'}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-4 mb-4">
+        <button
+          onClick={() => updateCount(count - 1)}
+          className="w-10 h-10 rounded-lg bg-obsidian border border-smoke text-white hover:border-gold transition-colors flex items-center justify-center text-lg font-bold"
+        >
+          -
+        </button>
+        <div className="text-4xl font-bold text-white flex-1 text-center">
+          {count} <span className="text-lg text-ivory/30">/ {goal}</span>
+        </div>
+        <button
+          onClick={() => updateCount(count + 1)}
+          className="w-10 h-10 rounded-lg bg-gold text-obsidian hover:bg-gold/90 transition-colors flex items-center justify-center text-lg font-bold"
+        >
+          +
+        </button>
+      </div>
+
+      <div className="w-full bg-obsidian rounded-full h-3 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-300 ${
+            progress >= 100 ? 'bg-emerald-500' : progress >= 60 ? 'bg-gold' : 'bg-yellow-500'
+          }`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <p className="text-xs text-ivory/30 mt-2 text-center">
+        {count >= goal ? 'Goal reached! Keep crushing it.' : `${goal - count} more DMs to hit your daily goal`}
+      </p>
+    </div>
+  )
+}
+
 export default function AdminDashboard({ userRole }: { userRole: string }) {
   const supabase = createClient()
   const isAdmin = userRole === 'admin'
@@ -458,6 +526,9 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Daily Outreach Tracker */}
+          <DailyOutreachTracker />
+
           {/* Trends */}
           <div className="grid md:grid-cols-2 gap-6">
             <SimpleChart
