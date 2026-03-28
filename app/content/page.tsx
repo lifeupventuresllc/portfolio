@@ -1,143 +1,284 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
-export const dynamic = 'force-dynamic'
-
-export const metadata = {
-  title: 'Your Program - FitPro',
+type Project = {
+  id: string
+  client_name: string
+  service_type: string
+  package: string | null
+  status: string
+  deadline: string | null
+  revisions_used: number
+  revision_limit: number
+  notes: string | null
+  created_at: string
+  updated_at: string | null
 }
 
-export default async function ContentPage() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+const STATUSES = ['inbox', 'in-progress', 'review', 'delivered', 'revision', 'complete'] as const
 
-  if (!user) redirect('/login?redirect=/content')
+const STATUS_LABELS: Record<string, string> = {
+  'inbox': 'Received',
+  'in-progress': 'In Progress',
+  'review': 'Under Review',
+  'delivered': 'Delivered',
+  'revision': 'Revision',
+  'complete': 'Complete',
+}
 
-  // Check if user has purchased
-  const { data: purchases } = await supabase
-    .from('purchases')
-    .select('id, product_id, status')
-    .eq('user_id', user.id)
-    .eq('status', 'completed')
+const STATUS_COLORS: Record<string, string> = {
+  'inbox': 'bg-blue-500',
+  'in-progress': 'bg-yellow-500',
+  'review': 'bg-purple-500',
+  'delivered': 'bg-emerald-500',
+  'revision': 'bg-orange-500',
+  'complete': 'bg-gold',
+}
 
-  const hasPurchased = purchases && purchases.length > 0
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
 
-  if (!hasPurchased) {
-    return (
-      <div className="max-w-4xl mx-auto py-16 px-4">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
+function ProgressBar({ status }: { status: string }) {
+  const currentIndex = STATUSES.indexOf(status as typeof STATUSES[number])
+  // Map revision back to after delivered for display
+  const displayOrder = ['inbox', 'in-progress', 'review', 'delivered', 'complete']
+  const isRevision = status === 'revision'
+
+  return (
+    <div className="flex items-center gap-1 w-full mt-4">
+      {displayOrder.map((step, i) => {
+        const stepIndex = STATUSES.indexOf(step as typeof STATUSES[number])
+        const isCurrent = step === status || (isRevision && step === 'delivered')
+        const isPast = !isRevision
+          ? stepIndex < currentIndex
+          : STATUSES.indexOf(step as typeof STATUSES[number]) <= STATUSES.indexOf('delivered')
+
+        return (
+          <div key={step} className="flex-1 flex flex-col items-center gap-1.5">
+            <div
+              className={`h-1.5 w-full rounded-full transition-colors ${
+                isCurrent
+                  ? (isRevision ? 'bg-orange-500' : STATUS_COLORS[step])
+                  : isPast
+                    ? 'bg-gold/60'
+                    : 'bg-smoke'
+              }`}
+            />
+            <span className={`text-[10px] tracking-wider uppercase ${
+              isCurrent ? 'text-ivory/80 font-medium' : 'text-ivory/30'
+            }`}>
+              {i === 3 && isRevision ? 'Revision' : step.replace('-', ' ')}
+            </span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Content Locked</h1>
-          <p className="text-gray-500 mb-8 max-w-md mx-auto">
-            Purchase the Complete Fitness Program to unlock all content, workout plans, and nutrition guides.
-          </p>
-          <Link
-            href="/#pricing"
-            className="inline-block bg-black text-white px-8 py-3 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
-          >
-            Get Access Now — $29.99
-          </Link>
-        </div>
+        )
+      })}
+    </div>
+  )
+}
+
+export default function ClientPortalPage() {
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<{ email?: string } | null>(null)
+  const [requesting, setRequesting] = useState<string | null>(null)
+
+  const supabase = createClient()
+
+  const fetchProjects = useCallback(async () => {
+    const res = await fetch('/api/client/projects')
+    if (res.ok) {
+      const data = await res.json()
+      setProjects(data)
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      if (!user) {
+        window.location.href = '/login?redirect=/content'
+        return
+      }
+      fetchProjects()
+    }
+    init()
+  }, [supabase, fetchProjects])
+
+  async function requestRevision(projectId: string) {
+    setRequesting(projectId)
+    try {
+      const res = await fetch('/api/client/projects', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: projectId }),
+      })
+      if (res.ok) {
+        await fetchProjects()
+      } else {
+        const err = await res.json()
+        alert(err.error || 'Failed to request revision')
+      }
+    } finally {
+      setRequesting(null)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-obsidian pt-24 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Your Fitness Program</h1>
-        <p className="text-gray-500">Welcome back! Here&apos;s your complete 12-week program.</p>
-      </div>
+    <div className="min-h-screen bg-obsidian pt-24 pb-16">
+      <div className="max-w-4xl mx-auto px-6">
+        {/* Header */}
+        <div className="mb-10">
+          <h1 className="text-2xl font-bold text-ivory tracking-tight">Client Portal</h1>
+          <p className="text-ivory/40 text-sm mt-1">
+            Welcome back{user?.email ? `, ${user.email}` : ''}. Track your projects and request revisions below.
+          </p>
+        </div>
 
-      {/* Program Weeks */}
-      <div className="space-y-6">
-        {Array.from({ length: 12 }, (_, i) => i + 1).map((week) => (
-          <div
-            key={week}
-            className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-sm transition-shadow"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Week {week}
-                  {week <= 4 && ' — Foundation'}
-                  {week > 4 && week <= 8 && ' — Building'}
-                  {week > 8 && ' — Peak'}
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  {week <= 4 && 'Build your base with fundamental movements and habits.'}
-                  {week > 4 && week <= 8 && 'Progressive overload and increased intensity.'}
-                  {week > 8 && 'Maximum effort and advanced techniques.'}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-medium bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
-                  {week <= 4 ? 'Beginner' : week <= 8 ? 'Intermediate' : 'Advanced'}
-                </span>
-              </div>
+        {projects.length === 0 ? (
+          /* Empty State */
+          <div className="text-center py-20 border border-smoke/40 rounded-2xl bg-charcoal/30">
+            <div className="w-14 h-14 bg-smoke/40 rounded-full flex items-center justify-center mx-auto mb-5">
+              <svg className="w-7 h-7 text-ivory/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
             </div>
+            <h2 className="text-lg font-semibold text-ivory mb-2">No projects yet</h2>
+            <p className="text-ivory/40 text-sm max-w-sm mx-auto mb-6">
+              Once you book a content editing or audio engineering package, your projects will appear here.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Link
+                href="/services/content-editing"
+                className="inline-block bg-gold text-obsidian px-5 py-2.5 rounded-lg text-xs font-semibold tracking-wider uppercase hover:bg-gold/90 transition-colors"
+              >
+                Content Editing
+              </Link>
+              <Link
+                href="/services/audio-engineering"
+                className="inline-block border border-smoke/60 text-ivory/60 px-5 py-2.5 rounded-lg text-xs font-semibold tracking-wider uppercase hover:border-gold/40 hover:text-ivory transition-colors"
+              >
+                Audio Engineering
+              </Link>
+            </div>
+          </div>
+        ) : (
+          /* Project Cards */
+          <div className="space-y-5">
+            {projects.map((project) => (
+              <div
+                key={project.id}
+                className="border border-smoke/40 rounded-2xl bg-charcoal/30 p-6 hover:border-smoke/60 transition-colors"
+              >
+                {/* Top Row: Service badge + Status badge */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2.5 mb-1.5">
+                      <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${STATUS_COLORS[project.status] || 'bg-ivory/30'}`} />
+                      <span className="text-xs font-medium text-ivory/50 tracking-wider uppercase">
+                        {project.service_type === 'audio' ? 'Audio Engineering' : 'Content Editing'}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-ivory truncate">
+                      {project.package || 'Custom Project'}
+                    </h3>
+                  </div>
+                  <span className={`flex-shrink-0 text-[10px] font-semibold tracking-wider uppercase px-3 py-1 rounded-full border ${
+                    project.status === 'complete'
+                      ? 'bg-gold/10 text-gold border-gold/30'
+                      : project.status === 'delivered'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                        : project.status === 'revision'
+                          ? 'bg-orange-500/10 text-orange-400 border-orange-500/30'
+                          : project.status === 'in-progress'
+                            ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+                            : project.status === 'review'
+                              ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                              : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                  }`}>
+                    {STATUS_LABELS[project.status] || project.status}
+                  </span>
+                </div>
 
-            <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {['Mon', 'Wed', 'Fri', 'Sat'].map((day) => (
-                <div
-                  key={day}
-                  className="bg-gray-50 rounded-lg p-3 text-center"
-                >
-                  <div className="text-xs text-gray-400 mb-1">{day}</div>
-                  <div className="text-sm font-medium text-gray-700">
-                    {day === 'Sat' ? 'Active Recovery' : 'Workout'}
+                {/* Progress Bar */}
+                <ProgressBar status={project.status} />
+
+                {/* Details Row */}
+                <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-xs text-ivory/40">
+                  {project.deadline && (
+                    <div className="flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Due {formatDate(project.deadline)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Revisions: {project.revisions_used} / {project.revision_limit}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Started {formatDate(project.created_at)}</span>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
 
-      {/* Nutrition Guide Section */}
-      <div className="mt-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Nutrition Guide</h2>
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Macro Targets</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Protein</span>
-                <span className="font-medium">1g per lb bodyweight</span>
+                {/* Notes */}
+                {project.notes && (
+                  <div className="mt-4 bg-smoke/30 rounded-lg px-4 py-3">
+                    <p className="text-xs text-ivory/50 leading-relaxed">{project.notes}</p>
+                  </div>
+                )}
+
+                {/* Revision Button */}
+                {project.status === 'delivered' && project.revisions_used < project.revision_limit && (
+                  <div className="mt-5 flex items-center gap-3">
+                    <button
+                      onClick={() => requestRevision(project.id)}
+                      disabled={requesting === project.id}
+                      className="bg-gold text-obsidian px-5 py-2 rounded-lg text-xs font-semibold tracking-wider uppercase hover:bg-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {requesting === project.id ? 'Requesting...' : 'Request Revision'}
+                    </button>
+                    <span className="text-[11px] text-ivory/30">
+                      {project.revision_limit - project.revisions_used} revision{project.revision_limit - project.revisions_used !== 1 ? 's' : ''} remaining
+                    </span>
+                  </div>
+                )}
+
+                {/* Revision limit reached */}
+                {project.status === 'delivered' && project.revisions_used >= project.revision_limit && (
+                  <div className="mt-5">
+                    <span className="text-[11px] text-ivory/30">
+                      All revisions used. Contact support for additional changes.
+                    </span>
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Carbs</span>
-                <span className="font-medium">40-50% of calories</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Fats</span>
-                <span className="font-medium">25-30% of calories</span>
-              </div>
-            </div>
+            ))}
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Meal Timing</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Pre-workout</span>
-                <span className="font-medium">1-2 hrs before</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Post-workout</span>
-                <span className="font-medium">Within 1 hr</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Meals per day</span>
-                <span className="font-medium">4-5 recommended</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   )

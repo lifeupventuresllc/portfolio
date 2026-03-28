@@ -141,6 +141,102 @@ export async function sendOnboardingDay7Email(email: string) {
   }
 }
 
+export async function sendPurchaseOnboardingDay3Email(email: string, serviceName: string) {
+  const { error } = await resend.emails.send({
+    from: `Asa Luke <${FROM_EMAIL}>`,
+    to: email,
+    replyTo: REPLY_TO,
+    subject: 'Quick check-in on your order',
+    headers: UNSUB_HEADERS,
+    text: `Hey!\n\nJust checking in — you purchased ${serviceName} a few days ago.\n\nHave you submitted your intake form yet? It helps me understand exactly what you need so I can deliver the best results.\n\nIf you haven't filled it out yet, you can do it here: ${process.env.NEXT_PUBLIC_APP_URL}/intake\n\nHit reply if you have any questions.\n\n— Asa Luke\nasaluke.io`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #C9A84C;">Quick Check-In</h1>
+        <p>Just checking in — you purchased <strong>${serviceName}</strong> a few days ago.</p>
+        <p>Have you submitted your intake form yet? It helps me understand exactly what you need so I can deliver the best results.</p>
+        <p>If you haven't filled it out yet, submit it here:</p>
+        <p style="margin-top: 20px;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/intake" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Submit Intake Form</a>
+        </p>
+        <p>Hit reply if you have any questions.</p>
+        <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
+        ${FOOTER}
+      </div>
+    `,
+  })
+
+  if (error) {
+    console.error('Failed to send purchase onboarding day 3 email:', error)
+  }
+}
+
+export async function sendPurchaseOnboardingDay7Email(email: string, serviceName: string) {
+  const { error } = await resend.emails.send({
+    from: `Asa Luke <${FROM_EMAIL}>`,
+    to: email,
+    replyTo: REPLY_TO,
+    subject: 'Tips for getting the best results',
+    headers: UNSUB_HEADERS,
+    text: `Hey!\n\nIt's been about a week since you purchased ${serviceName}. Here are a few tips to get the most out of it:\n\n1. Be specific in your brief — the more detail you give, the better the final product.\n2. Share reference examples — links to content you like help me match your vision.\n3. Communicate early — if something isn't right, let me know before the deadline so we can adjust.\n4. Trust the process — I've delivered for dozens of clients across content editing and audio engineering.\n\nIf you have any questions, just hit reply.\n\n— Asa Luke\nasaluke.io`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #C9A84C;">Tips for Best Results</h1>
+        <p>It's been about a week since you purchased <strong>${serviceName}</strong>. Here are a few tips to get the most out of it:</p>
+        <ol style="color: #374151; line-height: 2;">
+          <li><strong>Be specific in your brief</strong> — the more detail you give, the better the final product.</li>
+          <li><strong>Share reference examples</strong> — links to content you like help me match your vision.</li>
+          <li><strong>Communicate early</strong> — if something isn't right, let me know before the deadline so we can adjust.</li>
+          <li><strong>Trust the process</strong> — I've delivered for dozens of clients across content editing and audio engineering.</li>
+        </ol>
+        <p>If you have any questions, just hit reply.</p>
+        <p style="margin-top: 20px;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/content" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View Your Content</a>
+        </p>
+        <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
+        ${FOOTER}
+      </div>
+    `,
+  })
+
+  if (error) {
+    console.error('Failed to send purchase onboarding day 7 email:', error)
+  }
+}
+
+export async function sendUpsellEmail(email: string, firstName: string, serviceType: string) {
+  const serviceLabel = serviceType === 'content' ? 'edit' : 'mix'
+
+  const { error } = await resend.emails.send({
+    from: `Asa Luke <${FROM_EMAIL}>`,
+    to: email,
+    replyTo: REPLY_TO,
+    subject: 'Want to keep the momentum going?',
+    headers: UNSUB_HEADERS,
+    text: `Hey ${firstName}! Glad you liked the ${serviceLabel}! If you want to keep the momentum going, here are my monthly packages:\n\n→ Starter ($297/mo) — 4 videos\n→ Growth ($597/mo) — 8 videos\n→ VIP ($997/mo) — 12+ videos\n\nWant me to set you up? Just hit reply.\n\n— Asa Luke\nasaluke.io`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #C9A84C;">Keep the Momentum Going</h1>
+        <p>Hey ${firstName}! Glad you liked the ${serviceLabel}! If you want to keep the momentum going, here are my monthly packages:</p>
+        <ul style="color: #374151; line-height: 2; list-style: none; padding: 0;">
+          <li><strong style="color: #C9A84C;">→</strong> <strong>Starter ($297/mo)</strong> — 4 videos</li>
+          <li><strong style="color: #C9A84C;">→</strong> <strong>Growth ($597/mo)</strong> — 8 videos</li>
+          <li><strong style="color: #C9A84C;">→</strong> <strong>VIP ($997/mo)</strong> — 12+ videos</li>
+        </ul>
+        <p>Want me to set you up? Just hit reply.</p>
+        <p style="margin-top: 20px;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/services" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View Packages</a>
+        </p>
+        <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
+        ${FOOTER}
+      </div>
+    `,
+  })
+
+  if (error) {
+    console.error('Failed to send upsell email:', error)
+  }
+}
+
 export async function sendRefundConfirmation(email: string, productName: string, amount: number) {
   const dollars = (amount / 100).toFixed(2)
 

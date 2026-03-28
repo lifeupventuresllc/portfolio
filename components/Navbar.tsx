@@ -79,7 +79,7 @@ export default function Navbar() {
 
             {user && (
               <Link href="/content" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
-                My Purchases
+                My Projects
               </Link>
             )}
             {(profile?.role === 'admin' || profile?.role === 'support') && (
@@ -138,7 +138,7 @@ export default function Navbar() {
             {user ? (
               <>
                 <Link href="/content" onClick={() => setMenuOpen(false)} className="block text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
-                  My Purchases
+                  My Projects
                 </Link>
                 <button onClick={() => { handleSignOut(); setMenuOpen(false); }} className="block text-xs text-ivory/30 tracking-[0.15em] uppercase hover:text-gold transition-colors">
                   Sign Out

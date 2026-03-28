@@ -8,6 +8,7 @@ import CsvImporter from '@/components/CsvImporter'
 import ProjectBoard from '@/components/ProjectBoard'
 import Templates from '@/components/Templates'
 import OutreachAnalytics from '@/components/OutreachAnalytics'
+import RevenueForecast from '@/components/RevenueForecast'
 import IntakeSubmissions from '@/components/IntakeSubmissions'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
@@ -533,6 +534,9 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
 
           {/* Outreach Analytics */}
           <OutreachAnalytics prospects={prospects} />
+
+          {/* Revenue Forecast */}
+          <RevenueForecast purchases={purchases} leads={leads} prospects={prospects} />
 
           {/* Trends */}
           <div className="grid md:grid-cols-2 gap-6">

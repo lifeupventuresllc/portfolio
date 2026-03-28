@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { sendOnboardingDay3Email, sendOnboardingDay7Email } from '@/lib/email'
+import { sendOnboardingDay3Email, sendOnboardingDay7Email, sendPurchaseOnboardingDay3Email, sendPurchaseOnboardingDay7Email, sendUpsellEmail } from '@/lib/email'
 import { sendFollowUpEmail, sendProspectFollowUpEmail, FUNNEL_NURTURE_SEQUENCE } from '@/lib/follow-up-emails'
 import { computeLeadScore } from '@/lib/lead-scoring'
 
@@ -88,6 +88,129 @@ export async function GET(request: NextRequest) {
         user_id: user.id,
         email: user.email,
         type: 'onboarding_day7',
+      })
+    }
+  }
+
+  // --- 2b. Send purchase onboarding emails ---
+
+  // Purchase Day 3: check-in / intake form reminder
+  const { data: day3Purchases } = await supabase
+    .from('purchases')
+    .select('id, user_id, product_id')
+    .eq('status', 'completed')
+    .gte('created_at', day3Start)
+    .lt('created_at', day3Ago)
+
+  for (const purchase of day3Purchases || []) {
+    const { data: alreadySent } = await supabase
+      .from('emails')
+      .select('id')
+      .eq('user_id', purchase.user_id)
+      .eq('type', 'purchase_onboarding_day3')
+      .limit(1)
+
+    if (!alreadySent || alreadySent.length === 0) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', purchase.user_id)
+        .single()
+
+      const { data: product } = await supabase
+        .from('products')
+        .select('name')
+        .eq('id', purchase.product_id)
+        .single()
+
+      if (profile?.email) {
+        await sendPurchaseOnboardingDay3Email(profile.email, product?.name || 'your service')
+        await supabase.from('emails').insert({
+          user_id: purchase.user_id,
+          email: profile.email,
+          type: 'purchase_onboarding_day3',
+        })
+      }
+    }
+  }
+
+  // Purchase Day 7: tips for best results
+  const { data: day7Purchases } = await supabase
+    .from('purchases')
+    .select('id, user_id, product_id')
+    .eq('status', 'completed')
+    .gte('created_at', day7Start)
+    .lt('created_at', day7Ago)
+
+  for (const purchase of day7Purchases || []) {
+    const { data: alreadySent } = await supabase
+      .from('emails')
+      .select('id')
+      .eq('user_id', purchase.user_id)
+      .eq('type', 'purchase_onboarding_day7')
+      .limit(1)
+
+    if (!alreadySent || alreadySent.length === 0) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', purchase.user_id)
+        .single()
+
+      const { data: product } = await supabase
+        .from('products')
+        .select('name')
+        .eq('id', purchase.product_id)
+        .single()
+
+      if (profile?.email) {
+        await sendPurchaseOnboardingDay7Email(profile.email, product?.name || 'your service')
+        await supabase.from('emails').insert({
+          user_id: purchase.user_id,
+          email: profile.email,
+          type: 'purchase_onboarding_day7',
+        })
+      }
+    }
+  }
+
+  // --- 2c. Send upsell emails for completed projects ---
+  const day3AgoDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString()
+  const day7AgoDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data: completedProjects } = await supabase
+    .from('projects')
+    .select('id, client_name, client_email, service_type')
+    .eq('status', 'complete')
+    .gte('completed_at', day7AgoDate)
+    .lte('completed_at', day3AgoDate)
+
+  for (const project of completedProjects || []) {
+    if (!project.client_email) continue
+
+    // Look up user profile by email for dedup tracking (emails table requires user_id)
+    const { data: clientProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', project.client_email)
+      .single()
+
+    if (!clientProfile) continue
+
+    const { data: alreadySent } = await supabase
+      .from('emails')
+      .select('id')
+      .eq('user_id', clientProfile.id)
+      .eq('type', 'upsell')
+      .limit(1)
+
+    if (!alreadySent || alreadySent.length === 0) {
+      const firstName = project.client_name.split(' ')[0]
+      await sendUpsellEmail(project.client_email, firstName, project.service_type)
+      await supabase.from('emails').insert({
+        user_id: clientProfile.id,
+        email: project.client_email,
+        type: 'upsell',
       })
     }
   }
