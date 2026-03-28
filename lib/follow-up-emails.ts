@@ -95,6 +95,88 @@ export const FUNNEL_NURTURE_SEQUENCE: FollowUpStep[] = [
   },
 ]
 
+// Prospect outreach follow-up sequence (for cold outreach prospects)
+export const PROSPECT_FOLLOW_UP_SEQUENCE = [
+  {
+    delayDays: 2,
+    subject: (firstName: string) => `Just bumping this up, ${firstName}`,
+    text: (firstName: string) => `Hey ${firstName}! Just bumping this up in case it got buried — would love to do that free edit/mix for you. Totally no pressure either way!\n\n— Asa Luke\nIG: @1AsaLuke`,
+    html: (firstName: string) => `<div style="font-family:Arial,sans-serif; max-width:540px; margin:0 auto; color:#333333;">
+      <p>Hey ${firstName}!</p>
+      <p>Just bumping this up in case it got buried — would love to do that free edit/mix for you. Totally no pressure either way!</p>
+      <p>— <strong>Asa Luke</strong><br><a href="https://instagram.com/1AsaLuke" style="color:#C9A84C;">@1AsaLuke</a></p>
+      ${FOOTER}
+    </div>`,
+  },
+  {
+    delayDays: 5,
+    subject: (firstName: string) => `Thought of you, ${firstName}`,
+    text: (firstName: string) => `Hey ${firstName} — just finished an edit for another creator and it reminded me of your style. Still happy to do one for you free if you're interested.\n\nCheck out my work: ${BASE_URL}\n\n— Asa Luke`,
+    html: (firstName: string) => `<div style="font-family:Arial,sans-serif; max-width:540px; margin:0 auto; color:#333333;">
+      <p>Hey ${firstName},</p>
+      <p>Just finished an edit for another creator and it reminded me of your style. Still happy to do one for you free if you're interested.</p>
+      <p style="text-align:center; margin:24px 0;">
+        <a href="${BASE_URL}" style="display:inline-block; background:#C9A84C; color:#0A0A0F; padding:12px 32px; border-radius:8px; text-decoration:none; font-weight:bold;">See My Work</a>
+      </p>
+      <p>— <strong>Asa Luke</strong></p>
+      ${FOOTER}
+    </div>`,
+  },
+  {
+    delayDays: 10,
+    subject: (firstName: string) => `Last few free spots, ${firstName}`,
+    text: (firstName: string) => `Hey ${firstName}! I'm about to close out my free spots for this month — wanted to check one more time if you'd want me to edit a clip or mix a track for you before I fill up. Just send me the file and I'll get it done in 48 hrs.\n\n— Asa Luke`,
+    html: (firstName: string) => `<div style="font-family:Arial,sans-serif; max-width:540px; margin:0 auto; color:#333333;">
+      <p>Hey ${firstName}!</p>
+      <p>I'm about to close out my free spots for this month — wanted to check one more time if you'd want me to edit a clip or mix a track for you before I fill up.</p>
+      <p>Just send me the file and I'll get it done in 48 hrs.</p>
+      <p>— <strong>Asa Luke</strong><br><a href="https://instagram.com/1AsaLuke" style="color:#C9A84C;">@1AsaLuke</a></p>
+      ${FOOTER}
+    </div>`,
+  },
+  {
+    delayDays: 20,
+    subject: (firstName: string) => `No worries, ${firstName}`,
+    text: (firstName: string) => `Hey ${firstName} — no worries if the timing isn't right! If you ever need a content editor or mix engineer, I'm here. Keep killing it!\n\n— Asa Luke`,
+    html: (firstName: string) => `<div style="font-family:Arial,sans-serif; max-width:540px; margin:0 auto; color:#333333;">
+      <p>Hey ${firstName},</p>
+      <p>No worries if the timing isn't right! If you ever need a content editor or mix engineer, I'm here. Keep killing it!</p>
+      <p>— <strong>Asa Luke</strong><br><a href="https://instagram.com/1AsaLuke" style="color:#C9A84C;">@1AsaLuke</a></p>
+      ${FOOTER}
+    </div>`,
+  },
+]
+
+export async function sendProspectFollowUpEmail(
+  email: string,
+  firstName: string,
+  step: number
+): Promise<boolean> {
+  const sequence = PROSPECT_FOLLOW_UP_SEQUENCE[step]
+  if (!sequence) return false
+
+  try {
+    const { error } = await resend.emails.send({
+      from: `Asa Luke <${FROM_EMAIL}>`,
+      to: email,
+      replyTo: REPLY_TO,
+      subject: sequence.subject(firstName),
+      text: sequence.text(firstName),
+      headers: UNSUB_HEADERS,
+      html: sequence.html(firstName),
+    })
+
+    if (error) {
+      console.error(`Prospect follow-up failed (step ${step}):`, error)
+      return false
+    }
+    return true
+  } catch (err) {
+    console.error(`Prospect follow-up error (step ${step}):`, err)
+    return false
+  }
+}
+
 export async function sendFollowUpEmail(
   email: string,
   firstName: string,

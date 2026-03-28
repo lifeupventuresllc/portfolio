@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendOnboardingDay3Email, sendOnboardingDay7Email } from '@/lib/email'
-import { sendFollowUpEmail, FUNNEL_NURTURE_SEQUENCE } from '@/lib/follow-up-emails'
+import { sendFollowUpEmail, sendProspectFollowUpEmail, FUNNEL_NURTURE_SEQUENCE } from '@/lib/follow-up-emails'
+import { computeLeadScore } from '@/lib/lead-scoring'
 
 export async function GET(request: NextRequest) {
   // Verify cron secret
@@ -163,5 +164,56 @@ export async function GET(request: NextRequest) {
     await supabase.from('funnel_leads').update({ follow_up_stage: 1 }).eq('id', lead.id)
   }
 
-  return NextResponse.json({ ok: true, date: today, followUpsSent })
+  // --- 5. Process prospect follow-ups ---
+  let prospectFollowUpsSent = 0
+  const { data: pendingProspectFollowUps } = await supabase
+    .from('follow_up_queue')
+    .select('id, prospect_id, step')
+    .eq('status', 'pending')
+    .not('prospect_id', 'is', null)
+    .lte('scheduled_for', now.toISOString())
+    .limit(50)
+
+  for (const item of pendingProspectFollowUps || []) {
+    const { data: prospect } = await supabase
+      .from('outreach_prospects')
+      .select('name, email, status')
+      .eq('id', item.prospect_id)
+      .single()
+
+    if (!prospect || !prospect.email || ['closed', 'lost', 'replied'].includes(prospect.status)) {
+      await supabase.from('follow_up_queue').update({ status: 'skipped' }).eq('id', item.id)
+      continue
+    }
+
+    const firstName = prospect.name.split(' ')[0]
+    const sent = await sendProspectFollowUpEmail(prospect.email, firstName, item.step)
+
+    await supabase.from('follow_up_queue').update({
+      status: sent ? 'sent' : 'skipped',
+      sent_at: sent ? now.toISOString() : null,
+    }).eq('id', item.id)
+
+    if (sent) {
+      await supabase.from('outreach_prospects').update({
+        touch_count: (prospect as Record<string, unknown>).touch_count as number + 1 || 1,
+        last_contacted_at: now.toISOString(),
+      }).eq('id', item.prospect_id)
+      prospectFollowUpsSent++
+    }
+  }
+
+  // --- 6. Recalculate lead scores ---
+  const { data: activeLeads } = await supabase
+    .from('funnel_leads')
+    .select('id, status, follow_up_stage, last_email_at')
+    .not('status', 'in', '("converted","lost")')
+    .limit(200)
+
+  for (const lead of activeLeads || []) {
+    const score = computeLeadScore(lead.status, lead.follow_up_stage || 0, lead.last_email_at)
+    await supabase.from('funnel_leads').update({ lead_score: score }).eq('id', lead.id)
+  }
+
+  return NextResponse.json({ ok: true, date: today, followUpsSent, prospectFollowUpsSent })
 }

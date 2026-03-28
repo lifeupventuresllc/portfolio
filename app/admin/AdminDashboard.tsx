@@ -7,6 +7,8 @@ import SimpleChart from '@/components/SimpleChart'
 import CsvImporter from '@/components/CsvImporter'
 import ProjectBoard from '@/components/ProjectBoard'
 import Templates from '@/components/Templates'
+import OutreachAnalytics from '@/components/OutreachAnalytics'
+import IntakeSubmissions from '@/components/IntakeSubmissions'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 type Profile = {
@@ -95,7 +97,7 @@ type Prospect = {
   created_at: string
 }
 
-type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates' | 'leads' | 'outreach' | 'projects' | 'templates'
+type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates' | 'leads' | 'outreach' | 'projects' | 'templates' | 'intake'
 
 function DailyOutreachTracker() {
   const today = new Date().toISOString().split('T')[0]
@@ -435,8 +437,8 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
   )
 
   const tabs: TabName[] = isAdmin
-    ? ['overview', 'leads', 'outreach', 'projects', 'templates', 'users', 'payments', 'emails', 'affiliates']
-    : ['overview', 'leads', 'outreach', 'projects', 'templates', 'users', 'payments', 'emails']
+    ? ['overview', 'leads', 'outreach', 'projects', 'intake', 'templates', 'users', 'payments', 'emails', 'affiliates']
+    : ['overview', 'leads', 'outreach', 'projects', 'intake', 'templates', 'users', 'payments', 'emails']
 
   if (loading) {
     return (
@@ -528,6 +530,9 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
         <div className="space-y-6">
           {/* Daily Outreach Tracker */}
           <DailyOutreachTracker />
+
+          {/* Outreach Analytics */}
+          <OutreachAnalytics prospects={prospects} />
 
           {/* Trends */}
           <div className="grid md:grid-cols-2 gap-6">
@@ -825,9 +830,16 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
                     'bg-emerald-500/20 text-emerald-400'
                   }`}>{item.service}</span>
                 )},
-                { key: 'lead_score', label: 'Score', render: (item) => (
-                  <span className="text-sm font-medium">{item.lead_score || 0}</span>
-                )},
+                { key: 'lead_score', label: 'Score', render: (item) => {
+                  const score = item.lead_score || 0
+                  const color = score >= 36 ? 'bg-emerald-500/20 text-emerald-400' : score >= 16 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'
+                  const label = score >= 36 ? 'Hot' : score >= 16 ? 'Warm' : 'Cold'
+                  return (
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${color}`}>
+                      {score} {label}
+                    </span>
+                  )
+                }},
                 { key: 'status', label: 'Status', render: (item: FunnelLead) => (
                   <select
                     value={item.status}
@@ -940,6 +952,9 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
 
       {/* Projects Tab */}
       {activeTab === 'projects' && <ProjectBoard />}
+
+      {/* Intake Tab */}
+      {activeTab === 'intake' && <IntakeSubmissions />}
 
       {/* Templates Tab */}
       {activeTab === 'templates' && <Templates />}

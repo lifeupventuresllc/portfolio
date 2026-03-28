@@ -82,5 +82,28 @@ export async function PATCH(request: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Auto-schedule follow-ups when status changes to "contacted" and prospect has email
+  if (updates.status === 'contacted' && data?.email && !data?.next_follow_up_at) {
+    const now = new Date()
+    const FOLLOW_UP_DAYS = [2, 5, 10, 20]
+
+    for (let i = 0; i < FOLLOW_UP_DAYS.length; i++) {
+      const scheduledFor = new Date(now.getTime() + FOLLOW_UP_DAYS[i] * 24 * 60 * 60 * 1000)
+      await supabase.from('follow_up_queue').insert({
+        prospect_id: id,
+        sequence_type: 'free-sample',
+        step: i,
+        scheduled_for: scheduledFor.toISOString(),
+        status: 'pending',
+      })
+    }
+
+    // Mark that follow-ups are scheduled
+    await supabase.from('outreach_prospects').update({
+      next_follow_up_at: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+    }).eq('id', id)
+  }
+
   return NextResponse.json(data)
 }
