@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 type DayTask = {
   day: string
@@ -39,56 +40,75 @@ const PILLAR_LABELS = {
   sales: 'Sales',
 }
 
-function getWeekKey() {
-  const now = new Date()
-  const startOfYear = new Date(now.getFullYear(), 0, 1)
-  const weekNum = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7)
-  return `schedule_${now.getFullYear()}_w${weekNum}`
-}
-
-function getTodayKey() {
-  return `daily_${new Date().toISOString().split('T')[0]}`
-}
-
 export default function ContentSchedule() {
-  const weekKey = getWeekKey()
-  const todayKey = getTodayKey()
+  const todayStr = new Date().toISOString().split('T')[0]
   const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
 
   const [weekChecked, setWeekChecked] = useState<Record<string, boolean>>({})
   const [dailyChecked, setDailyChecked] = useState<Record<string, boolean>>({})
   const [streak, setStreak] = useState(0)
 
-  useEffect(() => {
-    const savedWeek = JSON.parse(localStorage.getItem(weekKey) || '{}')
-    const savedDaily = JSON.parse(localStorage.getItem(todayKey) || '{}')
-    setWeekChecked(savedWeek)
-    setDailyChecked(savedDaily)
+  const supabase = createClient()
 
-    // Calculate streak
+  const loadTasks = useCallback(async () => {
+    // Load today's tasks from Supabase
+    const { data } = await supabase
+      .from('schedule_tasks')
+      .select('task_type, task_id, completed')
+      .eq('date', todayStr)
+
+    const daily: Record<string, boolean> = {}
+    const weekly: Record<string, boolean> = {}
+
+    for (const row of data || []) {
+      if (row.task_type === 'daily') daily[row.task_id] = row.completed
+      if (row.task_type === 'weekly') weekly[row.task_id] = row.completed
+    }
+
+    setDailyChecked(daily)
+    setWeekChecked(weekly)
+
+    // Calculate streak from Supabase
     let s = 0
-    const today = new Date()
     for (let i = 1; i <= 30; i++) {
-      const d = new Date(today.getTime() - i * 86400000)
-      const key = `daily_${d.toISOString().split('T')[0]}`
-      const data = JSON.parse(localStorage.getItem(key) || '{}')
-      const completed = Object.values(data).filter(Boolean).length
-      if (completed >= 3) s++
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      const dateStr = d.toISOString().split('T')[0]
+
+      const { data: dayTasks } = await supabase
+        .from('schedule_tasks')
+        .select('completed')
+        .eq('date', dateStr)
+        .eq('task_type', 'daily')
+        .eq('completed', true)
+
+      if ((dayTasks?.length || 0) >= 3) s++
       else break
     }
     setStreak(s)
-  }, [weekKey, todayKey])
+  }, [todayStr, supabase])
 
-  function toggleWeek(day: string) {
-    const updated = { ...weekChecked, [day]: !weekChecked[day] }
-    setWeekChecked(updated)
-    localStorage.setItem(weekKey, JSON.stringify(updated))
-  }
+  useEffect(() => {
+    loadTasks()
+  }, [loadTasks])
 
-  function toggleDaily(id: string) {
-    const updated = { ...dailyChecked, [id]: !dailyChecked[id] }
-    setDailyChecked(updated)
-    localStorage.setItem(todayKey, JSON.stringify(updated))
+  async function toggleTask(taskType: string, taskId: string, currentState: boolean) {
+    const newState = !currentState
+
+    // Upsert to Supabase
+    await supabase
+      .from('schedule_tasks')
+      .upsert(
+        { date: todayStr, task_type: taskType, task_id: taskId, completed: newState },
+        { onConflict: 'date,task_type,task_id' }
+      )
+
+    // Update local state
+    if (taskType === 'daily') {
+      setDailyChecked(prev => ({ ...prev, [taskId]: newState }))
+    } else {
+      setWeekChecked(prev => ({ ...prev, [taskId]: newState }))
+    }
   }
 
   const weekCompleted = Object.values(weekChecked).filter(Boolean).length
@@ -109,7 +129,7 @@ export default function ContentSchedule() {
               </span>
             </div>
             <button
-              onClick={() => toggleWeek(todayTask.day)}
+              onClick={() => toggleTask('weekly', todayTask.day, !!weekChecked[todayTask.day])}
               className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center text-2xl transition-all ${
                 weekChecked[todayTask.day]
                   ? 'bg-emerald-500 border-emerald-500 text-white scale-110'
@@ -138,7 +158,6 @@ export default function ContentSchedule() {
           </div>
         </div>
 
-        {/* Progress bar */}
         <div className="w-full bg-obsidian rounded-full h-2 mb-4 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
@@ -152,7 +171,7 @@ export default function ContentSchedule() {
           {DAILY_TASKS.map(task => (
             <button
               key={task.id}
-              onClick={() => toggleDaily(task.id)}
+              onClick={() => toggleTask('daily', task.id, !!dailyChecked[task.id])}
               className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left ${
                 dailyChecked[task.id]
                   ? 'bg-emerald-500/10 border border-emerald-500/20'
@@ -194,7 +213,7 @@ export default function ContentSchedule() {
             return (
               <button
                 key={item.day}
-                onClick={() => toggleWeek(item.day)}
+                onClick={() => toggleTask('weekly', item.day, !!weekChecked[item.day])}
                 className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left ${
                   weekChecked[item.day]
                     ? 'bg-emerald-500/10 border border-emerald-500/20'

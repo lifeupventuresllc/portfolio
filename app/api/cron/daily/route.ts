@@ -388,12 +388,17 @@ export async function GET(request: NextRequest) {
   // --- 7. Recalculate lead scores ---
   const { data: activeLeads } = await supabase
     .from('funnel_leads')
-    .select('id, status, follow_up_stage, last_email_at')
+    .select('id, status, follow_up_stage, last_email_at, phone, instagram, service, source')
     .not('status', 'in', '("converted","lost")')
     .limit(200)
 
   for (const lead of activeLeads || []) {
-    const score = computeLeadScore(lead.status, lead.follow_up_stage || 0, lead.last_email_at)
+    const score = computeLeadScore(lead.status, lead.follow_up_stage || 0, lead.last_email_at, {
+      hasPhone: !!lead.phone,
+      hasInstagram: !!lead.instagram,
+      serviceInterest: lead.service,
+      funnelSource: lead.source,
+    })
     await supabase.from('funnel_leads').update({ lead_score: score }).eq('id', lead.id)
   }
 

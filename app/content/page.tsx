@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
@@ -90,6 +90,10 @@ export default function ClientPortalPage() {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<{ email?: string } | null>(null)
   const [requesting, setRequesting] = useState<string | null>(null)
+  const [uploading, setUploading] = useState<string | null>(null)
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadProjectId, setUploadProjectId] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -131,6 +135,37 @@ export default function ClientPortalPage() {
       }
     } finally {
       setRequesting(null)
+    }
+  }
+
+  async function handleFileUpload(projectId: string, files: FileList | null) {
+    if (!files || files.length === 0) return
+    setUploading(projectId)
+
+    try {
+      for (const file of Array.from(files)) {
+        const fileName = `${projectId}/${Date.now()}-${file.name}`
+        const { error } = await supabase.storage
+          .from('client-uploads')
+          .upload(fileName, file, { upsert: true })
+
+        if (error) {
+          // If bucket doesn't exist yet, show helpful message
+          if (error.message?.includes('not found') || error.message?.includes('Bucket')) {
+            alert('File upload storage is being set up. Please contact Asa directly for now.')
+            return
+          }
+          throw error
+        }
+      }
+      setUploadSuccess(projectId)
+      setTimeout(() => setUploadSuccess(null), 3000)
+    } catch (err) {
+      console.error('Upload error:', err)
+      alert('Upload failed. Please try again or contact support.')
+    } finally {
+      setUploading(null)
+      setUploadProjectId(null)
     }
   }
 
@@ -302,6 +337,41 @@ export default function ClientPortalPage() {
                     <span className="text-[11px] text-ivory/30">
                       All revisions used. Contact support for additional changes.
                     </span>
+                  </div>
+                )}
+
+                {/* File Upload */}
+                {project.status !== 'complete' && (
+                  <div className="mt-5 pt-4 border-t border-smoke/30">
+                    <div className="flex items-center gap-3">
+                      <input
+                        ref={uploadProjectId === project.id ? fileInputRef : null}
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(project.id, e.target.files)}
+                        accept="video/*,audio/*,image/*,.zip,.rar,.psd,.ai,.pdf"
+                      />
+                      <button
+                        onClick={() => {
+                          setUploadProjectId(project.id)
+                          setTimeout(() => fileInputRef.current?.click(), 50)
+                        }}
+                        disabled={uploading === project.id}
+                        className="flex items-center gap-2 border border-smoke/60 text-ivory/60 px-4 py-2 rounded-lg text-xs font-medium hover:border-gold/40 hover:text-ivory transition-colors disabled:opacity-50"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        {uploading === project.id ? 'Uploading...' : 'Upload Files'}
+                      </button>
+                      <span className="text-[10px] text-ivory/30">
+                        Videos, audio, images, or archives
+                      </span>
+                      {uploadSuccess === project.id && (
+                        <span className="text-xs text-emerald-400">Uploaded!</span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
