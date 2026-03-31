@@ -237,6 +237,132 @@ export async function sendUpsellEmail(email: string, firstName: string, serviceT
   }
 }
 
+// === CLIENT CHECK-IN EMAILS ===
+
+export async function sendCheckinEmail(email: string, firstName: string, type: '30' | '60' | '90') {
+  const subjects: Record<string, string> = {
+    '30': "Quick check — how's everything going?",
+    '60': "2 months in — ready to level up?",
+    '90': "3 months strong — let's talk about what's next",
+  }
+
+  const bodies: Record<string, string> = {
+    '30': `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #C9A84C;">How's Everything Going?</h1>
+        <p>Hey ${firstName}! It's been about a month since we started working together, and I wanted to check in.</p>
+        <p>Quick questions:</p>
+        <ul style="color: #374151; line-height: 2;">
+          <li>Are you happy with the quality of work?</li>
+          <li>Is there anything you'd like adjusted?</li>
+          <li>Any feedback on turnaround time?</li>
+        </ul>
+        <p>Your satisfaction is everything to me. Just hit reply and let me know how things are going.</p>
+        <p style="margin-top: 20px;">— Asa Luke</p>
+        <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
+        ${FOOTER}
+      </div>
+    `,
+    '60': `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #C9A84C;">Ready to Level Up?</h1>
+        <p>Hey ${firstName}! We're 2 months in and I hope you're seeing results from the content.</p>
+        <p>A lot of my clients at this stage start thinking about scaling — posting more frequently, adding new content types, or expanding to new platforms.</p>
+        <p>If you're interested in upgrading your package or adding services, I'd love to chat about what would make the biggest impact for your brand.</p>
+        <p style="margin-top: 20px;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/book" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Book a Quick Call</a>
+        </p>
+        <p style="margin-top: 20px;">— Asa Luke</p>
+        <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
+        ${FOOTER}
+      </div>
+    `,
+    '90': `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #C9A84C;">3 Months Strong</h1>
+        <p>Hey ${firstName}! We've been working together for 3 months now and I appreciate you trusting me with your brand.</p>
+        <p>At this point, I'd love to have a quick conversation about:</p>
+        <ul style="color: #374151; line-height: 2;">
+          <li><strong>What's working</strong> — so we can double down</li>
+          <li><strong>What could improve</strong> — so we can adjust</li>
+          <li><strong>Your goals for the next quarter</strong> — so I can plan content around them</li>
+        </ul>
+        <p>Also — if you know anyone who could benefit from what we do, I'd appreciate a referral. I'll give you a discount on next month's invoice for every person you send my way.</p>
+        <p style="margin-top: 20px;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/book" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Book a Strategy Call</a>
+        </p>
+        <p style="margin-top: 20px;">— Asa Luke</p>
+        <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
+        ${FOOTER}
+      </div>
+    `,
+  }
+
+  const { error } = await resend.emails.send({
+    from: `Asa Luke <${FROM_EMAIL}>`,
+    to: email,
+    replyTo: REPLY_TO,
+    subject: subjects[type],
+    headers: UNSUB_HEADERS,
+    text: `Hey ${firstName}, checking in after ${type} days. How's everything going? Reply to this email or book a call at ${process.env.NEXT_PUBLIC_APP_URL}/book — Asa Luke`,
+    html: bodies[type],
+  })
+
+  if (error) {
+    console.error(`Failed to send ${type}-day checkin email:`, error)
+  }
+}
+
+// === BOOKING CONFIRMATION EMAILS ===
+
+export async function sendBookingConfirmation(email: string, name: string, date: string, timeSlot: string, service: string) {
+  const { error } = await resend.emails.send({
+    from: `Asa Luke <${FROM_EMAIL}>`,
+    to: email,
+    replyTo: REPLY_TO,
+    subject: `Booking Confirmed — ${date} at ${timeSlot}`,
+    headers: UNSUB_HEADERS,
+    text: `Hey ${name}! Your call is confirmed.\n\nDate: ${date}\nTime: ${timeSlot} (Pacific)\nTopic: ${service}\n\nI'll reach out via email at the scheduled time. If you need to reschedule, just reply to this email.\n\n— Asa Luke`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #C9A84C;">You're Booked</h1>
+        <p>Hey ${name}! Your call is confirmed.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr><td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Date</td><td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${date}</td></tr>
+          <tr><td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Time</td><td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${timeSlot} (Pacific)</td></tr>
+          <tr><td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Topic</td><td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${service}</td></tr>
+        </table>
+        <p>I'll reach out via email at the scheduled time. If you need to reschedule, just reply to this email.</p>
+        <p style="margin-top: 20px;">— Asa Luke</p>
+        <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
+        ${FOOTER}
+      </div>
+    `,
+  })
+
+  if (error) console.error('Failed to send booking confirmation:', error)
+
+  // Notify admin
+  await resend.emails.send({
+    from: `Asa Luke System <${FROM_EMAIL}>`,
+    to: REPLY_TO,
+    subject: `New Booking: ${name} — ${date} at ${timeSlot}`,
+    text: `New booking!\n\nName: ${name}\nEmail: ${email}\nDate: ${date}\nTime: ${timeSlot}\nService: ${service}\n\nCheck admin dashboard for details.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #C9A84C;">New Booking</h1>
+        <p><strong>${name}</strong> (${email}) booked a call.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr><td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Date</td><td style="text-align: right;">${date}</td></tr>
+          <tr><td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Time</td><td style="text-align: right;">${timeSlot}</td></tr>
+          <tr><td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Service</td><td style="text-align: right;">${service}</td></tr>
+        </table>
+        <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin">View in Admin</a></p>
+      </div>
+    `,
+  })
+}
+
 export async function sendRefundConfirmation(email: string, productName: string, amount: number) {
   const dollars = (amount / 100).toFixed(2)
 

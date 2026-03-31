@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { sendOnboardingDay3Email, sendOnboardingDay7Email, sendPurchaseOnboardingDay3Email, sendPurchaseOnboardingDay7Email, sendUpsellEmail } from '@/lib/email'
+import { sendOnboardingDay3Email, sendOnboardingDay7Email, sendPurchaseOnboardingDay3Email, sendPurchaseOnboardingDay7Email, sendUpsellEmail, sendCheckinEmail } from '@/lib/email'
 import { sendFollowUpEmail, sendProspectFollowUpEmail, FUNNEL_NURTURE_SEQUENCE } from '@/lib/follow-up-emails'
 import { computeLeadScore } from '@/lib/lead-scoring'
 
@@ -326,7 +326,52 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // --- 6. Recalculate lead scores ---
+  // --- 6. Client check-ins (30/60/90 day) ---
+  let checkinsSent = 0
+  const checkinDays: Array<{ days: number; type: '30' | '60' | '90' }> = [
+    { days: 30, type: '30' },
+    { days: 60, type: '60' },
+    { days: 90, type: '90' },
+  ]
+
+  for (const { days, type } of checkinDays) {
+    const targetDate = new Date()
+    targetDate.setDate(targetDate.getDate() - days)
+    const targetStr = targetDate.toISOString().split('T')[0]
+
+    // Find customers who purchased on this date
+    const { data: customers } = await supabase
+      .from('purchases')
+      .select('user_id, profiles!inner(email, full_name)')
+      .eq('status', 'completed')
+      .gte('created_at', targetStr + 'T00:00:00')
+      .lt('created_at', targetStr + 'T23:59:59')
+
+    for (const customer of customers || []) {
+      const profile = (customer as Record<string, unknown>).profiles as Record<string, string>
+      const customerEmail = profile?.email
+      if (!customerEmail) continue
+
+      // Check if already sent
+      const { data: existing } = await supabase
+        .from('client_checkins')
+        .select('id')
+        .eq('customer_email', customerEmail)
+        .eq('checkin_type', type)
+        .single()
+
+      if (existing) continue
+
+      await sendCheckinEmail(customerEmail, profile.full_name || 'there', type)
+      await supabase.from('client_checkins').insert({
+        customer_email: customerEmail,
+        checkin_type: type,
+      })
+      checkinsSent++
+    }
+  }
+
+  // --- 7. Recalculate lead scores ---
   const { data: activeLeads } = await supabase
     .from('funnel_leads')
     .select('id, status, follow_up_stage, last_email_at')
@@ -338,5 +383,5 @@ export async function GET(request: NextRequest) {
     await supabase.from('funnel_leads').update({ lead_score: score }).eq('id', lead.id)
   }
 
-  return NextResponse.json({ ok: true, date: today, followUpsSent, prospectFollowUpsSent })
+  return NextResponse.json({ ok: true, date: today, followUpsSent, prospectFollowUpsSent, checkinsSent })
 }

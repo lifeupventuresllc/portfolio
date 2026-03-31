@@ -10,6 +10,9 @@ import Templates from '@/components/Templates'
 import OutreachAnalytics from '@/components/OutreachAnalytics'
 import RevenueForecast from '@/components/RevenueForecast'
 import IntakeSubmissions from '@/components/IntakeSubmissions'
+import ContentSchedule from '@/components/ContentSchedule'
+import BroadcastPanel from '@/components/BroadcastPanel'
+import OutreachTrackerPanel from '@/components/OutreachTracker'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 type Profile = {
@@ -98,7 +101,7 @@ type Prospect = {
   created_at: string
 }
 
-type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates' | 'leads' | 'outreach' | 'projects' | 'templates' | 'intake'
+type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates' | 'leads' | 'outreach' | 'projects' | 'templates' | 'intake' | 'schedule' | 'broadcast' | 'tracker'
 
 function DailyOutreachTracker() {
   const today = new Date().toISOString().split('T')[0]
@@ -438,8 +441,8 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
   )
 
   const tabs: TabName[] = isAdmin
-    ? ['overview', 'leads', 'outreach', 'projects', 'intake', 'templates', 'users', 'payments', 'emails', 'affiliates']
-    : ['overview', 'leads', 'outreach', 'projects', 'intake', 'templates', 'users', 'payments', 'emails']
+    ? ['overview', 'schedule', 'leads', 'outreach', 'broadcast', 'tracker', 'projects', 'intake', 'templates', 'users', 'payments', 'emails', 'affiliates']
+    : ['overview', 'schedule', 'leads', 'outreach', 'projects', 'intake', 'templates', 'users', 'payments', 'emails']
 
   if (loading) {
     return (
@@ -510,12 +513,12 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-smoke mb-6">
+      <div className="flex border-b border-smoke mb-6 overflow-x-auto scrollbar-hide">
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
               activeTab === tab
                 ? 'border-gold text-white'
                 : 'border-transparent text-ivory/50 hover:text-ivory/70'
@@ -958,10 +961,20 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
       {activeTab === 'projects' && <ProjectBoard />}
 
       {/* Intake Tab */}
+      {/* Schedule Tab */}
+      {activeTab === 'schedule' && <ContentSchedule />}
+
+      {/* Intake Tab */}
       {activeTab === 'intake' && <IntakeSubmissions />}
 
       {/* Templates Tab */}
       {activeTab === 'templates' && <Templates />}
+
+      {/* Broadcast Tab (Admin only) */}
+      {activeTab === 'broadcast' && isAdmin && <BroadcastPanel />}
+
+      {/* Tracker Tab (Admin only) */}
+      {activeTab === 'tracker' && isAdmin && <OutreachTrackerPanel />}
 
       {/* Affiliates Tab (Admin only) */}
       {activeTab === 'affiliates' && isAdmin && (

@@ -1,10 +1,12 @@
 import Link from 'next/link'
+import JsonLd, { localBusinessSchema } from '@/components/JsonLd'
 
 export const dynamic = 'force-dynamic'
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-obsidian">
+      <JsonLd data={localBusinessSchema} />
 
       {/* ── HERO ── */}
       <section className="min-h-[100vh] flex flex-col items-center justify-center text-center px-6 pt-14 relative overflow-hidden">

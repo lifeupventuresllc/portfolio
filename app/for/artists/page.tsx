@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import NicheLanding from '@/components/NicheLanding'
+import JsonLd, { breadcrumbSchema } from '@/components/JsonLd'
 
 export const metadata: Metadata = {
   title: 'Mixing & Mastering for Independent Artists',
@@ -8,6 +9,12 @@ export const metadata: Metadata = {
 
 export default function ArtistsPage() {
   return (
+    <>
+      <JsonLd data={breadcrumbSchema([
+        { name: 'Home', url: 'https://www.asaluke.io' },
+        { name: 'Audio Engineering', url: 'https://www.asaluke.io/services/audio-engineering' },
+        { name: 'For Artists', url: 'https://www.asaluke.io/for/artists' },
+      ])} />
     <NicheLanding
       headline="Your Music Deserves a Professional Mix."
       subheadline="You've written something great. But bedroom mixes don't compete with what's on Spotify. Get a professional mix that makes your music sound radio-ready — without paying big studio prices."
@@ -33,5 +40,6 @@ export default function ArtistsPage() {
         { title: 'You Release', desc: 'Get your polished track back in 48-72 hours. Ready for Spotify, Apple Music, everywhere.' },
       ]}
     />
+    </>
   )
 }

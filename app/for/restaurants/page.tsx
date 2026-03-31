@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import NicheLanding from '@/components/NicheLanding'
+import JsonLd, { breadcrumbSchema } from '@/components/JsonLd'
 
 export const metadata: Metadata = {
   title: 'Content Editing for Restaurants',
@@ -8,6 +9,12 @@ export const metadata: Metadata = {
 
 export default function RestaurantsPage() {
   return (
+    <>
+      <JsonLd data={breadcrumbSchema([
+        { name: 'Home', url: 'https://www.asaluke.io' },
+        { name: 'Content Editing', url: 'https://www.asaluke.io/services/content-editing' },
+        { name: 'For Restaurants', url: 'https://www.asaluke.io/for/restaurants' },
+      ])} />
     <NicheLanding
       headline="Your Food Looks Amazing. Your Instagram Doesn't."
       subheadline="You spend hours perfecting your dishes. Let us perfect how they look on screen. 12 professionally edited Reels per month — so your food gets the attention it deserves."
@@ -33,5 +40,6 @@ export default function RestaurantsPage() {
         { title: 'You Post It', desc: 'Get the finished Reel back in 48 hours. Post it and watch engagement grow.' },
       ]}
     />
+    </>
   )
 }

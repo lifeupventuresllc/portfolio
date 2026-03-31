@@ -15,6 +15,7 @@ type Project = {
   revisions_used: number
   revision_limit: number
   notes: string | null
+  assets_folder: string | null
   created_at: string
 }
 
@@ -38,6 +39,30 @@ const STATUS_BADGES: Record<string, string> = {
   'complete': 'bg-ivory/20 text-ivory/60',
 }
 
+const PROGRESS_OPTIONS = [0, 25, 50, 75, 100]
+
+function getProgress(project: Project): number {
+  // Parse progress from assets_folder field (used as progress storage)
+  if (project.assets_folder && project.assets_folder.startsWith('progress:')) {
+    return parseInt(project.assets_folder.split(':')[1], 10) || 0
+  }
+  // Default progress based on status
+  if (project.status === 'complete') return 100
+  if (project.status === 'delivered') return 90
+  if (project.status === 'review') return 75
+  if (project.status === 'revision') return 60
+  if (project.status === 'in-progress') return 25
+  return 0
+}
+
+function getProgressColor(pct: number): string {
+  if (pct >= 100) return 'bg-emerald-500'
+  if (pct >= 75) return 'bg-blue-500'
+  if (pct >= 50) return 'bg-gold'
+  if (pct >= 25) return 'bg-yellow-500'
+  return 'bg-smoke'
+}
+
 export default function ProjectBoard() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
@@ -59,6 +84,15 @@ export default function ProjectBoard() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, status: newStatus }),
+    })
+    await fetchProjects()
+  }
+
+  async function setProgress(id: string, pct: number) {
+    await fetch('/api/admin/projects', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, assets_folder: `progress:${pct}` }),
     })
     await fetchProjects()
   }
@@ -124,6 +158,7 @@ export default function ProjectBoard() {
             >
               <option value="content">Content Editing</option>
               <option value="audio">Audio Engineering</option>
+              <option value="fitness">Fitness Coaching</option>
             </select>
             <input
               placeholder="Package (e.g. Growth $597/mo)"
@@ -175,40 +210,73 @@ export default function ProjectBoard() {
               </div>
 
               <div className="space-y-3">
-                {statusProjects.map(project => (
-                  <div
-                    key={project.id}
-                    className={`rounded-xl border p-4 ${STATUS_COLORS[status]}`}
-                  >
-                    <div className="text-sm font-medium text-white mb-1">{project.client_name}</div>
-                    <div className="text-xs text-ivory/40 mb-2">
-                      {project.service_type === 'content' ? 'Content' : 'Audio'}
-                      {project.package && ` — ${project.package}`}
-                    </div>
-                    {project.deadline && (
-                      <div className="text-xs text-ivory/30 mb-2">Due: {formatDate(project.deadline)}</div>
-                    )}
-                    {project.revenue > 0 && (
-                      <div className="text-xs text-emerald-400 mb-2">${project.revenue}</div>
-                    )}
-                    {project.revisions_used > 0 && (
-                      <div className="text-xs text-ivory/30 mb-2">
-                        Rev: {project.revisions_used}/{project.revision_limit}
-                      </div>
-                    )}
-
-                    {/* Move buttons */}
-                    <select
-                      value={status}
-                      onChange={e => moveProject(project.id, e.target.value)}
-                      className="w-full text-xs bg-obsidian border border-smoke rounded px-2 py-1 text-ivory/70 mt-1"
+                {statusProjects.map(project => {
+                  const progress = getProgress(project)
+                  return (
+                    <div
+                      key={project.id}
+                      className={`rounded-xl border p-4 ${STATUS_COLORS[status]}`}
                     >
-                      {STATUSES.map(s => (
-                        <option key={s} value={s}>{s.replace('-', ' ')}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
+                      <div className="text-sm font-medium text-white mb-1">{project.client_name}</div>
+                      <div className="text-xs text-ivory/40 mb-2">
+                        {project.service_type === 'content' ? 'Content' : project.service_type === 'audio' ? 'Audio' : 'Fitness'}
+                        {project.package && ` — ${project.package}`}
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="mb-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-ivory/40">Progress</span>
+                          <span className={`text-[10px] font-bold ${progress >= 100 ? 'text-emerald-400' : 'text-ivory/60'}`}>{progress}%</span>
+                        </div>
+                        <div className="w-full bg-obsidian rounded-full h-2 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${getProgressColor(progress)}`}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        <div className="flex gap-1 mt-1">
+                          {PROGRESS_OPTIONS.map(pct => (
+                            <button
+                              key={pct}
+                              onClick={() => setProgress(project.id, pct)}
+                              className={`flex-1 text-[9px] py-0.5 rounded transition-colors ${
+                                progress === pct
+                                  ? 'bg-gold/30 text-gold font-bold'
+                                  : 'bg-obsidian text-ivory/30 hover:text-ivory/60'
+                              }`}
+                            >
+                              {pct}%
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {project.deadline && (
+                        <div className="text-xs text-ivory/30 mb-1">Due: {formatDate(project.deadline)}</div>
+                      )}
+                      {project.revenue > 0 && (
+                        <div className="text-xs text-emerald-400 mb-1">${project.revenue}</div>
+                      )}
+                      {project.revisions_used > 0 && (
+                        <div className="text-xs text-ivory/30 mb-1">
+                          Rev: {project.revisions_used}/{project.revision_limit}
+                        </div>
+                      )}
+
+                      {/* Status selector */}
+                      <select
+                        value={status}
+                        onChange={e => moveProject(project.id, e.target.value)}
+                        className="w-full text-xs bg-obsidian border border-smoke rounded px-2 py-1 text-ivory/70 mt-1"
+                      >
+                        {STATUSES.map(s => (
+                          <option key={s} value={s}>{s.replace('-', ' ')}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )
+                })}
 
                 {statusProjects.length === 0 && (
                   <div className="text-xs text-ivory/20 text-center py-8 border border-dashed border-smoke/50 rounded-xl">

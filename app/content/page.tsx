@@ -14,6 +14,7 @@ type Project = {
   revisions_used: number
   revision_limit: number
   notes: string | null
+  assets_folder: string | null
   created_at: string
   updated_at: string | null
 }
@@ -193,7 +194,7 @@ export default function ClientPortalPage() {
                     <div className="flex items-center gap-2.5 mb-1.5">
                       <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${STATUS_COLORS[project.status] || 'bg-ivory/30'}`} />
                       <span className="text-xs font-medium text-ivory/50 tracking-wider uppercase">
-                        {project.service_type === 'audio' ? 'Audio Engineering' : 'Content Editing'}
+                        {project.service_type === 'audio' ? 'Audio Engineering' : project.service_type === 'fitness' ? 'Fitness Coaching' : 'Content Editing'}
                       </span>
                     </div>
                     <h3 className="text-lg font-semibold text-ivory truncate">
@@ -219,6 +220,34 @@ export default function ClientPortalPage() {
 
                 {/* Progress Bar */}
                 <ProgressBar status={project.status} />
+
+                {/* Completion Percentage */}
+                {(() => {
+                  let pct = 0
+                  if (project.assets_folder?.startsWith('progress:')) {
+                    pct = parseInt(project.assets_folder.split(':')[1], 10) || 0
+                  } else if (project.status === 'complete') pct = 100
+                  else if (project.status === 'delivered') pct = 90
+                  else if (project.status === 'review') pct = 75
+                  else if (project.status === 'in-progress') pct = 25
+
+                  return (
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] text-ivory/40 uppercase tracking-wider">Completion</span>
+                        <span className={`text-sm font-bold ${pct >= 100 ? 'text-emerald-400' : pct >= 50 ? 'text-gold' : 'text-ivory/60'}`}>{pct}%</span>
+                      </div>
+                      <div className="w-full bg-smoke/40 rounded-full h-2.5 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            pct >= 100 ? 'bg-emerald-500' : pct >= 75 ? 'bg-blue-500' : pct >= 50 ? 'bg-gold' : pct >= 25 ? 'bg-yellow-500' : 'bg-smoke'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 {/* Details Row */}
                 <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-xs text-ivory/40">

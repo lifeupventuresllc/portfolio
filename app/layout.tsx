@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import JsonLd, { organizationSchema } from "@/components/JsonLd";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -44,6 +45,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <JsonLd data={organizationSchema} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-obsidian`}
       >

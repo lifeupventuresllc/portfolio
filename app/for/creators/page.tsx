@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import NicheLanding from '@/components/NicheLanding'
+import JsonLd, { breadcrumbSchema } from '@/components/JsonLd'
 
 export const metadata: Metadata = {
   title: 'Content Editing for Creators',
@@ -8,6 +9,12 @@ export const metadata: Metadata = {
 
 export default function CreatorsPage() {
   return (
+    <>
+      <JsonLd data={breadcrumbSchema([
+        { name: 'Home', url: 'https://www.asaluke.io' },
+        { name: 'Content Editing', url: 'https://www.asaluke.io/services/content-editing' },
+        { name: 'For Creators', url: 'https://www.asaluke.io/for/creators' },
+      ])} />
     <NicheLanding
       headline="Create More. Edit Less."
       subheadline="You have the ideas. You have the personality. But editing takes 3x longer than filming and it's killing your output. Let us handle the editing so you can create more."
@@ -33,5 +40,6 @@ export default function CreatorsPage() {
         { title: 'You Post & Grow', desc: 'Get the finished Reel in 48 hours. Stay consistent without the burnout.' },
       ]}
     />
+    </>
   )
 }
