@@ -15,6 +15,7 @@ import BroadcastPanel from '@/components/BroadcastPanel'
 import OutreachTrackerPanel from '@/components/OutreachTracker'
 import TrafficAnalytics from '@/components/TrafficAnalytics'
 import ContentPlanner from '@/components/ContentPlanner'
+import SocialPublisher from '@/components/SocialPublisher'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 type Profile = {
@@ -103,7 +104,7 @@ type Prospect = {
   created_at: string
 }
 
-type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates' | 'leads' | 'outreach' | 'projects' | 'templates' | 'intake' | 'schedule' | 'broadcast' | 'tracker' | 'analytics' | 'planner'
+type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates' | 'leads' | 'outreach' | 'projects' | 'templates' | 'intake' | 'schedule' | 'broadcast' | 'tracker' | 'analytics' | 'planner' | 'publish'
 
 function DailyOutreachTracker() {
   const today = new Date().toISOString().split('T')[0]
@@ -443,7 +444,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
   )
 
   const tabs: TabName[] = isAdmin
-    ? ['overview', 'planner', 'schedule', 'leads', 'outreach', 'broadcast', 'tracker', 'analytics', 'projects', 'intake', 'templates', 'users', 'payments', 'emails', 'affiliates']
+    ? ['overview', 'planner', 'publish', 'schedule', 'leads', 'outreach', 'broadcast', 'tracker', 'analytics', 'projects', 'intake', 'templates', 'users', 'payments', 'emails', 'affiliates']
     : ['overview', 'schedule', 'leads', 'outreach', 'projects', 'intake', 'templates', 'users', 'payments', 'emails']
 
   if (loading) {
@@ -980,6 +981,9 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
 
       {/* Content Planner Tab (Admin only) */}
       {activeTab === 'planner' && isAdmin && <ContentPlanner />}
+
+      {/* Social Publisher Tab (Admin only) */}
+      {activeTab === 'publish' && isAdmin && <SocialPublisher />}
 
       {/* Analytics Tab (Admin only) */}
       {activeTab === 'analytics' && isAdmin && <TrafficAnalytics />}

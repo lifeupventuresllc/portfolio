@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { sendOnboardingDay3Email, sendOnboardingDay7Email, sendPurchaseOnboardingDay3Email, sendPurchaseOnboardingDay7Email, sendUpsellEmail, sendCheckinEmail } from '@/lib/email'
 import { sendFollowUpEmail, sendProspectFollowUpEmail, FUNNEL_NURTURE_SEQUENCE } from '@/lib/follow-up-emails'
 import { computeLeadScore } from '@/lib/lead-scoring'
+import { publishToInstagram, publishToTikTok } from '@/lib/social'
 
 export async function GET(request: NextRequest) {
   // Verify cron secret
@@ -402,5 +403,63 @@ export async function GET(request: NextRequest) {
     await supabase.from('funnel_leads').update({ lead_score: score }).eq('id', lead.id)
   }
 
-  return NextResponse.json({ ok: true, date: today, followUpsSent, prospectFollowUpsSent, checkinsSent })
+  // --- 8. Auto-publish scheduled posts ---
+  let postsPublished = 0
+  const { data: duePosts } = await supabase
+    .from('scheduled_posts')
+    .select('*')
+    .eq('status', 'scheduled')
+    .lte('scheduled_at', now.toISOString())
+
+  for (const post of duePosts || []) {
+    if (!post.media_url) continue
+
+    await supabase.from('scheduled_posts').update({ status: 'publishing' }).eq('id', post.id)
+
+    const fullCaption = post.hashtags ? `${post.caption}\n\n${post.hashtags}` : post.caption
+    let success = true
+    let publishedId = ''
+    const errors: string[] = []
+
+    // Instagram
+    if (post.platform === 'instagram' || post.platform === 'both') {
+      const { data: igAccount } = await supabase
+        .from('social_accounts')
+        .select('page_access_token, ig_user_id')
+        .eq('platform', 'instagram')
+        .eq('active', true)
+        .single()
+
+      if (igAccount) {
+        const result = await publishToInstagram(igAccount.page_access_token, igAccount.ig_user_id, post.media_url, fullCaption)
+        if ('id' in result) { publishedId = result.id } else { success = false; errors.push(`IG: ${result.error}`) }
+      } else { success = false; errors.push('IG: No account connected') }
+    }
+
+    // TikTok
+    if (post.platform === 'tiktok' || post.platform === 'both') {
+      const { data: ttAccount } = await supabase
+        .from('social_accounts')
+        .select('access_token')
+        .eq('platform', 'tiktok')
+        .eq('active', true)
+        .single()
+
+      if (ttAccount) {
+        const result = await publishToTikTok(ttAccount.access_token, post.media_url, fullCaption)
+        if ('id' in result) { if (!publishedId) publishedId = result.id } else { success = false; errors.push(`TT: ${result.error}`) }
+      } else { success = false; errors.push('TT: No account connected') }
+    }
+
+    await supabase.from('scheduled_posts').update({
+      status: success ? 'published' : 'failed',
+      published_at: success ? now.toISOString() : null,
+      published_id: publishedId || null,
+      error_message: errors.length > 0 ? errors.join('; ') : null,
+    }).eq('id', post.id)
+
+    if (success) postsPublished++
+  }
+
+  return NextResponse.json({ ok: true, date: today, followUpsSent, prospectFollowUpsSent, checkinsSent, postsPublished })
 }
