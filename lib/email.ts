@@ -203,37 +203,91 @@ export async function sendPurchaseOnboardingDay7Email(email: string, serviceName
   }
 }
 
-export async function sendUpsellEmail(email: string, firstName: string, serviceType: string) {
-  const serviceLabel = serviceType === 'content' ? 'edit' : 'mix'
+export async function sendUpsellEmail(email: string, firstName: string, serviceType: string, stage: number = 1) {
+  const serviceLabel = serviceType === 'content' ? 'content' : 'audio'
+
+  const emails: Record<number, { subject: string; html: string; text: string }> = {
+    1: {
+      subject: 'Want to keep the momentum going?',
+      text: `Hey ${firstName}! Glad you liked the ${serviceLabel} work! If you want to keep the momentum going, here are my monthly packages:\n\n→ Starter ($297/mo) — 4 videos\n→ Growth ($597/mo) — 8 videos\n→ VIP ($997/mo) — 12+ videos\n\nWant me to set you up? Just hit reply.\n\n— Asa Luke`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #C9A84C;">Keep the Momentum Going</h1>
+          <p>Hey ${firstName}! Glad you liked the ${serviceLabel} work! If you want to keep the momentum going, here are my monthly packages:</p>
+          <ul style="color: #374151; line-height: 2; list-style: none; padding: 0;">
+            <li><strong style="color: #C9A84C;">→</strong> <strong>Starter ($297/mo)</strong> — 4 videos</li>
+            <li><strong style="color: #C9A84C;">→</strong> <strong>Growth ($597/mo)</strong> — 8 videos</li>
+            <li><strong style="color: #C9A84C;">→</strong> <strong>VIP ($997/mo)</strong> — 12+ videos</li>
+          </ul>
+          <p>Want me to set you up? Just hit reply.</p>
+          <p style="margin-top: 20px;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/services" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View Packages</a>
+          </p>
+          <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
+          ${FOOTER}
+        </div>
+      `,
+    },
+    2: {
+      subject: `Quick question about your ${serviceLabel} project`,
+      text: `Hey ${firstName}, just wanted to follow up. A lot of my clients who started with a single project ended up going monthly — and saw way better results because of the consistency.\n\nIf you're thinking about it, I can put together a custom package for you. Just reply and let me know what you need.\n\n— Asa Luke`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #C9A84C;">Quick Follow-Up</h1>
+          <p>Hey ${firstName}, just wanted to follow up.</p>
+          <p>A lot of my clients who started with a single project ended up going monthly — and saw way better results because of the <strong>consistency</strong>.</p>
+          <p>Here's what they say matters most:</p>
+          <ul style="color: #374151; line-height: 2; list-style: none; padding: 0;">
+            <li><strong style="color: #C9A84C;">→</strong> Consistent posting builds momentum</li>
+            <li><strong style="color: #C9A84C;">→</strong> The algorithm rewards regularity</li>
+            <li><strong style="color: #C9A84C;">→</strong> Their audience grew 2-3x in the first month</li>
+          </ul>
+          <p>If you're thinking about it, I can put together a custom package. Just reply.</p>
+          <p style="margin-top: 20px;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/book" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Book a Quick Call</a>
+          </p>
+          <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
+          ${FOOTER}
+        </div>
+      `,
+    },
+    3: {
+      subject: `Last chance — special offer for returning clients`,
+      text: `Hey ${firstName}, this is my last follow-up. I'm offering returning clients 15% off their first month of any monthly package.\n\nThis offer expires in 48 hours. If you're ready to level up your content, now's the time.\n\nReply or book a call: ${process.env.NEXT_PUBLIC_APP_URL}/book\n\n— Asa Luke`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #C9A84C;">Special Offer — Returning Clients Only</h1>
+          <p>Hey ${firstName}, this is my last follow-up and I wanted to make it count.</p>
+          <p>I'm offering returning clients <strong style="color: #C9A84C;">15% off their first month</strong> of any monthly package.</p>
+          <div style="background: #1A1A22; border: 1px solid #C9A84C; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 0; text-align: center; color: #C9A84C; font-size: 18px; font-weight: bold;">15% OFF FIRST MONTH</p>
+            <p style="margin: 8px 0 0; text-align: center; color: #9ca3af; font-size: 13px;">Offer expires in 48 hours</p>
+          </div>
+          <p>If you're ready to level up your content, now's the time.</p>
+          <p style="margin-top: 20px;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/book" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Claim Your Spot</a>
+          </p>
+          <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
+          ${FOOTER}
+        </div>
+      `,
+    },
+  }
+
+  const emailData = emails[stage] || emails[1]
 
   const { error } = await resend.emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
     to: email,
     replyTo: REPLY_TO,
-    subject: 'Want to keep the momentum going?',
+    subject: emailData.subject,
     headers: UNSUB_HEADERS,
-    text: `Hey ${firstName}! Glad you liked the ${serviceLabel}! If you want to keep the momentum going, here are my monthly packages:\n\n→ Starter ($297/mo) — 4 videos\n→ Growth ($597/mo) — 8 videos\n→ VIP ($997/mo) — 12+ videos\n\nWant me to set you up? Just hit reply.\n\n— Asa Luke\nasaluke.io`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #C9A84C;">Keep the Momentum Going</h1>
-        <p>Hey ${firstName}! Glad you liked the ${serviceLabel}! If you want to keep the momentum going, here are my monthly packages:</p>
-        <ul style="color: #374151; line-height: 2; list-style: none; padding: 0;">
-          <li><strong style="color: #C9A84C;">→</strong> <strong>Starter ($297/mo)</strong> — 4 videos</li>
-          <li><strong style="color: #C9A84C;">→</strong> <strong>Growth ($597/mo)</strong> — 8 videos</li>
-          <li><strong style="color: #C9A84C;">→</strong> <strong>VIP ($997/mo)</strong> — 12+ videos</li>
-        </ul>
-        <p>Want me to set you up? Just hit reply.</p>
-        <p style="margin-top: 20px;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/services" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View Packages</a>
-        </p>
-        <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
-        ${FOOTER}
-      </div>
-    `,
+    text: emailData.text,
+    html: emailData.html,
   })
 
   if (error) {
-    console.error('Failed to send upsell email:', error)
+    console.error(`Failed to send upsell email (stage ${stage}):`, error)
   }
 }
 

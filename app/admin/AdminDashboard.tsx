@@ -13,6 +13,7 @@ import IntakeSubmissions from '@/components/IntakeSubmissions'
 import ContentSchedule from '@/components/ContentSchedule'
 import BroadcastPanel from '@/components/BroadcastPanel'
 import OutreachTrackerPanel from '@/components/OutreachTracker'
+import TrafficAnalytics from '@/components/TrafficAnalytics'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 type Profile = {
@@ -101,7 +102,7 @@ type Prospect = {
   created_at: string
 }
 
-type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates' | 'leads' | 'outreach' | 'projects' | 'templates' | 'intake' | 'schedule' | 'broadcast' | 'tracker'
+type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates' | 'leads' | 'outreach' | 'projects' | 'templates' | 'intake' | 'schedule' | 'broadcast' | 'tracker' | 'analytics'
 
 function DailyOutreachTracker() {
   const today = new Date().toISOString().split('T')[0]
@@ -441,7 +442,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
   )
 
   const tabs: TabName[] = isAdmin
-    ? ['overview', 'schedule', 'leads', 'outreach', 'broadcast', 'tracker', 'projects', 'intake', 'templates', 'users', 'payments', 'emails', 'affiliates']
+    ? ['overview', 'schedule', 'leads', 'outreach', 'broadcast', 'tracker', 'analytics', 'projects', 'intake', 'templates', 'users', 'payments', 'emails', 'affiliates']
     : ['overview', 'schedule', 'leads', 'outreach', 'projects', 'intake', 'templates', 'users', 'payments', 'emails']
 
   if (loading) {
@@ -975,6 +976,9 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
 
       {/* Tracker Tab (Admin only) */}
       {activeTab === 'tracker' && isAdmin && <OutreachTrackerPanel />}
+
+      {/* Analytics Tab (Admin only) */}
+      {activeTab === 'analytics' && isAdmin && <TrafficAnalytics />}
 
       {/* Affiliates Tab (Admin only) */}
       {activeTab === 'affiliates' && isAdmin && (

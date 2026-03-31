@@ -174,44 +174,58 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // --- 2c. Send upsell emails for completed projects ---
-  const day3AgoDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString()
-  const day7AgoDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  // --- 2c. Send upsell emails for completed projects (3-stage sequence) ---
+  // Stage 1: Day 3 after completion
+  // Stage 2: Day 7 after completion
+  // Stage 3: Day 14 after completion
+  const upsellStages = [
+    { daysAfter: 3, stage: 1 },
+    { daysAfter: 7, stage: 2 },
+    { daysAfter: 14, stage: 3 },
+  ]
 
-  const { data: completedProjects } = await supabase
-    .from('projects')
-    .select('id, client_name, client_email, service_type')
-    .eq('status', 'complete')
-    .gte('completed_at', day7AgoDate)
-    .lte('completed_at', day3AgoDate)
+  for (const { daysAfter, stage } of upsellStages) {
+    const targetDate = new Date(now.getTime() - daysAfter * 24 * 60 * 60 * 1000)
+    const targetStart = new Date(targetDate)
+    targetStart.setHours(0, 0, 0, 0)
+    const targetEnd = new Date(targetDate)
+    targetEnd.setHours(23, 59, 59, 999)
 
-  for (const project of completedProjects || []) {
-    if (!project.client_email) continue
+    const { data: completedProjects } = await supabase
+      .from('projects')
+      .select('id, client_name, client_email, service_type')
+      .eq('status', 'complete')
+      .gte('completed_at', targetStart.toISOString())
+      .lte('completed_at', targetEnd.toISOString())
 
-    // Look up user profile by email for dedup tracking (emails table requires user_id)
-    const { data: clientProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', project.client_email)
-      .single()
+    for (const project of completedProjects || []) {
+      if (!project.client_email) continue
 
-    if (!clientProfile) continue
+      const { data: clientProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', project.client_email)
+        .single()
 
-    const { data: alreadySent } = await supabase
-      .from('emails')
-      .select('id')
-      .eq('user_id', clientProfile.id)
-      .eq('type', 'upsell')
-      .limit(1)
+      if (!clientProfile) continue
 
-    if (!alreadySent || alreadySent.length === 0) {
-      const firstName = project.client_name.split(' ')[0]
-      await sendUpsellEmail(project.client_email, firstName, project.service_type)
-      await supabase.from('emails').insert({
-        user_id: clientProfile.id,
-        email: project.client_email,
-        type: 'upsell',
-      })
+      // Check if this stage already sent
+      const { data: alreadySent } = await supabase
+        .from('emails')
+        .select('id')
+        .eq('user_id', clientProfile.id)
+        .eq('type', `upsell-${stage}`)
+        .limit(1)
+
+      if (!alreadySent || alreadySent.length === 0) {
+        const firstName = project.client_name.split(' ')[0]
+        await sendUpsellEmail(project.client_email, firstName, project.service_type, stage)
+        await supabase.from('emails').insert({
+          user_id: clientProfile.id,
+          email: project.client_email,
+          type: `upsell-${stage}`,
+        })
+      }
     }
   }
 
