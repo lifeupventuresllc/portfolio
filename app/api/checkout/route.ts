@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
         'audio-monthly-6':    { name: 'Audio Engineering - Mix Elite', description: '8 tracks mix & master per month', price: 79900, mode: 'subscription', category: 'audio-engineering' },
         'bundle-creator':     { name: 'The Creator Package', description: 'Content + Audio + Fitness bundle', price: 59700, mode: 'subscription', category: 'content-editing' },
         'bundle-empire':      { name: 'The Empire Package', description: 'Scale + Mix Pro + Fitness + Strategy', price: 99700, mode: 'subscription', category: 'content-editing' },
+        'protein-budget-system': { name: 'The Protein Budget System', description: '15 recipes, meal plan, grocery lists, prep playbook', price: 2700, mode: 'payment', category: 'fitness' },
       }
 
       const pkg = PACKAGES[packageSlug]
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
       }
 
       const isSubscription = pkg.mode === 'subscription'
-      const successCategory = pkg.category === 'content-editing' ? 'content-editing' : 'audio-engineering'
+      const successCategory = pkg.category
 
       const sessionParams: Record<string, unknown> = {
         payment_method_types: ['card'],

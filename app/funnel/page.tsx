@@ -23,11 +23,11 @@ const SERVICES = {
   },
   fitness: {
     emoji: '💪',
-    title: 'The Fast Food Flip + The Compound Comeback',
+    title: 'The Fast Food Flip + The Compound Comeback + The Protein Cheat Sheet',
     price: 'FREE',
-    realValue: '$79 value',
-    desc: '5-day healthy fast food meal plans + a 7-day progressive overload compound movement program',
-    assets: ['The Fast Food Flip (5-Day Meal Plans)', 'The Compound Comeback (7-Day Workout Program)'],
+    realValue: '$119 value',
+    desc: '5-day healthy fast food meal plans, a 7-day progressive overload program, and the top 20 cheapest protein sources ranked by cost per gram',
+    assets: ['The Fast Food Flip (5-Day Meal Plans)', 'The Compound Comeback (7-Day Workout Program)', 'The Protein Cheat Sheet (Top 20 Cheapest Protein Sources)'],
     guideUrl: '/guides/fitness',
   },
 } as const

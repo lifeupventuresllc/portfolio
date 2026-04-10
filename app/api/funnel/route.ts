@@ -25,13 +25,14 @@ const GUIDE_INFO = {
     ],
   },
   fitness: {
-    label: 'The Fast Food Flip + The Compound Comeback',
+    label: 'The Fast Food Flip + The Compound Comeback + The Protein Cheat Sheet',
     path: '/guides/fitness',
-    desc: '5-day fast food meal plans + progressive overload compound movement program',
+    desc: '5-day fast food meal plans + progressive overload compound movement program + top 20 cheapest protein sources',
     packagePath: '/services/bundles',
     assets: [
       { name: 'The Fast Food Flip', desc: '5-Day Meal Plans — fast food alternatives for 3 weight classes (Under 150 lbs, 150-200 lbs, 200+ lbs). Breakfast, lunch, snack & dinner.' },
       { name: 'The Compound Comeback', desc: '7-Day Progressive Overload Program — compound movements only: bench press, deadlift, squat, overhead press, pull-ups & more.' },
+      { name: 'The Protein Cheat Sheet', desc: 'Top 20 Cheapest Protein Sources — ranked by cost per gram with budget tiers, swap guide & 5 rules to spend less and eat more protein.' },
     ],
   },
 } as Record<string, { label: string; path: string; desc: string; packagePath: string; assets: { name: string; desc: string }[] }>
@@ -97,6 +98,20 @@ const EMAIL_GUIDE_CONTENT: Record<string, string> = {
         <p><strong>Day 5: Upper Body</strong> — Incline DB Press (4x10), Weighted Pull-ups/Rows (4x8), DB Overhead Press (3x10)</p>
         <p><strong>Day 6: Legs + Core</strong> — Front Squat (4x8), Hip Thrust (3x12), Hanging Leg Raises (3x15)</p>
         <p><strong>Day 7: Full Rest</strong> — No gym. Eat well, sleep 7-9 hours, hydrate.</p>
+      </div>
+    </div>
+    <div style="background:#f9f9f9; border:1px solid #ddd; border-radius:12px; padding:24px; margin:20px 0;">
+      <h3 style="color:#C9A84C; margin:0 0 12px;">Asset 3: The Protein Cheat Sheet — Top 20 Cheapest Protein Sources</h3>
+      <p style="font-size:12px; color:#888; margin-bottom:12px;">Ranked by cost per gram of protein</p>
+      <div style="font-size:13px; color:#333; line-height:1.8;">
+        <p><strong>Tier 1 — Under $0.04/g:</strong> Lentils, Black Beans, Eggs, Chicken Thighs, Peanut Butter, Whey Protein (bulk tub)</p>
+        <p><strong>Tier 2 — $0.04-$0.08/g:</strong> Greek Yogurt, Ground Turkey, Ground Beef, Tofu</p>
+        <p style="margin-top:12px; font-weight:bold; color:#C9A84C;">5 Rules to Spend Less & Eat More Protein:</p>
+        <p><strong>1.</strong> Build meals around beans + eggs + chicken thighs</p>
+        <p><strong>2.</strong> Buy whey in bulk tubs (5 lb+) — never single-serve packets</p>
+        <p><strong>3.</strong> Use whole milk for easy protein (8g per glass)</p>
+        <p><strong>4.</strong> Large tubs of yogurt, never single-serve cups</p>
+        <p><strong>5.</strong> Shop sales, buy bulk, freeze portions</p>
       </div>
     </div>
   `,

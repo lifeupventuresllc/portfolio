@@ -75,15 +75,19 @@ export default function FitnessGuide() {
         {/* Header */}
         <div className="text-center mb-16">
           <span className="inline-block bg-emerald-500 text-white text-xs font-bold uppercase px-4 py-1 rounded-full tracking-wider mb-4">100% FREE</span>
-          <p className="text-gold text-xs font-semibold tracking-[0.3em] uppercase mb-4">2 Free Digital Assets</p>
+          <p className="text-gold text-xs font-semibold tracking-[0.3em] uppercase mb-4">3 Free Digital Assets</p>
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-2 leading-tight">
             <span className="text-gold">The Fast Food Flip</span>
           </h1>
           <p className="text-ivory/40 text-lg mb-1">+</p>
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
+          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-2 leading-tight">
             <span className="text-gold">The Compound Comeback</span>
           </h1>
-          <p className="text-ivory/60 max-w-lg mx-auto mb-6">5-day fast food meal plans for 3 weight classes + a 7-day progressive overload program. By Asa Luke.</p>
+          <p className="text-ivory/40 text-lg mb-1">+</p>
+          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
+            <span className="text-gold">The Protein Cheat Sheet</span>
+          </h1>
+          <p className="text-ivory/60 max-w-lg mx-auto mb-6">5-day fast food meal plans for 3 weight classes, a 7-day progressive overload program, and the top 20 cheapest protein sources ranked by cost per gram. By Asa Luke.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4">
             <button onClick={() => window.print()} className="inline-flex items-center gap-2 border-2 border-gold text-gold px-6 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl hover:bg-gold/10 transition-all">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
@@ -187,6 +191,87 @@ export default function FitnessGuide() {
                 </div>
               </section>
             ))}
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════ */}
+        {/* ASSET 3: THE PROTEIN CHEAT SHEET        */}
+        {/* ═══════════════════════════════════════ */}
+        <div className="mt-20">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gold text-obsidian rounded-xl flex items-center justify-center font-bold text-sm">3</div>
+            <div>
+              <h2 className="text-2xl font-bold text-white">The Protein Cheat Sheet</h2>
+              <p className="text-ivory/40 text-sm">Top 20 cheapest protein sources ranked by cost per gram</p>
+            </div>
+          </div>
+
+          <div className="bg-charcoal border border-smoke rounded-2xl p-6 mb-6">
+            <p className="text-ivory/60 text-sm leading-relaxed">Top 20 cheapest protein sources ranked by cost per gram. Budget tiers, swap guide, and 5 rules to spend less and eat more protein.</p>
+          </div>
+
+          <div className="space-y-6">
+            <section className="bg-charcoal border border-smoke rounded-2xl p-6">
+              <h3 className="text-white font-bold mb-4">Tier 1 — Under $0.04/g Protein</h3>
+              <div className="space-y-3">
+                {[
+                  { name: 'Lentils (dry)', cost: '~$0.01/g', note: 'Cheapest protein on Earth. 18g protein per cup cooked. Buy in bulk.' },
+                  { name: 'Black Beans (dry/canned)', cost: '~$0.02/g', note: '15g protein per cup. Versatile — burritos, bowls, soups, dips.' },
+                  { name: 'Eggs', cost: '~$0.02/g', note: '6g protein each. Complete amino acid profile. Buy 60-packs at Costco.' },
+                  { name: 'Chicken Thighs (bone-in)', cost: '~$0.03/g', note: '26g protein per thigh. Cheaper and juicier than breast. Buy family packs.' },
+                  { name: 'Peanut Butter', cost: '~$0.03/g', note: '8g protein per 2 tbsp. Get natural — just peanuts and salt.' },
+                  { name: 'Whey Protein (bulk tub)', cost: '~$0.03/g', note: '25g protein per scoop. Buy 5 lb tubs, never single-serve packets.' },
+                ].map((item, j) => (
+                  <div key={j} className="bg-obsidian rounded-xl p-4 border border-smoke/50">
+                    <div className="flex justify-between items-center mb-1">
+                      <p className="text-white font-semibold text-sm">{item.name}</p>
+                      <span className="text-gold font-bold text-sm">{item.cost}</span>
+                    </div>
+                    <p className="text-ivory/50 text-xs">{item.note}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="bg-charcoal border border-smoke rounded-2xl p-6">
+              <h3 className="text-white font-bold mb-4">Tier 2 — $0.04-$0.08/g Protein</h3>
+              <div className="space-y-3">
+                {[
+                  { name: 'Greek Yogurt (large tub)', cost: '~$0.04/g', note: '15-20g protein per serving. Always buy the big tub, never single-serve cups.' },
+                  { name: 'Ground Turkey (85/15)', cost: '~$0.05/g', note: '22g protein per 4 oz. Great for meal prep — tacos, bowls, burgers.' },
+                  { name: 'Ground Beef (80/20)', cost: '~$0.06/g', note: '20g protein per 4 oz. Buy in bulk, portion and freeze.' },
+                  { name: 'Tofu (extra firm)', cost: '~$0.04/g', note: '20g protein per block. Press it, season it, bake or pan-fry.' },
+                ].map((item, j) => (
+                  <div key={j} className="bg-obsidian rounded-xl p-4 border border-smoke/50">
+                    <div className="flex justify-between items-center mb-1">
+                      <p className="text-white font-semibold text-sm">{item.name}</p>
+                      <span className="text-gold font-bold text-sm">{item.cost}</span>
+                    </div>
+                    <p className="text-ivory/50 text-xs">{item.note}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="bg-charcoal border border-smoke rounded-2xl p-6">
+              <h3 className="text-white font-bold mb-4">5 Rules — Spend Less, Eat More Protein</h3>
+              <div className="space-y-3">
+                {[
+                  { rule: 'Rule 1', text: 'Build meals around beans + eggs + chicken thighs. These three cover most of your protein for pennies.' },
+                  { rule: 'Rule 2', text: 'Buy whey in bulk tubs (5 lb+). Cost per serving drops by 40-60% vs. single-serve packets.' },
+                  { rule: 'Rule 3', text: 'Use whole milk for easy protein. 8g per glass. Cheapest liquid protein source.' },
+                  { rule: 'Rule 4', text: 'Large tubs of yogurt, never single-serve. Same product, half the price per gram.' },
+                  { rule: 'Rule 5', text: 'Shop sales, buy bulk, freeze portions. Protein doesn\'t expire if you freeze it the day you buy it.' },
+                ].map((item, j) => (
+                  <div key={j} className="bg-obsidian rounded-xl p-4 border border-smoke/50">
+                    <div className="flex justify-between items-center mb-1">
+                      <p className="text-gold font-semibold text-sm">{item.rule}</p>
+                    </div>
+                    <p className="text-ivory/50 text-xs">{item.text}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
           </div>
         </div>
 
