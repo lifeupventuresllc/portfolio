@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 
 const WHATS_INSIDE = [
   {
@@ -49,9 +50,25 @@ const FAQ = [
 ]
 
 export default function ProteinBudgetSystemPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-obsidian" />}>
+      <ProteinBudgetSystemContent />
+    </Suspense>
+  )
+}
+
+function ProteinBudgetSystemContent() {
+  const searchParams = useSearchParams()
   const [checkoutEmail, setCheckoutEmail] = useState('')
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [showCanceled, setShowCanceled] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('success') === 'true') setShowSuccess(true)
+    if (searchParams.get('canceled') === 'true') setShowCanceled(true)
+  }, [searchParams])
 
   async function handleCheckout() {
     if (!checkoutEmail) return
@@ -63,7 +80,11 @@ export default function ProteinBudgetSystemPage() {
         body: JSON.stringify({ packageSlug: 'protein-budget-system', email: checkoutEmail }),
       })
       const data = await res.json()
-      if (data.url) window.location.href = data.url
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        alert(data.error || 'Something went wrong. Please try again.')
+      }
     } catch {
       alert('Something went wrong. Please try again.')
     }
@@ -72,6 +93,20 @@ export default function ProteinBudgetSystemPage() {
 
   return (
     <div className="min-h-screen bg-obsidian">
+      {/* Success / Canceled banners */}
+      {showSuccess && (
+        <div className="fixed top-0 inset-x-0 z-50 bg-green-600 text-white text-center py-4 px-4">
+          <p className="font-semibold">Payment successful! Check your email for the download link.</p>
+          <button onClick={() => setShowSuccess(false)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white text-xl">&times;</button>
+        </div>
+      )}
+      {showCanceled && (
+        <div className="fixed top-0 inset-x-0 z-50 bg-red-600/90 text-white text-center py-4 px-4">
+          <p className="font-semibold">Checkout canceled. No charge was made.</p>
+          <button onClick={() => setShowCanceled(false)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white text-xl">&times;</button>
+        </div>
+      )}
+
       {/* Hero */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(201,168,76,0.08),transparent_70%)]" />
