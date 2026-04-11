@@ -210,6 +210,12 @@ export default function FitnessGuide() {
             <p className="text-ivory/60 text-sm leading-relaxed">Top 20 cheapest protein sources ranked by cost per gram. Budget tiers, swap guide, and 5 rules to spend less and eat more protein.</p>
           </div>
 
+          <div className="mb-8">
+            <a href="/cheat-sheet.html" target="_blank" rel="noopener noreferrer" className="inline-block bg-gold text-obsidian px-6 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
+              View the Cheat Sheet
+            </a>
+          </div>
+
           <div className="space-y-6">
             <section className="bg-charcoal border border-smoke rounded-2xl p-6">
               <h3 className="text-white font-bold mb-4">Tier 1 — Under $0.04/g Protein</h3>

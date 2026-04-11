@@ -1,0 +1,2162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Menu — All Recipes</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Lora:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Lora', Georgia, serif;
+    background: #0a0a0a; color: #e8e8e8; line-height: 1.6; padding: 0; margin: 0; overflow: hidden; height: 100vh;
+  }
+  .container { max-width: 820px; margin: 0 auto; }
+
+  .cover {
+    text-align: center; padding: 60px 20px 40px; margin-bottom: 40px; border-bottom: 2px solid #222;
+  }
+  .cover h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 48px; font-weight: 900; letter-spacing: -2px; text-transform: uppercase;
+    background: linear-gradient(135deg, #f5a623, #f7c948);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px;
+  }
+  .cover .sub { font-size: 14px; font-weight: 300; color: #888; letter-spacing: 3px; text-transform: uppercase; }
+  .cover .count { font-size: 13px; color: #666; margin-top: 8px; }
+
+  .section-header {
+    margin: 60px 0 24px; padding: 20px 0; border-bottom: 3px solid #f5a623;
+  }
+  .section-header h2 {
+    font-size: 32px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px;
+    background: linear-gradient(135deg, #f5a623, #f7c948);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .section-header .section-count {
+    font-size: 13px; font-weight: 400; color: #666; letter-spacing: 1px; margin-top: 4px;
+  }
+
+  .recipe {
+    background: #141414; border: 1px solid #222; border-radius: 14px;
+    margin-bottom: 24px; overflow: hidden; page-break-inside: avoid;
+  }
+  .recipe-header {
+    background: linear-gradient(135deg, #1a1a1a, #1e1e1e);
+    padding: 16px 24px; border-bottom: 1px solid #222;
+  }
+  .recipe-num {
+    font-size: 11px; font-weight: 700; color: #f5a623; text-transform: uppercase;
+    letter-spacing: 2px; margin-bottom: 2px;
+  }
+  .recipe-title { font-size: 20px; font-weight: 800; color: #fff; }
+  .recipe-meta { font-size: 12px; color: #888; margin-top: 4px; }
+  .recipe-macros { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
+  .macro-pill {
+    font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px;
+    background: rgba(245, 166, 35, 0.1); color: #f5a623;
+  }
+  .new-badge {
+    font-size: 10px; font-weight: 800; padding: 3px 10px; border-radius: 20px;
+    background: rgba(76, 175, 80, 0.15); color: #4caf50; letter-spacing: 1px;
+    text-transform: uppercase; display: inline-block; margin-left: 10px; vertical-align: middle;
+  }
+
+  .recipe-body { padding: 20px 24px; }
+  .recipe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .recipe-col h3 {
+    font-size: 10px; font-weight: 700; color: #f5a623; text-transform: uppercase;
+    letter-spacing: 2px; margin-bottom: 10px;
+  }
+  .recipe-col ul { list-style: none; }
+  .recipe-col li {
+    font-size: 13px; color: #ccc; padding: 4px 0; border-bottom: 1px solid #1a1a1a;
+  }
+  .recipe-col li:last-child { border-bottom: none; }
+  .recipe-col ol { padding-left: 18px; }
+  .recipe-col ol li { font-size: 13px; color: #ccc; padding: 4px 0; border-bottom: 1px solid #1a1a1a; }
+
+  .recipe-note {
+    margin-top: 14px; padding: 10px 14px; background: #1a1a1a; border-radius: 8px;
+    font-size: 12px; color: #888; font-style: italic;
+  }
+
+  .sub-header {
+    font-size: 10px; font-weight: 700; color: #f5a623; text-transform: uppercase;
+    letter-spacing: 1px; margin: 12px 0 6px; padding-top: 10px; border-top: 1px solid #1e1e1e;
+  }
+
+  .snack-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px;
+  }
+  .snack-card {
+    background: #141414; border: 1px solid #222; border-radius: 12px; padding: 18px;
+  }
+  .snack-card h3 {
+    font-size: 10px; font-weight: 700; color: #f5a623; text-transform: uppercase;
+    letter-spacing: 2px; margin-bottom: 10px;
+  }
+  .snack-row {
+    display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .snack-row:last-child { border-bottom: none; }
+  .snack-label { color: #999; }
+  .snack-value { color: #fff; font-weight: 600; }
+
+  .dessert-category {
+    font-size: 18px; font-weight: 800; color: #fff; text-transform: uppercase;
+    letter-spacing: 3px; margin: 36px 0 18px; padding: 12px 0;
+    border-bottom: 2px solid #333;
+  }
+
+  /* FONT OVERRIDES */
+  h1, h2, h3, .recipe-title, .card-header h3, .day-title {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+  .macro-pill, .new-badge, .pill, .recipe-num, .recipe-meta, .info-row,
+  .snack-row, .meal-label, .total-label, .total-val, .menu-tag,
+  .person-type, .addon-note, .note-box, th, .section-count, .section-sub, .card-sub,
+  .step-num, .dessert-category {
+    font-family: 'Montserrat', 'Inter', sans-serif;
+  }
+
+  /* SWIPEABLE BOOK LAYOUT */
+  .book {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    height: 100vh;
+    scroll-behavior: smooth;
+  }
+  .book::-webkit-scrollbar { display: none; }
+  .page {
+    flex: 0 0 100vw;
+    width: 100vw;
+    height: 100vh;
+    scroll-snap-align: start;
+    overflow-y: auto;
+    padding: 40px;
+    position: relative;
+  }
+  .page::-webkit-scrollbar { width: 4px; }
+  .page::-webkit-scrollbar-track { background: #0a0a0a; }
+  .page::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+  .page-num {
+    font-family: 'Montserrat', sans-serif;
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    padding: 10px;
+    font-size: 10px;
+    color: #555;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: linear-gradient(transparent, #0a0a0a 60%);
+    pointer-events: none;
+  }
+  .swipe-hint {
+    font-family: 'Montserrat', sans-serif;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: #444;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    z-index: 10;
+    animation: fadeOut 4s forwards;
+    animation-delay: 3s;
+  }
+  @keyframes fadeOut { to { opacity: 0; } }
+
+  /* MOBILE RESPONSIVE */
+  @media (max-width: 680px) {
+    .page { padding: 16px; }
+    .cover h1 { font-size: 32px; }
+    .cover .sub { font-size: 11px; }
+    .recipe-grid { grid-template-columns: 1fr; }
+    .recipe-header { padding: 14px 16px; }
+    .recipe-title { font-size: 16px; }
+    .recipe-body { padding: 14px 16px; }
+    .recipe-macros { gap: 8px; }
+    .macro-pill { font-size: 10px; padding: 3px 8px; }
+    .recipe-col li { font-size: 12px; }
+    .recipe-col ol li { font-size: 12px; }
+    .recipe-note { font-size: 11px; }
+    .snack-grid { grid-template-columns: 1fr; gap: 10px !important; }
+    .snack-row { font-size: 11px; }
+    .section-header h2 { font-size: 22px; }
+    .dessert-category { font-size: 14px; }
+  }
+
+  @media (max-width: 420px) {
+    .cover h1 { font-size: 26px; }
+    .recipe-title { font-size: 15px; }
+    .macro-pill { font-size: 9px; padding: 2px 6px; }
+    .recipe-col li, .recipe-col ol li { font-size: 11px; }
+  }
+
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  @media print {
+    body { background: #0a0a0a !important; color: #e8e8e8 !important; padding: 20px; }
+    .recipe, .snack-card { background: #141414 !important; border-color: #222 !important; }
+    .recipe-header { background: linear-gradient(135deg, #1a1a1a, #1e1e1e) !important; }
+    .recipe-note { background: #1a1a1a !important; }
+    .cover h1 { background: linear-gradient(135deg, #f5a623, #f7c948) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; }
+    .recipe-num, .recipe-col h3, .snack-card h3, .macro-pill { color: #f5a623 !important; }
+    .section-header h2 { background: linear-gradient(135deg, #f5a623, #f7c948) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; }
+    .section-header { border-bottom-color: #f5a623 !important; }
+    .recipe-title { color: #fff !important; }
+    .macro-pill { background: rgba(245, 166, 35, 0.1) !important; }
+    .new-badge { background: rgba(76, 175, 80, 0.15) !important; color: #4caf50 !important; }
+  }
+</style>
+</head>
+<body>
+<div class="swipe-hint">Swipe to turn pages &rarr;</div>
+<div class="book">
+
+<!-- PAGE 1: COVER -->
+<div class="page">
+<div class="container" style="min-height:80vh; display:flex; flex-direction:column; justify-content:center;">
+  <div class="cover">
+    <h1>The Menu</h1>
+    <div class="sub">Macro-Friendly Meal Prep Recipes</div>
+    <div class="count">25 Recipes &middot; 4 Snacks &middot; 10 Desserts &mdash; Updated April 2026</div>
+  </div>
+</div>
+<div class="page-num">Swipe &rarr;</div>
+</div>
+
+<!-- PAGE 2: BREAKFAST -->
+<div class="page">
+<div class="container">
+  <div class="section-header"><h2>Breakfast</h2><div class="section-count">8 Recipes</div></div>
+
+  <!-- Protein sub-header: Chicken -->
+  <div style="font-family:'Playfair Display',Georgia,serif; font-size:20px; font-weight:800; color:#f5a623; text-transform:uppercase; letter-spacing:2px; margin:32px 0 16px; padding:10px 0; border-bottom:2px solid #333;">Chicken</div>
+
+  <!-- #4 Chicken Nugget Hash Brown Bake -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 4</div>
+      <div class="recipe-title">Chicken Nugget Hash Brown Bake</div>
+      <div class="recipe-meta">1 serving per bowl</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">354 cal</span>
+        <span class="macro-pill">46g P</span>
+        <span class="macro-pill">7g F</span>
+        <span class="macro-pill">23g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients (per bowl)</h3>
+          <ul>
+            <li>&frac12; cup shredded hash browns</li>
+            <li>1 whole egg</li>
+            <li>&frac14; cup egg whites</li>
+            <li>4 oz lightly breaded chicken nuggets</li>
+            <li>1 oz fat-free cheese</li>
+            <li>Salt + pepper</li>
+            <li>1&ndash;2 tbsp pico de gallo</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Mix all base ingredients in a 13 oz oven-safe container.</li>
+            <li>Bake at 375&deg;F for 30 min until eggs are cooked through.</li>
+            <li>Add cheese on top and heat again until melted.</li>
+            <li>Top with pico and enjoy.</li>
+          </ol>
+        </div>
+      </div>
+      <div class="recipe-note">Egg-free version: omit whole egg and egg whites, add 2 oz extra chicken nuggets.</div>
+    </div>
+  </div>
+
+  <!-- Protein sub-header: Beef -->
+  <div style="font-family:'Playfair Display',Georgia,serif; font-size:20px; font-weight:800; color:#f5a623; text-transform:uppercase; letter-spacing:2px; margin:32px 0 16px; padding:10px 0; border-bottom:2px solid #333;">Beef</div>
+
+  <!-- #8 Beef & Egg Power Bowl -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 8</div>
+      <div class="recipe-title">Beef &amp; Egg Breakfast Power Bowl</div>
+      <div class="recipe-meta">10 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">552 cal</span>
+        <span class="macro-pill">51g P</span>
+        <span class="macro-pill">20g F</span>
+        <span class="macro-pill">40g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>3 lbs 96/4 ground beef</li>
+            <li>20 slices beef bacon (45-cal kind)</li>
+            <li>20 eggs</li>
+            <li>4 lbs (64 oz) frozen south style potatoes</li>
+            <li>1&frac12; tsp paprika</li>
+            <li>1&frac12; tsp garlic powder</li>
+            <li>1&frac14; tsp onion powder</li>
+            <li>1&frac14; tsp black pepper</li>
+            <li>&frac34; tsp salt</li>
+            <li>&frac34; tsp all-purpose seasoning (for eggs)</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Season beef with paprika, garlic, onion, pepper, salt. Brown in large skillet. Drain.</li>
+            <li>Chop bacon into small pieces. Cook until crispy.</li>
+            <li>Scramble eggs with all-purpose seasoning.</li>
+            <li>Spread potatoes on sheet pan. Spray with oil. Bake 400&deg;F for 20 min. Broil 500&deg;F for 10 min.</li>
+            <li>Combine all ingredients. Mix evenly.</li>
+            <li>Weigh total. Divide by 10. Portion into 10 containers.</li>
+          </ol>
+        </div>
+      </div>
+      <div class="recipe-note">Sauces optional &mdash; not included in macros.</div>
+    </div>
+  </div>
+
+  <!-- #11 Steak Egg & Cheese Bagels -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 11</div>
+      <div class="recipe-title">Steak, Egg &amp; Cheese Breakfast Bagels</div>
+      <div class="recipe-meta">6 sandwiches</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">495 cal</span>
+        <span class="macro-pill">63g P</span>
+        <span class="macro-pill">21g F</span>
+        <span class="macro-pill">36g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>35 oz top sirloin steak (~5.8 oz per sandwich)</li>
+            <li>6 slices beef bacon (45-cal kind)</li>
+            <li>6 eggs</li>
+            <li>6 slices fat-free cheese</li>
+            <li>6 Sola protein bagels</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Cook steak to 125&deg;F internal. Rest 5 min. Slice thin.</li>
+            <li>Cook bacon until crispy.</li>
+            <li>Cook eggs your way.</li>
+            <li>Toast Sola protein bagels.</li>
+            <li>Assemble: bagel &rarr; steak &rarr; bacon &rarr; egg &rarr; cheese &rarr; top.</li>
+            <li>Wrap in foil for storage.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #15 Southwest Bacon Breakfast Burritos -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 15</div>
+      <div class="recipe-title">Southwest Bacon Breakfast Burritos</div>
+      <div class="recipe-meta">7 burritos</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">527 cal</span>
+        <span class="macro-pill">37g P</span>
+        <span class="macro-pill">20g F</span>
+        <span class="macro-pill">44g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>7 burrito-sized tortillas</li>
+            <li>7 whole eggs</li>
+            <li>1 lb 96/4 ground beef</li>
+            <li>10 slices center-cut bacon</li>
+            <li>4 oz reduced-fat Mexican-style cheese</li>
+            <li>1 bag (~10 oz) southwestern burrito bowl mix (Good &amp; Gather, Target frozen)</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Cook ground beef in one pan, bacon in the other.</li>
+            <li>After beef is 50% cooked, add southwestern veggie mix.</li>
+            <li>Chop bacon into pieces. Add to beef mixture.</li>
+            <li>Scramble eggs separately. Fold into the mixture.</li>
+            <li>Add cheese. Stir until melted and combined.</li>
+            <li>Distribute evenly into 7 tortillas. Roll up tightly.</li>
+            <li>Wrap in foil. Reheat in oven or air fryer.</li>
+          </ol>
+        </div>
+      </div>
+      <div class="recipe-note">Egg-free version: omit eggs, add 4 oz extra ground beef. ~490 cal &middot; 38g P per burrito.</div>
+    </div>
+  </div>
+
+  <!-- Protein sub-header: Turkey -->
+  <div style="font-family:'Playfair Display',Georgia,serif; font-size:20px; font-weight:800; color:#f5a623; text-transform:uppercase; letter-spacing:2px; margin:32px 0 16px; padding:10px 0; border-bottom:2px solid #333;">Turkey</div>
+
+  <!-- #13 Turkey Sausage Sweet Potato Hash -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 13</div>
+      <div class="recipe-title">Turkey Sausage Sweet Potato Hash</div>
+      <div class="recipe-meta">4 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">~475 cal</span>
+        <span class="macro-pill">39g P</span>
+        <span class="macro-pill">10g F</span>
+        <span class="macro-pill">42g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>1.5 lbs 93/7 ground turkey</li>
+            <li>24 oz (1.5 lbs) sweet potatoes, diced &frac12;&rdquo;</li>
+            <li>8 oz bell peppers, diced</li>
+            <li>4 oz onion, diced</li>
+            <li>4 slices beef bacon (45-cal kind)</li>
+            <li>1&frac12; tsp paprika</li>
+            <li>1&frac14; tsp garlic powder</li>
+            <li>&frac34; tsp salt</li>
+            <li>&frac34; tsp black pepper</li>
+            <li>Cooking spray</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Dice sweet potatoes. Toss with cooking spray. Roast at 400&deg;F for 20 min.</li>
+            <li>Season turkey with paprika, garlic, salt, pepper. Brown in large skillet. Drain.</li>
+            <li>Chop bacon into small pieces. Cook until crispy.</li>
+            <li>Saut&eacute; peppers &amp; onion 3&ndash;4 min.</li>
+            <li>Combine all ingredients. Mix evenly.</li>
+            <li>Portion into 4 containers.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #18 Turkey Stuffed Bagel Meal Prep — NEW -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 18 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Turkey Stuffed Bagel Meal Prep</div>
+      <div class="recipe-meta">4 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">~450 cal</span>
+        <span class="macro-pill">~48g P</span>
+        <span class="macro-pill">~14g F</span>
+        <span class="macro-pill">~30g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>1 lb 97/3 ground turkey</li>
+            <li>1 tbsp avocado oil</li>
+            <li>1 small white onion, diced</li>
+            <li>1 small green pepper, diced</li>
+            <li>1&ndash;2 cups crimini mushrooms</li>
+            <li>1 tbsp minced garlic</li>
+            <li>4 Plain Dave&rsquo;s Killer Bagels</li>
+            <li>8 slices Reduced Fat Provolone</li>
+            <li>Black pepper, garlic powder, onion powder, smoked paprika, chili powder</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Saut&eacute; onion, bell pepper, and mushroom in avocado oil over medium-high. Add garlic, cook until soft.</li>
+            <li>Push veggies to the side. Add ground turkey. Season with black pepper, garlic powder, onion powder, smoked paprika, chili powder.</li>
+            <li>Once meat is cooked, combine with veggies.</li>
+            <li>Toast bagels. Top each with turkey-veggie mixture and 2 slices Provolone.</li>
+            <li>Air fry or broil until cheese is melted.</li>
+            <li>Wrap in foil for storage.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Protein sub-header: Other -->
+  <div style="font-family:'Playfair Display',Georgia,serif; font-size:20px; font-weight:800; color:#f5a623; text-transform:uppercase; letter-spacing:2px; margin:32px 0 16px; padding:10px 0; border-bottom:2px solid #333;">Other</div>
+
+  <!-- #20 Protein Banana Bread — NEW -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 20 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Protein Banana Bread</div>
+      <div class="recipe-meta">~8 slices</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">~180 cal</span>
+        <span class="macro-pill">~12g P</span>
+        <span class="macro-pill">~4g F</span>
+        <span class="macro-pill">~25g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>Ripe bananas</li>
+            <li>Egg whites</li>
+            <li>Nonfat Greek yogurt</li>
+            <li>Vanilla protein powder</li>
+            <li>Oat flour</li>
+            <li>Baking powder</li>
+            <li>Baking soda</li>
+            <li>Monkfruit sweetener</li>
+            <li>Salt</li>
+            <li>Mini chocolate chips</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Mash bananas. Mix in egg whites and Greek yogurt until smooth.</li>
+            <li>Stir in vanilla protein powder.</li>
+            <li>Add dry ingredients: oat flour, baking powder, baking soda, sweetener, salt. Don&rsquo;t over mix &mdash; just combine.</li>
+            <li>Pour into loaf pan (optional: line with parchment).</li>
+            <li>Throw chocolate chips on top (or mix in batter).</li>
+            <li>Bake at 350&deg;F for 40&ndash;45 min. Ready when toothpick comes out clean, top is golden, center is set.</li>
+            <li>Cool 15&ndash;20 min before slicing.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Protein sub-header: Mixed -->
+  <div style="font-family:'Playfair Display',Georgia,serif; font-size:20px; font-weight:800; color:#f5a623; text-transform:uppercase; letter-spacing:2px; margin:32px 0 16px; padding:10px 0; border-bottom:2px solid #333;">Mixed</div>
+
+  <!-- #21 Protein Pancake Bake — NEW -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 21 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Protein Pancake Bake</div>
+      <div class="recipe-meta">12 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">289 cal</span>
+        <span class="macro-pill">25g P</span>
+        <span class="macro-pill">10g F</span>
+        <span class="macro-pill">25g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>4 cups Kodiak Buttermilk Pancake Mix</li>
+            <li>3 cups unsweetened almond milk</li>
+            <li>4 large eggs</li>
+            <li>2&ndash;3 tbsp calorie-free sweetener</li>
+            <li>1 lb turkey breakfast sausage (cooked)</li>
+            <li>8 slices turkey bacon (cooked &amp; chopped)</li>
+            <li>1&frac12; cups lite shredded cheese</li>
+            <li>Lite syrup (drizzle)</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Preheat oven to 375&deg;F.</li>
+            <li>Cook sausage and bacon. Set aside.</li>
+            <li>Mix pancake mix, almond milk, eggs, and sweetener until smooth.</li>
+            <li>Fold in sausage, bacon, and cheese.</li>
+            <li>Pour into a greased 9&times;13 baking dish.</li>
+            <li>Bake 30&ndash;35 minutes, until set and golden.</li>
+            <li>Cool, slice into 12 pieces, store in fridge. Reheat, add lite syrup, and go.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="page-num">Breakfast</div>
+</div>
+
+<!-- PAGE 3: LUNCH -->
+<div class="page">
+<div class="container">
+  <div class="section-header"><h2>Lunch</h2><div class="section-count">9 Recipes</div></div>
+
+  <!-- Protein sub-header: Chicken -->
+  <div style="font-family:'Playfair Display',Georgia,serif; font-size:20px; font-weight:800; color:#f5a623; text-transform:uppercase; letter-spacing:2px; margin:32px 0 16px; padding:10px 0; border-bottom:2px solid #333;">Chicken</div>
+
+  <!-- #1 BBQ Chicken Pizza -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 1</div>
+      <div class="recipe-title">BBQ Chicken Pizza</div>
+      <div class="recipe-meta">4 slices</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">~280 cal</span>
+        <span class="macro-pill">~32g P</span>
+        <span class="macro-pill">~10g F</span>
+        <span class="macro-pill">~22g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>10 oz chicken breast</li>
+            <li>1 thin pizza crust</li>
+            <li>2&ndash;3 tbsp BBQ sauce</li>
+            <li>2 oz shredded cheese (fat-free or low-fat)</li>
+            <li>1 oz onion</li>
+            <li>2 oz jalapeno</li>
+            <li>Italian seasoning, salt, red pepper flakes</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Season chicken with Italian, salt, red pepper. Cook 3&ndash;5 min per side (160&deg;F+).</li>
+            <li>Dice chicken.</li>
+            <li>Spread BBQ sauce on pizza crust.</li>
+            <li>Add cheese evenly. Top with chicken, onion, jalapeno.</li>
+            <li>Bake 425&deg;F for 10 min until crispy and melted.</li>
+            <li>Cut into 4 slices.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #2 Chicken Pineapple Fried Rice -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 2 <span class="new-badge" style="background:rgba(66,165,245,0.12);color:#42a5f5;">Also in Dinner</span></div>
+      <div class="recipe-title">Chicken Pineapple Fried Rice</div>
+      <div class="recipe-meta">5 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">613 cal</span>
+        <span class="macro-pill">66g P</span>
+        <span class="macro-pill">12g F</span>
+        <span class="macro-pill">56g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>2 lbs chicken breast</li>
+            <li>2&frac23; cups cooked jasmine rice</li>
+            <li>1 cup mixed vegetables</li>
+            <li>1&frac12; cups pineapple</li>
+            <li>6 tbsp soy sauce</li>
+            <li>1&frac12; cups diced bell peppers</li>
+            <li>&frac34; cup diced onion</li>
+            <li>3 eggs</li>
+            <li>6 tbsp sugar-free ketchup</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Dice chicken, season, cook in wok or large skillet.</li>
+            <li>Scramble 3 eggs in same pan, break into pieces.</li>
+            <li>Add diced peppers and onion, saut&eacute; 3&ndash;4 min.</li>
+            <li>Add cooked rice, pineapple, mixed veggies. Stir-fry together.</li>
+            <li>Add soy sauce and sugar-free ketchup. Toss to combine.</li>
+            <li>Distribute into 5 containers.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #3 Chicken Teriyaki Rice Bowl -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 3 <span class="new-badge" style="background:rgba(66,165,245,0.12);color:#42a5f5;">Also in Dinner</span></div>
+      <div class="recipe-title">Chicken Teriyaki Rice Bowl</div>
+      <div class="recipe-meta">4 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">~380 cal</span>
+        <span class="macro-pill">36g P</span>
+        <span class="macro-pill">5g F</span>
+        <span class="macro-pill">42g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>1.5 lbs chicken breast</li>
+            <li>18 oz cooked jasmine rice</li>
+            <li>14 oz broccoli florets</li>
+            <li>4 tbsp low-sodium teriyaki sauce</li>
+            <li>1 tbsp sesame oil</li>
+            <li>1&frac14; tsp garlic powder</li>
+            <li>&frac34; tsp ground ginger</li>
+            <li>&frac34; tsp black pepper</li>
+            <li>Optional: sesame seeds, green onion</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Dice chicken. Season with garlic, ginger, pepper.</li>
+            <li>Cook chicken in skillet with sesame oil, 5&ndash;6 min. Set aside.</li>
+            <li>Steam or roast broccoli until tender-crisp (~5 min).</li>
+            <li>Cook rice per package directions.</li>
+            <li>Toss chicken with teriyaki sauce.</li>
+            <li>Portion into 4 containers: rice &rarr; broccoli &rarr; chicken.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #5 Chicken & Fries with Cane's Sauce -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 5 <span class="new-badge" style="background:rgba(66,165,245,0.12);color:#42a5f5;">Also in Dinner</span></div>
+      <div class="recipe-title">Chicken &amp; Fries with Cane&rsquo;s Sauce</div>
+      <div class="recipe-meta">4 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">603 cal</span>
+        <span class="macro-pill">57g P</span>
+        <span class="macro-pill">18g F</span>
+        <span class="macro-pill">47g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>2 lbs chicken breast</li>
+            <li>2 tbsp hot honey</li>
+            <li>1 bag Alexia sweet potato fries (566g)</li>
+            <li>Salt, pepper, paprika, garlic powder, sea salt</li>
+          </ul>
+          <div class="sub-header">Cane&rsquo;s Sauce</div>
+          <ul>
+            <li>&frac12; cup fat-free Greek yogurt</li>
+            <li>&frac14; cup light mayo</li>
+            <li>2 tbsp sugar-free ketchup</li>
+            <li>1 tsp honey mustard</li>
+            <li>1 tsp Worcestershire sauce</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Season chicken with salt, pepper, paprika, garlic powder, sea salt.</li>
+            <li>Cook chicken (grill, skillet, or bake at 400&deg;F until 165&deg;F internal).</li>
+            <li>Air fry sweet potato fries per package directions.</li>
+            <li>Mix all Cane&rsquo;s sauce ingredients together.</li>
+            <li>Slice chicken, toss with hot honey.</li>
+            <li>Divide everything into 4 meal preps.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Protein sub-header: Beef -->
+  <div style="font-family:'Playfair Display',Georgia,serif; font-size:20px; font-weight:800; color:#f5a623; text-transform:uppercase; letter-spacing:2px; margin:32px 0 16px; padding:10px 0; border-bottom:2px solid #333;">Beef</div>
+
+  <!-- #9 Macro Friendly Big Mac -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 9</div>
+      <div class="recipe-title">Macro Friendly Big Mac</div>
+      <div class="recipe-meta">1 serving</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">539 cal</span>
+        <span class="macro-pill">56g P</span>
+        <span class="macro-pill">12g F</span>
+        <span class="macro-pill">44g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>7 oz 96% lean ground beef</li>
+            <li>1 Nature&rsquo;s Own brioche bun (64g)</li>
+            <li>2 slices fat-free American cheese (42g)</li>
+            <li>2 tsp light mayo</li>
+            <li>2 tsp sugar-free ketchup</li>
+            <li>1 tsp sweet pickle relish</li>
+            <li>1 tsp mustard</li>
+            <li>1 tsp Worcestershire sauce</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Form 200g beef into patty. Season with salt and pepper.</li>
+            <li>Cook on medium-high to desired doneness.</li>
+            <li>Toast brioche bun.</li>
+            <li>Mix sauce: mayo + ketchup + relish + mustard + Worcestershire.</li>
+            <li>Assemble: bun &rarr; sauce &rarr; patty &rarr; cheese &rarr; sauce &rarr; top bun.</li>
+          </ol>
+        </div>
+      </div>
+      <div class="recipe-note">To batch: multiply all ingredients by number of servings.</div>
+    </div>
+  </div>
+
+  <!-- #10 BBQ Beef Burritos -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 10 <span class="new-badge" style="background:rgba(66,165,245,0.12);color:#42a5f5;">Also in Dinner</span></div>
+      <div class="recipe-title">BBQ Beef Burritos</div>
+      <div class="recipe-meta">11 burritos</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">270 cal</span>
+        <span class="macro-pill">32g P</span>
+        <span class="macro-pill">7g F</span>
+        <span class="macro-pill">43g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>3 lbs 96/4 ground beef</li>
+            <li>~2 cups (10 oz) diced bell peppers</li>
+            <li>10 jalapeno peppers (with juice)</li>
+            <li>1 can red kidney beans (drained)</li>
+            <li>6 tbsp sugar-free BBQ sauce</li>
+            <li>11 Extreme Bonus wraps (60 cal each)</li>
+            <li>1&frac12; tsp salt</li>
+            <li>&frac34; tsp black pepper</li>
+            <li>2 tsp honey BBQ seasoning</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Cook beef with salt, pepper, honey BBQ seasoning.</li>
+            <li>Add diced peppers + BBQ seasoning + jalapenos with juice.</li>
+            <li>Add drained kidney beans + 100g BBQ sauce. Mix well.</li>
+            <li>Distribute into 11 wraps. Roll up.</li>
+            <li>Toast until crispy.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Protein sub-header: Turkey -->
+  <div style="font-family:'Playfair Display',Georgia,serif; font-size:20px; font-weight:800; color:#f5a623; text-transform:uppercase; letter-spacing:2px; margin:32px 0 16px; padding:10px 0; border-bottom:2px solid #333;">Turkey</div>
+
+  <!-- #14 Ground Turkey Taco Bowl -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 14 <span class="new-badge" style="background:rgba(66,165,245,0.12);color:#42a5f5;">Also in Dinner</span></div>
+      <div class="recipe-title">Ground Turkey Taco Bowl</div>
+      <div class="recipe-meta">4 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">~400 cal</span>
+        <span class="macro-pill">34g P</span>
+        <span class="macro-pill">9g F</span>
+        <span class="macro-pill">40g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>1.5 lbs 93/7 ground turkey</li>
+            <li>14 oz cooked jasmine rice</li>
+            <li>1 can (15 oz) black beans, drained &amp; rinsed</li>
+            <li>8 tbsp salsa</li>
+            <li>4 oz fat-free shredded cheese</li>
+            <li>4 oz romaine lettuce, shredded</li>
+            <li>Taco seasoning: 1&frac14; tsp cumin, 1&frac14; tsp chili powder, &frac34; tsp garlic powder, &frac34; tsp onion powder, &frac34; tsp paprika, &frac34; tsp salt</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Brown turkey with taco seasoning. Drain.</li>
+            <li>Cook rice per package directions.</li>
+            <li>Drain and rinse black beans.</li>
+            <li>Portion into 4 containers: rice &rarr; turkey &rarr; beans.</li>
+            <li>Store salsa, cheese, and lettuce separately.</li>
+            <li>Top with salsa, cheese, lettuce before eating.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #16 Dump-and-Bake Taco Bowls — NEW -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 16 <span class="new-badge">New</span> <span class="new-badge" style="background:rgba(66,165,245,0.12);color:#42a5f5;">Also in Dinner</span></div>
+      <div class="recipe-title">Dump-and-Bake Taco Bowls</div>
+      <div class="recipe-meta">5 servings &nbsp;|&nbsp; without toppings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">501 cal</span>
+        <span class="macro-pill">41.3g P</span>
+        <span class="macro-pill">18.8g F</span>
+        <span class="macro-pill">34g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Protein Base</h3>
+          <ul>
+            <li>Lean ground turkey (cooked)</li>
+            <li>2 red bell peppers, diced</li>
+            <li>1 bag Trader Joe&rsquo;s diced onions</li>
+            <li>1 packet taco seasoning</li>
+            <li>&frac23; cup turkey bone broth</li>
+          </ul>
+          <div class="sub-header">Per-Container Add-Ins (&times;5)</div>
+          <ul>
+            <li>1 tbsp uncooked brown rice (Success Rice 10 min)</li>
+            <li>2 tbsp diced onions</li>
+            <li>&frac14; cup black beans, drained &amp; rinsed</li>
+            <li>1&ndash;1&frac12; tbsp sliced black olives</li>
+            <li>~1&frac12; cups cooked turkey mixture</li>
+            <li>3 tbsp turkey bone broth</li>
+            <li>&frac14; cup lite shredded cheese</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Brown ground turkey with diced bell peppers, onions, and taco seasoning.</li>
+            <li>Add turkey bone broth instead of water. Simmer until reduced.</li>
+            <li>In each container, layer: brown rice, onions, black beans, olives, turkey mixture, bone broth.</li>
+            <li>Top with lite shredded cheese.</li>
+            <li>Bake covered at 375&deg;F for 25&ndash;30 min until rice is cooked and cheese melted.</li>
+            <li>Top with salsa, sour cream, avocado before eating.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Protein sub-header: Mixed -->
+  <div style="font-family:'Playfair Display',Georgia,serif; font-size:20px; font-weight:800; color:#f5a623; text-transform:uppercase; letter-spacing:2px; margin:32px 0 16px; padding:10px 0; border-bottom:2px solid #333;">Mixed</div>
+
+  <!-- #22 Sourdough Pizza Toast — NEW -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 22 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Sourdough Pizza Toast</div>
+      <div class="recipe-meta">1 serving (2 slices)</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">~540 cal</span>
+        <span class="macro-pill">43g P</span>
+        <span class="macro-pill">21g F</span>
+        <span class="macro-pill">44g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>2 large slices sourdough bread (100g)</li>
+            <li>&frac14; cup marinara or pizza sauce (60g)</li>
+            <li>&frac12; cup low-fat cottage cheese (70g)</li>
+            <li>&frac14; cup low-fat shredded mozzarella cheese (28g)</li>
+            <li>14 slices turkey pepperoni (30g)</li>
+            <li>1 tsp Italian seasoning (2g)</li>
+            <li>&frac12; tsp garlic powder (1g)</li>
+            <li>&frac12; tsp red pepper flakes</li>
+            <li>1 tbsp hot honey (15ml)</li>
+            <li>Fresh parsley or basil for garnish</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Toast sourdough slices in toaster or air fryer for 2&ndash;3 minutes until slightly firm.</li>
+            <li>Blend the cottage cheese in a food processor until smooth.</li>
+            <li>Spread marinara sauce evenly over toasted slices. Add a layer of cottage cheese on top.</li>
+            <li>Distribute shredded mozzarella evenly. Top each slice with turkey pepperoni, Italian seasoning, and garlic powder.</li>
+            <li>Air fry at 375&deg;F for 5&ndash;7 minutes, or bake in oven at 400&deg;F for 8&ndash;10 minutes, until cheese is melted and pepperoni is slightly crispy.</li>
+            <li>Remove. Drizzle hot honey over top, sprinkle with red pepper flakes, garnish with parsley or basil.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="page-num">Lunch</div>
+</div>
+
+<!-- PAGE 4: DINNER -->
+<div class="page">
+<div class="container">
+  <div class="section-header"><h2>Dinner</h2><div class="section-count">12 Recipes</div></div>
+
+  <!-- Protein sub-header: Chicken -->
+  <div style="font-family:'Playfair Display',Georgia,serif; font-size:20px; font-weight:800; color:#f5a623; text-transform:uppercase; letter-spacing:2px; margin:32px 0 16px; padding:10px 0; border-bottom:2px solid #333;">Chicken</div>
+
+  <!-- #2 Chicken Pineapple Fried Rice -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 2 <span class="new-badge" style="background:rgba(66,165,245,0.12);color:#42a5f5;">Also in Lunch</span></div>
+      <div class="recipe-title">Chicken Pineapple Fried Rice</div>
+      <div class="recipe-meta">5 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">613 cal</span>
+        <span class="macro-pill">66g P</span>
+        <span class="macro-pill">12g F</span>
+        <span class="macro-pill">56g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>2 lbs chicken breast</li>
+            <li>2&frac23; cups cooked jasmine rice</li>
+            <li>1 cup mixed vegetables</li>
+            <li>1&frac12; cups pineapple</li>
+            <li>6 tbsp soy sauce</li>
+            <li>1&frac12; cups diced bell peppers</li>
+            <li>&frac34; cup diced onion</li>
+            <li>3 eggs</li>
+            <li>6 tbsp sugar-free ketchup</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Dice chicken, season, cook in wok or large skillet.</li>
+            <li>Scramble 3 eggs in same pan, break into pieces.</li>
+            <li>Add diced peppers and onion, saut&eacute; 3&ndash;4 min.</li>
+            <li>Add cooked rice, pineapple, mixed veggies. Stir-fry together.</li>
+            <li>Add soy sauce and sugar-free ketchup. Toss to combine.</li>
+            <li>Distribute into 5 containers.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #3 Chicken Teriyaki Rice Bowl -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 3 <span class="new-badge" style="background:rgba(66,165,245,0.12);color:#42a5f5;">Also in Lunch</span></div>
+      <div class="recipe-title">Chicken Teriyaki Rice Bowl</div>
+      <div class="recipe-meta">4 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">~380 cal</span>
+        <span class="macro-pill">36g P</span>
+        <span class="macro-pill">5g F</span>
+        <span class="macro-pill">42g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>1.5 lbs chicken breast</li>
+            <li>18 oz cooked jasmine rice</li>
+            <li>14 oz broccoli florets</li>
+            <li>4 tbsp low-sodium teriyaki sauce</li>
+            <li>1 tbsp sesame oil</li>
+            <li>1&frac14; tsp garlic powder</li>
+            <li>&frac34; tsp ground ginger</li>
+            <li>&frac34; tsp black pepper</li>
+            <li>Optional: sesame seeds, green onion</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Dice chicken. Season with garlic, ginger, pepper.</li>
+            <li>Cook chicken in skillet with sesame oil, 5&ndash;6 min. Set aside.</li>
+            <li>Steam or roast broccoli until tender-crisp (~5 min).</li>
+            <li>Cook rice per package directions.</li>
+            <li>Toss chicken with teriyaki sauce.</li>
+            <li>Portion into 4 containers: rice &rarr; broccoli &rarr; chicken.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #5 Chicken & Fries with Cane's Sauce -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 5 <span class="new-badge" style="background:rgba(66,165,245,0.12);color:#42a5f5;">Also in Lunch</span></div>
+      <div class="recipe-title">Chicken &amp; Fries with Cane&rsquo;s Sauce</div>
+      <div class="recipe-meta">4 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">603 cal</span>
+        <span class="macro-pill">57g P</span>
+        <span class="macro-pill">18g F</span>
+        <span class="macro-pill">47g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>2 lbs chicken breast</li>
+            <li>2 tbsp hot honey</li>
+            <li>1 bag Alexia sweet potato fries (566g)</li>
+            <li>Salt, pepper, paprika, garlic powder, sea salt</li>
+          </ul>
+          <div class="sub-header">Cane&rsquo;s Sauce</div>
+          <ul>
+            <li>&frac12; cup fat-free Greek yogurt</li>
+            <li>&frac14; cup light mayo</li>
+            <li>2 tbsp sugar-free ketchup</li>
+            <li>1 tsp honey mustard</li>
+            <li>1 tsp Worcestershire sauce</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Season chicken with salt, pepper, paprika, garlic powder, sea salt.</li>
+            <li>Cook chicken (grill, skillet, or bake at 400&deg;F until 165&deg;F internal).</li>
+            <li>Air fry sweet potato fries per package directions.</li>
+            <li>Mix all Cane&rsquo;s sauce ingredients together.</li>
+            <li>Slice chicken, toss with hot honey.</li>
+            <li>Divide everything into 4 meal preps.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #6 Honey Chili Chicken — NEW -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 6 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Honey Chili Chicken &amp; Cauliflower Rice</div>
+      <div class="recipe-meta">4 bowls &nbsp;|&nbsp; (5 bowls: 520 cal &middot; 49g P &middot; 24g F &middot; 25g C)</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">649 cal</span>
+        <span class="macro-pill">61g P</span>
+        <span class="macro-pill">30g F</span>
+        <span class="macro-pill">32g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>3 lbs boneless, skinless chicken thighs, bite-size</li>
+            <li>&frac14; cup coconut aminos</li>
+            <li>&frac12; cup chicken broth</li>
+            <li>&frac14; cup raw honey</li>
+            <li>2 tbsp minced garlic</li>
+            <li>1 tsp onion powder</li>
+            <li>1 tsp paprika</li>
+            <li>1 tsp black pepper</li>
+            <li>1 tsp ground ginger</li>
+            <li>1 tbsp chili flakes (adjust to taste)</li>
+            <li>2 bunches green onions, sliced</li>
+            <li>2 bags cauliflower rice</li>
+            <li>Olive or avocado oil</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Season chicken thighs with onion powder, paprika, pepper, ginger.</li>
+            <li>Heat oil in large skillet. Cook chicken in batches until golden.</li>
+            <li>Mix coconut aminos, chicken broth, honey, garlic, and chili flakes for sauce.</li>
+            <li>Pour sauce over chicken. Simmer 3&ndash;5 min until thickened.</li>
+            <li>Cook cauliflower rice per package directions.</li>
+            <li>Portion: cauliflower rice &rarr; chicken with sauce. Top with green onions.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #7 High-Protein Pizza Pasta Bake — NEW -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 7 <span class="new-badge">New</span></div>
+      <div class="recipe-title">High-Protein Pizza Pasta Bake</div>
+      <div class="recipe-meta">6 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">487 cal</span>
+        <span class="macro-pill">52g P</span>
+        <span class="macro-pill">18g F</span>
+        <span class="macro-pill">12g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>Protein pasta</li>
+            <li>Turkey pepperoni</li>
+            <li>Mozzarella cheese</li>
+            <li>String cheese, chopped</li>
+            <li>Marinara sauce</li>
+            <li>Italian seasoning, salt, pepper, garlic powder</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Cook protein pasta per package directions. Drain.</li>
+            <li>Mix pasta with marinara sauce and seasonings.</li>
+            <li>Layer into greased baking dish.</li>
+            <li>Divide into six containers. Top with chopped string cheese, mozzarella, turkey pepperoni, and extra seasoning.</li>
+            <li>Bake for 20&ndash;25 min. Broil for 2 min for a crispy top.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #23 Creamy Lemon Chicken Orzo — NEW -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 23 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Creamy Lemon Chicken Orzo</div>
+      <div class="recipe-meta">4 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">540 cal</span>
+        <span class="macro-pill">43g P</span>
+        <span class="macro-pill">21g F</span>
+        <span class="macro-pill">44g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <div class="sub-header">For the Chicken</div>
+          <ul>
+            <li>1.75 lbs boneless skinless chicken thighs (800g)</li>
+            <li>1 tsp salt</li>
+            <li>1 tsp black pepper</li>
+            <li>1 tsp garlic powder</li>
+            <li>1 tsp dried oregano or Italian seasoning</li>
+            <li>1 tbsp olive oil</li>
+          </ul>
+          <div class="sub-header">For the Orzo</div>
+          <ul>
+            <li>1&frac12; cups dry orzo pasta (300g)</li>
+            <li>1 small yellow onion (finely diced)</li>
+            <li>3 cloves garlic (minced)</li>
+            <li>3 cups low-sodium chicken broth (720ml)</li>
+            <li>&frac12; cup nonfat Greek yogurt or light cream (120g)</li>
+            <li>Zest of 1 lemon</li>
+            <li>Juice of 1 large lemon</li>
+          </ul>
+          <div class="sub-header">Add-ins</div>
+          <ul>
+            <li>3 cups fresh spinach (90g)</li>
+            <li>&frac14; cup grated Parmesan cheese (30g)</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Season chicken with salt, pepper, garlic, oregano.</li>
+            <li>Sear chicken in olive oil over medium-high heat, 4&ndash;5 minutes per side until golden and cooked through. Remove and set aside.</li>
+            <li>In same pan, add onion and cook 2&ndash;3 minutes until softened, then add garlic for 30 seconds.</li>
+            <li>Toast dry orzo in the pan for 1 minute to lightly brown.</li>
+            <li>Pour in chicken broth, bring to a gentle simmer, and cook 8&ndash;10 minutes, stirring occasionally, until orzo is tender and creamy.</li>
+            <li>Lower heat and stir in Greek yogurt, lemon zest, lemon juice, and Parmesan until smooth.</li>
+            <li>Add spinach. Fold in and let it wilt into the orzo.</li>
+            <li>Nestle chicken back into the pan and simmer 2&ndash;3 minutes to warm through and absorb flavor.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Protein sub-header: Beef -->
+  <div style="font-family:'Playfair Display',Georgia,serif; font-size:20px; font-weight:800; color:#f5a623; text-transform:uppercase; letter-spacing:2px; margin:32px 0 16px; padding:10px 0; border-bottom:2px solid #333;">Beef</div>
+
+  <!-- #10 BBQ Beef Burritos -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 10 <span class="new-badge" style="background:rgba(66,165,245,0.12);color:#42a5f5;">Also in Lunch</span></div>
+      <div class="recipe-title">BBQ Beef Burritos</div>
+      <div class="recipe-meta">11 burritos</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">270 cal</span>
+        <span class="macro-pill">32g P</span>
+        <span class="macro-pill">7g F</span>
+        <span class="macro-pill">43g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>3 lbs 96/4 ground beef</li>
+            <li>~2 cups (10 oz) diced bell peppers</li>
+            <li>10 jalapeno peppers (with juice)</li>
+            <li>1 can red kidney beans (drained)</li>
+            <li>6 tbsp sugar-free BBQ sauce</li>
+            <li>11 Extreme Bonus wraps (60 cal each)</li>
+            <li>1&frac12; tsp salt</li>
+            <li>&frac34; tsp black pepper</li>
+            <li>2 tsp honey BBQ seasoning</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Cook beef with salt, pepper, honey BBQ seasoning.</li>
+            <li>Add diced peppers + BBQ seasoning + jalapenos with juice.</li>
+            <li>Add drained kidney beans + 100g BBQ sauce. Mix well.</li>
+            <li>Distribute into 11 wraps. Roll up.</li>
+            <li>Toast until crispy.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #12 Steak & Onion Stir Fry — NEW -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 12 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Steak &amp; Onion Stir Fry</div>
+      <div class="recipe-meta">Lean &amp; High Protein &nbsp;|&nbsp; 6 servings &nbsp;|&nbsp; macros without broccoli or cauliflower rice</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">~372 cal</span>
+        <span class="macro-pill">45g P</span>
+        <span class="macro-pill">18g F</span>
+        <span class="macro-pill">8g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>2 lbs flank steak, thinly sliced</li>
+            <li>1&frac12; tbsp light soy + 1&frac12; tbsp dark soy</li>
+            <li>1&frac12; tbsp oyster sauce</li>
+            <li>1 tsp stevia</li>
+            <li>&frac34; tsp baking soda</li>
+            <li>2 tsp arrowroot powder</li>
+            <li>2 tsp sesame oil + 1 tbsp avocado oil</li>
+            <li>1&frac12; white onions, sliced</li>
+            <li>1 bunch green onions (whites + greens)</li>
+            <li>6&ndash;8 cloves garlic</li>
+            <li>2 cups cremini mushrooms</li>
+          </ul>
+          <div class="sub-header">Sauce</div>
+          <ul>
+            <li>1 tbsp rice wine</li>
+            <li>1&frac12; tbsp dark soy</li>
+            <li>1 tbsp oyster sauce</li>
+            <li>&frac23; cup water</li>
+            <li>Black pepper</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Marinate beef with all marinade ingredients 20&ndash;30 min.</li>
+            <li>Stir fry onions + mushrooms 3&ndash;4 min &rarr; set aside.</li>
+            <li>Cook beef in batches; add garlic when almost done.</li>
+            <li>Deglaze with rice wine, add sauce ingredients.</li>
+            <li>Mix &frac12; tsp arrowroot + 1 tbsp water &rarr; stir in off heat till glossy.</li>
+            <li>Add veggies + green onion tops &rarr; toss, season, serve.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Protein sub-header: Turkey -->
+  <div style="font-family:'Playfair Display',Georgia,serif; font-size:20px; font-weight:800; color:#f5a623; text-transform:uppercase; letter-spacing:2px; margin:32px 0 16px; padding:10px 0; border-bottom:2px solid #333;">Turkey</div>
+
+  <!-- #14 Ground Turkey Taco Bowl -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 14 <span class="new-badge" style="background:rgba(66,165,245,0.12);color:#42a5f5;">Also in Lunch</span></div>
+      <div class="recipe-title">Ground Turkey Taco Bowl</div>
+      <div class="recipe-meta">4 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">~400 cal</span>
+        <span class="macro-pill">34g P</span>
+        <span class="macro-pill">9g F</span>
+        <span class="macro-pill">40g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>1.5 lbs 93/7 ground turkey</li>
+            <li>14 oz cooked jasmine rice</li>
+            <li>1 can (15 oz) black beans, drained &amp; rinsed</li>
+            <li>8 tbsp salsa</li>
+            <li>4 oz fat-free shredded cheese</li>
+            <li>4 oz romaine lettuce, shredded</li>
+            <li>Taco seasoning: 1&frac14; tsp cumin, 1&frac14; tsp chili powder, &frac34; tsp garlic powder, &frac34; tsp onion powder, &frac34; tsp paprika, &frac34; tsp salt</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Brown turkey with taco seasoning. Drain.</li>
+            <li>Cook rice per package directions.</li>
+            <li>Drain and rinse black beans.</li>
+            <li>Portion into 4 containers: rice &rarr; turkey &rarr; beans.</li>
+            <li>Store salsa, cheese, and lettuce separately.</li>
+            <li>Top with salsa, cheese, lettuce before eating.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #16 Dump-and-Bake Taco Bowls — NEW -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 16 <span class="new-badge">New</span> <span class="new-badge" style="background:rgba(66,165,245,0.12);color:#42a5f5;">Also in Lunch</span></div>
+      <div class="recipe-title">Dump-and-Bake Taco Bowls</div>
+      <div class="recipe-meta">5 servings &nbsp;|&nbsp; without toppings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">501 cal</span>
+        <span class="macro-pill">41.3g P</span>
+        <span class="macro-pill">18.8g F</span>
+        <span class="macro-pill">34g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Protein Base</h3>
+          <ul>
+            <li>Lean ground turkey (cooked)</li>
+            <li>2 red bell peppers, diced</li>
+            <li>1 bag Trader Joe&rsquo;s diced onions</li>
+            <li>1 packet taco seasoning</li>
+            <li>&frac23; cup turkey bone broth</li>
+          </ul>
+          <div class="sub-header">Per-Container Add-Ins (&times;5)</div>
+          <ul>
+            <li>1 tbsp uncooked brown rice (Success Rice 10 min)</li>
+            <li>2 tbsp diced onions</li>
+            <li>&frac14; cup black beans, drained &amp; rinsed</li>
+            <li>1&ndash;1&frac12; tbsp sliced black olives</li>
+            <li>~1&frac12; cups cooked turkey mixture</li>
+            <li>3 tbsp turkey bone broth</li>
+            <li>&frac14; cup lite shredded cheese</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Brown ground turkey with diced bell peppers, onions, and taco seasoning.</li>
+            <li>Add turkey bone broth instead of water. Simmer until reduced.</li>
+            <li>In each container, layer: brown rice, onions, black beans, olives, turkey mixture, bone broth.</li>
+            <li>Top with lite shredded cheese.</li>
+            <li>Bake covered at 375&deg;F for 25&ndash;30 min until rice is cooked and cheese melted.</li>
+            <li>Top with salsa, sour cream, avocado before eating.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #17 Protein Mac & Cheese Bake — NEW -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 17 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Protein Mac &amp; Cheese Bake</div>
+      <div class="recipe-meta">Turkey &amp; Marinara &nbsp;|&nbsp; ~6 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">~480 cal</span>
+        <span class="macro-pill">~45g P</span>
+        <span class="macro-pill">~15g F</span>
+        <span class="macro-pill">~35g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Meat &amp; Veggies</h3>
+          <ul>
+            <li>1 lb 93/7 ground turkey</li>
+            <li>1 tbsp olive or avocado oil</li>
+            <li>1 tbsp minced garlic</li>
+            <li>1 (8 oz) carton baby bella mushrooms, sliced</li>
+            <li>Onion powder, garlic powder, black pepper, paprika</li>
+          </ul>
+          <div class="sub-header">Meat Sauce</div>
+          <ul>
+            <li>1 (16 oz) can diced tomatoes</li>
+            <li>Chopped sun-dried tomatoes (not in oil)</li>
+            <li>2 cups Rao&rsquo;s Marinara</li>
+            <li>2 tbsp fresh basil, chopped</li>
+          </ul>
+          <div class="sub-header">Mac &amp; Cheese Layer</div>
+          <ul>
+            <li>1&frac12; cups protein pasta (uncooked)</li>
+            <li>1 (16 oz) low-fat cottage cheese</li>
+            <li>1&frac12; cups low-fat shredded cheese</li>
+            <li>1 stick lite string cheese, torn</li>
+            <li>&frac12; cup almond milk</li>
+            <li>5&ndash;7 slices lite mozzarella (topping)</li>
+            <li>&frac12; tsp garlic powder, &frac12; tsp onion powder, &frac14; tsp pepper</li>
+            <li>1 tbsp arrowroot powder + 2 tbsp water (slurry)</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Cook protein pasta. Drain.</li>
+            <li>Brown turkey with oil, garlic, and mushrooms. Season generously.</li>
+            <li>Make meat sauce: add diced tomatoes, sun-dried tomatoes, Rao&rsquo;s, and basil. Simmer 10 min.</li>
+            <li>Make cheese sauce: blend cottage cheese, shredded cheese, almond milk, seasonings, arrowroot slurry. Stir into pasta.</li>
+            <li>Layer in baking dish: pasta cheese mixture &rarr; meat sauce &rarr; mozzarella &amp; string cheese.</li>
+            <li>Bake at 375&deg;F for 25&ndash;30 min. Broil 2 min for crispy top.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Protein sub-header: Mixed / Seafood -->
+  <div style="font-family:'Playfair Display',Georgia,serif; font-size:20px; font-weight:800; color:#f5a623; text-transform:uppercase; letter-spacing:2px; margin:32px 0 16px; padding:10px 0; border-bottom:2px solid #333;">Mixed / Seafood</div>
+
+  <!-- #24 Fully Loaded Fried Cabbage — NEW -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 24 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Fully Loaded Fried Cabbage</div>
+      <div class="recipe-meta">~5 servings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">~320 cal</span>
+        <span class="macro-pill">33g P</span>
+        <span class="macro-pill">10g F</span>
+        <span class="macro-pill">15g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>1 lb raw shrimp (peeled &amp; deveined)</li>
+            <li>1 lb chicken sausage (5 links, cooked &amp; sliced)</li>
+            <li>5 slices nitrate-free turkey bacon (chopped)</li>
+            <li>1 head green cabbage (chopped)</li>
+            <li>2 red bell peppers (chopped)</li>
+            <li>1 red onion (sliced)</li>
+            <li>1 tbsp minced garlic</li>
+            <li>2&ndash;3 tbsp avocado or olive oil</li>
+            <li>Garlic powder, onion powder, black pepper, Cajun seasoning to taste</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Prep everything &mdash; chop peppers, onion, cabbage, bacon, slice sausage.</li>
+            <li>Heat 1&ndash;2 tbsp oil in large pot over medium heat. Add turkey bacon and sausage. Cook until browned. Remove and set aside.</li>
+            <li>Add shrimp to same pot. Season with garlic powder, onion powder, pepper, Cajun. Cook 1&ndash;2 min per side until just pink. Remove and set aside.</li>
+            <li>Add more oil if needed. Add onion until translucent. Add bell peppers, minced garlic, pepper, Cajun. Stir well.</li>
+            <li>Add cabbage in batches so it wilts evenly. Do not cover. Season as it cooks.</li>
+            <li>Return turkey bacon, sausage, and shrimp to pot. Toss until combined and heated through.</li>
+            <li>Serve hot.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="page-num">Dinner</div>
+</div>
+
+<!-- PAGE 5: SIDES -->
+<div class="page">
+<div class="container">
+  <div class="section-header"><h2>Sides</h2><div class="section-count">1 Recipe</div></div>
+
+  <!-- #19 High-Protein Flatbread — NEW -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Recipe 19 <span class="new-badge">New</span></div>
+      <div class="recipe-title">High-Protein Flatbread</div>
+      <div class="recipe-meta">6 flatbreads &nbsp;|&nbsp; without toppings</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">98 cal</span>
+        <span class="macro-pill">9g P</span>
+        <span class="macro-pill">1g F</span>
+        <span class="macro-pill">14g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>High-protein flour blend (oat flour + protein powder)</li>
+            <li>Water</li>
+            <li>Salt</li>
+            <li>Baking powder</li>
+          </ul>
+          <div class="sub-header">Suggested Toppings</div>
+          <ul>
+            <li>Ghee</li>
+            <li>Parmesan cheese</li>
+            <li>Fresh parsley</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Mix dry ingredients. Add water gradually until soft dough forms.</li>
+            <li>Divide dough into 6 equal pieces.</li>
+            <li>Roll into circles about &frac18; to &frac14; inch thick.</li>
+            <li>Heat a skillet over medium heat. Cook each piece ~30 seconds. Flip and cook another 10 seconds.</li>
+            <li>Should have golden brown flecks all over.</li>
+            <li>Top with ghee, parmesan, and parsley &mdash; or whatever you like.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="page-num">Sides</div>
+</div>
+
+<!-- PAGE 6: SNACKS -->
+<div class="page">
+<div class="container">
+  <div class="section-header"><h2>Snacks</h2><div class="section-count">4 Options</div></div>
+
+  <div class="snack-grid">
+    <div class="snack-card">
+      <h3>Yoplait Protein + Berries</h3>
+      <div class="snack-row"><span class="snack-label">Yoplait Protein (5.3 oz)</span><span class="snack-value">140 cal &middot; 15g P</span></div>
+      <div class="snack-row"><span class="snack-label">+ 3 oz mixed berries</span><span class="snack-value">35 cal &middot; 0.5g P</span></div>
+      <div class="snack-row"><span class="snack-label">Total</span><span class="snack-value">175 cal &middot; 15.5g P</span></div>
+    </div>
+    <div class="snack-card">
+      <h3>Banana + Nut Butter</h3>
+      <div class="snack-row"><span class="snack-label">Regular</span><span class="snack-value">200 cal &middot; 5g P</span></div>
+      <div class="snack-row"><span class="snack-label">Large</span><span class="snack-value">290 cal &middot; 9g P</span></div>
+    </div>
+    <div class="snack-card">
+      <h3>Rice Cakes + PB</h3>
+      <div class="snack-row"><span class="snack-label">Regular</span><span class="snack-value">165 cal &middot; 6g P</span></div>
+      <div class="snack-row"><span class="snack-label">Large</span><span class="snack-value">210 cal &middot; 7g P</span></div>
+    </div>
+    <div class="snack-card">
+      <h3>Pepperoni Protein Box <span class="new-badge">New</span></h3>
+      <div class="snack-row"><span class="snack-label">15 turkey pepperoni</span><span class="snack-value"></span></div>
+      <div class="snack-row"><span class="snack-label">1 oz cubed cheese</span><span class="snack-value"></span></div>
+      <div class="snack-row"><span class="snack-label">2 boiled eggs</span><span class="snack-value"></span></div>
+      <div class="snack-row"><span class="snack-label">10 olives</span><span class="snack-value"></span></div>
+      <div class="snack-row"><span class="snack-label">&frac12; cup fruit of choice</span><span class="snack-value"></span></div>
+      <div class="snack-row"><span class="snack-label">Total</span><span class="snack-value">~410 cal &middot; 28g P</span></div>
+    </div>
+  </div>
+
+</div>
+<div class="page-num">Snacks</div>
+</div>
+
+<!-- PAGE 7: DESSERTS -->
+<div class="page">
+<div class="container">
+  <div class="section-header"><h2>Desserts</h2><div class="section-count">10 Options</div></div>
+
+  <div class="dessert-category">Skillet Cookies</div>
+
+  <!-- D1 Chocolate Chip Skillet Cookie -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Dessert 1 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Chocolate Chip Skillet Cookie</div>
+      <div class="recipe-meta">1 serving</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">432 cal</span>
+        <span class="macro-pill">40g P</span>
+        <span class="macro-pill">8.5g F</span>
+        <span class="macro-pill">47.5g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>3 tbsp all purpose flour</li>
+            <li>3 tbsp PEScience vanilla protein</li>
+            <li>1 tbsp coconut flour</li>
+            <li>2 tbsp powdered peanut butter</li>
+            <li>1 tsp monkfruit sweetener</li>
+            <li>&frac12; tsp baking soda</li>
+            <li>3 tbsp egg whites</li>
+            <li>3 tbsp unsweetened applesauce</li>
+            <li>3 tbsp nonfat Greek yogurt</li>
+            <li>1 tbsp mini chocolate chips</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Mix dry: flour, protein, coconut flour, powdered PB, monkfruit, baking soda.</li>
+            <li>Add wet: egg whites, applesauce, Greek yogurt. Combine until just mixed.</li>
+            <li>Press into greased oven-safe skillet. Top with chocolate chips.</li>
+            <li>Bake at 350&deg;F for 8&ndash;10 min.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D2 Dubai Chocolate Skillet Cookie -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Dessert 2 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Dubai Chocolate Skillet Cookie</div>
+      <div class="recipe-meta">1 serving</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">421 cal</span>
+        <span class="macro-pill">35.5g P</span>
+        <span class="macro-pill">8.5g F</span>
+        <span class="macro-pill">45.5g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>3 tbsp all purpose flour</li>
+            <li>3 tbsp PEScience chocolate protein</li>
+            <li>1 tbsp coconut flour</li>
+            <li>1&frac12; tbsp powdered peanut butter</li>
+            <li>1 tbsp cocoa powder</li>
+            <li>1 tsp monkfruit</li>
+            <li>&frac12; tsp baking soda</li>
+            <li>3 tbsp egg whites</li>
+            <li>3 tbsp unsweetened applesauce</li>
+            <li>3 tbsp nonfat Greek yogurt</li>
+            <li>Middle: 1&frac12; tsp melted chocolate</li>
+            <li>Toppings: 1&frac12; tsp pistachio cr&egrave;me, 1 tsp shredded puff pastry</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Mix dry: flour, chocolate protein, coconut flour, powdered PB, cocoa, monkfruit, baking soda.</li>
+            <li>Add wet: egg whites, applesauce, Greek yogurt. Combine.</li>
+            <li>Press half the dough into skillet. Add melted chocolate in center. Cover with remaining dough.</li>
+            <li>Bake at 350&deg;F for 10&ndash;12 min.</li>
+            <li>Top with pistachio cr&egrave;me and shredded puff pastry.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D3 Brookie Skillet -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Dessert 3 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Brookie Skillet</div>
+      <div class="recipe-meta">1 serving</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">482 cal</span>
+        <span class="macro-pill">31g P</span>
+        <span class="macro-pill">25.5g F</span>
+        <span class="macro-pill">37.5g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Brownie Layer</h3>
+          <ul>
+            <li>2&frac12; tbsp PEScience chocolate truffle protein</li>
+            <li>2&frac12; tbsp all purpose flour</li>
+            <li>2 tsp coconut flour</li>
+            <li>1 tbsp cocoa powder</li>
+            <li>&frac12; tsp baking powder</li>
+            <li>&frac13; cup unsweetened almond milk</li>
+            <li>1&frac12; tbsp light margarine</li>
+            <li>2 tbsp nonfat Greek yogurt</li>
+            <li>2 tsp mini chocolate chips</li>
+          </ul>
+          <div class="sub-header">Cookie Base</div>
+          <ul>
+            <li>1 tbsp PEScience vanilla protein</li>
+            <li>2 tsp coconut flour</li>
+            <li>1 tbsp light margarine</li>
+            <li>1 tsp monkfruit</li>
+            <li>&frac12; tsp baking powder</li>
+            <li>&frac12; tsp vanilla extract</li>
+            <li>1 tsp mini chocolate chips</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Make cookie base: mix vanilla protein, coconut flour, margarine, monkfruit, baking powder, vanilla. Press into bottom of skillet. Add chips.</li>
+            <li>Make brownie layer: mix chocolate protein, flour, coconut flour, cocoa, baking powder. Add almond milk, margarine, yogurt. Pour over cookie base. Top with chips.</li>
+            <li>Bake at 350&deg;F for 12 min.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dessert-category">Cheesecake Bowls</div>
+
+  <div class="recipe-note" style="margin-bottom: 20px;">For all cheesecake bowls: Mix all ingredients and store in the fridge for 3+ hours.</div>
+
+  <!-- D4 Cookies & Cream Cheesecake Bowl -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Dessert 4 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Cookies &amp; Cream Cheesecake Bowl</div>
+      <div class="recipe-meta">1 serving</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">424 cal</span>
+        <span class="macro-pill">40g P</span>
+        <span class="macro-pill">14g F</span>
+        <span class="macro-pill">33g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-col">
+        <h3>Ingredients</h3>
+        <ul>
+          <li>&frac34; cup nonfat Greek yogurt</li>
+          <li>&frac13; cup low fat cream cheese</li>
+          <li>3 tbsp Fairlife skim milk</li>
+          <li>1 tbsp FF white chocolate pudding mix</li>
+          <li>1 tbsp PEScience cookies &amp; cream protein</li>
+          <li>2 tsp monkfruit sweetener</li>
+          <li>1 tsp Oreo baking crumbs</li>
+          <li>Topping: 1 crushed Oreo</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- D5 Biscoff Cheesecake Bowl -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Dessert 5 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Biscoff Cheesecake Bowl</div>
+      <div class="recipe-meta">1 serving</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">425 cal</span>
+        <span class="macro-pill">39.5g P</span>
+        <span class="macro-pill">15.5g F</span>
+        <span class="macro-pill">31g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-col">
+        <h3>Ingredients</h3>
+        <ul>
+          <li>&frac34; cup nonfat Greek yogurt</li>
+          <li>&frac13; cup low fat cream cheese</li>
+          <li>3 tbsp Fairlife skim milk</li>
+          <li>1 tbsp FF white chocolate pudding mix</li>
+          <li>1 tbsp PEScience snickerdoodle protein</li>
+          <li>2 tsp monkfruit sweetener</li>
+          <li>1 tsp cinnamon</li>
+          <li>Toppings: 1 Biscoff cookie, crushed + 1 tsp Biscoff drizzle</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- D6 Strawberry Shortcake Cheesecake -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Dessert 6 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Strawberry Shortcake Cheesecake</div>
+      <div class="recipe-meta">1 serving</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">415 cal</span>
+        <span class="macro-pill">40g P</span>
+        <span class="macro-pill">15g F</span>
+        <span class="macro-pill">28g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-col">
+        <h3>Ingredients</h3>
+        <ul>
+          <li>&frac34; cup nonfat Greek yogurt</li>
+          <li>&frac13; cup low fat cream cheese</li>
+          <li>3 tbsp Fairlife skim milk</li>
+          <li>1 tsp FF white chocolate pudding mix</li>
+          <li>1 tsp strawberry jello powder</li>
+          <li>1 tbsp PEScience vanilla protein</li>
+          <li>2 tsp monkfruit</li>
+          <li>Topping: 1 golden Oreo, crushed</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="dessert-category">Cookie Doughs</div>
+
+  <!-- D7 Sugar Cookie Dough -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Dessert 7 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Sugar Cookie Dough</div>
+      <div class="recipe-meta">1 serving</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">395 cal</span>
+        <span class="macro-pill">37g P</span>
+        <span class="macro-pill">9.5g F</span>
+        <span class="macro-pill">41.5g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>&frac14; cup oat flour</li>
+            <li>3 tbsp vanilla protein</li>
+            <li>1 tsp FF white chocolate pudding mix</li>
+            <li>1 tsp powdered PB</li>
+            <li>2 tsp brown monkfruit</li>
+            <li>Pinch of salt</li>
+            <li>&frac12; tsp vanilla extract</li>
+            <li>1 tsp sprinkles</li>
+            <li>&frac12; cup nonfat Greek yogurt</li>
+            <li>2&ndash;3 tsp unsweetened almond milk</li>
+            <li>2 tsp white chocolate + &frac12; tsp coconut oil (magic shell)</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Mix oat flour, protein, pudding mix, powdered PB, monkfruit, salt.</li>
+            <li>Add vanilla, yogurt, and almond milk. Stir until cookie dough consistency.</li>
+            <li>Fold in sprinkles.</li>
+            <li>Melt white chocolate with coconut oil. Drizzle on top as magic shell.</li>
+            <li>Refrigerate 30 min+ before eating.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D8 Red Velvet Cookie Dough -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Dessert 8 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Red Velvet Cookie Dough</div>
+      <div class="recipe-meta">1 serving</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">385 cal</span>
+        <span class="macro-pill">37g P</span>
+        <span class="macro-pill">9g F</span>
+        <span class="macro-pill">40g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>&frac14; cup oat flour</li>
+            <li>3 tbsp chocolate protein</li>
+            <li>1 tsp fat free chocolate pudding mix</li>
+            <li>1 tsp powdered peanut butter</li>
+            <li>2 tsp brown monkfruit</li>
+            <li>Pinch of salt</li>
+            <li>1&frac12; tsp red velvet extract</li>
+            <li>&frac12; cup nonfat Greek yogurt</li>
+            <li>2&ndash;3 tsp unsweetened almond milk</li>
+            <li>2 tsp chocolate + &frac14; tsp coconut oil (magic shell)</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Mix oat flour, protein, pudding mix, powdered PB, monkfruit, salt.</li>
+            <li>Add red velvet extract, yogurt, and almond milk. Stir until cookie dough consistency.</li>
+            <li>Melt chocolate with coconut oil. Drizzle on top as magic shell.</li>
+            <li>Refrigerate 30 min+ before eating.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dessert-category">Other Desserts</div>
+
+  <!-- D9 Mini Pumpkin Pie -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Dessert 9 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Mini Pumpkin Pie</div>
+      <div class="recipe-meta">1 serving</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">359 cal</span>
+        <span class="macro-pill">25g P</span>
+        <span class="macro-pill">14g F</span>
+        <span class="macro-pill">36.5g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Crust</h3>
+          <ul>
+            <li>&frac14; cup Graham cracker crumbs</li>
+            <li>2 tsp light butter/margarine</li>
+          </ul>
+          <div class="sub-header">Filling</div>
+          <ul>
+            <li>&frac13; cup canned pumpkin</li>
+            <li>&frac14; cup + 1 tbsp unsweetened almond milk</li>
+            <li>&frac12; beaten egg</li>
+            <li>2 tbsp PEScience pumpkin protein</li>
+            <li>4 tsp brown monkfruit</li>
+            <li>&frac34; tsp cinnamon</li>
+            <li>&frac14; tsp ginger + nutmeg</li>
+            <li>Pinch of salt</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Mix Graham cracker crumbs with melted margarine. Press into ramekin or mini pie dish.</li>
+            <li>Blend all filling ingredients until smooth.</li>
+            <li>Pour filling over crust.</li>
+            <li>Bake at 350&deg;F for 40 min until set.</li>
+            <li>Cool completely before serving.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D10 Biscoff Tiramisu -->
+  <div class="recipe">
+    <div class="recipe-header">
+      <div class="recipe-num">Dessert 10 <span class="new-badge">New</span></div>
+      <div class="recipe-title">Biscoff Tiramisu</div>
+      <div class="recipe-meta">1 serving</div>
+      <div class="recipe-macros">
+        <span class="macro-pill">506 cal</span>
+        <span class="macro-pill">42g P</span>
+        <span class="macro-pill">17.5g F</span>
+        <span class="macro-pill">48g C</span>
+      </div>
+    </div>
+    <div class="recipe-body">
+      <div class="recipe-grid">
+        <div class="recipe-col">
+          <h3>Ingredients</h3>
+          <ul>
+            <li>6 Biscoff cookies</li>
+            <li>3 tbsp espresso or cold coffee</li>
+            <li>&frac14; cup + 1 tbsp nonfat Greek yogurt</li>
+            <li>&frac12; cup + 1 tbsp light ricotta</li>
+            <li>3 tbsp snickerdoodle protein</li>
+            <li>1 tsp cornstarch</li>
+            <li>&frac12; tsp vanilla extract</li>
+            <li>4 tsp monkfruit sweetener</li>
+            <li>Topping: 1 tsp crushed Biscoff cookies</li>
+          </ul>
+        </div>
+        <div class="recipe-col">
+          <h3>Directions</h3>
+          <ol>
+            <li>Mix yogurt, ricotta, protein powder, cornstarch, vanilla, and monkfruit until smooth.</li>
+            <li>Dip Biscoff cookies briefly in espresso/coffee.</li>
+            <li>Layer in a jar or bowl: soaked cookies &rarr; cream mixture &rarr; repeat.</li>
+            <li>Top with crushed Biscoff cookies.</li>
+            <li>Refrigerate 3+ hours (overnight is best).</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="page-num">Desserts</div>
+</div>
+
+<!-- PAGE 8: SAUCE SWAPS -->
+<div class="page">
+<div class="container">
+  <div class="section-header"><h2>Sauce Swaps</h2><div class="section-count">Mix It Up</div></div>
+
+  <div class="recipe-note" style="line-height: 2;">
+    <strong style="color:#f5a623">Power Bowl:</strong> Day 1 plain &middot; Day 2 hot sauce &middot; Day 3 sugar-free BBQ drizzle<br>
+    <strong style="color:#f5a623">Fried Rice:</strong> Day 1 as-is &middot; Day 2 add sriracha &middot; Day 3 add sweet chili<br>
+    <strong style="color:#f5a623">Burritos:</strong> Day 1 as-is &middot; Day 2 ranch drizzle &middot; Day 3 hot honey<br>
+    <strong style="color:#f5a623">Steak Bagels:</strong> Day 4 plain &middot; Day 5 sriracha mayo &middot; Day 6 everything bagel seasoning<br>
+    <strong style="color:#f5a623">Big Macs:</strong> Day 4 special sauce &middot; Day 5 buffalo sauce &middot; Day 6 ranch swap<br>
+    <strong style="color:#f5a623">Pizza:</strong> Day 4 classic BBQ &middot; Day 5 hot honey &middot; Day 6 ranch drizzle
+  </div>
+</div>
+<div class="page-num">Sauce Swaps</div>
+</div>
+
+</div><!-- end .book -->
+</body>
+</html>
