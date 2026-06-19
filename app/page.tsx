@@ -196,6 +196,47 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── THE MENU (COOKBOOK) ── */}
+      <section className="py-24 sm:py-32 px-6 border-t border-smoke/50 bg-charcoal/40">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
+          <div className="order-2 md:order-1 grid grid-cols-2 gap-4" style={{ perspective: '800px' }}>
+            <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)]">
+              <p className="text-gold text-3xl font-bold mb-2">25+</p>
+              <p className="text-ivory/40 text-sm uppercase tracking-wider">Recipes</p>
+            </div>
+            <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)]">
+              <p className="text-gold text-3xl font-bold mb-2">$12.99</p>
+              <p className="text-ivory/40 text-sm uppercase tracking-wider">One-Time</p>
+            </div>
+            <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)]">
+              <p className="text-gold text-3xl font-bold mb-2">Macros</p>
+              <p className="text-ivory/40 text-sm uppercase tracking-wider">+ Cost Per Serving</p>
+            </div>
+            <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)]">
+              <p className="text-gold text-3xl font-bold mb-2">Lifetime</p>
+              <p className="text-ivory/40 text-sm uppercase tracking-wider">Access</p>
+            </div>
+          </div>
+          <div className="order-1 md:order-2">
+            <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Digital Cookbook</p>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-white mb-8 leading-[1.1]">
+              The Menu.
+            </h2>
+            <p className="text-ivory/50 text-lg leading-relaxed mb-10">
+              25+ macro-friendly recipes — breakfast, lunch, dinner, snacks, and desserts —
+              each with full macros and cost per serving. No guesswork, just food that fits your goals.
+            </p>
+            <Link
+              href="/services/fitness#menu"
+              className="group relative inline-block bg-gold text-obsidian px-10 py-4 text-base font-bold tracking-wider uppercase rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
+              style={{ perspective: '600px', transformStyle: 'preserve-3d' }}
+            >
+              Get The Menu — $12.99
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ── LISTEN ── */}
       <section className="py-24 px-6 border-t border-smoke/50 bg-charcoal/40">
         <div className="max-w-2xl mx-auto text-center">
