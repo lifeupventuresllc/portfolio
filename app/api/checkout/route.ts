@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
         'bundle-creator':     { name: 'The Creator Package', description: 'Content + Audio + Fitness bundle', price: 59700, mode: 'subscription', category: 'content-editing' },
         'bundle-empire':      { name: 'The Empire Package', description: 'Scale + Mix Pro + Fitness + Strategy', price: 99700, mode: 'subscription', category: 'content-editing' },
         'protein-budget-system': { name: 'The Protein Budget System', description: '15 recipes, meal plan, grocery lists, prep playbook', price: 2700, mode: 'payment', category: 'fitness' },
-        'the-menu-cookbook': { name: 'The Menu — Complete Cookbook', description: '25 macro-friendly recipes, organized by meal type, with macros and cost per serving', price: 5000, mode: 'payment', category: 'fitness' },
+        'the-menu-cookbook': { name: 'The Menu — Complete Cookbook', description: '25 macro-friendly recipes, organized by meal type, with macros and cost per serving', price: 1299, mode: 'payment', category: 'fitness' },
       }
 
       const pkg = PACKAGES[packageSlug]
