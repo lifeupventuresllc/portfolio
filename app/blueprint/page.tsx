@@ -2,43 +2,75 @@
 
 import { useState } from 'react'
 
+const ACTIVITY = [
+  { value: 'sedentary', label: 'Sedentary — desk job, minimal movement' },
+  { value: 'light', label: 'Lightly active — some walking / errands' },
+  { value: 'moderate', label: 'Moderately active — on your feet part of the day' },
+  { value: 'active', label: 'Active — on your feet most of the day' },
+  { value: 'very_active', label: 'Very active — physical job / athlete' },
+]
+const WORKOUT_LENGTH = [
+  { value: '30_cardio', label: '~30 min — light cardio only' },
+  { value: '45_strength', label: '~45 min — strength only' },
+  { value: '45_60_both', label: '45–60 min — strength + cardio' },
+  { value: '60_both', label: '~60 min — strength + cardio' },
+  { value: '90_intense', label: '~90 min — intense training' },
+]
+
+type Preview = { workoutEat: number; restEat: number; protein_g: number; splitLabel: string }
+
+function downloadPDF(base64: string, filename: string) {
+  const bin = atob(base64)
+  const arr = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
+  const url = URL.createObjectURL(new Blob([arr], { type: 'application/pdf' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
 export default function BlueprintPage() {
-  const [formData, setFormData] = useState({
-    first_name: '',
-    email: '',
-    phone: '',
-    age: '',
-    gender: 'Female',
-    height_feet: '5',
-    height_inches: '4',
-    weight_lbs: '',
-    goal: 'Lose Fat',
-    activity_level: 'Moderate',
-    workout_days: '3',
-    workout_length: '45 min',
-    cardio: 'No',
+  const [form, setForm] = useState({
+    goal: 'lose', name: '', email: '', phone: '', age: '', sex: 'female',
+    feet: '', inches: '', weight_lbs: '', goal_weight_lbs: '',
+    activity: 'moderate', workout_days_per_week: '4', workout_length: '45_60_both', cardio: 'no',
   })
   const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [done, setDone] = useState<{ preview: Preview; base64: string; filename: string } | null>(null)
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
+  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  const input = 'w-full px-4 py-3 bg-obsidian border border-smoke rounded-2xl text-white text-sm placeholder-ivory/30 focus:outline-none focus:border-gold transition-colors'
+  const goalWord = form.goal === 'gain' ? 'gain' : form.goal === 'maintain' ? 'maintain' : 'lose'
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
+  async function submit() {
     setError('')
+    const height_in = (Number(form.feet) || 0) * 12 + (Number(form.inches) || 0)
+    if (!form.email || !form.age || !height_in || !form.weight_lbs) {
+      setError('Please fill out all fields so I can build your blueprint.')
+      return
+    }
+    setLoading(true)
     try {
       const res = await fetch('/api/blueprint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: form.name, email: form.email, phone: form.phone, age: form.age, sex: form.sex,
+          height_in, weight_lbs: form.weight_lbs, goal_weight_lbs: form.goal_weight_lbs,
+          goal: form.goal, activity: form.activity,
+          workout_days_per_week: form.workout_days_per_week, workout_length: form.workout_length,
+          cardio: form.cardio === 'yes',
+        }),
       })
       const data = await res.json()
-      if (res.ok) {
-        setSuccess(true)
+      if (data.success) {
+        downloadPDF(data.pdfBase64, data.filename)
+        setDone({ preview: data.preview, base64: data.pdfBase64, filename: data.filename })
       } else {
         setError(data.error || 'Something went wrong. Please try again.')
       }
@@ -48,253 +80,159 @@ export default function BlueprintPage() {
     setLoading(false)
   }
 
-  if (success) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center px-4">
-        <div className="max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-[#C9A84C]/20 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-[#C9A84C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <polyline points="20 6 9 17 4 12" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-4">Your Blueprint is Being Created</h2>
-          <p className="text-white/60 leading-relaxed">
-            Check your email in the next 2 minutes. Check your spam folder if you don't see it.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-[#0a0a0f] px-4 py-16">
-      <div className="max-w-lg mx-auto">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <p className="text-[#C9A84C] text-xs font-semibold tracking-[0.3em] uppercase mb-4">
-            Life Up Fitness
-          </p>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4 leading-tight">
-            Get Your Free Custom<br />Calorie Blueprint
-          </h1>
-          <p className="text-white/50 leading-relaxed">
-            Fill out 9 quick questions. Your personalized plan lands in your email in minutes.
+    <div className="min-h-screen bg-obsidian">
+      <section className="relative pt-32 pb-10 px-4 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(201,168,76,0.08),transparent_70%)]" />
+        <div className="max-w-2xl mx-auto text-center relative">
+          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">Free Calorie Blueprint</p>
+          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">Get Your Blueprint</h1>
+          <p className="text-ivory/60 max-w-xl mx-auto leading-relaxed">
+            Answer a few questions and I&apos;ll build your personalized 7-page Calorie Blueprint —
+            your exact numbers for gym days and rest days, macros, and your game plan.
+            It downloads instantly and lands in your inbox.
           </p>
         </div>
+      </section>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* First Name */}
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">First Name</label>
-            <input
-              type="text"
-              name="first_name"
-              required
-              value={formData.first_name}
-              onChange={handleChange}
-              placeholder="Your first name"
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#C9A84C] transition-colors"
-            />
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Email</label>
-            <input
-              type="email"
-              name="email"
-              required
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="your@email.com"
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#C9A84C] transition-colors"
-            />
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Phone Number</label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              placeholder="(555) 000-0000"
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#C9A84C] transition-colors"
-            />
-          </div>
-
-          {/* Age */}
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Age</label>
-            <input
-              type="number"
-              name="age"
-              required
-              min={16}
-              max={80}
-              value={formData.age}
-              onChange={handleChange}
-              placeholder="25"
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#C9A84C] transition-colors"
-            />
-          </div>
-
-          {/* Gender */}
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Gender</label>
-            <select
-              name="gender"
-              value={formData.gender}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#C9A84C] transition-colors"
-            >
-              <option value="Female">Female</option>
-              <option value="Male">Male</option>
-            </select>
-          </div>
-
-          {/* Height */}
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Height</label>
-            <div className="flex gap-3">
-              <select
-                name="height_feet"
-                value={formData.height_feet}
-                onChange={handleChange}
-                className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#C9A84C] transition-colors"
-              >
-                {[4, 5, 6, 7].map(f => (
-                  <option key={f} value={f}>{f} ft</option>
+      {!done ? (
+        <section className="pb-24 px-4">
+          <div className="max-w-lg mx-auto bg-charcoal border border-smoke rounded-3xl p-6 sm:p-8 space-y-4">
+            {/* Goal */}
+            <div>
+              <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Your goal</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[{ v: 'lose', l: 'Lose Fat' }, { v: 'gain', l: 'Build Muscle' }, { v: 'maintain', l: 'Maintain' }].map((g) => (
+                  <button key={g.v} onClick={() => set('goal', g.v)}
+                    className={`py-3 rounded-xl text-xs font-semibold transition-colors ${form.goal === g.v ? 'bg-gold text-obsidian' : 'bg-obsidian border border-smoke text-ivory/60'}`}>
+                    {g.l}
+                  </button>
                 ))}
-              </select>
-              <select
-                name="height_inches"
-                value={formData.height_inches}
-                onChange={handleChange}
-                className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#C9A84C] transition-colors"
-              >
-                {[0,1,2,3,4,5,6,7,8,9,10,11].map(i => (
-                  <option key={i} value={i}>{i} in</option>
-                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Age</label>
+                <input type="number" value={form.age} onChange={(e) => set('age', e.target.value)} placeholder="28" className={input} />
+              </div>
+              <div>
+                <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Sex</label>
+                <select value={form.sex} onChange={(e) => set('sex', e.target.value)} className={input}>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-3">
+              <div>
+                <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Feet</label>
+                <input type="number" value={form.feet} onChange={(e) => set('feet', e.target.value)} placeholder="5" className={input} />
+              </div>
+              <div>
+                <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Inches</label>
+                <input type="number" value={form.inches} onChange={(e) => set('inches', e.target.value)} placeholder="6" className={input} />
+              </div>
+              <div>
+                <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Weight</label>
+                <input type="number" value={form.weight_lbs} onChange={(e) => set('weight_lbs', e.target.value)} placeholder="150" className={input} />
+              </div>
+              <div>
+                <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Goal wt</label>
+                <input type="number" value={form.goal_weight_lbs} onChange={(e) => set('goal_weight_lbs', e.target.value)} placeholder="140" className={input} />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Activity outside the gym</label>
+              <select value={form.activity} onChange={(e) => set('activity', e.target.value)} className={input}>
+                {ACTIVITY.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
               </select>
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Workout days / week</label>
+                <select value={form.workout_days_per_week} onChange={(e) => set('workout_days_per_week', e.target.value)} className={input}>
+                  {[1, 2, 3, 4, 5, 6, 7].map((n) => <option key={n} value={n}>{n} days</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Cardio?</label>
+                <select value={form.cardio} onChange={(e) => set('cardio', e.target.value)} className={input}>
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Average workout length</label>
+              <select value={form.workout_length} onChange={(e) => set('workout_length', e.target.value)} className={input}>
+                {WORKOUT_LENGTH.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
+              </select>
+            </div>
+
+            <div className="border-t border-smoke pt-4 space-y-3">
+              <input type="text" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={input} />
+              <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="Your email (your blueprint lands here too)" className={input} />
+              <input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="Phone (so Coach Asa can follow up)" className={input} />
+            </div>
+
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+
+            <button onClick={submit} disabled={loading}
+              className="w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] disabled:opacity-40 disabled:cursor-not-allowed">
+              {loading ? 'Building your blueprint...' : 'Get My Blueprint (PDF)'}
+            </button>
+            <p className="text-ivory/30 text-xs text-center">Free. Downloads instantly + emailed to you.</p>
           </div>
+        </section>
+      ) : (
+        <section className="pb-24 px-4">
+          <div className="max-w-lg mx-auto">
+            <div className="bg-charcoal border-2 border-gold/40 rounded-3xl p-8 text-center">
+              <p className="text-green-400 text-sm font-semibold mb-1">✓ Your blueprint downloaded</p>
+              <p className="text-ivory/50 text-xs mb-6">📩 I also emailed a copy to {form.email}</p>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-obsidian border border-gold/30 rounded-2xl py-4">
+                  <p className="text-3xl font-bold text-gold">{done.preview.workoutEat.toLocaleString()}</p>
+                  <p className="text-ivory/40 text-xs uppercase tracking-wider mt-1">Workout day</p>
+                </div>
+                <div className="bg-obsidian border border-gold/30 rounded-2xl py-4">
+                  <p className="text-3xl font-bold text-gold">{done.preview.restEat.toLocaleString()}</p>
+                  <p className="text-ivory/40 text-xs uppercase tracking-wider mt-1">Rest day</p>
+                </div>
+              </div>
+              <p className="text-ivory/50 text-sm mb-4">Protein target: <span className="text-white font-semibold">{done.preview.protein_g}g/day</span> · Split {done.preview.splitLabel}</p>
+              <button onClick={() => downloadPDF(done.base64, done.filename)}
+                className="text-gold text-sm font-semibold underline underline-offset-4 hover:text-gold/80">
+                Download my blueprint again
+              </button>
+            </div>
 
-          {/* Weight */}
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Current Weight (lbs)</label>
-            <input
-              type="number"
-              name="weight_lbs"
-              required
-              min={80}
-              max={500}
-              value={formData.weight_lbs}
-              onChange={handleChange}
-              placeholder="150"
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#C9A84C] transition-colors"
-            />
+            <div className="bg-gradient-to-br from-[#1a1608] to-charcoal border border-gold/30 rounded-3xl p-8 mt-6 text-center">
+              <h3 className="text-white text-xl font-bold mb-2">Knowing your numbers is step one.</h3>
+              <p className="text-ivory/60 text-sm mb-6 leading-relaxed">
+                Actually hitting them — with the meals built for you, workouts, and me checking in every week —
+                is where the change happens. That&apos;s my Snatched Without Starving challenge.
+              </p>
+              <a href="/challenge"
+                className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
+                Get Snatched Without Starving →
+              </a>
+            </div>
+            <p className="text-center text-ivory/40 text-xs mt-4">Want to {goalWord} for real? Let&apos;s do it together.</p>
           </div>
+        </section>
+      )}
 
-          {/* Goal */}
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Your Goal</label>
-            <select
-              name="goal"
-              value={formData.goal}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#C9A84C] transition-colors"
-            >
-              <option value="Lose Fat">Lose Fat</option>
-              <option value="Build Muscle">Build Muscle</option>
-              <option value="Maintain">Maintain</option>
-            </select>
-          </div>
-
-          {/* Activity Level */}
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Activity Level</label>
-            <select
-              name="activity_level"
-              value={formData.activity_level}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#C9A84C] transition-colors"
-            >
-              <option value="Low">Low — desk job, minimal movement</option>
-              <option value="Moderate">Moderate — on feet part of the day</option>
-              <option value="Active">Active — physical job, on feet most of the day</option>
-              <option value="Very Active">Very Active — physical labor or athlete</option>
-            </select>
-          </div>
-
-          {/* Workout Days */}
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Days Per Week You Work Out</label>
-            <select
-              name="workout_days"
-              value={formData.workout_days}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#C9A84C] transition-colors"
-            >
-              {[0,1,2,3,4,5,6].map(d => (
-                <option key={d} value={d}>{d} {d === 1 ? 'day' : 'days'}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Workout Length */}
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Average Workout Length</label>
-            <select
-              name="workout_length"
-              value={formData.workout_length}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#C9A84C] transition-colors"
-            >
-              <option value="I don't work out yet">I don't work out yet</option>
-              <option value="30 min">30 min</option>
-              <option value="45 min">45 min</option>
-              <option value="60 min">60 min</option>
-              <option value="90 min">90 min</option>
-            </select>
-          </div>
-
-          {/* Cardio */}
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-2">Do You Do Cardio?</label>
-            <select
-              name="cardio"
-              value={formData.cardio}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#C9A84C] transition-colors"
-            >
-              <option value="No">No</option>
-              <option value="Yes — 1-2x/week">Yes — 1-2x/week</option>
-              <option value="Yes — 3-4x/week">Yes — 3-4x/week</option>
-              <option value="Yes — daily">Yes — daily</option>
-            </select>
-          </div>
-
-          {error && (
-            <p className="text-red-400 text-sm text-center">{error}</p>
-          )}
-
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#C9A84C] text-black py-4 rounded-xl font-bold text-base uppercase tracking-wider transition-all duration-300 hover:bg-[#C9A84C]/90 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-          >
-            {loading ? 'Creating Your Blueprint...' : 'Get My Free Blueprint →'}
-          </button>
-
-          <p className="text-white/30 text-xs text-center pb-4">
-            Your information is private and secure. We never share or sell your data.
-          </p>
-        </form>
-      </div>
+      <footer className="py-8 px-4 border-t border-smoke">
+        <div className="max-w-6xl mx-auto text-center text-sm text-ivory/40">
+          &copy; {new Date().getFullYear()} Asa Luke. All rights reserved.
+        </div>
+      </footer>
     </div>
   )
 }

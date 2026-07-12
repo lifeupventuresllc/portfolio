@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    const { productId, email, packageSlug } = await request.json()
+    const { productId, email, packageSlug, name, cohortSlug } = await request.json()
 
     // Direct checkout by slug (from service pages — no login required)
     if (packageSlug) {
@@ -25,6 +25,8 @@ export async function POST(request: NextRequest) {
         'bundle-empire':      { name: 'The Empire Package', description: 'Scale + Mix Pro + Fitness + Strategy', price: 99700, mode: 'subscription', category: 'content-editing' },
         'protein-budget-system': { name: 'The Protein Budget System', description: '15 recipes, meal plan, grocery lists, prep playbook', price: 2700, mode: 'payment', category: 'fitness' },
         'the-menu-cookbook': { name: 'The Menu — Complete Cookbook', description: '25 macro-friendly recipes, organized by meal type, with macros and cost per serving', price: 1299, mode: 'payment', category: 'fitness' },
+        'snatched-challenge':    { name: 'Snatched Without Starving — 6-Week Challenge', description: 'Custom training, done-for-you weekly nutrition, weekly coach check-ins, community + The Menu cookbook', price: 14700, mode: 'payment', category: 'fitness' },
+        'snatched-inner-circle': { name: 'Snatched Without Starving — Inner Circle', description: 'Everything in the Challenge + weekly 1:1 video calls, direct access, fully custom plans, faith + mindset coaching', price: 30000, mode: 'payment', category: 'fitness' },
       }
 
       const pkg = PACKAGES[packageSlug]
@@ -66,6 +68,20 @@ export async function POST(request: NextRequest) {
         sessionParams.customer_email = email
       } else if (user?.email) {
         sessionParams.customer_email = user.email
+      }
+
+      // Challenge tiers: tag metadata + route to the challenge onboarding page
+      if (packageSlug.startsWith('snatched-')) {
+        const tier = packageSlug === 'snatched-inner-circle' ? 'inner_circle' : 'challenge'
+        sessionParams.success_url = `${process.env.NEXT_PUBLIC_APP_URL}/challenge?success=true`
+        sessionParams.cancel_url = `${process.env.NEXT_PUBLIC_APP_URL}/challenge?canceled=true`
+        sessionParams.metadata = {
+          ...(sessionParams.metadata as Record<string, string>),
+          type: 'challenge',
+          tier,
+          cohortSlug: cohortSlug || 'founding',
+          name: name || '',
+        }
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

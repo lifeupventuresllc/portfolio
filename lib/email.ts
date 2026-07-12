@@ -78,6 +78,115 @@ export async function sendWelcomeEmail(email: string) {
   }
 }
 
+export async function sendChallengeWelcome(email: string, name: string, tier: 'challenge' | 'inner_circle') {
+  const firstName = (name || '').split(' ')[0] || 'sis'
+  const isInner = tier === 'inner_circle'
+  const tierBlurb = isInner
+    ? "You're in the Inner Circle — everything in the Challenge PLUS weekly 1:1 video calls with me, direct access between calls, fully custom plans, and faith + mindset coaching."
+    : "You just joined Snatched Without Starving — custom training, done-for-you weekly nutrition, and me personally checking in on you every week."
+
+  const { error } = await resend.emails.send({
+    from: `Asa Luke <${FROM_EMAIL}>`,
+    to: email,
+    replyTo: REPLY_TO,
+    subject: "You're in! Welcome to Snatched Without Starving",
+    headers: UNSUB_HEADERS,
+    text: `Welcome ${firstName}!\n\n${tierBlurb}\n\nStep 1 — create your account with THIS email (${email}) so I can build your custom plan:\n${process.env.NEXT_PUBLIC_APP_URL}/signup\n\nOnce you're in, you'll fill out a quick intake (your goal, stats, budget, and the foods you love) and I'll build your training + nutrition around it.\n\nLet's get you snatched — without starving.\n\n— Coach Asa\nasaluke.io`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #C9A84C;">You're in, ${firstName}! 🙌🏽</h1>
+        <p style="color: #374151; line-height: 1.7;">${tierBlurb}</p>
+        <p style="color: #374151; line-height: 1.7;"><strong>Step 1 — create your account</strong> with this same email (${email}) so I can build your custom plan:</p>
+        <p style="margin: 20px 0;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/signup" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Create My Account</a>
+        </p>
+        <p style="color: #374151; line-height: 1.7;">Once you're in, you'll fill out a quick intake — your goal, stats, budget, and the foods you love — and I'll build your training and nutrition around it.</p>
+        <p style="color: #374151; line-height: 1.7;">Let's get you snatched — without starving.</p>
+        <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">— Coach Asa · asaluke.io</p>
+        ${FOOTER}
+      </div>
+    `,
+  })
+
+  if (error) {
+    console.error('Failed to send challenge welcome email:', error)
+  }
+}
+
+export async function sendBlueprintEmail(
+  email: string,
+  name: string,
+  targets: { calories: number; protein_g: number; carbs_g: number; fats_g: number },
+  goal: string,
+  pdf?: { base64: string; filename: string }
+) {
+  const firstName = (name || '').split(' ')[0] || 'there'
+  const goalWord = goal === 'gain' ? 'gain' : goal === 'maintain' ? 'maintain' : 'lose'
+
+  const { error } = await resend.emails.send({
+    from: `Asa Luke <${FROM_EMAIL}>`,
+    to: email,
+    replyTo: REPLY_TO,
+    subject: `${firstName}, here's your Calorie Blueprint`,
+    headers: UNSUB_HEADERS,
+    attachments: pdf ? [{ filename: pdf.filename, content: pdf.base64 }] : undefined,
+    text: `Hey ${firstName}!\n\nHere's your personalized Nutrition Blueprint to ${goalWord} weight:\n\nDaily Calories: ${targets.calories}\nProtein: ${targets.protein_g}g\nCarbs: ${targets.carbs_g}g\nFats: ${targets.fats_g}g\n\nHitting these every day is how you ${goalWord} the right way — without starving.\n\nWant me to build the actual meals, workouts, and check in on you every week so you actually hit it? That's my Snatched Without Starving challenge:\n${process.env.NEXT_PUBLIC_APP_URL}/challenge\n\n— Coach Asa\nasaluke.io`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #C9A84C;">Your Nutrition Blueprint 📊</h1>
+        <p style="color: #374151;">Hey ${firstName} — here's exactly what to hit each day to ${goalWord} weight the right way:</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color:#6b7280;">Daily Calories</td><td style="padding:10px 0; border-bottom:1px solid #e5e7eb; text-align:right; font-weight:bold; color:#C9A84C;">${targets.calories}</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color:#6b7280;">Protein</td><td style="padding:10px 0; border-bottom:1px solid #e5e7eb; text-align:right; font-weight:bold;">${targets.protein_g}g</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color:#6b7280;">Carbs</td><td style="padding:10px 0; border-bottom:1px solid #e5e7eb; text-align:right; font-weight:bold;">${targets.carbs_g}g</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color:#6b7280;">Fats</td><td style="padding:10px 0; border-bottom:1px solid #e5e7eb; text-align:right; font-weight:bold;">${targets.fats_g}g</td></tr>
+        </table>
+        <p style="color:#374151;">Knowing your numbers is step one. Actually hitting them — with the meals, workouts, and someone in your corner every week — is where the real change happens.</p>
+        <p style="margin: 24px 0;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/challenge" style="display:inline-block; background:#C9A84C; color:#0A0A0F; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold;">Get Snatched Without Starving →</a>
+        </p>
+        <p style="color:#9ca3af; font-size:12px; margin-top:40px;">— Coach Asa · asaluke.io</p>
+        ${FOOTER}
+      </div>
+    `,
+  })
+
+  if (error) {
+    console.error('Failed to send blueprint email:', error)
+  }
+}
+
+export async function sendCoachBlueprintNotification(info: {
+  name: string; email: string; phone?: string; goal: string; weight_lbs: number
+  age: number; activity: string; workout_days: number; workoutEat: number; restEat: number
+}) {
+  const coachEmail = process.env.COACH_EMAIL || REPLY_TO
+  const { error } = await resend.emails.send({
+    from: `Life Up Fitness <${FROM_EMAIL}>`,
+    to: coachEmail,
+    replyTo: REPLY_TO,
+    subject: `New Blueprint Lead — ${info.name || info.email}`,
+    text: `New blueprint just generated. Follow up on Instagram within 24 hours.\n\nName: ${info.name}\nEmail: ${info.email}\nPhone: ${info.phone || '—'}\nGoal: ${info.goal}\nWeight: ${info.weight_lbs} lbs\nAge: ${info.age}\nActivity: ${info.activity}\nWorkout days: ${info.workout_days}/week\nTargets: ${info.workoutEat} workout / ${info.restEat} rest cal`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #C9A84C;">New Blueprint Lead 🔥</h2>
+        <p style="color:#374151;">Follow up on Instagram within 24 hours.</p>
+        <table style="width:100%; border-collapse:collapse; margin:12px 0;">
+          <tr><td style="padding:6px 0; color:#6b7280;">Name</td><td style="padding:6px 0; text-align:right; font-weight:bold;">${info.name || '—'}</td></tr>
+          <tr><td style="padding:6px 0; color:#6b7280;">Email</td><td style="padding:6px 0; text-align:right;">${info.email}</td></tr>
+          <tr><td style="padding:6px 0; color:#6b7280;">Phone</td><td style="padding:6px 0; text-align:right;">${info.phone || '—'}</td></tr>
+          <tr><td style="padding:6px 0; color:#6b7280;">Goal</td><td style="padding:6px 0; text-align:right;">${info.goal}</td></tr>
+          <tr><td style="padding:6px 0; color:#6b7280;">Weight / Age</td><td style="padding:6px 0; text-align:right;">${info.weight_lbs} lbs · ${info.age}</td></tr>
+          <tr><td style="padding:6px 0; color:#6b7280;">Activity</td><td style="padding:6px 0; text-align:right;">${info.activity}</td></tr>
+          <tr><td style="padding:6px 0; color:#6b7280;">Workout days</td><td style="padding:6px 0; text-align:right;">${info.workout_days}/week</td></tr>
+          <tr><td style="padding:6px 0; color:#6b7280;">Targets</td><td style="padding:6px 0; text-align:right; color:#C9A84C; font-weight:bold;">${info.workoutEat} / ${info.restEat} cal</td></tr>
+        </table>
+      </div>
+    `,
+  })
+  if (error) console.error('Failed to send coach notification:', error)
+}
+
 export async function sendOnboardingDay3Email(email: string) {
   const { error } = await resend.emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,

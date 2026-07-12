@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createServiceClient } from '@/lib/supabase/server'
-import { sendPurchaseConfirmation, sendRefundConfirmation } from '@/lib/email'
+import { sendPurchaseConfirmation, sendRefundConfirmation, sendChallengeWelcome } from '@/lib/email'
 import { dispatchWebhooks } from '@/lib/webhooks'
 import Stripe from 'stripe'
 
@@ -34,6 +34,94 @@ export async function POST(request: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session
         const userId = session.metadata?.userId
         const productId = session.metadata?.productId
+
+        // ---- Challenge enrollment (guest-friendly, keyed by email) ----
+        if (session.metadata?.type === 'challenge') {
+          const email = session.customer_email || session.customer_details?.email || ''
+          const tier = session.metadata.tier === 'inner_circle' ? 'inner_circle' : 'challenge'
+          const cohortSlug = session.metadata.cohortSlug || 'founding'
+          const name = session.metadata.name || ''
+
+          // Idempotency
+          const { data: existingEnrollment } = await supabase
+            .from('challenge_enrollments')
+            .select('id')
+            .eq('stripe_session_id', session.id)
+            .maybeSingle()
+
+          if (existingEnrollment) {
+            console.log('Enrollment already recorded for session:', session.id)
+            break
+          }
+
+          // Find the cohort (for slot tracking)
+          const { data: cohort } = await supabase
+            .from('challenge_cohorts')
+            .select('id, slots_filled, inner_circle_filled')
+            .eq('slug', cohortSlug)
+            .maybeSingle()
+
+          // Link to an existing account if the email already has one
+          let linkedUserId: string | null = null
+          if (email) {
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('email', email)
+              .maybeSingle()
+            linkedUserId = prof?.id || null
+          }
+
+          const { error: enrollError } = await supabase
+            .from('challenge_enrollments')
+            .insert({
+              user_id: linkedUserId,
+              cohort_id: cohort?.id || null,
+              email,
+              name,
+              tier,
+              status: 'active',
+              amount: session.amount_total || 0,
+              stripe_session_id: session.id,
+              stripe_payment_intent: session.payment_intent as string,
+              started_at: new Date().toISOString(),
+            })
+
+          if (enrollError) {
+            console.error('Failed to create enrollment:', enrollError)
+            break
+          }
+
+          // Increment cohort slot counts
+          if (cohort) {
+            await supabase
+              .from('challenge_cohorts')
+              .update({
+                slots_filled: (cohort.slots_filled || 0) + 1,
+                ...(tier === 'inner_circle'
+                  ? { inner_circle_filled: (cohort.inner_circle_filled || 0) + 1 }
+                  : {}),
+              })
+              .eq('id', cohort.id)
+          }
+
+          // Log + send the challenge welcome email
+          if (email && linkedUserId) {
+            await supabase.from('emails').insert({ user_id: linkedUserId, email, type: 'purchase' })
+          }
+          if (email) {
+            await sendChallengeWelcome(email, name, tier)
+          }
+
+          await dispatchWebhooks('challenge.enrolled', {
+            email,
+            tier,
+            amount: session.amount_total,
+            cohortSlug,
+          })
+
+          break
+        }
 
         if (!userId || !productId) {
           console.error('Missing metadata in checkout session')
