@@ -194,7 +194,8 @@ export default function BlueprintPage() {
           <div className="max-w-lg mx-auto">
             <div className="bg-charcoal border-2 border-gold/40 rounded-3xl p-8 text-center">
               <p className="text-green-400 text-sm font-semibold mb-1">✓ Your blueprint downloaded</p>
-              <p className="text-ivory/50 text-xs mb-6">📩 I also emailed a copy to {form.email}</p>
+              <p className="text-ivory/50 text-xs mb-1">📩 I also emailed a copy to {form.email}</p>
+              <p className="text-ivory/40 text-xs mb-6">Don&apos;t see it in a couple minutes? Check your <span className="text-ivory/60">spam / promotions</span> folder (and add asaluke.io to your contacts).</p>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="bg-obsidian border border-gold/30 rounded-2xl py-4">
                   <p className="text-3xl font-bold text-gold">{done.preview.workoutEat.toLocaleString()}</p>
