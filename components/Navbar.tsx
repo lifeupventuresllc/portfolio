@@ -78,6 +78,11 @@ export default function Navbar() {
             </Link>
 
             {user && (
+              <Link href="/plan" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+                My Plan
+              </Link>
+            )}
+            {user && (
               <Link href="/content" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
                 My Projects
               </Link>
@@ -137,6 +142,9 @@ export default function Navbar() {
             </Link>
             {user ? (
               <>
+                <Link href="/plan" onClick={() => setMenuOpen(false)} className="block text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+                  My Plan
+                </Link>
                 <Link href="/content" onClick={() => setMenuOpen(false)} className="block text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
                   My Projects
                 </Link>

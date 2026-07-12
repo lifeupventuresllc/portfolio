@@ -73,7 +73,8 @@ export async function POST(request: NextRequest) {
       // Challenge tiers: tag metadata + route to the challenge onboarding page
       if (packageSlug.startsWith('snatched-')) {
         const tier = packageSlug === 'snatched-inner-circle' ? 'inner_circle' : 'challenge'
-        sessionParams.success_url = `${process.env.NEXT_PUBLIC_APP_URL}/challenge?success=true`
+        // After payment, guide her to create her account → straight into onboarding
+        sessionParams.success_url = `${process.env.NEXT_PUBLIC_APP_URL}/signup?redirect=/plan/intake&success=true`
         sessionParams.cancel_url = `${process.env.NEXT_PUBLIC_APP_URL}/challenge?canceled=true`
         sessionParams.metadata = {
           ...(sessionParams.metadata as Record<string, string>),

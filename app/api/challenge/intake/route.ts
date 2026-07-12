@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { calcNutritionTargets } from '@/lib/nutrition'
+import { generateWorkout } from '@/lib/workout'
+import type { Level, Injury } from '@/lib/workout-exercises'
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,6 +58,8 @@ export async function POST(request: NextRequest) {
       food_preferences: body.food_preferences,
       dislikes_allergies: body.dislikes_allergies,
       injuries_limitations: body.injuries_limitations,
+      // catch-all: cook days drive the meal plan (how many times/week she batch-cooks)
+      form_data: { cook_days_per_week: Number(body.cook_days_per_week) || 2 },
     }
 
     // Upsert intake (one per enrollment)
@@ -109,6 +113,45 @@ export async function POST(request: NextRequest) {
         .eq('id', existingPlan.id)
     } else {
       await svc.from('challenge_nutrition_plans').insert(planPayload)
+    }
+
+    // Auto-generate her Week 1 workout program from her setup + goals, and publish it.
+    const level = (body.experience_level === 'advanced' ? 3 : body.experience_level === 'intermediate' ? 2 : 1) as Level
+    const track: 'gym' | 'home' = body.training_location === 'home' ? 'home' : 'gym'
+    const workoutGoal = (body.goal === 'gain' || body.goal === 'maintain' ? body.goal : 'lose') as 'lose' | 'gain' | 'maintain'
+    const program = generateWorkout({
+      name: enrollment.name || body.name || 'Your',
+      track,
+      level,
+      goal: workoutGoal,
+      daysPerWeek: Number(body.days_per_week) || 3,
+      weekNumber: 1,
+      injuries: (Array.isArray(body.injuries) ? body.injuries : []) as Injury[],
+    })
+
+    const workoutPayload = {
+      enrollment_id: enrollment.id,
+      user_id: user.id,
+      week_number: 1,
+      location: body.training_location || 'gym',
+      difficulty: body.experience_level || 'beginner',
+      plan: program,
+      status: 'published',
+    }
+    const { data: existingWorkout } = await svc
+      .from('challenge_workout_plans')
+      .select('id')
+      .eq('enrollment_id', enrollment.id)
+      .eq('week_number', 1)
+      .maybeSingle()
+
+    if (existingWorkout) {
+      await svc
+        .from('challenge_workout_plans')
+        .update({ ...workoutPayload, updated_at: new Date().toISOString() })
+        .eq('id', existingWorkout.id)
+    } else {
+      await svc.from('challenge_workout_plans').insert(workoutPayload)
     }
 
     // Mark intake complete + set goal on the enrollment

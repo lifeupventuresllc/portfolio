@@ -4,15 +4,15 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 const INCLUDED = [
-  { title: 'Your Custom Training Plan', desc: 'Workouts built for you — home or gym, matched to your level (beginner → advanced) and your goal.' },
-  { title: 'Done-For-You Weekly Nutrition', desc: 'I plan your meals every week for your goal (lose or gain), plus a grocery list built around your budget and the foods you love.' },
-  { title: 'Weekly Check-Ins With Me', desc: 'Not a PDF you figure out alone, not an AI app — me, personally checking on you every week so you never fall off.' },
-  { title: 'The Sisterhood', desc: 'A private community of women walking it out with you.' },
-  { title: 'Progress Tracker', desc: 'See your progress beyond the scale — weight, measurements, and photos over time.' },
+  { title: 'Your Custom Sculpt Plan', desc: 'Workouts built for you — home or gym, matched to your level (beginner → advanced) and your goal.' },
+  { title: 'The Eat-What-You-Love Meal Plan', desc: 'I plan your meals every week for your goal (lose or gain), plus a grocery list built around your budget and the foods you love.' },
+  { title: 'Weekly Check-Ins With Coach Asa', desc: 'Not a PDF you figure out alone, not an AI app — me, personally checking on you every week so you never fall off.' },
+  { title: 'The Curve Collective', desc: 'A private community of women walking it out with you.' },
+  { title: 'The Transformation Tracker', desc: 'See your progress beyond the scale — weight, measurements, and photos over time.' },
   { title: 'The Menu Cookbook', desc: 'Cravable, macro-friendly recipes — real food you actually want to eat.' },
-  { title: '7-Day Kickstart', desc: 'A quick win in your very first week so you feel the momentum fast.' },
-  { title: 'Eating-Out Survival Guide', desc: 'Stay on track at restaurants and social events without the guilt.' },
-  { title: 'Keep-It-Off Habit Reset', desc: 'The system that makes your results actually stick after the 6 weeks.' },
+  { title: 'The 7-Day Jump Start', desc: 'A quick win in your very first week so you feel the momentum fast.' },
+  { title: 'The Eat-Out Cheat Sheet', desc: 'Stay on track at restaurants and social events without the guilt.' },
+  { title: 'The 21-Day Habit Reset', desc: 'The system that makes your results actually stick after the 6 weeks.' },
 ]
 
 const FAQ = [
@@ -190,7 +190,7 @@ function ChallengeContent() {
               <ul className="text-ivory/60 text-sm space-y-2 mb-8 flex-1">
                 <li>• Everything listed above</li>
                 <li>• Weekly group check-ins with me</li>
-                <li>• The Sisterhood community</li>
+                <li>• The Curve Collective community</li>
               </ul>
               <button
                 onClick={() => handleCheckout('snatched-challenge')}

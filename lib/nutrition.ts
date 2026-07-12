@@ -100,7 +100,10 @@ function round(n: number): number {
 function proteinGrams(inputs: BlueprintInputs): { grams: number; label: string } {
   const w = inputs.weight_lbs
   if (inputs.sex === 'male') {
-    const factor = inputs.goal === 'gain' ? 1.0 : inputs.goal === 'maintain' ? 0.8 : 0.85
+    // Caloric deficit (cut) = HIGHEST protein to protect muscle while losing (Asa's method:
+    // he keeps protein in the 200s across 180–208 lb, never dropping it as bodyweight falls).
+    // 1.1 g/lb keeps a cutter elevated (180→198, 195→215, 208→229). Gain 1.0, maintain 0.8.
+    const factor = inputs.goal === 'gain' ? 1.0 : inputs.goal === 'maintain' ? 0.8 : 1.1
     return { grams: Math.max(140, round(w * factor)), label: `${factor}g/lb (min 140g)` }
   }
   const factor = inputs.goal === 'gain' ? 0.8 : inputs.goal === 'maintain' ? 0.7 : 0.75
