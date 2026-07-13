@@ -36,8 +36,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
 
+        // Default members straight to their dashboard (honor an explicit ?redirect= first)
         const params = new URLSearchParams(window.location.search)
-        const redirect = params.get('redirect') || '/'
+        const redirect = params.get('redirect') || '/plan'
         window.location.href = redirect
       } else if (mode === 'signup') {
         if (password.length < 6) {
