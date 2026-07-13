@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import SiteFooter from "@/components/SiteFooter";
 import JsonLd, { organizationSchema } from "@/components/JsonLd";
 
 const geistSans = localFont({
@@ -49,10 +50,11 @@ export default function RootLayout({
         <JsonLd data={organizationSchema} />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-obsidian`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-obsidian min-h-screen flex flex-col`}
       >
         <Navbar />
-        <main>{children}</main>
+        <main className="flex-1">{children}</main>
+        <SiteFooter />
       </body>
     </html>
   );

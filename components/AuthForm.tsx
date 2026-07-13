@@ -14,6 +14,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [accepted, setAccepted] = useState(false)
 
   // Fresh non-singleton client to avoid any cached state.
   // Sanitize the env values: the anon key is a JWT (only [A-Za-z0-9._-]) — strip ANY
@@ -43,6 +44,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
       } else if (mode === 'signup') {
         if (password.length < 6) {
           throw new Error('Password must be at least 6 characters')
+        }
+        if (!accepted) {
+          throw new Error('Please accept the Terms of Service and EULA to create your account.')
         }
         const { error } = await supabase.auth.signUp({
           email,
@@ -125,9 +129,26 @@ export default function AuthForm({ mode }: AuthFormProps) {
             </div>
           )}
 
+          {mode === 'signup' && (
+            <label className="flex items-start gap-3 text-sm text-ivory/60 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={accepted}
+                onChange={(e) => setAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 flex-none accent-gold cursor-pointer"
+              />
+              <span>
+                I agree to the{' '}
+                <Link href="/terms" target="_blank" className="text-gold hover:underline">Terms of Service</Link>,{' '}
+                <Link href="/eula" target="_blank" className="text-gold hover:underline">EULA</Link>, and{' '}
+                <Link href="/privacy" target="_blank" className="text-gold hover:underline">Privacy Policy</Link>.
+              </span>
+            </label>
+          )}
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (mode === 'signup' && !accepted)}
             className="w-full bg-gold text-obsidian py-3 rounded-xl font-bold uppercase tracking-wider hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? 'Loading...' : titles[mode]}
