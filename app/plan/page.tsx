@@ -146,7 +146,10 @@ export default async function PlanDashboard() {
 
       {/* Workout */}
       <section>
-        <h2 className="text-white font-bold text-lg mb-3">Your training this week</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-white font-bold text-lg">Your training this week</h2>
+          {workoutPlan?.plan && <Link href="/plan/workout" className="inline-flex items-center gap-1.5 bg-gold text-obsidian px-4 py-2 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform">▶ Start session</Link>}
+        </div>
         {workoutPlan?.plan ? (
           <WorkoutView program={workoutPlan.plan as WorkoutProgram} />
         ) : (
