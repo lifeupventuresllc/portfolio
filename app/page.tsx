@@ -213,7 +213,7 @@ export default function LandingPage() {
               <p className="text-ivory/40 text-sm uppercase tracking-wider">Recipes</p>
             </div>
             <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)]">
-              <p className="text-gold text-3xl font-bold mb-2">$12.99</p>
+              <p className="text-gold text-3xl font-bold mb-2">$25.99</p>
               <p className="text-ivory/40 text-sm uppercase tracking-wider">One-Time</p>
             </div>
             <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)]">
@@ -239,7 +239,7 @@ export default function LandingPage() {
               className="group relative inline-block bg-gold text-obsidian px-10 py-4 text-base font-bold tracking-wider uppercase rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
               style={{ perspective: '600px', transformStyle: 'preserve-3d' }}
             >
-              Get The Menu — $12.99
+              Get The Menu — $25.99
             </Link>
           </div>
         </div>

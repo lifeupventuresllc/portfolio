@@ -93,8 +93,8 @@ export default function FitnessGuide() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
               Save / Download Guide
             </button>
-            <Link href="/services/bundles" className="inline-block bg-gold text-obsidian px-6 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
-              Want the Full 12-Week Program? View Now
+            <Link href="/challenge" className="inline-block bg-gold text-obsidian px-6 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
+              Ready for a coach? See the Challenge
             </Link>
           </div>
         </div>
@@ -283,10 +283,10 @@ export default function FitnessGuide() {
 
         {/* CTA */}
         <div className="mt-16 text-center bg-gradient-to-br from-charcoal to-gold/5 border border-gold/30 rounded-2xl p-10">
-          <h3 className="text-2xl font-bold text-white mb-3">Want the Full 12-Week Program?</h3>
-          <p className="text-ivory/60 mb-8 max-w-md mx-auto">Progressive overload periodization, full nutrition plan, and tracking. One-time purchase, lifetime access.</p>
-          <Link href="/#fitness" className="inline-block bg-gold text-obsidian px-10 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
-            View Fitness Program — $29.99
+          <h3 className="text-2xl font-bold text-white mb-3">Ready for the real thing?</h3>
+          <p className="text-ivory/60 mb-8 max-w-md mx-auto">Get a custom workout, done-for-you weekly meals built around food you love, and me coaching you every week — the Snatched Without Starving 6-week challenge.</p>
+          <Link href="/challenge" className="inline-block bg-gold text-obsidian px-10 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
+            See the Challenge →
           </Link>
         </div>
 

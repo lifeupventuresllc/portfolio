@@ -77,9 +77,9 @@ export default function PricingCard({
     'one-time'
 
   const defaultFeatures = [
-    '12-week structured program',
     'Custom workout plans',
-    'Nutrition guide',
+    'Done-for-you weekly meals',
+    'Weekly coach check-ins',
     'Lifetime access',
   ]
 

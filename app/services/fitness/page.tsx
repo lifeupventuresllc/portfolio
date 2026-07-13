@@ -107,16 +107,44 @@ function ProteinBudgetSystemContent() {
         </div>
       )}
 
+      {/* ═══ PRIMARY OFFER — Snatched Without Starving (featured first) ═══ */}
+      <section className="relative pt-32 pb-20 px-4 overflow-hidden border-b border-smoke">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_30%,rgba(201,168,76,0.14),transparent_70%)]" />
+        <div className="max-w-3xl mx-auto text-center relative">
+          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+            The Flagship Program
+          </p>
+          <h1 className="text-4xl sm:text-6xl font-bold text-white mb-4 tracking-tight">
+            Snatched Without Starving
+          </h1>
+          <p className="text-xl sm:text-2xl text-gold font-semibold mb-6">
+            My 6-week coached challenge — custom training, done-for-you meals, and me checking in on you every week
+          </p>
+          <p className="text-ivory/60 mb-10 max-w-2xl mx-auto leading-relaxed">
+            Not a PDF and not an app that forgets your name. You get a custom workout, a weekly
+            meal plan built around food you actually love, and a real coach — me — in your corner
+            the whole way. This is the one I&apos;d put you in.
+          </p>
+          <a
+            href="/challenge"
+            className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] cursor-pointer"
+          >
+            See the Challenge →
+          </a>
+          <p className="text-ivory/30 text-xs mt-6">Prefer to start smaller? The cookbook &amp; budget system are below.</p>
+        </div>
+      </section>
+
       {/* Hero */}
-      <section className="relative pt-32 pb-20 px-4 overflow-hidden">
+      <section className="relative pt-20 pb-20 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(201,168,76,0.08),transparent_70%)]" />
         <div className="max-w-3xl mx-auto text-center relative">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">
             Digital Product
           </p>
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
+          <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
             The Protein Budget System
-          </h1>
+          </h2>
           <p className="text-xl sm:text-2xl text-gold font-semibold mb-6">
             Hit 120g+ protein daily on under $75/week
           </p>
@@ -256,7 +284,7 @@ function ProteinBudgetSystemContent() {
             }
             className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] cursor-pointer"
           >
-            Get The Menu — $12.99
+            Get The Menu — $25.99
           </button>
         </div>
       </section>
@@ -316,7 +344,7 @@ function ProteinBudgetSystemContent() {
               One-Time Purchase
             </p>
             <div className="mb-4">
-              <span className="text-5xl font-bold text-gold">$12.99</span>
+              <span className="text-5xl font-bold text-gold">$25.99</span>
             </div>
             <p className="text-ivory/60 text-sm mb-8 leading-relaxed">
               25 recipes, full macros, cost per serving, desserts included. Buy once, keep forever.
@@ -355,7 +383,7 @@ function ProteinBudgetSystemContent() {
                   disabled={checkoutLoading || !checkoutEmail}
                   className="bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
                 >
-                  {checkoutLoading ? 'Loading...' : 'Get It — $12.99'}
+                  {checkoutLoading ? 'Loading...' : 'Get It — $25.99'}
                 </button>
               </div>
               <p className="text-ivory/30 text-xs mt-3 text-center">

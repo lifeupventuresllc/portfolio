@@ -15,7 +15,6 @@ const BUNDLES = [
     highlights: [
       '4 Reels/Month (Content Editing)',
       '1 Track Mix & Master/Month (Audio)',
-      'Full 12-Week Fitness Program (Free)',
     ],
     sections: [
       {
@@ -38,14 +37,6 @@ const BUNDLES = [
           'Delivered in WAV + MP3',
         ],
       },
-      {
-        label: 'Fitness',
-        items: [
-          'Full 12-Week Training Program',
-          'Structured progressive overload plan',
-          'Included free with your bundle',
-        ],
-      },
     ],
     guarantee:
       'Not satisfied in 30 days? Your entire next month is free. No questions asked.',
@@ -62,7 +53,6 @@ const BUNDLES = [
     highlights: [
       '12+ Reels/Month (Full Engine)',
       '3 Tracks Mix & Master/Month (Audio)',
-      'Full 12-Week Fitness Program (Free)',
       '1-Hour Monthly Strategy Session',
       'Priority Support Across All Services',
     ],
@@ -92,14 +82,6 @@ const BUNDLES = [
         ],
       },
       {
-        label: 'Fitness',
-        items: [
-          'Full 12-Week Training Program',
-          'Structured progressive overload plan',
-          'Included free with your bundle',
-        ],
-      },
-      {
         label: 'Bundle Exclusives',
         items: [
           '1-Hour Monthly Strategy Session (content + music)',
@@ -118,7 +100,6 @@ const PRICE_COMPARISON = [
   { service: 'Content Editing — Scale (24 Reels/mo)', individual: '$897', bundle: 'Empire' },
   { service: 'Audio Engineering — 2 Tracks/mo', individual: '$175', bundle: 'Creator' },
   { service: 'Audio Engineering — 4 Tracks/mo', individual: '$425', bundle: 'Empire' },
-  { service: '12-Week Fitness Program', individual: '$30', bundle: 'Both' },
 ]
 
 export default function BundlesPage() {

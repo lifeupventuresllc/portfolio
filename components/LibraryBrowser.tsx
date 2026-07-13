@@ -24,8 +24,12 @@ export default function LibraryBrowser() {
   const [cat, setCat] = useState<MealCategory>('breakfast')
   const [group, setGroup] = useState('All')
   const [q, setQ] = useState('')
+  const [budgetOnly, setBudgetOnly] = useState(false)
 
-  const recipes = useMemo(() => byCategory(cat).filter((r) => r.name.toLowerCase().includes(q.toLowerCase())), [cat, q])
+  const budgetCount = useMemo(() => RECIPES.filter((r) => r.budget).length, [])
+  const recipes = useMemo(() => byCategory(cat)
+    .filter((r) => r.name.toLowerCase().includes(q.toLowerCase()))
+    .filter((r) => !budgetOnly || r.budget), [cat, q, budgetOnly])
   const moves = useMemo(() => ALL_MOVES.filter((m) => (group === 'All' || m.group === group) && m.name.toLowerCase().includes(q.toLowerCase())), [group, q])
 
   const pill = (active: boolean) => `px-4 py-2 rounded-xl text-xs font-semibold transition-colors ${active ? 'bg-gold text-obsidian' : 'bg-charcoal border border-smoke text-ivory/60'}`
@@ -43,9 +47,17 @@ export default function LibraryBrowser() {
 
       {tab === 'recipes' ? (
         <>
-          <div className="flex gap-2 mb-4 flex-wrap">
+          <div className="flex gap-2 mb-3 flex-wrap items-center">
             {MEAL_TABS.map((t) => <button key={t.c} onClick={() => setCat(t.c)} className={pill(cat === t.c)}>{t.l}</button>)}
+            <button
+              onClick={() => setBudgetOnly((b) => !b)}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-colors ${budgetOnly ? 'bg-green-500 text-obsidian' : 'bg-charcoal border border-green-500/40 text-green-400'}`}>
+              {budgetOnly ? '✓ ' : '💚 '}Budget-friendly · {budgetCount}
+            </button>
           </div>
+          {budgetOnly && (
+            <p className="text-green-400/80 text-xs mb-4">Showing only budget-friendly picks — the cheapest way to hit your macros. Tap the toggle to see everything again.</p>
+          )}
           <div className="grid sm:grid-cols-2 gap-3">
             {recipes.map((r) => {
               const tier = costTier(r.name, r.budget)
