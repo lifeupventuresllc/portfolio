@@ -5,6 +5,7 @@ import WorkoutView from '@/components/WorkoutView'
 import WeekPlanView from '@/components/WeekPlanView'
 import DailyCheckin from '@/components/DailyCheckin'
 import CoachMedia from '@/components/CoachMedia'
+import CountUp from '@/components/CountUp'
 import { LIVE_CALL } from '@/lib/live-call'
 import type { WorkoutProgram } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
@@ -111,14 +112,14 @@ export default async function PlanDashboard() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { l: 'Calories', v: nutritionPlan.calories?.toLocaleString(), c: 'text-gold' },
-              { l: 'Protein', v: `${nutritionPlan.protein_g}g`, c: 'text-green-400' },
-              { l: 'Carbs', v: `${nutritionPlan.carbs_g}g`, c: 'text-white' },
-              { l: 'Fats', v: `${nutritionPlan.fats_g}g`, c: 'text-white' },
+              { l: 'Calories', v: Number(nutritionPlan.calories) || 0, s: '', c: 'text-gold' },
+              { l: 'Protein', v: Number(nutritionPlan.protein_g) || 0, s: 'g', c: 'text-green-400' },
+              { l: 'Carbs', v: Number(nutritionPlan.carbs_g) || 0, s: 'g', c: 'text-white' },
+              { l: 'Fats', v: Number(nutritionPlan.fats_g) || 0, s: 'g', c: 'text-white' },
             ].map((t) => (
-              <div key={t.l} className="bg-charcoal border border-smoke rounded-2xl p-4">
+              <div key={t.l} className="bg-charcoal border border-smoke rounded-2xl p-4 transition-transform hover:-translate-y-0.5">
                 <p className="text-ivory/40 text-xs uppercase tracking-wider mb-1">{t.l}</p>
-                <p className={`text-xl font-bold ${t.c}`}>{t.v}</p>
+                <p className={`text-xl font-bold ${t.c}`}><CountUp value={t.v} suffix={t.s} /></p>
               </div>
             ))}
           </div>

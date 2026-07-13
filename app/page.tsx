@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import JsonLd, { localBusinessSchema } from '@/components/JsonLd'
+import RevealScript from '@/components/RevealScript'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,10 +8,11 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-obsidian">
       <JsonLd data={localBusinessSchema} />
+      <RevealScript />
 
       {/* ── HERO ── */}
       <section className="min-h-[100vh] flex flex-col items-center justify-center text-center px-6 pt-14 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_45%,rgba(201,168,76,0.06),transparent_70%)]" />
+        <div className="luf-breathe absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_45%,rgba(201,168,76,0.10),transparent_70%)]" />
 
         <div className="relative z-10 flex flex-col items-center">
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-6">
@@ -67,7 +69,7 @@ export default function LandingPage() {
 
       {/* ── CONTENT EDITING ── */}
       <section className="py-24 sm:py-32 px-6 border-t border-smoke/50">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
+        <div className="luf-reveal max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div>
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Content Editing</p>
             <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-white mb-8 leading-[1.1]">
@@ -112,7 +114,7 @@ export default function LandingPage() {
 
       {/* ── AUDIO ENGINEERING ── */}
       <section className="py-24 sm:py-32 px-6 border-t border-smoke/50 bg-charcoal/40">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
+        <div className="luf-reveal max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div className="order-2 md:order-1 grid grid-cols-2 gap-4" style={{ perspective: '800px' }}>
             <div className="bg-obsidian border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
               <p className="text-gold text-3xl font-bold mb-2">10+</p>
@@ -157,7 +159,7 @@ export default function LandingPage() {
 
       {/* ── FITNESS ── */}
       <section id="fitness" className="py-24 sm:py-32 px-6 border-t border-smoke/50">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
+        <div className="luf-reveal max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div>
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">The 6-Week Challenge</p>
             <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-white mb-8 leading-[1.1]">
@@ -204,7 +206,7 @@ export default function LandingPage() {
 
       {/* ── THE MENU (COOKBOOK) ── */}
       <section className="py-24 sm:py-32 px-6 border-t border-smoke/50 bg-charcoal/40">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
+        <div className="luf-reveal max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div className="order-2 md:order-1 grid grid-cols-2 gap-4" style={{ perspective: '800px' }}>
             <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)]">
               <p className="text-gold text-3xl font-bold mb-2">25+</p>

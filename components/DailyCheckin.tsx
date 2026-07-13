@@ -27,7 +27,7 @@ export default function DailyCheckin() {
     <div className="bg-charcoal border border-smoke rounded-2xl p-5">
       <div className="flex items-center justify-between mb-3">
         <p className="text-white font-semibold text-sm">Did you show up today?</p>
-        <span className="text-gold font-bold text-sm">🔥 {loading ? '—' : streak} day{streak === 1 ? '' : 's'}</span>
+        <span className="text-gold font-bold text-sm"><span className="luf-flame">🔥</span> {loading ? '—' : streak} day{streak === 1 ? '' : 's'}</span>
       </div>
       <div className="flex gap-3">
         <button onClick={() => set('workout')} disabled={loading} className={chip(!!today?.workout)}>{today?.workout ? '✅' : ''} Workout</button>
