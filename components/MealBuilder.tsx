@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { byCategory, type Recipe, type MealCategory } from '@/lib/recipes'
 import { buildWeekFromSelections, PICK_GUIDE, type WeekPlan, type DayType } from '@/lib/meal-plan'
 import { costTier } from '@/lib/ingredients'
+import BudgetBar from '@/components/BudgetBar'
 import WeekPlanView from '@/components/WeekPlanView'
 
 type SlotKey = 'breakfasts' | 'lunches' | 'dinners' | 'snacks' | 'desserts'
@@ -186,6 +187,7 @@ export default function MealBuilder({ initial }: {
                   : `Heads up: ~$${plan.groceryCost} is $${plan.groceryCost - budgetNum} over your $${budgetNum} budget.`}
               </p>
               {plan.groceryCost > budgetNum && <p className="text-ivory/50 text-xs mt-1">Swap a <span className="text-red-400">$$$</span> meal for a <span className="text-green-400">Budget</span> pick, or keep &ldquo;Fit my budget&rdquo; on.</p>}
+              <BudgetBar cost={plan.groceryCost} budget={budgetNum} />
             </div>
           )}
           <WeekPlanView plan={plan} />
