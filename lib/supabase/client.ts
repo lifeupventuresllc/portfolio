@@ -5,6 +5,6 @@ export function createClient() {
   // which would otherwise make the fetch Authorization/apikey header value invalid.
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!.replace(/\s/g, ''),
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.replace(/\s/g, '')
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.replace(/[^A-Za-z0-9._-]/g, '')
   )
 }

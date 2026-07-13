@@ -15,10 +15,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
-  // Fresh non-singleton client to avoid any cached state
+  // Fresh non-singleton client to avoid any cached state.
+  // Sanitize the env values: the anon key is a JWT (only [A-Za-z0-9._-]) — strip ANY
+  // other char (a stray newline/invisible char baked into the env var was making the
+  // fetch Authorization header value invalid and blocking every login).
   const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!.replace(/\s/g, ''),
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.replace(/[^A-Za-z0-9._-]/g, ''),
     { isSingleton: false }
   )
 

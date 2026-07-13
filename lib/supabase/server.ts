@@ -7,7 +7,7 @@ export function createClient() {
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!.replace(/\s/g, ''),
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.replace(/\s/g, ''),
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.replace(/[^A-Za-z0-9._-]/g, ''),
     {
       cookies: {
         getAll() {
@@ -31,6 +31,6 @@ export function createClient() {
 export function createServiceClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!.replace(/\s/g, ''),
-    process.env.SUPABASE_SERVICE_ROLE_KEY!.replace(/\s/g, '')
+    process.env.SUPABASE_SERVICE_ROLE_KEY!.replace(/[^A-Za-z0-9._-]/g, '')
   )
 }
