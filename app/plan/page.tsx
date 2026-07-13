@@ -202,6 +202,10 @@ export default async function PlanDashboard() {
             <p className="text-white font-semibold text-sm">The Library 📚</p>
             <p className="text-ivory/50 text-xs mt-1">Every recipe + every move, searchable</p>
           </Link>
+          <Link href="/plan/achievements" className="block bg-charcoal border border-smoke rounded-2xl p-4 hover:border-gold/50 transition-colors sm:col-span-2">
+            <p className="text-white font-semibold text-sm">Your badges 🏅</p>
+            <p className="text-ivory/50 text-xs mt-1">Every milestone you hit — I&apos;m keeping track of your work</p>
+          </Link>
         </div>
         {enrollment.tier === 'inner_circle' && (
           <div className="bg-charcoal border border-gold/40 rounded-2xl p-5 mt-3">
