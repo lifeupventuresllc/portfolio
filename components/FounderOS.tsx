@@ -48,6 +48,19 @@ const VEHICLES = [
   { name: 'Acting', tag: 'REACH — longest runway', note: 'Needs the name first. Build audience now; self-produce to show range.' },
 ]
 
+// The north-star ladder — each 10× forces a new mechanism.
+const LADDER = [
+  { n: '1', when: 'Now', how: 'Your hands — one person, one DM, one client.' },
+  { n: '10', when: 'Mo. 1–6', how: 'Coaching + first content. Still 1:1. Learn what truly helps.' },
+  { n: '100', when: 'Year 1', how: 'Content engine + products selling. First shift 1:1 → 1:many.' },
+  { n: '1,000', when: 'Year 2–3', how: 'Platform audience + owned email list + app v1.' },
+  { n: '10,000', when: 'Year 3–5', how: 'Multi-platform media + subscription + app DAU + first hire.' },
+  { n: '100,000', when: 'Year 5–7', how: 'Media brand + app platform + team running systems.' },
+  { n: '1,000,000', when: 'Year 7–12', how: 'Software + media do the serving. Owned IP + ecosystem.' },
+  { n: '10,000,000', when: 'Year 12–17', how: 'Six vehicles as divisions; you become visionary, not operator.' },
+  { n: '100,000,000', when: '~Year 20', how: 'THE MISSION — owned media + app + platform at global scale.' },
+]
+
 type Priority = { text: string; done: boolean }
 type Metrics = { content: number; served: number; outreach: number; deepWork: number }
 type Journal = { peopleServed: string; win: string; lesson: string; gratitude: string; tomorrow: string }
@@ -395,14 +408,30 @@ export default function FounderOS() {
               </div>
             </div>
 
+            {/* THE LADDER — people served daily */}
+            <div className="bg-charcoal rounded-xl border border-smoke p-6">
+              <h2 className="text-lg font-semibold text-white mb-1">People Served Daily — the ladder</h2>
+              <p className="text-ivory/40 text-xs mb-4">Your north star. Each 10× forces a new mechanism. You can’t skip rungs.</p>
+              <div className="space-y-1.5">
+                {LADDER.map((r, i) => (
+                  <div key={r.n} className="flex items-baseline gap-3">
+                    <span className={`shrink-0 text-right w-24 font-bold tabular-nums ${i === LADDER.length - 1 ? 'text-gold' : 'text-white'}`}>{r.n}</span>
+                    <span className="shrink-0 text-[10px] text-ivory/40 w-16">{r.when}</span>
+                    <span className="text-ivory/70 text-xs">{r.how}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-ivory/40 text-xs mt-4">Stuck at a rung? You’re missing the next asset. The plateau names your next build.</p>
+            </div>
+
             <div className="bg-charcoal rounded-xl border border-smoke p-6">
               <h2 className="text-lg font-semibold text-white mb-3">Build first (dependency order)</h2>
               <ol className="space-y-1.5 text-sm text-ivory/80 list-decimal list-inside">
                 <li>Install the daily habit (this dashboard + journal, unbroken).</li>
-                <li>Ship the fitness cash engine to “sellable” — one paid offer live.</li>
-                <li>Turn on the content engine — 1 platform mastered before 3.</li>
-                <li>Close the loop: content → free magnet → email → paid offer, measured.</li>
-                <li>Systematize + document so it runs 80% without you, then hire.</li>
+                <li><span className="text-gold">Run two tracks in parallel from Day 1:</span> (A) ship the fitness cash engine to “sellable,” and (B) turn on the awareness/content engine — 1 platform, daily, every post points to the free magnet. <span className="text-ivory/50">Don’t wait for a perfect product to start being seen.</span></li>
+                <li>Close the loop: aware → free magnet → email → paid offer, measured weekly.</li>
+                <li>Amplify awareness: collabs, then a 2nd platform, then paid ads (only once it converts free).</li>
+                <li>Systematize + document so it runs 80% without you, then hire (editor first — feed the engine).</li>
                 <li>Then expand vehicles: music drop, acting push, community, platform.</li>
               </ol>
               <p className="text-ivory/40 text-xs mt-4">Full manual: <span className="text-ivory/60">~/Desktop/Master-Operating-System/</span></p>
