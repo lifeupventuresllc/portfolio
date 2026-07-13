@@ -55,7 +55,7 @@ export default async function AdminCheckins() {
                   </p>
                 )}
                 {c.client_notes && <p className="text-ivory/70 text-sm mb-1 italic">&ldquo;{c.client_notes}&rdquo;</p>}
-                <CoachResponse checkinId={c.id} existing={c.coach_response} />
+                <CoachResponse checkinId={c.id} existing={c.coach_response} existingMedia={c.coach_media_url} />
               </div>
             )
           })}

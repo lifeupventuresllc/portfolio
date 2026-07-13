@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
         'the-menu-cookbook': { name: 'The Menu — Complete Cookbook', description: '25 macro-friendly recipes, organized by meal type, with macros and cost per serving', price: 1299, mode: 'payment', category: 'fitness' },
         'snatched-challenge':    { name: 'Snatched Without Starving — 6-Week Challenge', description: 'Custom training, done-for-you weekly nutrition, weekly coach check-ins, community + The Menu cookbook', price: 15000, mode: 'payment', category: 'fitness' },
         'snatched-inner-circle': { name: 'Snatched Without Starving — Inner Circle', description: 'Everything in the Challenge + weekly 1:1 video calls, direct access, fully custom plans, faith + mindset coaching', price: 30000, mode: 'payment', category: 'fitness' },
+        'snatched-challenge-plan': { name: 'Snatched Without Starving — Challenge (Payment Plan)', description: '3 monthly payments of $50 — full challenge access from day one', price: 5000, mode: 'subscription', category: 'fitness' },
       }
 
       const pkg = PACKAGES[packageSlug]
@@ -82,6 +83,10 @@ export async function POST(request: NextRequest) {
           tier,
           cohortSlug: cohortSlug || 'founding',
           name: name || '',
+        }
+        // Payment plan: tag the subscription so the webhook auto-cancels it after 3 payments (3× $50)
+        if (isSubscription) {
+          sessionParams.subscription_data = { metadata: { installments: '3', type: 'challenge', tier } }
         }
       }
 

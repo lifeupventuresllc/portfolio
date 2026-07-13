@@ -190,7 +190,7 @@ function ChallengeContent() {
             <div className="bg-charcoal border border-smoke rounded-3xl p-8 flex flex-col">
               <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">The Challenge</p>
               <div className="mb-2"><span className="text-5xl font-bold text-white">$150</span></div>
-              <p className="text-ivory/40 text-sm mb-6">$2,000+ in value · one-time · 6 weeks</p>
+              <p className="text-ivory/40 text-sm mb-6">$2,000+ in value · one-time or 3× $50 · 6 weeks</p>
               <ul className="text-ivory/60 text-sm space-y-2 mb-8 flex-1">
                 <li>• Everything listed above</li>
                 <li>• Weekly group check-ins with me</li>
@@ -201,7 +201,14 @@ function ChallengeContent() {
                 disabled={loadingSlug !== null || !email}
                 className="w-full bg-gold text-obsidian px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {loadingSlug === 'snatched-challenge' ? 'Loading...' : 'Join The Challenge'}
+                {loadingSlug === 'snatched-challenge' ? 'Loading...' : 'Join The Challenge — $150'}
+              </button>
+              <button
+                onClick={() => handleCheckout('snatched-challenge-plan')}
+                disabled={loadingSlug !== null || !email}
+                className="w-full mt-3 bg-obsidian border border-gold/40 text-gold px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-2xl transition-colors hover:bg-gold/10 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {loadingSlug === 'snatched-challenge-plan' ? 'Loading...' : 'Or split it — 3 payments of $50'}
               </button>
             </div>
 

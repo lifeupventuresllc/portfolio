@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import CheckinForm from '@/components/CheckinForm'
 import ProgressChart, { type ProgressPoint } from '@/components/ProgressChart'
+import CoachMedia from '@/components/CoachMedia'
 
 export const dynamic = 'force-dynamic'
 
@@ -67,10 +68,11 @@ export default async function CheckinPage() {
                     <span className="text-ivory/40 text-xs">{c.weight_lbs ? `${c.weight_lbs} lbs` : ''}{c.submitted_at ? ` · ${shortDate(c.submitted_at)}` : ''}</span>
                   </div>
                   {c.client_notes && <p className="text-ivory/60 text-sm mb-3 italic">&ldquo;{c.client_notes}&rdquo;</p>}
-                  {c.coach_response ? (
+                  {c.coach_response || c.coach_media_url ? (
                     <div className="bg-obsidian border-l-2 border-gold rounded-r-xl p-4">
                       <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1">From Coach Asa</p>
-                      <p className="text-ivory/80 text-sm">{c.coach_response}</p>
+                      {c.coach_response && <p className="text-ivory/80 text-sm">{c.coach_response}</p>}
+                      <CoachMedia url={c.coach_media_url} />
                     </div>
                   ) : (
                     <p className="text-ivory/40 text-xs">💬 Asa is reviewing this — you&apos;ll get his response here soon.</p>

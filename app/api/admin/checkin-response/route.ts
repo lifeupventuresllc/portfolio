@@ -13,11 +13,13 @@ async function coachUser() {
 export async function POST(request: NextRequest) {
   if (!(await coachUser())) return NextResponse.json({ error: 'Coach login required.' }, { status: 403 })
   try {
-    const { checkinId, response } = await request.json()
-    if (!checkinId || !response?.trim()) return NextResponse.json({ error: 'Write a response first.' }, { status: 400 })
+    const { checkinId, response, mediaUrl } = await request.json()
+    if (!checkinId || (!response?.trim() && !mediaUrl?.trim())) return NextResponse.json({ error: 'Write a response or add a video/voice link first.' }, { status: 400 })
     const svc = createServiceClient()
     await svc.from('challenge_checkins').update({
-      coach_response: response.trim(), status: 'reviewed', reviewed_at: new Date().toISOString(),
+      coach_response: response?.trim() || null,
+      coach_media_url: mediaUrl?.trim() || null,
+      status: 'reviewed', reviewed_at: new Date().toISOString(),
     }).eq('id', checkinId)
     return NextResponse.json({ success: true })
   } catch (error) {

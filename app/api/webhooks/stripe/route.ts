@@ -231,6 +231,22 @@ export async function POST(request: NextRequest) {
         break
       }
 
+      case 'invoice.payment_succeeded': {
+        // Payment-plan installments: cancel the subscription once all payments are collected (3× $50).
+        const invoice = event.data.object as Stripe.Invoice
+        const subId = (invoice as unknown as { subscription?: string }).subscription
+        if (!subId) break
+        const sub = await stripe().subscriptions.retrieve(subId)
+        const installments = Number(sub.metadata?.installments || 0)
+        if (installments > 0) {
+          const paid = await stripe().invoices.list({ subscription: subId, status: 'paid', limit: 100 })
+          if (paid.data.length >= installments) {
+            await stripe().subscriptions.cancel(subId)
+          }
+        }
+        break
+      }
+
       case 'charge.refunded': {
         const charge = event.data.object as Stripe.Charge
         const paymentIntent = charge.payment_intent as string

@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import WorkoutView from '@/components/WorkoutView'
 import WeekPlanView from '@/components/WeekPlanView'
+import DailyCheckin from '@/components/DailyCheckin'
+import CoachMedia from '@/components/CoachMedia'
+import { LIVE_CALL } from '@/lib/live-call'
 import type { WorkoutProgram } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
 
@@ -83,6 +86,22 @@ export default async function PlanDashboard() {
 
   return shell(
     <div className="space-y-8">
+      {/* Daily accountability + live call — the "I'm with you" touchpoints */}
+      <section className="grid sm:grid-cols-2 gap-3">
+        <DailyCheckin />
+        <div className="bg-charcoal border border-gold/30 rounded-2xl p-5 flex flex-col">
+          <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1">Live with me</p>
+          <p className="text-white font-semibold text-sm">{LIVE_CALL.title}</p>
+          <p className="text-ivory/50 text-xs mt-0.5 mb-2">{LIVE_CALL.whenLabel}</p>
+          <p className="text-ivory/50 text-xs flex-1">{LIVE_CALL.blurb}</p>
+          {LIVE_CALL.zoomUrl ? (
+            <a href={LIVE_CALL.zoomUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block bg-gold text-obsidian px-5 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl text-center">Join the call</a>
+          ) : (
+            <p className="text-ivory/30 text-xs mt-3">Your call link drops here before we go live.</p>
+          )}
+        </div>
+      </section>
+
       {/* Targets */}
       {nutritionPlan && (
         <section>
@@ -137,11 +156,12 @@ export default async function PlanDashboard() {
       {/* Weekly check-in with Coach Asa */}
       <section>
         <h2 className="text-white font-bold text-lg mb-3">Your check-in with me</h2>
-        {latestCheckin?.coach_response ? (
+        {latestCheckin?.coach_response || latestCheckin?.coach_media_url ? (
           <div className="bg-charcoal border border-gold/30 rounded-2xl p-5">
             <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1">Latest from Coach Asa · Week {latestCheckin.week_number}</p>
-            <p className="text-ivory/80 text-sm mb-4">{latestCheckin.coach_response}</p>
-            <Link href="/plan/checkin" className="inline-block bg-gold text-obsidian px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl">Check in for this week</Link>
+            {latestCheckin.coach_response && <p className="text-ivory/80 text-sm mb-2">{latestCheckin.coach_response}</p>}
+            <CoachMedia url={latestCheckin.coach_media_url} />
+            <div className="mt-4"><Link href="/plan/checkin" className="inline-block bg-gold text-obsidian px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl">Check in for this week</Link></div>
           </div>
         ) : latestCheckin ? (
           <div className="bg-charcoal border border-smoke rounded-2xl p-5">
