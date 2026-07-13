@@ -210,11 +210,6 @@ export default function ContentIntakePage() {
         </form>
       </div>
 
-      <footer className="py-8 px-6 border-t border-smoke mt-16">
-        <div className="max-w-6xl mx-auto text-center text-sm text-ivory/40">
-          &copy; {new Date().getFullYear()} Asa Luke. All rights reserved.
-        </div>
-      </footer>
     </div>
   )
 }

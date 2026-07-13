@@ -260,11 +260,6 @@ function ChallengeContent() {
         </div>
       </section>
 
-      <footer className="py-8 px-4 border-t border-smoke">
-        <div className="max-w-6xl mx-auto text-center text-sm text-ivory/40">
-          &copy; {new Date().getFullYear()} Asa Luke. All rights reserved.
-        </div>
-      </footer>
     </div>
   )
 }
