@@ -21,8 +21,8 @@ export async function POST(request: NextRequest) {
 
   // Create a server-side Supabase client that writes cookies to this response
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!.replace(/\s/g, ''),
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.replace(/[^A-Za-z0-9._-]/g, ''),
     {
       cookies: {
         getAll() {
