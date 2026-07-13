@@ -35,9 +35,12 @@ export default function MealBuilder({ initial }: {
   const tierColor = (t: string) => t === '$' ? 'text-green-400' : t === '$$' ? 'text-gold' : 'text-red-400'
 
   const guide = PICK_GUIDE[cookDays]
+  const [flash, setFlash] = useState('')
   const has = (k: SlotKey, r: Recipe) => sel[k].some((x) => x.name === r.name)
   const toggle = (k: SlotKey, r: Recipe) => {
     setSaved(false)
+    const adding = !has(k, r)
+    if (adding) { setFlash(r.name); setTimeout(() => setFlash(''), 550) }
     setSel((s) => ({ ...s, [k]: has(k, r) ? s[k].filter((x) => x.name !== r.name) : [...s[k], r] }))
   }
   const toggleDay = (i: number) => { setSaved(false); setDayTypes((d) => d.map((t, x) => (x === i ? (t === 'workout' ? 'rest' : 'workout') : t))) }
@@ -148,7 +151,7 @@ export default function MealBuilder({ initial }: {
             const tier = costTier(r.name, r.budget)
             if (fitBudget && tier === '$$$' && !on) return null  // seamless: hide pricey unless already picked
             return (
-              <button key={r.name} onClick={() => toggle(tab, r)} className={`text-left rounded-2xl p-4 border transition-colors ${on ? 'bg-gold/10 border-gold' : 'bg-charcoal border-smoke hover:border-gold/50'}`}>
+              <button key={r.name} onClick={() => toggle(tab, r)} className={`text-left rounded-2xl p-4 border transition-colors ${flash === r.name ? 'luf-pop' : ''} ${on ? 'bg-gold/10 border-gold' : 'bg-charcoal border-smoke hover:border-gold/50'}`}>
                 <div className="flex justify-between items-start gap-2 mb-1">
                   <span className="text-white font-semibold text-sm leading-tight">{r.name}</span>
                   {r.budget && <span className="text-[9px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full whitespace-nowrap">Budget</span>}

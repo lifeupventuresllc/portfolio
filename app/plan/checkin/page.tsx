@@ -4,6 +4,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import CheckinForm from '@/components/CheckinForm'
 import ProgressChart, { type ProgressPoint } from '@/components/ProgressChart'
 import CoachMedia from '@/components/CoachMedia'
+import PhotoUpload from '@/components/PhotoUpload'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,6 +38,17 @@ export default async function CheckinPage() {
     .filter((p) => p.weight_lbs != null)
     .map((p) => ({ label: shortDate(p.created_at), weight: Number(p.weight_lbs) }))
 
+  // progress photos → private signed URLs
+  const { data: photoRows } = await svc.from('challenge_progress')
+    .select('created_at, photo_urls').eq('enrollment_id', enrollment.id).eq('note', 'photo')
+    .order('created_at', { ascending: false }).limit(24)
+  const photos = ((await Promise.all((photoRows || []).flatMap((r) =>
+    (r.photo_urls || []).map(async (p: string) => {
+      const { data } = await svc.storage.from('progress-photos').createSignedUrl(p, 3600)
+      return data?.signedUrl ? { url: data.signedUrl, date: shortDate(r.created_at) } : null
+    })
+  ))).filter(Boolean)) as { url: string; date: string }[]
+
   return (
     <div className="min-h-screen bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto">
@@ -51,6 +63,23 @@ export default async function CheckinPage() {
             <ProgressChart points={points} />
           </div>
         )}
+
+        <div className="mb-8">
+          <h2 className="text-white font-bold text-lg mb-3">Your progress photos</h2>
+          {photos.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {photos.map((p, idx) => (
+                <div key={idx} className="relative aspect-[3/4] rounded-xl overflow-hidden border border-smoke">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.url} alt={`Progress ${p.date}`} className="w-full h-full object-cover" />
+                  <span className="absolute bottom-1 left-1 text-[9px] bg-obsidian/80 text-ivory/80 px-1.5 py-0.5 rounded">{p.date}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <PhotoUpload />
+          <p className="text-ivory/40 text-xs mt-2">Private to you and me. Same pose, same light, once a week — the scale lies, these don&apos;t.</p>
+        </div>
 
         <div className="mb-10">
           <h2 className="text-white font-bold text-lg mb-3">This week&apos;s check-in</h2>
