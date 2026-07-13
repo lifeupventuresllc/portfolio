@@ -19,7 +19,7 @@ const FAQ = [
   { q: 'What if I want to gain weight, not lose it?', a: 'This is built for both. Your plan is set to your goal — lose or gain your first 10–15 lbs. Most programs only do fat loss; this does either.' },
   { q: "I'm a total beginner. Is this for me?", a: 'Yes. Your training is matched to your level — beginner, intermediate, or advanced — and you can train at home or in the gym.' },
   { q: 'Do I really talk to you, or is it automated?', a: "You talk to me. Every week I personally check in on your progress — it's real coaching, not a chatbot." },
-  { q: 'Whats the difference between the Challenge and the Inner Circle?', a: 'The Challenge ($147) has group check-ins and everything you need to transform. The Inner Circle ($300) adds weekly 1:1 video calls with me, direct access between calls, fully custom plans, and faith + mindset coaching — limited to 5 women.' },
+  { q: 'Whats the difference between the Challenge and the Inner Circle?', a: 'The Challenge ($150) has group check-ins and everything you need to transform. The Inner Circle ($300) adds weekly 1:1 video calls with me, direct access between calls, fully custom plans, and faith + mindset coaching — limited to 5 women.' },
 ]
 
 export default function ChallengePage() {
@@ -95,7 +95,7 @@ function ChallengeContent() {
             onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
             className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] cursor-pointer"
           >
-            Join The Challenge — $147
+            Join The Challenge — $150
           </button>
         </div>
       </section>
@@ -147,11 +147,15 @@ function ChallengeContent() {
         <div className="max-w-2xl mx-auto text-center bg-charcoal border-2 border-gold/30 rounded-3xl p-8 sm:p-10">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">My Guarantee</p>
           <p className="text-white text-lg sm:text-xl font-semibold leading-relaxed">
-            Check in with me every week for 6 weeks. If you don&apos;t see visible results —
-            your first 5–8 lbs down or gained and inches off your waist — I coach you
-            <span className="text-gold"> free until you do.</span>
+            Show up and do the work — weekly check-ins, follow your plan, put in your
+            workouts. If you still don&apos;t see visible results — your first 5–8 lbs
+            down or gained and inches off your waist — I coach you
+            <span className="text-gold"> free until you do.*</span>
           </p>
-          <p className="text-ivory/50 text-sm mt-4">That&apos;s on me.</p>
+          <p className="text-ivory/50 text-sm mt-4">
+            *You just hold up your end: check in every week, follow the plan, do the workouts.
+            I go all in for the women who go all in. That&apos;s on me.
+          </p>
         </div>
       </section>
 
@@ -185,7 +189,7 @@ function ChallengeContent() {
             {/* Challenge */}
             <div className="bg-charcoal border border-smoke rounded-3xl p-8 flex flex-col">
               <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">The Challenge</p>
-              <div className="mb-2"><span className="text-5xl font-bold text-white">$147</span></div>
+              <div className="mb-2"><span className="text-5xl font-bold text-white">$150</span></div>
               <p className="text-ivory/40 text-sm mb-6">$2,000+ in value · one-time · 6 weeks</p>
               <ul className="text-ivory/60 text-sm space-y-2 mb-8 flex-1">
                 <li>• Everything listed above</li>
