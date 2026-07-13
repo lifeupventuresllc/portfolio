@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { buildBlueprint } from '@/lib/nutrition'
 import MealBuilder from '@/components/MealBuilder'
+import GroceryPricing from '@/components/GroceryPricing'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,6 +66,10 @@ export default async function MealsPage() {
           budget: Number(intake.weekly_food_budget) || undefined,
           weightLbs: Number(intake.weight_lbs) || undefined,
         }} />
+
+        <div className="mt-8">
+          <GroceryPricing />
+        </div>
       </div>
     </div>
   )
