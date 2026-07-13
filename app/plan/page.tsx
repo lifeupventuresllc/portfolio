@@ -8,6 +8,7 @@ import CoachMedia from '@/components/CoachMedia'
 import CountUp from '@/components/CountUp'
 import { LIVE_CALL } from '@/lib/live-call'
 import type { WorkoutProgram } from '@/lib/workout'
+import type { Level, Injury } from '@/lib/workout-exercises'
 import type { WeekPlan } from '@/lib/meal-plan'
 
 export const dynamic = 'force-dynamic'
@@ -74,11 +75,17 @@ export default async function PlanDashboard() {
     )
   }
 
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: latestCheckin }] = await Promise.all([
+  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: latestCheckin }, { data: intake }] = await Promise.all([
     svc.from('challenge_workout_plans').select('*').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('*').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_checkins').select('*').eq('enrollment_id', enrollment.id).order('week_number', { ascending: false }).limit(1).maybeSingle(),
+    svc.from('challenge_intake').select('experience_level, form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
   ])
+
+  // Her real level + injuries — so exercise swaps stay in-system and injury-aware
+  const level = (intake?.experience_level === 'advanced' ? 3 : intake?.experience_level === 'intermediate' ? 2 : 1) as Level
+  const injuries = (Array.isArray((intake?.form_data as { injuries?: Injury[] })?.injuries)
+    ? (intake!.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
 
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
     ? (nutritionPlan.meals as WeekPlan) : null
@@ -151,7 +158,7 @@ export default async function PlanDashboard() {
           {workoutPlan?.plan && <Link href="/plan/workout" className="inline-flex items-center gap-1.5 bg-gold text-obsidian px-4 py-2 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform">▶ Start session</Link>}
         </div>
         {workoutPlan?.plan ? (
-          <WorkoutView program={workoutPlan.plan as WorkoutProgram} />
+          <WorkoutView program={workoutPlan.plan as WorkoutProgram} editable level={level} injuries={injuries} />
         ) : (
           <p className="text-ivory/50 text-sm">Your workout is being prepared. Refresh in a moment.</p>
         )}

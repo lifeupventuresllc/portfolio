@@ -1,13 +1,32 @@
 // On-screen renderer for a generated WorkoutProgram (gym or home).
-// Pure presentational — safe to render from a server component.
-import type { WorkoutProgram } from '@/lib/workout'
+// Server component; when `editable`, gym superset moves get a swap control
+// whose options are computed here (same muscle, her level, injury-safe).
+import type { WorkoutProgram, GymDay } from '@/lib/workout'
+import type { Level, Injury } from '@/lib/workout-exercises'
+import { swapOptions } from '@/lib/workout-swap'
+import ExerciseSwap from '@/components/ExerciseSwap'
 
 function Cue({ text }: { text: string }) {
   return <p className="text-ivory/40 text-xs leading-relaxed mt-0.5">{text}</p>
 }
 
-export default function WorkoutView({ program }: { program: WorkoutProgram }) {
+export default function WorkoutView({ program, editable = false, level = 1, injuries = [] }: {
+  program: WorkoutProgram
+  editable?: boolean
+  level?: Level
+  injuries?: Injury[]
+}) {
   const isHome = program.track === 'home'
+
+  // Legal swap options for one superset slot (excludes moves used elsewhere that day).
+  const optionsFor = (d: GymDay, side: 'push' | 'pull', i: number) => {
+    const cur = d.supersets[i][side]
+    const used = d.supersets.flatMap((s) => [s.push.name, s.pull.name])
+      .concat(d.accessory.map((a) => a.name))
+      .filter((n) => n !== cur.name)
+    return swapOptions({ muscle: cur.muscle, movement: cur.movement, level, injuries, excludeNames: used })
+      .map((e) => ({ name: e.name, cue: e.cue }))
+  }
   return (
     <div className="space-y-4">
       {/* Header meta */}
@@ -45,8 +64,10 @@ export default function WorkoutView({ program }: { program: WorkoutProgram }) {
                 <p className="text-gold/80 text-[10px] uppercase tracking-wider mb-1">Superset {i + 1} — {s.reps}</p>
                 <p className="text-white text-sm font-semibold">{s.push.name}</p>
                 <Cue text={s.push.cue} />
+                {editable && <ExerciseSwap dayNum={d.dayNum} supersetIndex={i} side="push" options={optionsFor(d, 'push', i)} />}
                 <p className="text-white text-sm font-semibold mt-2">{s.pull.name}</p>
                 <Cue text={s.pull.cue} />
+                {editable && <ExerciseSwap dayNum={d.dayNum} supersetIndex={i} side="pull" options={optionsFor(d, 'pull', i)} />}
               </div>
             ))}
           </div>

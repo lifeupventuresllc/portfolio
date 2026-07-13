@@ -58,8 +58,12 @@ export async function POST(request: NextRequest) {
       food_preferences: body.food_preferences,
       dislikes_allergies: body.dislikes_allergies,
       injuries_limitations: body.injuries_limitations,
-      // catch-all: cook days drive the meal plan (how many times/week she batch-cooks)
-      form_data: { cook_days_per_week: Number(body.cook_days_per_week) || 2 },
+      // catch-all: cook days drive the meal plan (how many times/week she batch-cooks);
+      // structured injuries persist so exercise swaps stay injury-aware
+      form_data: {
+        cook_days_per_week: Number(body.cook_days_per_week) || 2,
+        injuries: (Array.isArray(body.injuries) ? body.injuries : []) as Injury[],
+      },
     }
 
     // Upsert intake (one per enrollment)
