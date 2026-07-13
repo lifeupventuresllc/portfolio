@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import CoachResponse from '@/components/CoachResponse'
@@ -26,6 +27,7 @@ export default async function AdminCheckins() {
   return (
     <div className="min-h-screen bg-obsidian px-4 py-16">
       <div className="max-w-2xl mx-auto">
+        <Link href="/admin/clients" className="text-ivory/40 text-xs hover:text-gold mb-2 inline-block">← Your clients</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-2">Coach Tool</p>
         <h1 className="text-3xl font-bold text-white mb-2">Weekly Check-Ins</h1>
         <p className="text-ivory/50 text-sm mb-8">{pending.length} waiting on your response. Reply and it lands on her dashboard instantly.</p>
