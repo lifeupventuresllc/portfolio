@@ -167,7 +167,7 @@ export default function MealBuilder({ initial }: {
       {error && <p className="text-red-400 text-sm">{error}</p>}
 
       <div className="flex gap-3">
-        <button onClick={build} className="flex-1 bg-gold text-obsidian px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all hover:scale-[1.01]">Build my week</button>
+        <button onClick={build} className="luf-glow flex-1 bg-gold text-obsidian px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all hover:scale-[1.01]">Build my week</button>
         {plan && <button onClick={save} disabled={saving} className="flex-1 bg-charcoal border border-gold text-gold px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl disabled:opacity-40">{saving ? 'Saving...' : saved ? '✓ Saved' : 'Save to my plan'}</button>}
       </div>
 

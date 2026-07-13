@@ -1,5 +1,6 @@
 // Renders a built WeekPlan ("What to Eat This Week"). Presentational — server or client.
 import type { WeekPlan, Slot } from '@/lib/meal-plan'
+import Ring from '@/components/Ring'
 
 const SLOT_LABEL: Record<Slot, string> = { BF: 'Breakfast', LN: 'Lunch', SN: 'Snack', DN: 'Dinner', DS: 'Dessert' }
 
@@ -30,10 +31,16 @@ export default function WeekPlanView({ plan }: { plan: WeekPlan }) {
       {plan.days.map((d, i) => (
         <div key={i} className="bg-charcoal border border-smoke rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-white font-bold text-base">{d.dayName}</h3>
-            <span className={`text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold ${d.eatOut ? 'bg-blue-500/15 text-blue-400' : d.dayType === 'workout' ? 'bg-gold/15 text-gold' : 'bg-green-500/15 text-green-400'}`}>
-              {d.eatOut ? '🍔 Eating out' : d.dayType === 'workout' ? '💪🏽 Workout' : '😌 Rest'} · {d.target.toLocaleString()} cal
-            </span>
+            <div>
+              <h3 className="text-white font-bold text-base leading-tight">{d.dayName}</h3>
+              <span className={`inline-block mt-1 text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider font-semibold ${d.eatOut ? 'bg-blue-500/15 text-blue-400' : d.dayType === 'workout' ? 'bg-gold/15 text-gold' : 'bg-green-500/15 text-green-400'}`}>
+                {d.eatOut ? '🍔 Eating out' : d.dayType === 'workout' ? '💪🏽 Workout' : '😌 Rest'} · {d.target.toLocaleString()} cal
+              </span>
+            </div>
+            <Ring pct={Math.min(100, Math.round((d.totalCal / (d.target || 1)) * 100))} size={54} stroke={5}
+              color={d.eatOut ? '#4A9FE0' : d.dayType === 'workout' ? '#C9A84C' : '#46c46f'}>
+              <span className="text-[11px] font-bold text-white tabular-nums">{Math.round((d.totalCal / (d.target || 1)) * 100)}%</span>
+            </Ring>
           </div>
           <div className="space-y-2">
             {d.meals.map((m, j) => (

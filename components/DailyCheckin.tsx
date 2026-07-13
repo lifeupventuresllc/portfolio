@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Ring from '@/components/Ring'
 
 type Today = { workout?: boolean; nutrition?: boolean } | null
 
@@ -8,32 +9,52 @@ export default function DailyCheckin() {
   const [streak, setStreak] = useState(0)
   const [today, setToday] = useState<Today>(null)
   const [loading, setLoading] = useState(true)
+  const [pop, setPop] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/plan/daily').then((r) => r.json()).then((d) => { setStreak(d.streak || 0); setToday(d.today); setLoading(false) }).catch(() => setLoading(false))
   }, [])
 
   async function set(key: 'workout' | 'nutrition') {
-    const next = { workout: !!today?.workout, nutrition: !!today?.nutrition, [key]: !today?.[key] }
-    setToday(next) // optimistic
+    const now = !today?.[key]
+    const next = { workout: !!today?.workout, nutrition: !!today?.nutrition, [key]: now }
+    setToday(next)
+    if (now) { setPop(key); setTimeout(() => setPop(null), 700) }
     const res = await fetch('/api/plan/daily', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next) })
     const d = await res.json()
     setStreak(d.streak || 0); setToday(d.today)
   }
 
-  const chip = (active: boolean) => `flex-1 py-3 rounded-xl text-sm font-semibold transition-colors ${active ? 'bg-green-500/15 text-green-400 border border-green-500/40' : 'bg-obsidian border border-smoke text-ivory/50'}`
+  const both = !!today?.workout && !!today?.nutrition
+  const items: { k: 'workout' | 'nutrition'; label: string; icon: string }[] = [
+    { k: 'workout', label: 'Workout', icon: '💪🏽' },
+    { k: 'nutrition', label: 'Nutrition', icon: '🍽️' },
+  ]
 
   return (
     <div className="bg-charcoal border border-smoke rounded-2xl p-5">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <p className="text-white font-semibold text-sm">Did you show up today?</p>
         <span className="text-gold font-bold text-sm"><span className="luf-flame">🔥</span> {loading ? '—' : streak} day{streak === 1 ? '' : 's'}</span>
       </div>
-      <div className="flex gap-3">
-        <button onClick={() => set('workout')} disabled={loading} className={chip(!!today?.workout)}>{today?.workout ? '✅' : ''} Workout</button>
-        <button onClick={() => set('nutrition')} disabled={loading} className={chip(!!today?.nutrition)}>{today?.nutrition ? '✅' : ''} Nutrition</button>
+      <div className="flex justify-around">
+        {items.map(({ k, label, icon }) => {
+          const done = !!today?.[k]
+          return (
+            <button key={k} onClick={() => set(k)} disabled={loading} className="flex flex-col items-center gap-2 group">
+              <div className={pop === k ? 'luf-pop' : ''}>
+                <Ring pct={done ? 100 : 0} size={72} stroke={7} color={done ? '#46c46f' : '#3a3a44'} track="rgba(255,255,255,0.06)">
+                  <span className={`text-2xl transition-transform group-hover:scale-110 ${done ? '' : 'opacity-50 grayscale'}`}>{done ? '✓' : icon}</span>
+                </Ring>
+              </div>
+              <span className={`text-xs font-semibold ${done ? 'text-green-400' : 'text-ivory/50'}`}>{label}</span>
+            </button>
+          )
+        })}
       </div>
-      <p className="text-ivory/40 text-xs mt-3">Tap what you hit. Keep the streak alive — I&apos;m watching, and I&apos;m proud of every day you show up.</p>
+      <p className={`text-xs mt-4 text-center transition-colors ${both ? 'text-green-400 font-semibold' : 'text-ivory/40'}`}>
+        {both ? "That's a full day, and I saw it. Proud of you. 💛" : "Tap what you hit — I'm watching, and every day counts."}
+      </p>
     </div>
   )
 }

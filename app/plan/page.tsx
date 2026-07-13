@@ -139,7 +139,7 @@ export default async function PlanDashboard() {
           <div className="bg-charcoal border border-gold/30 rounded-2xl p-6 text-center">
             <p className="text-white font-semibold mb-1">Build this week&apos;s meals</p>
             <p className="text-ivory/50 text-sm mb-4">Pick meals you love from the cookbook or grab fast-food options — we&apos;ll portion everything to your calories.</p>
-            <Link href="/plan/meals" className="inline-block bg-gold text-obsidian px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl">Build my meals</Link>
+            <Link href="/plan/meals" className="luf-glow inline-block bg-gold text-obsidian px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl">Build my meals</Link>
           </div>
         )}
       </section>
@@ -171,7 +171,7 @@ export default async function PlanDashboard() {
             <Link href="/plan/checkin" className="text-ivory/40 text-xs hover:text-gold">View my check-ins →</Link>
           </div>
         ) : (
-          <div className="bg-charcoal border border-gold/30 rounded-2xl p-6 text-center">
+          <div className="luf-float bg-charcoal border border-gold/30 rounded-2xl p-6 text-center">
             <p className="text-white font-semibold mb-1">Let&apos;s check in, {firstName}</p>
             <p className="text-ivory/50 text-sm mb-4">Every week you check in with me and I adjust your plan around your real progress. This is the part that gets you results — not a PDF, not a bot. Me.</p>
             <Link href="/plan/checkin" className="inline-block bg-gold text-obsidian px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl">Do my check-in</Link>
