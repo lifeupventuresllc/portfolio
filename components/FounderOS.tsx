@@ -108,6 +108,13 @@ function niceDate(key: string): string {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 }
 
+// Whole days from date `a` to date `b` (positive if b is later).
+function daysBetween(a: string, b: string): number {
+  const [ay, am, ad] = a.split('-').map(Number)
+  const [by, bm, bd] = b.split('-').map(Number)
+  return Math.round((new Date(by, bm - 1, bd).getTime() - new Date(ay, am - 1, ad).getTime()) / 86400000)
+}
+
 // A day "counts" for the streak when the daily minimum is met.
 function dayCounts(e?: DayEntry): boolean {
   if (!e) return false
@@ -127,7 +134,7 @@ function computeStreak(days: Record<string, DayEntry>): number {
   return streak
 }
 
-type Tab = 'today' | 'journal' | 'compass'
+type Tab = 'today' | 'progress' | 'journal' | 'compass'
 
 export default function FounderOS() {
   const [state, setState] = useState<State>({ days: {} })
@@ -174,6 +181,20 @@ export default function FounderOS() {
     }, 800)
   }, [state])
 
+  // ── Explicit Save button: flush to the cloud immediately, skip the debounce.
+  const saveNow = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    try { localStorage.setItem(LS_KEY, JSON.stringify(state)) } catch { /* ignore */ }
+    setStatus('saving')
+    fetch('/api/admin/founder', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: state }),
+    })
+      .then((r) => setStatus(r.ok ? 'saved' : 'local'))
+      .catch(() => setStatus('local'))
+  }, [state])
+
   // ── Mutators (all operate on today's entry).
   const patchDay = useCallback((patch: Partial<DayEntry>) => {
     setState((s) => {
@@ -205,6 +226,44 @@ export default function FounderOS() {
     .sort()
     .reverse()
 
+  // ── Progress analytics (derived from every saved day) ──
+  const allKeys = Object.keys(state.days)
+  const daysLogged = allKeys.length
+  const sumMetric = (k: keyof Metrics) => allKeys.reduce((t, d) => t + (state.days[d].metrics?.[k] || 0), 0)
+  const totalServed = sumMetric('served')
+  const totalContent = sumMetric('content')
+  const bestServed = allKeys.reduce((m, d) => Math.max(m, state.days[d].metrics?.served || 0), 0)
+
+  const windowTotals = (n: number) =>
+    allKeys
+      .filter((d) => { const diff = daysBetween(d, key); return diff >= 0 && diff < n })
+      .reduce(
+        (acc, d) => {
+          const m = state.days[d].metrics || ({} as Metrics)
+          return {
+            content: acc.content + (m.content || 0),
+            served: acc.served + (m.served || 0),
+            outreach: acc.outreach + (m.outreach || 0),
+            deepWork: acc.deepWork + (m.deepWork || 0),
+          }
+        },
+        { content: 0, served: 0, outreach: 0, deepWork: 0 }
+      )
+  const weekTotals = windowTotals(7)
+  const monthTotals = windowTotals(30)
+
+  // Current ladder rung from your best single day of people served.
+  const ladderNums = LADDER.map((r) => Number(r.n.replace(/,/g, '')))
+  let reachedIdx = -1
+  for (let i = 0; i < ladderNums.length; i++) if (bestServed >= ladderNums[i]) reachedIdx = i
+  const currentRung = LADDER[Math.max(0, reachedIdx)]
+  const nextRung = LADDER[Math.min(LADDER.length - 1, reachedIdx + 1)]
+
+  const recentDays = allKeys
+    .filter((d) => { const diff = daysBetween(d, key); return diff >= 0 && diff < 14 })
+    .sort()
+    .reverse()
+
   return (
     <div className="min-h-screen bg-obsidian px-4 py-10">
       <div className="max-w-3xl mx-auto">
@@ -226,19 +285,27 @@ export default function FounderOS() {
           </div>
         </div>
 
-        {/* Save status + date */}
+        {/* Save status + date + explicit Save */}
         <div className="flex items-center justify-between text-xs text-ivory/40 mb-6">
           <span>{niceDate(key)}</span>
-          <span>
-            {status === 'saving' && '· saving…'}
-            {status === 'saved' && '· saved & synced'}
-            {status === 'local' && '· saved locally (offline)'}
-          </span>
+          <div className="flex items-center gap-3">
+            <span>
+              {status === 'saving' && 'saving…'}
+              {status === 'saved' && 'saved ✓'}
+              {status === 'local' && 'saved locally (offline)'}
+            </span>
+            <button
+              onClick={saveNow}
+              className="px-3 py-1 rounded-lg bg-gold text-obsidian font-semibold hover:bg-gold/90 transition-colors"
+            >
+              Save
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-smoke">
-          {(['today', 'journal', 'compass'] as Tab[]).map((t) => (
+          {(['today', 'progress', 'journal', 'compass'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -335,6 +402,73 @@ export default function FounderOS() {
                 <Stepper label="People served" value={day.metrics.served} onBump={(d) => bumpMetric('served', d)} />
                 <Stepper label="Outreach" value={day.metrics.outreach} onBump={(d) => bumpMetric('outreach', d)} />
                 <Stepper label="Deep-work hrs" value={day.metrics.deepWork} onBump={(d) => bumpMetric('deepWork', d)} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'progress' && (
+          <div className="space-y-5">
+            {/* Headline stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatTile label="Day streak" value={streak} accent />
+              <StatTile label="Days logged" value={daysLogged} />
+              <StatTile label="Served (all-time)" value={totalServed} />
+              <StatTile label="Content (all-time)" value={totalContent} />
+            </div>
+
+            {/* Milestone — the served-daily ladder with your current rung */}
+            <div className="bg-charcoal rounded-xl border border-smoke p-6">
+              <h2 className="text-lg font-semibold text-white mb-1">Milestone — people served daily</h2>
+              <p className="text-ivory/50 text-xs mb-4">
+                Best day so far: <span className="text-gold font-semibold">{bestServed}</span> served · you’re on rung{' '}
+                <span className="text-white font-semibold">{currentRung.n}</span> → next:{' '}
+                <span className="text-white font-semibold">{nextRung.n}</span> ({nextRung.how})
+              </p>
+              <div className="space-y-1.5">
+                {LADDER.map((r, i) => {
+                  const reached = i <= reachedIdx
+                  const isCurrent = i === Math.max(0, reachedIdx)
+                  return (
+                    <div key={r.n} className={`flex items-baseline gap-3 ${reached ? 'opacity-100' : 'opacity-40'}`}>
+                      <span className={`shrink-0 w-4 text-center text-xs ${reached ? 'text-gold' : 'text-ivory/30'}`}>{reached ? '✓' : '○'}</span>
+                      <span className={`shrink-0 text-right w-24 font-bold tabular-nums ${isCurrent ? 'text-gold' : 'text-white'}`}>{r.n}</span>
+                      <span className="shrink-0 text-[10px] text-ivory/40 w-16">{r.when}</span>
+                      <span className="text-ivory/60 text-xs">{r.how}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* This week / this month rollups */}
+            <div className="grid sm:grid-cols-2 gap-3">
+              <RollupCard title="This week (last 7 days)" t={weekTotals} />
+              <RollupCard title="This month (last 30 days)" t={monthTotals} />
+            </div>
+
+            {/* Recent days — completion + served */}
+            <div className="bg-charcoal rounded-xl border border-smoke p-6">
+              <h2 className="text-lg font-semibold text-white mb-4">Recent days</h2>
+              {recentDays.length === 0 && (
+                <p className="text-ivory/40 text-sm">No days logged yet — head to the Today tab and start.</p>
+              )}
+              <div className="space-y-2">
+                {recentDays.map((d) => {
+                  const e = state.days[d]
+                  const done = CHECKLIST.filter((c) => e.checklist?.[c.key]).length
+                  const pct = Math.round((done / CHECKLIST.length) * 100)
+                  return (
+                    <div key={d} className="flex items-center gap-3">
+                      <span className="text-ivory/60 text-xs w-24 shrink-0">{niceDate(d)}</span>
+                      <div className="flex-1 h-2 bg-smoke rounded-full overflow-hidden">
+                        <div className="h-full bg-gold" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-ivory/40 text-[10px] w-8 text-right">{done}/{CHECKLIST.length}</span>
+                      <span className="text-ivory/60 text-xs w-16 text-right">{e.metrics?.served || 0} served</span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -444,6 +578,37 @@ export default function FounderOS() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function StatTile({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+  return (
+    <div className="bg-charcoal rounded-xl border border-smoke p-4 text-center">
+      <div className={`text-3xl font-bold ${accent ? 'text-gold' : 'text-white'}`}>{value}</div>
+      <div className="text-[10px] text-ivory/50 uppercase tracking-wider mt-1">{label}</div>
+    </div>
+  )
+}
+
+function RollupCard({ title, t }: { title: string; t: { content: number; served: number; outreach: number; deepWork: number } }) {
+  const rows: [string, number][] = [
+    ['Content', t.content],
+    ['People served', t.served],
+    ['Outreach', t.outreach],
+    ['Deep-work hrs', t.deepWork],
+  ]
+  return (
+    <div className="bg-charcoal rounded-xl border border-smoke p-5">
+      <h3 className="text-sm font-semibold text-white mb-3">{title}</h3>
+      <div className="grid grid-cols-2 gap-y-2 text-sm">
+        {rows.map(([label, val]) => (
+          <div key={label} className="contents">
+            <span className="text-ivory/50">{label}</span>
+            <span className="text-white text-right font-semibold">{val}</span>
+          </div>
+        ))}
       </div>
     </div>
   )
