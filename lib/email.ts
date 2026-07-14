@@ -2,6 +2,10 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+// Canonical site URL for every email link. Hard fallback so links can NEVER
+// render as "undefined/..." (a 404) if the env var is missing on the server.
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://www.asaluke.io').replace(/\/$/, '')
+
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@asaluke.io'
 const REPLY_TO = 'info.lifeupventures@gmail.com'
 const UNSUB_HEADERS = {
@@ -19,7 +23,7 @@ export async function sendPurchaseConfirmation(email: string, productName: strin
     replyTo: REPLY_TO,
     subject: `Purchase Confirmed — ${productName}`,
     headers: UNSUB_HEADERS,
-    text: `Payment Received\n\nThank you for your purchase.\n\nProduct: ${productName}\nAmount: $${dollars}\n\nYour content is now unlocked: ${process.env.NEXT_PUBLIC_APP_URL}/content\n\n— Asa Luke\nasaluke.io`,
+    text: `Payment Received\n\nThank you for your purchase.\n\nProduct: ${productName}\nAmount: $${dollars}\n\nYour content is now unlocked: ${APP_URL}/content\n\n— Asa Luke\nasaluke.io`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #C9A84C;">Payment Received</h1>
@@ -34,7 +38,7 @@ export async function sendPurchaseConfirmation(email: string, productName: strin
             <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">$${dollars}</td>
           </tr>
         </table>
-        <p>Your content is now unlocked. <a href="${process.env.NEXT_PUBLIC_APP_URL}/content" style="color: #C9A84C;">Access it here</a>.</p>
+        <p>Your content is now unlocked. <a href="${APP_URL}/content" style="color: #C9A84C;">Access it here</a>.</p>
         <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
         ${FOOTER}
       </div>
@@ -53,19 +57,19 @@ export async function sendWelcomeEmail(email: string) {
     replyTo: REPLY_TO,
     subject: 'Welcome to Asa Luke',
     headers: UNSUB_HEADERS,
-    text: `Welcome!\n\nYour account is confirmed and ready to go.\n\nHere's what you can do next:\n- Check out my services at ${process.env.NEXT_PUBLIC_APP_URL}\n- Content editing, audio engineering, and fitness packages available\n\n— Asa Luke\nasaluke.io`,
+    text: `Welcome!\n\nYour account is confirmed and ready to go.\n\nHere's what you can do next:\n- Check out my services at ${APP_URL}\n- Content editing, audio engineering, and fitness packages available\n\n— Asa Luke\nasaluke.io`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #C9A84C;">Welcome</h1>
         <p>Your account is confirmed and ready to go.</p>
         <p>Here's what you can do next:</p>
         <ul style="color: #374151; line-height: 1.8;">
-          <li>Check out my <a href="${process.env.NEXT_PUBLIC_APP_URL}/services/content-editing" style="color: #C9A84C;">content editing</a>, <a href="${process.env.NEXT_PUBLIC_APP_URL}/services/audio-engineering" style="color: #C9A84C;">audio engineering</a>, and <a href="${process.env.NEXT_PUBLIC_APP_URL}/services/bundles" style="color: #C9A84C;">bundle packages</a></li>
+          <li>Check out my <a href="${APP_URL}/services/content-editing" style="color: #C9A84C;">content editing</a>, <a href="${APP_URL}/services/audio-engineering" style="color: #C9A84C;">audio engineering</a>, and <a href="${APP_URL}/services/bundles" style="color: #C9A84C;">bundle packages</a></li>
           <li>Subscription plans or one-time options available</li>
           <li>Professional-grade work delivered on schedule</li>
         </ul>
         <p style="margin-top: 20px;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View Services</a>
+          <a href="${APP_URL}" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View Services</a>
         </p>
         <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
         ${FOOTER}
@@ -91,14 +95,14 @@ export async function sendChallengeWelcome(email: string, name: string, tier: 'c
     replyTo: REPLY_TO,
     subject: "You're in! Welcome to Snatched Without Starving",
     headers: UNSUB_HEADERS,
-    text: `Welcome ${firstName}!\n\n${tierBlurb}\n\nStep 1 — create your account with THIS email (${email}) so I can build your custom plan:\n${process.env.NEXT_PUBLIC_APP_URL}/signup\n\nOnce you're in, you'll fill out a quick intake (your goal, stats, budget, and the foods you love) and I'll build your training + nutrition around it.\n\nLet's get you snatched — without starving.\n\n— Coach Asa\nasaluke.io`,
+    text: `Welcome ${firstName}!\n\n${tierBlurb}\n\nStep 1 — create your account with THIS email (${email}) so I can build your custom plan:\n${APP_URL}/signup\n\nOnce you're in, you'll fill out a quick intake (your goal, stats, budget, and the foods you love) and I'll build your training + nutrition around it.\n\nLet's get you snatched — without starving.\n\n— Coach Asa\nasaluke.io`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #C9A84C;">You're in, ${firstName}! 🙌🏽</h1>
         <p style="color: #374151; line-height: 1.7;">${tierBlurb}</p>
         <p style="color: #374151; line-height: 1.7;"><strong>Step 1 — create your account</strong> with this same email (${email}) so I can build your custom plan:</p>
         <p style="margin: 20px 0;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/signup" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Create My Account</a>
+          <a href="${APP_URL}/signup" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Create My Account</a>
         </p>
         <p style="color: #374151; line-height: 1.7;">Once you're in, you'll fill out a quick intake — your goal, stats, budget, and the foods you love — and I'll build your training and nutrition around it.</p>
         <p style="color: #374151; line-height: 1.7;">Let's get you snatched — without starving.</p>
@@ -130,7 +134,7 @@ export async function sendBlueprintEmail(
     subject: `${firstName}, here's your Calorie Blueprint`,
     headers: UNSUB_HEADERS,
     attachments: pdf ? [{ filename: pdf.filename, content: pdf.base64 }] : undefined,
-    text: `Hey ${firstName}!\n\nHere's your personalized Nutrition Blueprint to ${goalWord} weight:\n\nDaily Calories: ${targets.calories}\nProtein: ${targets.protein_g}g\nCarbs: ${targets.carbs_g}g\nFats: ${targets.fats_g}g\n\nHitting these every day is how you ${goalWord} the right way — without starving.\n\nWant me to build the actual meals, workouts, and check in on you every week so you actually hit it? That's my Snatched Without Starving challenge:\n${process.env.NEXT_PUBLIC_APP_URL}/challenge\n\n— Coach Asa\nasaluke.io`,
+    text: `Hey ${firstName}!\n\nHere's your personalized Nutrition Blueprint to ${goalWord} weight:\n\nDaily Calories: ${targets.calories}\nProtein: ${targets.protein_g}g\nCarbs: ${targets.carbs_g}g\nFats: ${targets.fats_g}g\n\nHitting these every day is how you ${goalWord} the right way — without starving.\n\nWant me to build the actual meals, workouts, and check in on you every week so you actually hit it? That's my Snatched Without Starving challenge:\n${APP_URL}/challenge\n\n— Coach Asa\nasaluke.io`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #C9A84C;">Your Nutrition Blueprint 📊</h1>
@@ -143,7 +147,7 @@ export async function sendBlueprintEmail(
         </table>
         <p style="color:#374151;">Knowing your numbers is step one. Actually hitting them — with the meals, workouts, and someone in your corner every week — is where the real change happens.</p>
         <p style="margin: 24px 0;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/challenge" style="display:inline-block; background:#C9A84C; color:#0A0A0F; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold;">Get Snatched Without Starving →</a>
+          <a href="${APP_URL}/challenge" style="display:inline-block; background:#C9A84C; color:#0A0A0F; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold;">Get Snatched Without Starving →</a>
         </p>
         <p style="color:#9ca3af; font-size:12px; margin-top:40px;">— Coach Asa · asaluke.io</p>
         ${FOOTER}
@@ -194,7 +198,7 @@ export async function sendOnboardingDay3Email(email: string) {
     replyTo: REPLY_TO,
     subject: 'Quick question for you',
     headers: UNSUB_HEADERS,
-    text: `Hey,\n\nYou signed up a few days ago — wanted to check in.\n\nWhether you need content editing, audio engineering, or fitness coaching, I've got packages that fit.\n\nCheck them out: ${process.env.NEXT_PUBLIC_APP_URL}\n\nHit reply if you have any questions.\n\n— Asa Luke\nasaluke.io`,
+    text: `Hey,\n\nYou signed up a few days ago — wanted to check in.\n\nWhether you need content editing, audio engineering, or fitness coaching, I've got packages that fit.\n\nCheck them out: ${APP_URL}\n\nHit reply if you have any questions.\n\n— Asa Luke\nasaluke.io`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #C9A84C;">Checking In</h1>
@@ -206,7 +210,7 @@ export async function sendOnboardingDay3Email(email: string) {
           <li><strong>Bundles</strong> — combined packages for creators who want it all</li>
         </ul>
         <p style="margin-top: 20px;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View Packages</a>
+          <a href="${APP_URL}" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View Packages</a>
         </p>
         <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
         ${FOOTER}
@@ -226,7 +230,7 @@ export async function sendOnboardingDay7Email(email: string) {
     replyTo: REPLY_TO,
     subject: 'Still thinking about it?',
     headers: UNSUB_HEADERS,
-    text: `Hey,\n\nIt's been about a week since you joined. If you're still on the fence, I get it.\n\nHere's what my clients get:\n- Content editing: 6-24 videos/month, subscription-based\n- Audio engineering: mixing & mastering, one-time or monthly\n- Bundle deals that save 20-30%\n\nCheck it out: ${process.env.NEXT_PUBLIC_APP_URL}\n\nHit reply anytime — happy to answer questions.\n\n— Asa Luke\nasaluke.io`,
+    text: `Hey,\n\nIt's been about a week since you joined. If you're still on the fence, I get it.\n\nHere's what my clients get:\n- Content editing: 6-24 videos/month, subscription-based\n- Audio engineering: mixing & mastering, one-time or monthly\n- Bundle deals that save 20-30%\n\nCheck it out: ${APP_URL}\n\nHit reply anytime — happy to answer questions.\n\n— Asa Luke\nasaluke.io`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #C9A84C;">One Week In</h1>
@@ -237,7 +241,7 @@ export async function sendOnboardingDay7Email(email: string) {
           <li><strong>Bundle Packages</strong> — Creator ($597/mo) or Empire ($997/mo)</li>
         </ul>
         <p style="margin-top: 20px;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View All Packages</a>
+          <a href="${APP_URL}" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View All Packages</a>
         </p>
         <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
         ${FOOTER}
@@ -257,7 +261,7 @@ export async function sendPurchaseOnboardingDay3Email(email: string, serviceName
     replyTo: REPLY_TO,
     subject: 'Quick check-in on your order',
     headers: UNSUB_HEADERS,
-    text: `Hey!\n\nJust checking in — you purchased ${serviceName} a few days ago.\n\nHave you submitted your intake form yet? It helps me understand exactly what you need so I can deliver the best results.\n\nIf you haven't filled it out yet, you can do it here: ${process.env.NEXT_PUBLIC_APP_URL}/intake\n\nHit reply if you have any questions.\n\n— Asa Luke\nasaluke.io`,
+    text: `Hey!\n\nJust checking in — you purchased ${serviceName} a few days ago.\n\nHave you submitted your intake form yet? It helps me understand exactly what you need so I can deliver the best results.\n\nIf you haven't filled it out yet, you can do it here: ${APP_URL}/intake\n\nHit reply if you have any questions.\n\n— Asa Luke\nasaluke.io`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #C9A84C;">Quick Check-In</h1>
@@ -265,7 +269,7 @@ export async function sendPurchaseOnboardingDay3Email(email: string, serviceName
         <p>Have you submitted your intake form yet? It helps me understand exactly what you need so I can deliver the best results.</p>
         <p>If you haven't filled it out yet, submit it here:</p>
         <p style="margin-top: 20px;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/intake" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Submit Intake Form</a>
+          <a href="${APP_URL}/intake" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Submit Intake Form</a>
         </p>
         <p>Hit reply if you have any questions.</p>
         <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
@@ -299,7 +303,7 @@ export async function sendPurchaseOnboardingDay7Email(email: string, serviceName
         </ol>
         <p>If you have any questions, just hit reply.</p>
         <p style="margin-top: 20px;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/content" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View Your Content</a>
+          <a href="${APP_URL}/content" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View Your Content</a>
         </p>
         <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
         ${FOOTER}
@@ -330,7 +334,7 @@ export async function sendUpsellEmail(email: string, firstName: string, serviceT
           </ul>
           <p>Want me to set you up? Just hit reply.</p>
           <p style="margin-top: 20px;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL}/services" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View Packages</a>
+            <a href="${APP_URL}/services" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View Packages</a>
           </p>
           <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
           ${FOOTER}
@@ -353,7 +357,7 @@ export async function sendUpsellEmail(email: string, firstName: string, serviceT
           </ul>
           <p>If you're thinking about it, I can put together a custom package. Just reply.</p>
           <p style="margin-top: 20px;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL}/book" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Book a Quick Call</a>
+            <a href="${APP_URL}/book" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Book a Quick Call</a>
           </p>
           <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
           ${FOOTER}
@@ -362,7 +366,7 @@ export async function sendUpsellEmail(email: string, firstName: string, serviceT
     },
     3: {
       subject: `Last chance — special offer for returning clients`,
-      text: `Hey ${firstName}, this is my last follow-up. I'm offering returning clients 15% off their first month of any monthly package.\n\nThis offer expires in 48 hours. If you're ready to level up your content, now's the time.\n\nReply or book a call: ${process.env.NEXT_PUBLIC_APP_URL}/book\n\n— Asa Luke`,
+      text: `Hey ${firstName}, this is my last follow-up. I'm offering returning clients 15% off their first month of any monthly package.\n\nThis offer expires in 48 hours. If you're ready to level up your content, now's the time.\n\nReply or book a call: ${APP_URL}/book\n\n— Asa Luke`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h1 style="color: #C9A84C;">Special Offer — Returning Clients Only</h1>
@@ -374,7 +378,7 @@ export async function sendUpsellEmail(email: string, firstName: string, serviceT
           </div>
           <p>If you're ready to level up your content, now's the time.</p>
           <p style="margin-top: 20px;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL}/book" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Claim Your Spot</a>
+            <a href="${APP_URL}/book" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Claim Your Spot</a>
           </p>
           <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
           ${FOOTER}
@@ -433,7 +437,7 @@ export async function sendCheckinEmail(email: string, firstName: string, type: '
         <p>A lot of my clients at this stage start thinking about scaling — posting more frequently, adding new content types, or expanding to new platforms.</p>
         <p>If you're interested in upgrading your package or adding services, I'd love to chat about what would make the biggest impact for your brand.</p>
         <p style="margin-top: 20px;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/book" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Book a Quick Call</a>
+          <a href="${APP_URL}/book" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Book a Quick Call</a>
         </p>
         <p style="margin-top: 20px;">— Asa Luke</p>
         <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
@@ -452,7 +456,7 @@ export async function sendCheckinEmail(email: string, firstName: string, type: '
         </ul>
         <p>Also — if you know anyone who could benefit from what we do, I'd appreciate a referral. I'll give you a discount on next month's invoice for every person you send my way.</p>
         <p style="margin-top: 20px;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/book" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Book a Strategy Call</a>
+          <a href="${APP_URL}/book" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Book a Strategy Call</a>
         </p>
         <p style="margin-top: 20px;">— Asa Luke</p>
         <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">Asa Luke — asaluke.io</p>
@@ -467,7 +471,7 @@ export async function sendCheckinEmail(email: string, firstName: string, type: '
     replyTo: REPLY_TO,
     subject: subjects[type],
     headers: UNSUB_HEADERS,
-    text: `Hey ${firstName}, checking in after ${type} days. How's everything going? Reply to this email or book a call at ${process.env.NEXT_PUBLIC_APP_URL}/book — Asa Luke`,
+    text: `Hey ${firstName}, checking in after ${type} days. How's everything going? Reply to this email or book a call at ${APP_URL}/book — Asa Luke`,
     html: bodies[type],
   })
 
@@ -520,7 +524,7 @@ export async function sendBookingConfirmation(email: string, name: string, date:
           <tr><td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Time</td><td style="text-align: right;">${timeSlot}</td></tr>
           <tr><td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Service</td><td style="text-align: right;">${service}</td></tr>
         </table>
-        <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin">View in Admin</a></p>
+        <p><a href="${APP_URL}/admin">View in Admin</a></p>
       </div>
     `,
   })
