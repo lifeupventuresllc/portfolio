@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
     const workoutGoal = (body.goal === 'gain' || body.goal === 'maintain' ? body.goal : 'lose') as 'lose' | 'gain' | 'maintain'
     const program = generateWorkout({
       name: enrollment.name || body.name || 'Your',
+      sex: (body.sex === 'male' ? 'male' : body.sex === 'other' ? 'other' : 'female'),
       track,
       level,
       goal: workoutGoal,
