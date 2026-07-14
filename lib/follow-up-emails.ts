@@ -22,76 +22,49 @@ type FollowUpStep = {
 const SERVICE_LABELS: Record<string, { name: string; packageUrl: string }> = {
   content: { name: 'content editing', packageUrl: `${BASE_URL}/services/content-editing` },
   audio: { name: 'audio engineering', packageUrl: `${BASE_URL}/services/audio-engineering` },
-  fitness: { name: 'fitness coaching', packageUrl: `${BASE_URL}/services/bundles` },
+  fitness: { name: 'the Snatched Without Starving challenge', packageUrl: `${BASE_URL}/challenge` },
 }
+
+const btn = (url: string, label: string) =>
+  `<p style="text-align:center; margin:24px 0;"><a href="${url}" style="display:inline-block; background:#C9A84C; color:#0A0A0F; padding:12px 32px; border-radius:8px; text-decoration:none; font-weight:bold;">${label}</a></p>`
+const sig = `<p>— <strong>Asa Luke</strong></p><p style="color:#999999; font-size:12px;">IG: <a href="https://instagram.com/1AsaLuke" style="color:#C9A84C;">@1AsaLuke</a></p>`
+const wrap = (inner: string) => `<div style="font-family:Arial,sans-serif; max-width:540px; margin:0 auto; color:#333333;">${inner}${sig}${FOOTER}</div>`
+const isFit = (service: string) => service === 'fitness'
+const CHALLENGE_URL = `${BASE_URL}/challenge`
 
 export const FUNNEL_NURTURE_SEQUENCE: FollowUpStep[] = [
   {
     // Day 1: Check-in
     delayDays: 1,
     subject: (firstName) => `${firstName}, did you check out your guide?`,
-    text: (firstName, service) => {
-      const svc = SERVICE_LABELS[service] || SERVICE_LABELS.content
-      return `Hey ${firstName},\n\nJust checking in — did you get a chance to look at the guide I sent?\n\nIf you have any questions about ${svc.name}, I'm here. Just hit reply.\n\nTalk soon,\nAsa Luke`
-    },
-    html: (firstName, service) => {
-      const svc = SERVICE_LABELS[service] || SERVICE_LABELS.content
-      return `<div style="font-family:Arial,sans-serif; max-width:540px; margin:0 auto; color:#333333;">
-        <p>Hey ${firstName},</p>
-        <p>Just checking in — did you get a chance to look at the guide I sent?</p>
-        <p>If you have any questions about ${svc.name}, I'm here. Just hit reply.</p>
-        <p>Talk soon,<br><strong>Asa Luke</strong></p>
-        <p style="color:#999999; font-size:12px;">IG: <a href="https://instagram.com/1AsaLuke" style="color:#C9A84C;">@1AsaLuke</a></p>
-        ${FOOTER}
-      </div>`
-    },
+    text: (firstName, service) => isFit(service)
+      ? `Hey ${firstName},\n\nDid your calorie blueprint make sense? That's your exact numbers to hit your goal.\n\nHere's the thing though — knowing your numbers is step one. Actually hitting them, week after week, with food you love and workouts that fit your body... that's where most people get stuck.\n\nHit reply and tell me your #1 goal. I read every one.\n\n— Asa Luke`
+      : `Hey ${firstName},\n\nJust checking in — did you get a chance to look at the guide I sent?\n\nIf you have any questions about ${(SERVICE_LABELS[service] || SERVICE_LABELS.content).name}, I'm here. Just hit reply.\n\nTalk soon,\nAsa Luke`,
+    html: (firstName, service) => isFit(service)
+      ? wrap(`<p>Hey ${firstName},</p><p>Did your calorie blueprint make sense? That's your exact numbers to hit your goal.</p><p>Here's the thing though — knowing your numbers is step one. Actually hitting them week after week, with food you love and workouts that fit your body, is where most people get stuck.</p><p>Hit reply and tell me your #1 goal. I read every one.</p>`)
+      : wrap(`<p>Hey ${firstName},</p><p>Just checking in — did you get a chance to look at the guide I sent?</p><p>If you have any questions about ${(SERVICE_LABELS[service] || SERVICE_LABELS.content).name}, I'm here. Just hit reply.</p>`),
   },
   {
-    // Day 3: Value add
+    // Day 3: Value → offer
     delayDays: 3,
-    subject: (firstName) => `Quick tip for you, ${firstName}`,
-    text: (firstName, service) => {
-      const svc = SERVICE_LABELS[service] || SERVICE_LABELS.content
-      return `Hey ${firstName},\n\nHope the guide has been helpful. Here's a bonus tip:\n\nThe strategies in that guide are exactly what I do for my clients — except I handle everything professionally, every month.\n\nIf you're interested in having ${svc.name} done for you, check out my packages: ${svc.packageUrl}\n\nNo pressure — just wanted to make sure you knew the option was there.\n\n— Asa Luke`
-    },
-    html: (firstName, service) => {
-      const svc = SERVICE_LABELS[service] || SERVICE_LABELS.content
-      return `<div style="font-family:Arial,sans-serif; max-width:540px; margin:0 auto; color:#333333;">
-        <p>Hey ${firstName},</p>
-        <p>Hope the guide has been helpful. Here's a bonus tip:</p>
-        <p>The strategies in that guide are exactly what I do for my clients — except I handle everything professionally, every month.</p>
-        <p>If you're interested in having ${svc.name} done for you:</p>
-        <p style="text-align:center; margin:24px 0;">
-          <a href="${svc.packageUrl}" style="display:inline-block; background:#C9A84C; color:#0A0A0F; padding:12px 32px; border-radius:8px; text-decoration:none; font-weight:bold;">View My Packages</a>
-        </p>
-        <p>No pressure — just wanted to make sure you knew the option was there.</p>
-        <p>— <strong>Asa Luke</strong></p>
-        ${FOOTER}
-      </div>`
-    },
+    subject: (firstName) => `${firstName}, your numbers won't do the work for you`,
+    text: (firstName, service) => isFit(service)
+      ? `Hey ${firstName},\n\nYour blueprint gives you the numbers. But numbers on a page don't get you snatched — a plan you'll actually follow does.\n\nThat's exactly what I built the Snatched Without Starving challenge for:\n• A custom workout for YOUR body and schedule\n• A done-for-you weekly meal plan built around food you love (on your budget)\n• Me checking in on you every single week\n\n6 weeks. $150. Not a PDF, not an app that forgets your name — me, coaching you.\n\nStart here: ${CHALLENGE_URL}\n\n— Asa Luke`
+      : `Hey ${firstName},\n\nHope the guide has been helpful. The strategies in it are exactly what I do for my clients — except I handle everything professionally, every month.\n\nIf you want ${(SERVICE_LABELS[service] || SERVICE_LABELS.content).name} done for you: ${(SERVICE_LABELS[service] || SERVICE_LABELS.content).packageUrl}\n\n— Asa Luke`,
+    html: (firstName, service) => isFit(service)
+      ? wrap(`<p>Hey ${firstName},</p><p>Your blueprint gives you the numbers. But numbers on a page don't get you snatched — a plan you'll actually follow does.</p><p>That's exactly what I built the <strong>Snatched Without Starving</strong> challenge for:</p><ul><li>A custom workout for YOUR body and schedule</li><li>A done-for-you weekly meal plan built around food you love (on your budget)</li><li>Me checking in on you every single week</li></ul><p><strong>6 weeks. $150.</strong> Not a PDF, not an app that forgets your name — me, coaching you.</p>${btn(CHALLENGE_URL, 'Start the challenge →')}`)
+      : wrap(`<p>Hey ${firstName},</p><p>Hope the guide has been helpful. The strategies in it are exactly what I do for my clients — except I handle everything professionally, every month.</p>${btn((SERVICE_LABELS[service] || SERVICE_LABELS.content).packageUrl, 'View My Packages')}`),
   },
   {
-    // Day 7: Soft pitch
+    // Day 7: Close + guarantee
     delayDays: 7,
-    subject: (firstName) => `${firstName}, one more thing`,
-    text: (firstName, service) => {
-      const svc = SERVICE_LABELS[service] || SERVICE_LABELS.content
-      return `Hey ${firstName},\n\nI've got a few spots open this month for ${svc.name} clients.\n\nIf you've been thinking about getting professional help with your ${service === 'audio' ? 'music' : service === 'fitness' ? 'fitness goals' : 'content'}, now's a good time.\n\nCheck out the packages: ${svc.packageUrl}\n\nOr just reply to this email and we can chat about what would work best for you.\n\n— Asa Luke`
-    },
-    html: (firstName, service) => {
-      const svc = SERVICE_LABELS[service] || SERVICE_LABELS.content
-      return `<div style="font-family:Arial,sans-serif; max-width:540px; margin:0 auto; color:#333333;">
-        <p>Hey ${firstName},</p>
-        <p>I've got a few spots open this month for ${svc.name} clients.</p>
-        <p>If you've been thinking about getting professional help with your ${service === 'audio' ? 'music' : service === 'fitness' ? 'fitness goals' : 'content'}, now's a good time.</p>
-        <p style="text-align:center; margin:24px 0;">
-          <a href="${svc.packageUrl}" style="display:inline-block; background:#C9A84C; color:#0A0A0F; padding:12px 32px; border-radius:8px; text-decoration:none; font-weight:bold;">View Packages</a>
-        </p>
-        <p>Or just reply to this email and we can chat about what would work best for you.</p>
-        <p>— <strong>Asa Luke</strong></p>
-        ${FOOTER}
-      </div>`
-    },
+    subject: (firstName) => `${firstName}, a few founding spots left`,
+    text: (firstName, service) => isFit(service)
+      ? `Hey ${firstName},\n\nI'm holding a few founding spots in the Snatched Without Starving challenge at $150 before the price goes up.\n\nAnd I stand behind it: check in weekly and follow your plan, and if you don't see results, I coach you free until you do. That's how sure I am.\n\nCustom workouts + done-for-you meals + me in your corner every week, for 6 weeks.\n\nGrab your spot: ${CHALLENGE_URL}\n\nOr just reply and tell me what's holding you back — I'll help.\n\n— Asa Luke`
+      : `Hey ${firstName},\n\nI've got a few spots open this month for ${(SERVICE_LABELS[service] || SERVICE_LABELS.content).name} clients.\n\nCheck out the options: ${(SERVICE_LABELS[service] || SERVICE_LABELS.content).packageUrl}\n\nOr just reply and we can chat.\n\n— Asa Luke`,
+    html: (firstName, service) => isFit(service)
+      ? wrap(`<p>Hey ${firstName},</p><p>I'm holding a few <strong>founding spots</strong> in the Snatched Without Starving challenge at <strong>$150</strong> before the price goes up.</p><p>And I stand behind it: <em>check in weekly and follow your plan, and if you don't see results, I coach you free until you do.</em> That's how sure I am.</p><p>Custom workouts + done-for-you meals + me in your corner every week, for 6 weeks.</p>${btn(CHALLENGE_URL, 'Grab my spot →')}<p>Or just reply and tell me what's holding you back — I'll help.</p>`)
+      : wrap(`<p>Hey ${firstName},</p><p>I've got a few spots open this month for ${(SERVICE_LABELS[service] || SERVICE_LABELS.content).name} clients.</p>${btn((SERVICE_LABELS[service] || SERVICE_LABELS.content).packageUrl, 'View options')}<p>Or just reply and we can chat.</p>`),
   },
 ]
 
