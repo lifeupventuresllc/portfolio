@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import RevealScript from '@/components/RevealScript'
 
 const ACTIVITY = [
   { value: 'sedentary', label: 'Sedentary — desk job, minimal movement' },
@@ -44,7 +45,7 @@ export default function BlueprintPage() {
   const [done, setDone] = useState<{ preview: Preview; base64: string; filename: string } | null>(null)
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }))
-  const input = 'w-full px-4 py-3 bg-obsidian border border-smoke rounded-2xl text-white text-sm placeholder-ivory/30 focus:outline-none focus:border-gold transition-colors'
+  const input = 'w-full px-4 py-3 bg-obsidian border border-smoke rounded-2xl text-white text-sm placeholder-ivory/30 focus:outline-none focus:border-gold hover:border-gold/40 transition-colors'
   const goalWord = form.goal === 'gain' ? 'gain' : form.goal === 'maintain' ? 'maintain' : 'lose'
 
   async function submit() {
@@ -82,29 +83,38 @@ export default function BlueprintPage() {
 
   return (
     <div className="min-h-screen bg-obsidian">
+      <RevealScript />
       <section className="relative pt-32 pb-10 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(201,168,76,0.08),transparent_70%)]" />
-        <div className="max-w-2xl mx-auto text-center relative">
-          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">Free Calorie Blueprint</p>
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">Get Your Blueprint</h1>
-          <p className="text-ivory/60 max-w-xl mx-auto leading-relaxed">
-            Answer a few questions and I&apos;ll build your personalized 7-page Calorie Blueprint —
-            your exact numbers for gym days and rest days, macros, and your game plan.
-            It downloads instantly and lands in your inbox.
+        <div className="luf-breathe absolute inset-0 bg-[radial-gradient(ellipse_65%_55%_at_50%_35%,rgba(201,168,76,0.16),transparent_70%)]" />
+        <div className="max-w-3xl mx-auto text-center relative">
+          <span className="inline-block text-gold text-[11px] font-bold tracking-[0.3em] uppercase mb-5 border border-gold/40 rounded-full px-4 py-1.5 bg-gold/5">
+            Free · 7-Page Personalized Blueprint
+          </span>
+          <h1 className="text-white font-black uppercase leading-[0.92] tracking-tight text-balance text-5xl sm:text-6xl lg:text-7xl mb-5">
+            Stop guessing.<br />Know <span className="text-gold">exactly</span> what to eat.
+          </h1>
+          <p className="text-ivory/70 max-w-xl mx-auto leading-relaxed text-base sm:text-lg">
+            Your personal calorie + macro numbers for <span className="text-white font-semibold">gym days</span> and
+            <span className="text-white font-semibold"> rest days</span> — built in 60 seconds, downloaded instantly, and emailed to you.
           </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-7 text-xs text-ivory/50">
+            <span className="luf-float">⚡ Instant PDF</span>
+            <span className="luf-float" style={{ animationDelay: '0.6s' }}>📩 Sent to your inbox</span>
+            <span className="luf-float" style={{ animationDelay: '1.2s' }}>🎯 Built for your body</span>
+          </div>
         </div>
       </section>
 
       {!done ? (
         <section className="pb-24 px-4">
-          <div className="max-w-lg mx-auto bg-charcoal border border-smoke rounded-3xl p-6 sm:p-8 space-y-4">
+          <div className="luf-reveal max-w-lg mx-auto bg-charcoal border border-smoke rounded-3xl p-6 sm:p-8 space-y-4 transition-shadow duration-500 hover:shadow-[0_24px_70px_rgba(201,168,76,0.10)]">
             {/* Goal */}
             <div>
               <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Your goal</label>
               <div className="grid grid-cols-3 gap-2">
                 {[{ v: 'lose', l: 'Lose Fat' }, { v: 'gain', l: 'Build Muscle' }, { v: 'maintain', l: 'Maintain' }].map((g) => (
                   <button key={g.v} onClick={() => set('goal', g.v)}
-                    className={`py-3 rounded-xl text-xs font-semibold transition-colors ${form.goal === g.v ? 'bg-gold text-obsidian' : 'bg-obsidian border border-smoke text-ivory/60'}`}>
+                    className={`py-3 rounded-xl text-xs font-semibold transition-all duration-200 hover:scale-[1.04] active:scale-95 ${form.goal === g.v ? 'bg-gold text-obsidian luf-glow' : 'bg-obsidian border border-smoke text-ivory/60 hover:border-gold/50 hover:text-white'}`}>
                     {g.l}
                   </button>
                 ))}
@@ -183,8 +193,8 @@ export default function BlueprintPage() {
             {error && <p className="text-red-400 text-sm">{error}</p>}
 
             <button onClick={submit} disabled={loading}
-              className="w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] disabled:opacity-40 disabled:cursor-not-allowed">
-              {loading ? 'Building your blueprint...' : 'Get My Blueprint (PDF)'}
+              className="w-full bg-gold text-obsidian px-8 py-5 font-black text-base uppercase tracking-wider rounded-2xl luf-glow transition-all duration-300 hover:scale-[1.03] hover:-translate-y-1 hover:shadow-[0_22px_55px_rgba(201,168,76,0.5)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed">
+              {loading ? 'Building your blueprint…' : 'Get My Free Blueprint →'}
             </button>
             <p className="text-ivory/30 text-xs text-center">Free. Downloads instantly + emailed to you.</p>
           </div>
@@ -197,12 +207,12 @@ export default function BlueprintPage() {
               <p className="text-ivory/50 text-xs mb-1">📩 I also emailed a copy to {form.email}</p>
               <p className="text-ivory/40 text-xs mb-6">Don&apos;t see it in a couple minutes? Check your <span className="text-ivory/60">spam / promotions</span> folder (and add asaluke.io to your contacts).</p>
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-obsidian border border-gold/30 rounded-2xl py-4">
-                  <p className="text-3xl font-bold text-gold">{done.preview.workoutEat.toLocaleString()}</p>
+                <div className="bg-obsidian border border-gold/30 rounded-2xl py-4 transition-transform duration-300 hover:-translate-y-1 hover:border-gold/60">
+                  <p className="luf-pop text-3xl font-black text-gold">{done.preview.workoutEat.toLocaleString()}</p>
                   <p className="text-ivory/40 text-xs uppercase tracking-wider mt-1">Workout day</p>
                 </div>
-                <div className="bg-obsidian border border-gold/30 rounded-2xl py-4">
-                  <p className="text-3xl font-bold text-gold">{done.preview.restEat.toLocaleString()}</p>
+                <div className="bg-obsidian border border-gold/30 rounded-2xl py-4 transition-transform duration-300 hover:-translate-y-1 hover:border-gold/60">
+                  <p className="luf-pop text-3xl font-black text-gold">{done.preview.restEat.toLocaleString()}</p>
                   <p className="text-ivory/40 text-xs uppercase tracking-wider mt-1">Rest day</p>
                 </div>
               </div>
@@ -213,16 +223,19 @@ export default function BlueprintPage() {
               </button>
             </div>
 
-            <div className="bg-gradient-to-br from-[#1a1608] to-charcoal border border-gold/30 rounded-3xl p-8 mt-6 text-center">
-              <h3 className="text-white text-xl font-bold mb-2">Knowing your numbers is step one.</h3>
-              <p className="text-ivory/60 text-sm mb-6 leading-relaxed">
-                Actually hitting them — with the meals built for you, workouts, and me checking in every week —
-                is where the change happens. That&apos;s my Snatched Without Starving challenge.
-              </p>
-              <a href="/challenge"
-                className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
-                Get Snatched Without Starving →
-              </a>
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#1a1608] to-charcoal border border-gold/30 rounded-3xl p-8 mt-6 text-center">
+              <div className="luf-breathe absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_0%,rgba(201,168,76,0.12),transparent_70%)]" />
+              <div className="relative">
+                <h3 className="text-white text-2xl font-black uppercase tracking-tight mb-2 text-balance">Knowing your numbers is step one.</h3>
+                <p className="text-ivory/60 text-sm mb-6 leading-relaxed">
+                  Actually hitting them — with the meals built for you, workouts, and me checking in every week —
+                  is where the change happens. That&apos;s my Snatched Without Starving challenge.
+                </p>
+                <a href="/challenge"
+                  className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-wider luf-glow transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_22px_55px_rgba(201,168,76,0.5)] active:scale-[0.98]">
+                  Get Snatched Without Starving →
+                </a>
+              </div>
             </div>
             <p className="text-center text-ivory/40 text-xs mt-4">Want to {goalWord} for real? Let&apos;s do it together.</p>
           </div>
