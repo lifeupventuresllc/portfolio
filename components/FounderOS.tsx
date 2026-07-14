@@ -140,6 +140,7 @@ export default function FounderOS() {
   const [state, setState] = useState<State>({ days: {} })
   const [tab, setTab] = useState<Tab>('today')
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'local'>('idle')
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const loaded = useRef(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -447,30 +448,107 @@ export default function FounderOS() {
               <RollupCard title="This month (last 30 days)" t={monthTotals} />
             </div>
 
-            {/* Recent days — completion + served */}
+            {/* Recent days — tap any day for full detail */}
             <div className="bg-charcoal rounded-xl border border-smoke p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Recent days</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-white">Recent days</h2>
+                {recentDays.length > 0 && <span className="text-ivory/30 text-[10px]">tap a day for detail</span>}
+              </div>
               {recentDays.length === 0 && (
                 <p className="text-ivory/40 text-sm">No days logged yet — head to the Today tab and start.</p>
               )}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {recentDays.map((d) => {
                   const e = state.days[d]
                   const done = CHECKLIST.filter((c) => e.checklist?.[c.key]).length
                   const pct = Math.round((done / CHECKLIST.length) * 100)
                   return (
-                    <div key={d} className="flex items-center gap-3">
-                      <span className="text-ivory/60 text-xs w-24 shrink-0">{niceDate(d)}</span>
+                    <button
+                      key={d}
+                      onClick={() => setSelectedDay(d)}
+                      className="w-full flex items-center gap-3 text-left rounded-lg px-2 py-1.5 -mx-2 hover:bg-obsidian/60 transition-colors"
+                    >
+                      <span className="text-ivory/70 text-xs w-24 shrink-0">{niceDate(d)}</span>
                       <div className="flex-1 h-2 bg-smoke rounded-full overflow-hidden">
                         <div className="h-full bg-gold" style={{ width: `${pct}%` }} />
                       </div>
                       <span className="text-ivory/40 text-[10px] w-8 text-right">{done}/{CHECKLIST.length}</span>
                       <span className="text-ivory/60 text-xs w-16 text-right">{e.metrics?.served || 0} served</span>
-                    </div>
+                      <span className="text-ivory/30 text-xs">›</span>
+                    </button>
                   )
                 })}
               </div>
             </div>
+
+            {/* Day detail modal */}
+            {selectedDay && state.days[selectedDay] && (
+              <div
+                className="fixed inset-0 z-50 bg-black/75 flex items-start justify-center overflow-y-auto p-4"
+                onClick={() => setSelectedDay(null)}
+              >
+                <div
+                  className="bg-charcoal border border-smoke rounded-xl max-w-lg w-full my-8 p-6"
+                  onClick={(ev) => ev.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-lg font-bold text-white">{niceDate(selectedDay)}</h3>
+                    <button onClick={() => setSelectedDay(null)} className="text-ivory/50 hover:text-white text-2xl leading-none">×</button>
+                  </div>
+                  {(() => {
+                    const e = state.days[selectedDay]
+                    const m = e.metrics || { content: 0, served: 0, outreach: 0, deepWork: 0 }
+                    const j = e.journal || { peopleServed: '', win: '', lesson: '', gratitude: '', tomorrow: '' }
+                    const prios = (e.priorities || []).filter((p) => p.text)
+                    const metricRows: [string, keyof Metrics][] = [['Content', 'content'], ['Served', 'served'], ['Outreach', 'outreach'], ['Deep hrs', 'deepWork']]
+                    return (
+                      <div className="space-y-5">
+                        <div className="grid grid-cols-4 gap-2 text-center">
+                          {metricRows.map(([lab, k]) => (
+                            <div key={k} className="bg-obsidian rounded-lg border border-smoke p-2">
+                              <div className="text-xl font-bold text-white">{m[k] || 0}</div>
+                              <div className="text-[9px] text-ivory/50 uppercase tracking-wide">{lab}</div>
+                            </div>
+                          ))}
+                        </div>
+                        {prios.length > 0 && (
+                          <div>
+                            <p className="text-[10px] text-gold uppercase tracking-wider mb-2">Priorities</p>
+                            {prios.map((p, i) => (
+                              <div key={i} className="flex items-center gap-2 text-sm">
+                                <span className={p.done ? 'text-gold' : 'text-ivory/30'}>{p.done ? '✓' : '○'}</span>
+                                <span className={p.done ? 'text-ivory/50 line-through' : 'text-white'}>{p.text}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-[10px] text-gold uppercase tracking-wider mb-2">Non-negotiables</p>
+                          <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1">
+                            {CHECKLIST.map((c) => (
+                              <div key={c.key} className="flex items-center gap-2 text-xs">
+                                <span className={e.checklist?.[c.key] ? 'text-gold' : 'text-ivory/25'}>{e.checklist?.[c.key] ? '✓' : '○'}</span>
+                                <span className={e.checklist?.[c.key] ? 'text-ivory/70' : 'text-ivory/30'}>{c.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        {(j.peopleServed || j.win || j.lesson || j.gratitude || j.tomorrow) && (
+                          <div className="space-y-2">
+                            <p className="text-[10px] text-gold uppercase tracking-wider">Journal</p>
+                            {j.peopleServed && <DetailLine label="Served" value={j.peopleServed} />}
+                            {j.win && <DetailLine label="Win" value={j.win} />}
+                            {j.lesson && <DetailLine label="Lesson" value={j.lesson} />}
+                            {j.gratitude && <DetailLine label="Gratitude" value={j.gratitude} />}
+                            {j.tomorrow && <DetailLine label="Tomorrow" value={j.tomorrow} />}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -580,6 +658,12 @@ export default function FounderOS() {
         )}
       </div>
     </div>
+  )
+}
+
+function DetailLine({ label, value }: { label: string; value: string }) {
+  return (
+    <p className="text-sm text-ivory/80"><span className="text-ivory/40">{label}: </span>{value}</p>
   )
 }
 
