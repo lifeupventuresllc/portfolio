@@ -55,6 +55,11 @@ export default function BlueprintPage() {
       setError('Please fill out all fields so I can build your blueprint.')
       return
     }
+    // Sanity checks so a typo can't produce nonsense numbers
+    const age = Number(form.age), weight = Number(form.weight_lbs)
+    if (age < 13 || age > 100) { setError('Please enter a real age (13–100).'); return }
+    if (height_in < 36 || height_in > 90) { setError('Please double-check your height.'); return }
+    if (weight < 60 || weight > 700) { setError('Please double-check your weight (in pounds).'); return }
     setLoading(true)
     try {
       const res = await fetch('/api/blueprint', {

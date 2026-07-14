@@ -19,6 +19,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Please fill out all fields.' }, { status: 400 })
     }
 
+    // Guardrail: reject out-of-range inputs so a typo can't generate nonsense numbers
+    const ageN = Number(age), heightN = Number(height_in), weightN = Number(weight_lbs)
+    if (!(ageN >= 13 && ageN <= 100) || !(heightN >= 36 && heightN <= 90) || !(weightN >= 60 && weightN <= 700)) {
+      return NextResponse.json({ error: 'Please double-check your age, height, and weight — those values look off.' }, { status: 400 })
+    }
+
     const bp = buildBlueprint({
       name: name || '',
       age: Number(age),
