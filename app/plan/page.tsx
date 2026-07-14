@@ -4,6 +4,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import WorkoutView from '@/components/WorkoutView'
 import WeekPlanView from '@/components/WeekPlanView'
 import DailyCheckin from '@/components/DailyCheckin'
+import RebuildPlanButton from '@/components/RebuildPlanButton'
 import CoachMedia from '@/components/CoachMedia'
 import CountUp from '@/components/CountUp'
 import { LIVE_CALL } from '@/lib/live-call'
@@ -157,6 +158,7 @@ export default async function PlanDashboard() {
           <h2 className="text-white font-bold text-lg">Your training this week</h2>
           {workoutPlan?.plan && <Link href="/plan/workout" className="inline-flex items-center gap-1.5 bg-gold text-obsidian px-4 py-2 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform">▶ Start session</Link>}
         </div>
+        {workoutPlan?.plan && <div className="mb-3"><RebuildPlanButton /></div>}
         {workoutPlan?.plan ? (
           <WorkoutView program={workoutPlan.plan as WorkoutProgram} editable level={level} injuries={injuries} />
         ) : (
