@@ -6,61 +6,57 @@ import Ring from '@/components/Ring'
 import { buildSteps, dayLabels, type WorkoutStep } from '@/lib/workout-steps'
 import type { WorkoutProgram } from '@/lib/workout'
 
-export default function WorkoutPlayer({ program, firstName }: { program: WorkoutProgram; firstName: string }) {
+// Guided in-workout player. Opens straight into TODAY'S session (no picker
+// screen); a compact switcher lets her change the day. One countdown interval
+// per step (not recreated every second) so the timer runs smooth.
+export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
+  program: WorkoutProgram
+  firstName: string
+  startDay?: number
+}) {
   const router = useRouter()
-  const [dayIdx, setDayIdx] = useState<number | null>(null)
-  const [steps, setSteps] = useState<WorkoutStep[]>([])
+  const labels = dayLabels(program)
+  const clamp = (d: number) => Math.min(Math.max(d, 0), Math.max(labels.length - 1, 0))
+
+  const [dayIdx, setDayIdx] = useState(clamp(startDay))
+  const [steps, setSteps] = useState<WorkoutStep[]>(() => buildSteps(program, clamp(startDay)))
   const [i, setI] = useState(0)
   const [left, setLeft] = useState<number | null>(null)
   const [paused, setPaused] = useState(false)
   const [done, setDone] = useState(false)
-  const tick = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [switching, setSwitching] = useState(false)
 
-  const start = (d: number) => { setDayIdx(d); setSteps(buildSteps(program, d)); setI(0); setDone(false) }
   const step = steps[i]
+  const isTimed = step?.seconds != null
 
-  // (re)arm timer whenever the step changes
-  useEffect(() => {
-    if (tick.current) { clearInterval(tick.current); tick.current = null }
-    if (step?.seconds) setLeft(step.seconds); else setLeft(null)
-  }, [i, step?.seconds])
+  // Keep advance current without re-arming the interval every render.
+  const advanceRef = useRef<() => void>(() => {})
+  advanceRef.current = () => { if (i + 1 >= steps.length) finish(); else setI(i + 1) }
 
-  // run the countdown
-  useEffect(() => {
-    if (left == null || paused) return
-    if (left <= 0) { advance(); return }
-    tick.current = setInterval(() => setLeft((l) => (l == null ? l : l - 1)), 1000)
-    return () => { if (tick.current) clearInterval(tick.current) }
-  }, [left, paused])
-
-  function advance() {
-    if (i + 1 >= steps.length) { finish() } else setI(i + 1)
+  function selectDay(d: number) {
+    setDayIdx(clamp(d)); setSteps(buildSteps(program, clamp(d)))
+    setI(0); setDone(false); setPaused(false); setSwitching(false)
   }
   function finish() {
     setDone(true)
     fetch('/api/plan/daily', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workout: true }) }).catch(() => {})
   }
 
-  const labels = dayLabels(program)
+  // Reset the countdown when the step (or day) changes.
+  useEffect(() => { setLeft(step?.seconds ?? null) }, [i, dayIdx, step?.seconds])
 
-  // ---------- Day picker ----------
-  if (dayIdx === null) {
-    return (
-      <div className="max-w-lg mx-auto">
-        <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-2">Guided Session</p>
-        <h1 className="text-3xl font-bold text-white mb-2">Let&apos;s train, {firstName} 💪🏽</h1>
-        <p className="text-ivory/50 text-sm mb-7">Pick today&apos;s session — I&apos;ll walk you through every move, rep, and rest.</p>
-        <div className="space-y-3">
-          {labels.map((l, d) => (
-            <button key={d} onClick={() => start(d)} className="w-full text-left bg-charcoal border border-smoke rounded-2xl p-5 hover:border-gold/60 transition-colors flex items-center justify-between group">
-              <span className="text-white font-semibold">{l}</span>
-              <span className="text-gold text-xl group-hover:translate-x-1 transition-transform">▶</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    )
-  }
+  // ONE interval per step — decrements each second, advances at zero. No churn.
+  useEffect(() => {
+    if (!isTimed || paused || done) return
+    const id = setInterval(() => {
+      setLeft((l) => {
+        if (l == null) return l
+        if (l <= 1) { clearInterval(id); advanceRef.current(); return 0 }
+        return l - 1
+      })
+    }, 1000)
+    return () => clearInterval(id)
+  }, [i, dayIdx, paused, isTimed, done])
 
   // ---------- Finished ----------
   if (done) {
@@ -69,27 +65,46 @@ export default function WorkoutPlayer({ program, firstName }: { program: Workout
         <p className="text-6xl mb-4">🔥</p>
         <h1 className="text-3xl font-bold text-white mb-2">That&apos;s done, {firstName}.</h1>
         <p className="text-ivory/60 text-sm mb-8">You showed up and you finished. That&apos;s the whole game. I logged it for your streak.</p>
-        <button onClick={() => router.push('/plan')} className="luf-glow w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl">Back to my plan</button>
+        <button onClick={() => router.push('/plan')} className="luf-glow w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl">Back to my week</button>
         <p className="text-gold text-sm font-semibold mt-4">— Coach Asa</p>
       </div>
     )
   }
 
   if (!step) return null
-  const isTimed = step.seconds != null
   const pct = isTimed && left != null ? (left / step.seconds!) * 100 : 0
   const progress = Math.round(((i + 1) / steps.length) * 100)
 
   return (
-    <div className="max-w-lg mx-auto flex flex-col min-h-[80vh]">
-      {/* progress */}
-      <div className="flex items-center gap-3 mb-8">
-        <button onClick={() => router.push('/plan')} className="text-ivory/40 hover:text-gold text-sm">✕</button>
-        <div className="flex-1 h-1.5 bg-charcoal rounded-full overflow-hidden"><div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${progress}%` }} /></div>
-        <span className="text-ivory/40 text-xs tabular-nums">{i + 1}/{steps.length}</span>
+    <div className="max-w-lg mx-auto flex flex-col min-h-[86vh]">
+      {/* Header: today's session + day switcher + back to week */}
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <button onClick={() => router.push('/plan')} className="text-ivory/40 hover:text-gold text-xs font-semibold">← My week</button>
+        <button onClick={() => setSwitching((s) => !s)} className="text-center">
+          <p className="text-gold text-[10px] font-semibold tracking-[0.2em] uppercase">Today&apos;s session</p>
+          <p className="text-white text-sm font-bold leading-tight">{labels[dayIdx]} <span className="text-ivory/40">▾</span></p>
+        </button>
+        <span className="text-ivory/40 text-xs tabular-nums w-10 text-right">{i + 1}/{steps.length}</span>
       </div>
 
-      <div key={i} className="q-in-fwd flex-1 flex flex-col items-center justify-center text-center">
+      {/* progress bar */}
+      <div className="h-1.5 bg-charcoal rounded-full overflow-hidden mb-8">
+        <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+      </div>
+
+      {/* Day switcher sheet */}
+      {switching && (
+        <div className="mb-6 bg-charcoal border border-smoke rounded-2xl p-2 space-y-1">
+          {labels.map((l, d) => (
+            <button key={d} onClick={() => selectDay(d)}
+              className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${d === dayIdx ? 'bg-gold/15 text-gold' : 'text-ivory/70 hover:bg-obsidian'}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div key={`${dayIdx}-${i}`} className="q-in-fwd flex-1 flex flex-col items-center justify-center text-center">
         <p className={`text-xs font-semibold tracking-[0.2em] uppercase mb-5 ${step.rest ? 'text-green-400' : 'text-gold'}`}>{step.phase}</p>
 
         {isTimed ? (
@@ -111,15 +126,15 @@ export default function WorkoutPlayer({ program, firstName }: { program: Workout
       {/* controls */}
       <div className="mt-8">
         <div className="flex gap-3">
-          <button onClick={() => setI(Math.max(0, i - 1))} disabled={i === 0} className="px-5 py-4 rounded-2xl bg-charcoal border border-smoke text-ivory/60 disabled:opacity-30">←</button>
+          <button onClick={() => setI(Math.max(0, i - 1))} disabled={i === 0} className="px-5 py-4 rounded-2xl bg-charcoal border border-smoke text-ivory/60 disabled:opacity-30 active:scale-95 transition-transform">←</button>
           {isTimed ? (
-            <button onClick={() => setPaused((p) => !p)} className="flex-1 bg-charcoal border border-gold/40 text-gold px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl">{paused ? 'Resume' : 'Pause'}</button>
+            <button onClick={() => setPaused((p) => !p)} className="flex-1 bg-charcoal border border-gold/40 text-gold px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl active:scale-[.98] transition-transform">{paused ? 'Resume' : 'Pause'}</button>
           ) : (
-            <button onClick={advance} className="luf-glow flex-1 bg-gold text-obsidian px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl">Done — Next →</button>
+            <button onClick={() => advanceRef.current()} className="luf-glow flex-1 bg-gold text-obsidian px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl active:scale-[.98] transition-transform">Done — Next →</button>
           )}
-          <button onClick={advance} className="px-5 py-4 rounded-2xl bg-charcoal border border-smoke text-ivory/60">→</button>
+          <button onClick={() => advanceRef.current()} className="px-5 py-4 rounded-2xl bg-charcoal border border-smoke text-ivory/60 active:scale-95 transition-transform">→</button>
         </div>
-        {isTimed && <button onClick={advance} className="w-full text-center text-ivory/40 text-xs mt-3 hover:text-gold">Skip →</button>}
+        {isTimed && <button onClick={() => advanceRef.current()} className="w-full text-center text-ivory/40 text-xs mt-3 hover:text-gold">Skip →</button>}
       </div>
     </div>
   )

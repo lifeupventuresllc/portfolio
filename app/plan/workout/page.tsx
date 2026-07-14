@@ -24,8 +24,10 @@ export default async function WorkoutSession() {
   if (!enrollment) redirect('/plan')
 
   const firstName = (enrollment.name || user.email?.split('@')[0] || 'there').split(' ')[0]
-  const { data: workoutPlan } = await svc
-    .from('challenge_workout_plans').select('*').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle()
+  const [{ data: workoutPlan }, { data: doneRows }] = await Promise.all([
+    svc.from('challenge_workout_plans').select('*').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
+    svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
+  ])
 
   if (!workoutPlan?.plan) {
     return (
@@ -39,9 +41,15 @@ export default async function WorkoutSession() {
     )
   }
 
+  // "Today" = the next day in her week, rotating by how many workouts she's finished.
+  const program = workoutPlan.plan as WorkoutProgram
+  const numDays = program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)
+  const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
+  const startDay = numDays > 0 ? completed % numDays : 0
+
   return (
     <div className="min-h-screen bg-obsidian px-4 py-8">
-      <WorkoutPlayer program={workoutPlan.plan as WorkoutProgram} firstName={firstName} />
+      <WorkoutPlayer program={program} firstName={firstName} startDay={startDay} />
     </div>
   )
 }

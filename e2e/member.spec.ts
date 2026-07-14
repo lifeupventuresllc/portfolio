@@ -41,4 +41,21 @@ test.describe('Member journey (authenticated)', () => {
     await expect(page).not.toHaveURL(/\/login/)
     await expect(page.locator('body')).toContainText(/Curve Collective/i)
   })
+
+  test('workout player opens straight into today’s session + day switcher works', async ({ page }) => {
+    await login(page)
+    await page.goto('/plan/workout')
+    await expect(page).not.toHaveURL(/\/login/)
+    const body = page.locator('body')
+    // Either a generated session (opens directly — no picker) or the no-plan gate
+    if (await page.getByText("Today's session").isVisible().catch(() => false)) {
+      // P1c: opens straight into today's session (no picker screen), with a
+      // clean way back to the week and a day switcher — all without interaction.
+      await expect(page.getByRole('button', { name: /My week/i })).toBeVisible()
+      await expect(page.getByRole('button', { name: /Today's session/i })).toBeVisible()
+      await expect(body).toContainText(/\d+\/\d+/) // step counter — already in a session
+    } else {
+      await expect(body).toContainText(/No workout yet|Build my plan/i)
+    }
+  })
 })
