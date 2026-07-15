@@ -227,7 +227,7 @@ export default function BlueprintPage() {
             <a href="/challenge"
               className="flex items-center justify-between gap-3 bg-gold/5 border border-gold/40 rounded-2xl px-4 py-3 mb-4 transition-colors hover:bg-gold/10 hover:border-gold/70">
               <span className="text-gold/80 text-sm">Need personal training?</span>
-              <span className="text-gold text-sm font-bold whitespace-nowrap">Join the 6-Week Challenge →</span>
+              <span className="text-gold text-sm font-bold whitespace-nowrap">Click here to join →</span>
             </a>
             <div className="bg-charcoal border-2 border-gold/40 rounded-3xl p-8 text-center">
               <p className="text-green-400 text-sm font-semibold mb-1">✓ Your blueprint downloaded</p>
@@ -260,7 +260,7 @@ export default function BlueprintPage() {
                 </p>
                 <a href="/challenge"
                   className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-wider luf-glow transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_22px_55px_rgba(201,168,76,0.5)] active:scale-[0.98]">
-                  Get Snatched Without Starving →
+                  Click Here to Join the Challenge →
                 </a>
               </div>
             </div>

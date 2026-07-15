@@ -220,7 +220,7 @@ function coverPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   // ---- The offer (clickable) ----
   card(p, startX, 70, totalW, 46, C.goldFill, C.gold, 1.5)
   textC(p, 'Need personal training?', W / 2, 96, 11, f.bold, C.white)
-  textC(p, 'Join the 6-Week Challenge — done-for-you meals + weekly check-ins  »', W / 2, 80, 9, f.bold, C.gold)
+  textC(p, 'Click here to join the 6-Week Challenge  »', W / 2, 80, 9.5, f.bold, C.gold)
   linkRect(doc, p, startX, 70, totalW, 46, CHALLENGE_URL)
 
   textC(p, `© ${new Date().getFullYear()} Life Up Fitness  •  Coach Asa  •  asaluke.io`, W / 2, 34, 7, f.reg, C.gray)
@@ -529,7 +529,7 @@ function nextStepPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   // ---- Top offer bar (seamless, clickable) ----
   card(p, 36, H - 190, W - 72, 36, C.goldFill, C.gold, 1.6)
   textL(p, 'Need personal training?', 52, H - 174, 10.5, f.bold, C.white)
-  textR(p, 'Join the 6-Week Challenge  »', W - 52, H - 174, 10.5, f.bold, C.gold)
+  textR(p, 'Click here to join the 6-Week Challenge  »', W - 52, H - 174, 10.5, f.bold, C.gold)
   linkRect(doc, p, 36, H - 190, W - 72, 36, CHALLENGE_URL)
 
   const mw = (W - 72 - 42) / 4
@@ -557,7 +557,7 @@ function nextStepPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   textC(p, 'done-for-you meals + workouts, and I check in with you every single week.', W / 2, cy + 68, 9.5, f.reg, C.grayLight)
   const bW = 260, bX = W / 2 - bW / 2, bY = cy + 16, bH = 36
   card(p, bX, bY, bW, bH, C.gold)
-  textC(p, 'Join the 6-Week Challenge  »', W / 2, bY + 12, 11.5, f.bold, C.bg)
+  textC(p, 'Click Here to Join the Challenge  »', W / 2, bY + 12, 11, f.bold, C.bg)
   linkRect(doc, p, bX, bY, bW, bH, CHALLENGE_URL)
   linkRect(doc, p, 36, cy, W - 72, 132, CHALLENGE_URL)
 }
