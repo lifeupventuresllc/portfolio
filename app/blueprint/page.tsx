@@ -4,6 +4,7 @@ import { useState } from 'react'
 import RevealScript from '@/components/RevealScript'
 
 const ACTIVITY = [
+  { value: 'none', label: 'Not active — barely move / mostly resting' },
   { value: 'sedentary', label: 'Sedentary — desk job, minimal movement' },
   { value: 'light', label: 'Lightly active — some walking / errands' },
   { value: 'moderate', label: 'Moderately active — on your feet part of the day' },
@@ -11,6 +12,7 @@ const ACTIVITY = [
   { value: 'very_active', label: 'Very active — physical job / athlete' },
 ]
 const WORKOUT_LENGTH = [
+  { value: 'none', label: 'None — I don’t work out' },
   { value: '30_cardio', label: '~30 min — light cardio only' },
   { value: '45_strength', label: '~45 min — strength only' },
   { value: '45_60_both', label: '45–60 min — strength + cardio' },
@@ -169,8 +171,15 @@ export default function BlueprintPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Workout days / week</label>
-                <select value={form.workout_days_per_week} onChange={(e) => set('workout_days_per_week', e.target.value)} className={input}>
-                  {[1, 2, 3, 4, 5, 6, 7].map((n) => <option key={n} value={n}>{n} days</option>)}
+                <select value={form.workout_days_per_week}
+                  onChange={(e) => setForm((f) => ({
+                    ...f,
+                    workout_days_per_week: e.target.value,
+                    // keep it coherent: no workout days => no workout session
+                    workout_length: e.target.value === '0' ? 'none' : f.workout_length === 'none' ? '45_60_both' : f.workout_length,
+                  }))}
+                  className={input}>
+                  {[0, 1, 2, 3, 4, 5, 6, 7].map((n) => <option key={n} value={n}>{n === 0 ? "0 — I don’t work out" : `${n} days`}</option>)}
                 </select>
               </div>
               <div>
@@ -184,7 +193,14 @@ export default function BlueprintPage() {
 
             <div>
               <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Average workout length</label>
-              <select value={form.workout_length} onChange={(e) => set('workout_length', e.target.value)} className={input}>
+              <select value={form.workout_length}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  workout_length: e.target.value,
+                  // "none" session => 0 workout days
+                  workout_days_per_week: e.target.value === 'none' ? '0' : f.workout_days_per_week === '0' ? '4' : f.workout_days_per_week,
+                }))}
+                className={input}>
                 {WORKOUT_LENGTH.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
               </select>
             </div>

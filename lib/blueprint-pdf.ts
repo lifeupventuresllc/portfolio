@@ -28,6 +28,7 @@ const fmt = (n: number) => Math.round(n).toLocaleString('en-US')
 
 // Plain-English activity labels (drives the "Where Your Calories Come From" page)
 const ACTIVITY: Record<Activity, { name: string; desc: string }> = {
+  none: { name: 'Not Active', desc: 'mostly resting, very little daily movement' },
   sedentary: { name: 'Sedentary', desc: 'desk job, not much daily movement' },
   light: { name: 'Lightly Active', desc: 'on your feet part of the day' },
   moderate: { name: 'Moderately Active', desc: 'active job or regular movement' },
@@ -92,15 +93,21 @@ function pageBase(doc: PDFDocument, fonts: Fonts, sectionColor: RGB, clientName:
 const firstName = (bp: Blueprint) => (bp.inputs.name || '').split(' ')[0] || 'friend'
 
 // A single plan card: name header + Workout/Rest eat numbers + a plain "how fast" pill.
-function planCard(p: PDFPage, f: Fonts, x: number, top: number, w: number, h: number, name: string, tag: string, color: RGB, plan: Plan, dir: string) {
+// When noWorkout, collapses to one "Every day" number (no split).
+function planCard(p: PDFPage, f: Fonts, x: number, top: number, w: number, h: number, name: string, tag: string, color: RGB, plan: Plan, dir: string, noWorkout = false) {
   card(p, x, top - h, w, h, C.card, color, 1.8)
   p.drawRectangle({ x, y: top - 24, width: w, height: 24, color })
   textL(p, name, x + 12, top - 17, 11, f.bold, C.bg)
   textR(p, tag, x + w - 12, top - 16, 7.5, f.reg, C.bg)
-  textL(p, 'Workout days', x + 16, top - 52, 9.5, f.reg, C.grayLight)
-  textR(p, `${fmt(plan.workout.eat)} cal`, x + w - 16, top - 54, 15, f.bold, C.white)
-  textL(p, 'Rest days', x + 16, top - 80, 9.5, f.reg, C.grayLight)
-  textR(p, `${fmt(plan.rest.eat)} cal`, x + w - 16, top - 82, 15, f.bold, C.white)
+  if (noWorkout) {
+    textC(p, 'EVERY DAY', x + w / 2, top - 52, 9, f.reg, C.grayLight)
+    textC(p, `${fmt(plan.rest.eat)} cal`, x + w / 2, top - 82, 24, f.bold, C.white)
+  } else {
+    textL(p, 'Workout days', x + 16, top - 52, 9.5, f.reg, C.grayLight)
+    textR(p, `${fmt(plan.workout.eat)} cal`, x + w - 16, top - 54, 15, f.bold, C.white)
+    textL(p, 'Rest days', x + 16, top - 80, 9.5, f.reg, C.grayLight)
+    textR(p, `${fmt(plan.rest.eat)} cal`, x + w - 16, top - 82, 15, f.bold, C.white)
+  }
   card(p, x + 12, top - h + 12, w - 24, 28, C.goldFill)
   textC(p, `About ${Math.abs(plan.estWeeklyChangeLbs).toFixed(1)} lb ${dir} a week`, x + w / 2, top - h + 22, 9.5, f.bold, C.gold)
 }
@@ -169,7 +176,7 @@ function coverPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   textC(p, "WHAT'S INSIDE", W / 2, cy - 44, 11, f.bold, C.gold)
   const items = [
     'How much to eat — a steady plan and a faster one',
-    'Workout days vs rest days — how much for each',
+    bp.workoutDays === 0 ? 'Your daily number — the same simple target every day' : 'Workout days vs rest days — how much for each',
     'How to build every plate — hand + ounces, no counting',
     'Where your calories come from — by your activity level',
     'Easy off-day choices + what to expect next',
@@ -193,17 +200,20 @@ function coverPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
 // ---- PAGE 2: HOW MUCH TO EAT (the answer, lead with it) ----
 function howMuchPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   const p = pageBase(doc, f, C.green, bp.inputs.name || 'Your', 'How Much To Eat', 2)
+  const noWorkout = bp.workoutDays === 0
   pill(p, 'START HERE', 36, H - 70, 9, f.bold, C.green)
   headline(p, f, 'How Much To Eat', `Two ways to run it, ${firstName(bp)}. Start with Steady — Faster is only if you want it.`)
 
   const dir = bp.inputs.goal === 'gain' ? 'up' : 'down'
   const halfW = (W - 72 - 14) / 2
   const top = H - 162, h = 132
-  planCard(p, f, 36, top, halfW, h, 'STEADY', 'start here', C.green, bp.current, dir)
-  planCard(p, f, 36 + halfW + 14, top, halfW, h, 'FASTER', 'optional', C.pink, bp.aggressive, dir)
+  planCard(p, f, 36, top, halfW, h, 'STEADY', 'start here', C.green, bp.current, dir, noWorkout)
+  planCard(p, f, 36 + halfW + 14, top, halfW, h, 'FASTER', 'optional', C.pink, bp.aggressive, dir, noWorkout)
 
   let y = top - h - 20
-  textC(p, 'Rest days are a little lower — you burn less when you’re not working out.', W / 2, y, 9, f.reg, C.grayLight)
+  textC(p, noWorkout
+    ? 'You’re not working out right now, so it’s the same simple number every day.'
+    : 'Rest days are a little lower — you burn less when you’re not working out.', W / 2, y, 9, f.reg, C.grayLight)
 
   // What that looks like
   y -= 22
@@ -220,8 +230,28 @@ function howMuchPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   textC(p, 'so you never count a calorie.   — Coach Asa', W / 2, y - 38, 9, f.bold, C.gold)
 }
 
-// ---- PAGE 3: WORKOUT DAYS vs REST DAYS ----
+// ---- PAGE 3: WORKOUT DAYS vs REST DAYS (or ONE daily number if no workouts) ----
 function workoutRestPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
+  // No workout days -> one simple daily number, no split.
+  if (bp.workoutDays === 0) {
+    const p = pageBase(doc, f, C.teal, bp.inputs.name || 'Your', 'Your Daily Number', 3)
+    pill(p, 'EAT BY THE DAY', 36, H - 70, 9, f.bold, C.teal)
+    headline(p, f, 'Your Daily Number', `You’re not working out right now, ${firstName(bp)} — so every day is the same simple target.`)
+    const w = 320, x = (W - w) / 2, top = H - 172, h = 150
+    dayCard(p, f, x, top, w, h, 'EVERY DAY', '7 days / week', C.green, bp.current.rest, 'Same target daily')
+    let y = top - h - 22
+    const cardH = 62
+    card(p, 36, y - cardH, W - 72, cardH, C.card, C.teal, 1.6)
+    textL(p, 'WHY IT’S THE SAME EVERY DAY', 52, y - 20, 9.5, f.bold, C.teal)
+    wrapL(p, 'Your body burns about the same amount every day when you’re not training, so your food stays the same too. Hit this number and the plate on the next page and you’re set.', 52, y - 38, 9, f.reg, C.grayLight, W - 72 - 32, 13)
+    y -= cardH + 20
+    const cardH2 = 54
+    card(p, 36, y - cardH2, W - 72, cardH2, C.goldFill, C.gold, 1.6)
+    textC(p, 'Start moving later? Add a little food on the days you work out.', W / 2, y - 22, 9.5, f.bold, C.white)
+    textC(p, 'When you join the challenge I build your workouts in and adjust these numbers for you.', W / 2, y - 39, 8.5, f.reg, C.grayLight)
+    return
+  }
+
   const p = pageBase(doc, f, C.teal, bp.inputs.name || 'Your', 'Workout vs Rest Days', 3)
   pill(p, 'EAT BY THE DAY', 36, H - 70, 9, f.bold, C.teal)
   headline(p, f, 'Workout Days vs Rest Days', `Eat a little more on your ${bp.workoutDays} workout days, a little less on your ${bp.restDays} rest days.`)
@@ -307,7 +337,9 @@ function buildPlatePage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   const pyTop = H - 560, ph = 92
   card(p, 36, pyTop - ph, W - 72, ph, C.card, C.gold, 1.8)
   textL(p, 'YOUR DAY, IN PORTIONS', 52, pyTop - 24, 10, f.bold, C.gold)
-  textL(p, 'A full workout day in hand portions — spread across 3 meals + a snack. Rest days: about 1 fewer handful of carbs.', 52, pyTop - 40, 8.5, f.reg, C.grayLight)
+  textL(p, bp.workoutDays === 0
+    ? 'Your whole day in hand portions — spread across 3 meals + a snack. Same every day.'
+    : 'A full workout day in hand portions — spread across 3 meals + a snack. Rest days: about 1 fewer handful of carbs.', 52, pyTop - 40, 8.5, f.reg, C.grayLight)
   const cols3: [number, string, string, RGB][] = [
     [palms, palms === 1 ? 'palm' : 'palms', 'PROTEIN', C.protein],
     [handfuls, handfuls === 1 ? 'handful' : 'handfuls', 'CARBS', C.carbs],
@@ -325,6 +357,7 @@ function buildPlatePage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
 function activityCaloriePage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   const p = pageBase(doc, f, C.carbs, bp.inputs.name || 'Your', 'Where Your Calories Come From', 5)
   const act = ACTIVITY[bp.inputs.activity]
+  const noWorkout = bp.workoutDays === 0
   pill(p, 'YOUR ACTIVITY', 36, H - 70, 9, f.bold, C.carbs)
   headline(p, f, 'Where Your Calories Come From', 'Your daily number is built around how much you move — your activity level.')
 
@@ -335,11 +368,11 @@ function activityCaloriePage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   textL(p, `${act.name} — ${act.desc}.`, 52, aTop - 37, 10.5, f.bold, C.white)
   textR(p, `+${fmt(bp.neat)} cal/day`, W - 52, aTop - 30, 12, f.bold, C.gold)
 
-  textL(p, 'Your body burns calories three ways', 36, aTop - 74, 9.5, f.bold, C.carbs)
+  textL(p, noWorkout ? 'Your body burns calories two ways' : 'Your body burns calories three ways', 36, aTop - 74, 9.5, f.bold, C.carbs)
   const layers = [
     { c: C.green, t: 'Just staying alive', sub: '(BMR — your age, height + weight)', v: bp.bmr },
     { c: C.carbs, t: 'Moving around your day', sub: `(NEAT — set by "${act.name}")`, v: bp.neat },
-    { c: C.pink, t: 'Your workouts', sub: `(exercise burn — ${bp.workoutDays} workout days)`, v: bp.exerciseBurn },
+    ...(noWorkout ? [] : [{ c: C.pink, t: 'Your workouts', sub: `(exercise burn — ${bp.workoutDays} workout days)`, v: bp.exerciseBurn }]),
   ]
   let y = aTop - 88
   layers.forEach((l) => {
@@ -354,15 +387,25 @@ function activityCaloriePage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   // Totals per day type
   y -= 4
   const halfW = (W - 72 - 14) / 2
-  card(p, 36, y - 40, halfW, 40, C.card, C.orange, 1.4)
-  textL(p, 'Rest day burn', 50, y - 16, 8, f.reg, C.gray)
-  textR(p, `${fmt(bp.restMaintenance)} cal`, 36 + halfW - 14, y - 30, 13, f.bold, C.white)
-  card(p, 36 + halfW + 14, y - 40, halfW, 40, C.card, C.green, 1.4)
-  textL(p, 'Workout day burn', 36 + halfW + 28, y - 16, 8, f.reg, C.gray)
-  textR(p, `${fmt(bp.workoutMaintenance)} cal`, W - 50, y - 30, 13, f.bold, C.white)
+  if (noWorkout) {
+    card(p, 36, y - 40, W - 72, 40, C.card, C.green, 1.4)
+    textL(p, 'Your daily burn', 50, y - 16, 8, f.reg, C.gray)
+    textR(p, `${fmt(bp.restMaintenance)} cal`, W - 50, y - 30, 13, f.bold, C.white)
+  } else {
+    card(p, 36, y - 40, halfW, 40, C.card, C.orange, 1.4)
+    textL(p, 'Rest day burn', 50, y - 16, 8, f.reg, C.gray)
+    textR(p, `${fmt(bp.restMaintenance)} cal`, 36 + halfW - 14, y - 30, 13, f.bold, C.white)
+    card(p, 36 + halfW + 14, y - 40, halfW, 40, C.card, C.green, 1.4)
+    textL(p, 'Workout day burn', 36 + halfW + 28, y - 16, 8, f.reg, C.gray)
+    textR(p, `${fmt(bp.workoutMaintenance)} cal`, W - 50, y - 30, 13, f.bold, C.white)
+  }
 
   y -= 40 + 22
-  noteBox(p, 36, y - 56, W - 72, 56, C.carbs, [
+  noteBox(p, 36, y - 56, W - 72, 56, C.carbs, noWorkout ? [
+    `Because you're not active, your body burns about ${fmt(bp.restMaintenance)} calories a day.`,
+    'We set your food a little under that, so your body pulls the difference from stored',
+    'fat — and your protein stays high so you keep your shape.',
+  ] : [
     `Because you're ${act.name.toLowerCase()}, your body burns about ${fmt(bp.restMaintenance)} calories on a rest day`,
     `and ${fmt(bp.workoutMaintenance)} on a workout day. We set your food a little under that, so your body`,
     'pulls the difference from stored fat — and your protein stays high so you keep your shape.',

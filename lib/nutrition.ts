@@ -8,8 +8,8 @@
 
 export type Sex = 'female' | 'male'
 export type Goal = 'lose' | 'gain' | 'maintain'
-export type Activity = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
-export type WorkoutLength = '30_cardio' | '45_strength' | '45_60_both' | '60_both' | '90_intense'
+export type Activity = 'none' | 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
+export type WorkoutLength = 'none' | '30_cardio' | '45_strength' | '45_60_both' | '60_both' | '90_intense'
 
 export interface BlueprintInputs {
   name?: string
@@ -27,6 +27,7 @@ export interface BlueprintInputs {
 
 // Step 2 — NEAT (midpoint of each range)
 const NEAT: Record<Activity, number> = {
+  none: 100,
   sedentary: 175,
   light: 225,
   moderate: 275,
@@ -36,6 +37,7 @@ const NEAT: Record<Activity, number> = {
 
 // Step 3 — Exercise burn per workout day (midpoint of each range)
 const EXERCISE_BURN: Record<WorkoutLength, number> = {
+  none: 0,
   '30_cardio': 200,
   '45_strength': 250,
   '45_60_both': 325,
@@ -153,7 +155,10 @@ function buildPlan(
 ): Plan {
   const adj = adjustments(goal, aggressive)
   const restEat = round(restMaint + adj.rest)
-  const workoutEat = round(workoutMaint + adj.workout)
+  // No workout days -> every day is the same. Collapse the "workout day" to the rest day
+  // so the blueprint shows one clean daily number instead of a meaningless split.
+  const noWorkout = workoutDays === 0
+  const workoutEat = noWorkout ? restEat : round(workoutMaint + adj.workout)
 
   const weeklyEat = workoutDays * workoutEat + restDays * restEat
   const weeklyMaint = workoutDays * workoutMaint + restDays * restMaint
@@ -168,9 +173,9 @@ function buildPlan(
       macros: macrosFor(restEat, protein_g, goal),
     },
     workout: {
-      maintenance: round(workoutMaint),
+      maintenance: round(noWorkout ? restMaint : workoutMaint),
       eat: workoutEat,
-      adjustment: adj.workout,
+      adjustment: noWorkout ? adj.rest : adj.workout,
       macros: macrosFor(workoutEat, protein_g, goal),
     },
     weeklyEat,
@@ -202,12 +207,12 @@ export function buildBlueprint(inputs: BlueprintInputs): Blueprint {
 
   // Steps 2–4 — NEAT, Exercise Burn, Maintenance
   const neat = NEAT[inputs.activity]
-  const exerciseBurn = EXERCISE_BURN[inputs.workout_length]
-  const restMaintenance = bmr + neat
-  const workoutMaintenance = bmr + neat + exerciseBurn
-
   const workoutDays = Math.max(0, Math.min(7, Math.round(inputs.workout_days_per_week)))
   const restDays = 7 - workoutDays
+  // No workout days (or "none" session) = no exercise burn at all.
+  const exerciseBurn = workoutDays === 0 || inputs.workout_length === 'none' ? 0 : EXERCISE_BURN[inputs.workout_length]
+  const restMaintenance = bmr + neat
+  const workoutMaintenance = bmr + neat + exerciseBurn
 
   // Step 7 — protein first
   const { grams: protein_g, label: proteinRuleLabel } = proteinGrams(inputs)

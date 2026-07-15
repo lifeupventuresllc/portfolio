@@ -25,6 +25,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Please double-check your age, height, and weight — those values look off.' }, { status: 400 })
     }
 
+    // Allow an explicit 0 (person doesn't work out) — || would wrongly coerce 0 back to 4.
+    const workoutDaysN = Number(workout_days_per_week)
     const bp = buildBlueprint({
       name: name || '',
       age: Number(age),
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest) {
       goal_weight_lbs: goal_weight_lbs ? Number(goal_weight_lbs) : undefined,
       goal: goal as Goal,
       activity: activity as Activity,
-      workout_days_per_week: Number(workout_days_per_week) || 4,
+      workout_days_per_week: Number.isFinite(workoutDaysN) ? workoutDaysN : 4,
       workout_length: (workout_length || '45_60_both') as WorkoutLength,
       cardio: !!cardio,
     })
