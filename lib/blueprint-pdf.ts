@@ -94,6 +94,19 @@ function linkRect(doc: PDFDocument, p: PDFPage, x: number, y: number, w: number,
 
 const CHALLENGE_URL = 'https://www.asaluke.io/challenge'
 
+// Filled pie wedge on a circle centered at (cx,cy) radius r, from angle a0 to a1 (degrees).
+// Angles: 0°=right, sweeping so sin>0 is the lower half (page space). Used for the divided plate.
+function wedge(p: PDFPage, cx: number, cy: number, r: number, a0: number, a1: number, color: RGB) {
+  const N = 28
+  let d = `M ${r} ${r}`
+  for (let i = 0; i <= N; i++) {
+    const t = ((a0 + (a1 - a0) * (i / N)) * Math.PI) / 180
+    d += ` L ${(r + r * Math.cos(t)).toFixed(2)} ${(r + r * Math.sin(t)).toFixed(2)}`
+  }
+  d += ' Z'
+  p.drawSvgPath(d, { x: cx - r, y: cy + r, color, borderWidth: 0 })
+}
+
 function pageBase(doc: PDFDocument, fonts: Fonts, sectionColor: RGB, clientName: string, sectionName: string, pageNum: number): PDFPage {
   const p = doc.addPage([W, H])
   p.drawRectangle({ x: 0, y: 0, width: W, height: H, color: C.bg })
@@ -218,9 +231,15 @@ function howMuchPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   pill(p, 'START HERE', 36, H - 70, 9, f.bold, C.green)
   headline(p, f, 'How Much To Eat', `Two ways to run it, ${firstName(bp)}. Start with Steady — Faster is only if you want it.`)
 
+  // ---- Seamless top offer (subtle, clickable) ----
+  card(p, 36, H - 167, W - 72, 22, C.goldFill, C.gold, 0.75)
+  textL(p, 'Need personal training?', 48, H - 160, 8.5, f.reg, C.gold)
+  textR(p, 'Join the 6-Week Challenge  »', W - 48, H - 160, 8.5, f.bold, C.gold)
+  linkRect(doc, p, 36, H - 167, W - 72, 22, CHALLENGE_URL)
+
   const dir = bp.inputs.goal === 'gain' ? 'up' : 'down'
   const halfW = (W - 72 - 14) / 2
-  const top = H - 162, h = 132
+  const top = H - 196, h = 132
   planCard(p, f, 36, top, halfW, h, 'STEADY', 'start here', C.green, bp.current, dir, noWorkout)
   planCard(p, f, 36 + halfW + 14, top, halfW, h, 'FASTER', 'optional', C.pink, bp.aggressive, dir, noWorkout)
 
@@ -303,25 +322,34 @@ function buildPlatePage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   textL(p, 'YOUR ONE NUMBER: PROTEIN', 52, boxTop - 21, 9.5, f.bold, C.protein)
   textL(p, `Aim for about ${bp.protein_g}g a day — a palm (4–6 oz) of meat or a scoop of shake at each meal.`, 52, boxTop - 40, 9, f.reg, C.grayLight)
 
-  // ---- The plate picture (left) ----
-  const cx = 168, cy = H - 348, R = 82
-  p.drawCircle({ x: cx, y: cy, size: R, color: C.card2, borderColor: C.gold, borderWidth: 2 })
-  p.drawCircle({ x: cx, y: cy, size: R - 7, borderColor: C.gray, borderWidth: 1 })
-  const rr = R - 8
-  // divider lines: vertical splits veggies (left) from protein/carbs (right); horizontal splits the right half
-  p.drawLine({ start: { x: cx, y: cy - rr }, end: { x: cx, y: cy + rr }, thickness: 1.5, color: C.bg })
-  p.drawLine({ start: { x: cx, y: cy }, end: { x: cx + rr, y: cy }, thickness: 1.5, color: C.bg })
+  // ---- The plate picture (left): a real divided plate with steel dividers ----
+  const cx = 168, cy = H - 348, R = 84
+  const steel = hex('#C2C6D2'), veg = hex('#123f39'), pro = hex('#16401f'), crb = hex('#123a55')
+  // plate body + rim
+  p.drawCircle({ x: cx, y: cy, size: R + 4, color: hex('#2a2a34') })              // outer steel rim
+  p.drawCircle({ x: cx, y: cy, size: R + 4, borderColor: steel, borderWidth: 2 })
+  p.drawCircle({ x: cx, y: cy, size: R, color: C.card2 })                          // inner well
+  // filled compartments: veggies = left half, protein = top-right, carbs = bottom-right
+  const rr = R - 5
+  wedge(p, cx, cy, rr, 90, 270, veg)     // left half (page space: cos<0)
+  wedge(p, cx, cy, rr, 270, 360, pro)    // top-right
+  wedge(p, cx, cy, rr, 0, 90, crb)       // bottom-right
+  p.drawCircle({ x: cx, y: cy, size: R, borderColor: steel, borderWidth: 1.5 })    // inner rim over fills
+  // steel dividers: vertical (veggies | right) + horizontal (protein / carbs) with a center hub
+  p.drawLine({ start: { x: cx, y: cy - rr }, end: { x: cx, y: cy + rr }, thickness: 3, color: steel })
+  p.drawLine({ start: { x: cx, y: cy }, end: { x: cx + rr, y: cy }, thickness: 3, color: steel })
+  p.drawCircle({ x: cx, y: cy, size: 4, color: steel })
   // region labels inside the plate — hand word + ounces underneath
-  textC(p, 'VEGGIES', cx - 38, cy + 6, 8, f.bold, C.teal)
-  textC(p, 'half plate', cx - 38, cy - 5, 6.5, f.reg, C.gray)
-  textC(p, '6–8 oz', cx - 38, cy - 15, 6.5, f.bold, C.gold)
-  textC(p, 'PROTEIN', cx + 40, cy + 34, 7.5, f.bold, C.protein)
-  textC(p, 'palm', cx + 40, cy + 24, 6.5, f.reg, C.gray)
-  textC(p, '4–6 oz', cx + 40, cy + 14, 6.5, f.bold, C.gold)
-  textC(p, 'CARBS', cx + 40, cy - 20, 7.5, f.bold, C.carbs)
-  textC(p, 'handful', cx + 40, cy - 30, 6.5, f.reg, C.gray)
-  textC(p, '3–4 oz', cx + 40, cy - 40, 6.5, f.bold, C.gold)
-  textC(p, 'plus a thumb of fat (about ½ oz) for cooking', cx, cy - R - 20, 8, f.reg, C.grayLight)
+  textC(p, 'VEGGIES', cx - 40, cy + 8, 8, f.bold, C.white)
+  textC(p, 'half plate', cx - 40, cy - 3, 6.5, f.reg, C.grayLight)
+  textC(p, '6–8 oz', cx - 40, cy - 14, 7, f.bold, C.gold)
+  textC(p, 'PROTEIN', cx + 42, cy + 36, 7.5, f.bold, C.white)
+  textC(p, 'palm', cx + 42, cy + 26, 6.5, f.reg, C.grayLight)
+  textC(p, '4–6 oz', cx + 42, cy + 15, 7, f.bold, C.gold)
+  textC(p, 'CARBS', cx + 42, cy - 20, 7.5, f.bold, C.white)
+  textC(p, 'handful', cx + 42, cy - 30, 6.5, f.reg, C.grayLight)
+  textC(p, '3–4 oz', cx + 42, cy - 41, 7, f.bold, C.gold)
+  textC(p, 'plus a thumb of fat (about ½ oz) for cooking', cx, cy - R - 22, 8, f.reg, C.grayLight)
 
   // ---- The 4 parts (right) — hand example + ounces underneath ----
   const parts = [
