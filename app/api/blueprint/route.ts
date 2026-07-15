@@ -101,6 +101,31 @@ export async function POST(request: NextRequest) {
       source: 'blueprint',
     })
 
+    // Full lead record (every input + every computed number) so the coach can see
+    // each client's complete blueprint in the admin. Non-blocking — never breaks the funnel.
+    try {
+      const sw = bp.current.workout.macros
+      await svc.from('events').insert({
+        event_type: 'blueprint_lead',
+        source: 'blueprint',
+        metadata: {
+          name: name || '', email, phone: phone || '',
+          age: Number(age), sex: (sex || 'female'),
+          height_in: Number(height_in), weight_lbs: Number(weight_lbs),
+          goal_weight_lbs: goal_weight_lbs ? Number(goal_weight_lbs) : null,
+          goal, activity,
+          workout_days: workoutDaysN, workout_length: workout_length || '45_60_both', cardio: !!cardio,
+          bmr: bp.bmr, rest_maintenance: bp.restMaintenance, workout_maintenance: bp.workoutMaintenance,
+          protein_g: bp.protein_g, carbs_g: sw.carbs_g, fats_g: sw.fats_g, split: bp.splitLabel,
+          steady_workout: bp.current.workout.eat, steady_rest: bp.current.rest.eat,
+          faster_workout: bp.aggressive.workout.eat, faster_rest: bp.aggressive.rest.eat,
+          est_weekly_change_lbs: bp.current.estWeeklyChangeLbs,
+        },
+      })
+    } catch (e) {
+      console.error('Blueprint lead event failed:', e)
+    }
+
     return NextResponse.json({
       success: true,
       filename,
