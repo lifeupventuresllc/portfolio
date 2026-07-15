@@ -5,7 +5,7 @@
 // Where Your Calories Come From (by activity level) → Off Days → What's Next.
 // Letter (612x792), bottom-left origin.
 // ============================================================
-import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage, RGB } from 'pdf-lib'
+import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage, RGB, PDFString, PDFName } from 'pdf-lib'
 import type { Blueprint, Plan, PlanDay, Activity } from './nutrition'
 
 // ---- Palette ----
@@ -75,10 +75,24 @@ function wrapL(p: PDFPage, text: string, x: number, y: number, size: number, f: 
 }
 
 // Big, bold, tablet-style page headline. Returns the y where the subtitle should go.
-function headline(p: PDFPage, f: Fonts, title: string, subtitle: string) {
-  textL(p, title, 36, H - 116, 30, f.bold, C.white)
+function headline(p: PDFPage, f: Fonts, title: string, subtitle: string, titleSize = 30) {
+  textL(p, title, 36, H - 116, titleSize, f.bold, C.white)
   textL(p, subtitle, 36, H - 138, 9, f.reg, C.grayLight)
 }
+
+// Make a rectangle a clickable hyperlink (URI action) over already-drawn content.
+function linkRect(doc: PDFDocument, p: PDFPage, x: number, y: number, w: number, h: number, url: string) {
+  const annot = doc.context.obj({
+    Type: 'Annot', Subtype: 'Link', Rect: [x, y, x + w, y + h], Border: [0, 0, 0],
+    A: doc.context.obj({ Type: 'Action', S: 'URI', URI: PDFString.of(url) }),
+  })
+  const ref = doc.context.register(annot)
+  const existing = p.node.Annots()
+  if (existing) existing.push(ref)
+  else p.node.set(PDFName.of('Annots'), doc.context.obj([ref]))
+}
+
+const CHALLENGE_URL = 'https://www.asaluke.io/challenge'
 
 function pageBase(doc: PDFDocument, fonts: Fonts, sectionColor: RGB, clientName: string, sectionName: string, pageNum: number): PDFPage {
   const p = doc.addPage([W, H])
@@ -281,7 +295,8 @@ function workoutRestPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
 function buildPlatePage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   const p = pageBase(doc, f, C.purple, bp.inputs.name || 'Your', 'Build Your Plate', 4)
   pill(p, 'EVERY MEAL', 36, H - 70, 9, f.bold, C.purple)
-  headline(p, f, 'How To Build Your Plate', 'Don’t have a food scale? No problem — use your hand, or the ounces if you’ve got one.')
+  headline(p, f, 'How To Build Your Plate', '')
+  textL(p, 'Don’t have a food scale? No problem — use your hand, or the ounces if you’ve got one.', 36, H - 138, 9, f.bold, C.gold)
 
   const boxTop = H - 162
   card(p, 36, boxTop - 56, W - 72, 56, C.goldFill, C.protein, 1.8)
@@ -334,22 +349,23 @@ function buildPlatePage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   const palms = Math.max(1, Math.round(wm.protein_g / 30))
   const handfuls = Math.max(1, Math.round(wm.carbs_g / 30))
   const thumbs = Math.max(1, Math.round(wm.fats_g / 12))
-  const pyTop = H - 560, ph = 92
+  const pyTop = H - 556, ph = 108
   card(p, 36, pyTop - ph, W - 72, ph, C.card, C.gold, 1.8)
   textL(p, 'YOUR DAY, IN PORTIONS', 52, pyTop - 24, 10, f.bold, C.gold)
   textL(p, bp.workoutDays === 0
     ? 'Your whole day in hand portions — spread across 3 meals + a snack. Same every day.'
     : 'A full workout day in hand portions — spread across 3 meals + a snack. Rest days: about 1 fewer handful of carbs.', 52, pyTop - 40, 8.5, f.reg, C.grayLight)
-  const cols3: [number, string, string, RGB][] = [
-    [palms, palms === 1 ? 'palm' : 'palms', 'PROTEIN', C.protein],
-    [handfuls, handfuls === 1 ? 'handful' : 'handfuls', 'CARBS', C.carbs],
-    [thumbs, thumbs === 1 ? 'thumb' : 'thumbs', 'FAT', C.fat],
+  const cols3: [number, string, string, string, RGB][] = [
+    [palms, palms === 1 ? 'palm' : 'palms', '4–6 oz each', 'PROTEIN', C.protein],
+    [handfuls, handfuls === 1 ? 'handful' : 'handfuls', '3–4 oz each', 'CARBS', C.carbs],
+    [thumbs, thumbs === 1 ? 'thumb' : 'thumbs', '½ oz each', 'FAT', C.fat],
   ]
   const seg3 = (W - 72) / 3
-  cols3.forEach(([n, unit, mac, c], i) => {
+  cols3.forEach(([n, unit, oz, mac, c], i) => {
     const cxp = 36 + seg3 * i + seg3 / 2
-    textC(p, `${n} ${unit}`, cxp, pyTop - 68, 16, f.bold, c)
-    textC(p, mac, cxp, pyTop - 82, 7.5, f.reg, C.gray)
+    textC(p, `${n} ${unit}`, cxp, pyTop - 66, 16, f.bold, c)
+    textC(p, oz, cxp, pyTop - 82, 8.5, f.bold, C.gold)
+    textC(p, mac, cxp, pyTop - 94, 7.5, f.reg, C.gray)
   })
 }
 
@@ -359,7 +375,7 @@ function activityCaloriePage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   const act = ACTIVITY[bp.inputs.activity]
   const noWorkout = bp.workoutDays === 0
   pill(p, 'YOUR ACTIVITY', 36, H - 70, 9, f.bold, C.carbs)
-  headline(p, f, 'Where Your Calories Come From', 'Your daily number is built around how much you move — your activity level.')
+  headline(p, f, 'Where Do Your Calories Come From?', 'Your daily number is built around how much you move — your activity level.', 27)
 
   // Activity level highlight
   const aTop = H - 156
@@ -424,7 +440,7 @@ function offDaysPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
 
   const opts: { c: RGB; t: string; d: string; big?: string; small?: string }[] = [
     { c: C.green, t: 'Keep It Easy', d: 'Eat a normal day with your usual foods — right around your maintenance. Don’t stress the number.', big: maint, small: 'cal — maintenance' },
-    { c: C.gold, t: 'Eat Freely', d: `Eat whatever foods you enjoy — just keep it at or below your maintenance (${maint} cal), and stop when you’re satisfied, not stuffed.` },
+    { c: C.gold, t: 'Eat Freely', d: 'Eat whatever foods you enjoy — keep it at or below your maintenance, and stop when you’re satisfied, not stuffed.', big: maint, small: 'cal or less' },
     { c: C.purple, t: 'Carb Refuel — once a month', d: 'A day of extra carbs to refill your energy and keep your body from stalling. Load up on rice, oats, potatoes + fruit.', big: `${refuelCarbs}g`, small: 'carbs to refuel' },
   ]
   let y = H - 168
@@ -445,15 +461,15 @@ function offDaysPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
     y -= ch + 12
   })
 
-  // ---- Monthly schedule (restored): the easy month-long rhythm ----
+  // ---- Monthly schedule: the rhythm that lasts (built for long-term results) ----
   textL(p, 'YOUR MONTH AT A GLANCE', 36, y - 6, 9.5, f.bold, C.pink)
-  textL(p, 'Keep it simple most days — here’s the easy monthly rhythm to follow.', 36, y - 20, 8.5, f.reg, C.grayLight)
+  textL(p, 'The rhythm that lasts — mostly steady, with a free day and a monthly reset so you never burn out.', 36, y - 20, 8.5, f.reg, C.grayLight)
   const wkTop = y - 30, wkH = 66
   const weeks = [
-    { t: 'Week 1', s: 'Eat Freely', sub: 'on your off-days', c: C.gold },
-    { t: 'Week 2', s: 'Eat Freely', sub: 'on your off-days', c: C.gold },
-    { t: 'Week 3', s: 'Eat Freely', sub: 'on your off-days', c: C.gold },
-    { t: 'Week 4', s: 'Carb Refuel', sub: 'one day, then repeat', c: C.purple },
+    { t: 'Week 1', s: 'Keep It Easy', sub: 'off-days at maintenance', c: C.green },
+    { t: 'Week 2', s: 'Keep It Easy', sub: 'off-days at maintenance', c: C.green },
+    { t: 'Week 3', s: 'Eat Freely', sub: 'one relaxed day', c: C.gold },
+    { t: 'Week 4', s: 'Carb Refuel', sub: 'reset, then repeat', c: C.purple },
   ]
   const wkW = (W - 72 - 3 * 10) / 4
   weeks.forEach((wk, i) => {
@@ -466,8 +482,8 @@ function offDaysPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   })
 
   noteBox(p, 36, wkTop - wkH - 14 - 34, W - 72, 34, C.pink, [
-    'Keep It Easy any day you just want simple. Eat Freely on off-days for three weeks,',
-    'then one Carb Refuel day in week four — and start the rhythm over.',
+    'Why this works long-term: staying near maintenance on off-days keeps your results coming,',
+    'the free day keeps you sane, and the monthly refuel resets you. Then start the rhythm over.',
   ], f.reg)
 }
 
@@ -477,15 +493,22 @@ function nextStepPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   pill(p, "WHAT'S NEXT", 36, H - 70, 9, f.bold, C.orange)
   headline(p, f, 'What To Expect', 'Stay consistent and here’s how it tends to go.')
 
+  // ---- Top offer bar (seamless, clickable) ----
+  card(p, 36, H - 190, W - 72, 36, C.goldFill, C.gold, 1.6)
+  textL(p, 'Need personal training?', 52, H - 174, 10.5, f.bold, C.white)
+  textR(p, 'Join the 6-Week Challenge  »', W - 52, H - 174, 10.5, f.bold, C.gold)
+  linkRect(doc, p, 36, H - 190, W - 72, 36, CHALLENGE_URL)
+
   const mw = (W - 72 - 42) / 4
+  const tlY = H - 296 // timeline card bottom
   bp.timeline.forEach((m, i) => {
     const x = 36 + i * (mw + 14)
     const c = SECTION_COLORS[i % SECTION_COLORS.length]
-    card(p, x, H - 258, mw, 88, C.card, c, 1.5)
-    p.drawRectangle({ x, y: H - 258 + 85, width: mw, height: 3, color: c })
-    textC(p, m.label, x + mw / 2, H - 196, 9, f.bold, c)
-    textC(p, m.lbs, x + mw / 2, H - 218, 11, f.bold, C.white)
-    const words = m.desc.split(' '); let line = ''; let ly = H - 234
+    card(p, x, tlY, mw, 84, C.card, c, 1.5)
+    p.drawRectangle({ x, y: tlY + 81, width: mw, height: 3, color: c })
+    textC(p, m.label, x + mw / 2, tlY + 60, 9, f.bold, c)
+    textC(p, m.lbs, x + mw / 2, tlY + 38, 11, f.bold, C.white)
+    const words = m.desc.split(' '); let line = ''; let ly = tlY + 22
     words.forEach((wd) => {
       if (f.reg.widthOfTextAtSize(line + wd, 7) > mw - 14) { textC(p, line, x + mw / 2, ly, 7, f.reg, C.grayLight); line = wd + ' '; ly -= 10 }
       else line += wd + ' '
@@ -493,13 +516,17 @@ function nextStepPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
     textC(p, line, x + mw / 2, ly, 7, f.reg, C.grayLight)
   })
 
-  // Big CTA
-  card(p, 36, H - 428, W - 72, 120, C.goldFill, C.orange, 1.8)
-  textC(p, 'Your numbers are step one.', W / 2, H - 340, 15, f.bold, C.white)
-  textC(p, 'Inside the 6-Week Challenge I build them into done-for-you meals + workouts,', W / 2, H - 364, 9.5, f.reg, C.grayLight)
-  textC(p, 'and I check in with you every single week so you actually follow through.', W / 2, H - 380, 9.5, f.reg, C.grayLight)
-  card(p, W / 2 - 105, H - 418, 210, 30, C.gold)
-  textC(p, 'Start today  •  asaluke.io', W / 2, H - 409, 11, f.bold, C.bg)
+  // ---- Big bottom offer (bolder + clickable) — the six-week program ----
+  const cy = H - 470 // card bottom
+  card(p, 36, cy, W - 72, 132, C.goldFill, C.orange, 2)
+  textC(p, 'Need personal training?', W / 2, cy + 106, 16, f.bold, C.gold)
+  textC(p, 'Your numbers are step one — inside the 6-Week Challenge I build them into', W / 2, cy + 84, 9.5, f.reg, C.grayLight)
+  textC(p, 'done-for-you meals + workouts, and I check in with you every single week.', W / 2, cy + 68, 9.5, f.reg, C.grayLight)
+  const bW = 260, bX = W / 2 - bW / 2, bY = cy + 16, bH = 36
+  card(p, bX, bY, bW, bH, C.gold)
+  textC(p, 'Join the 6-Week Challenge  »', W / 2, bY + 12, 11.5, f.bold, C.bg)
+  linkRect(doc, p, bX, bY, bW, bH, CHALLENGE_URL)
+  linkRect(doc, p, 36, cy, W - 72, 132, CHALLENGE_URL)
 }
 
 export async function generateBlueprintPDF(bp: Blueprint): Promise<Uint8Array> {
