@@ -217,9 +217,11 @@ function coverPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
     iy -= 30
   })
 
-  card(p, startX, 70, totalW, 46, C.goldFill, C.green, 1.5)
-  textC(p, 'This is step one — knowing your numbers.', W / 2, 96, 10, f.bold, C.white)
-  textC(p, 'Inside the challenge, I turn them into your meals and check in weekly. — Coach Asa', W / 2, 80, 8.5, f.reg, C.grayLight)
+  // ---- The offer (clickable) ----
+  card(p, startX, 70, totalW, 46, C.goldFill, C.gold, 1.5)
+  textC(p, 'Need personal training?', W / 2, 96, 11, f.bold, C.white)
+  textC(p, 'Join the 6-Week Challenge — done-for-you meals + weekly check-ins  »', W / 2, 80, 9, f.bold, C.gold)
+  linkRect(doc, p, startX, 70, totalW, 46, CHALLENGE_URL)
 
   textC(p, `© ${new Date().getFullYear()} Life Up Fitness  •  Coach Asa  •  asaluke.io`, W / 2, 34, 7, f.reg, C.gray)
 }
@@ -231,15 +233,9 @@ function howMuchPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   pill(p, 'START HERE', 36, H - 70, 9, f.bold, C.green)
   headline(p, f, 'How Much To Eat', `Two ways to run it, ${firstName(bp)}. Start with Steady — Faster is only if you want it.`)
 
-  // ---- Seamless top offer (subtle, clickable) ----
-  card(p, 36, H - 167, W - 72, 22, C.goldFill, C.gold, 0.75)
-  textL(p, 'Need personal training?', 48, H - 160, 8.5, f.reg, C.gold)
-  textR(p, 'Join the 6-Week Challenge  »', W - 48, H - 160, 8.5, f.bold, C.gold)
-  linkRect(doc, p, 36, H - 167, W - 72, 22, CHALLENGE_URL)
-
   const dir = bp.inputs.goal === 'gain' ? 'up' : 'down'
   const halfW = (W - 72 - 14) / 2
-  const top = H - 196, h = 132
+  const top = H - 162, h = 132
   planCard(p, f, 36, top, halfW, h, 'STEADY', 'start here', C.green, bp.current, dir, noWorkout)
   planCard(p, f, 36 + halfW + 14, top, halfW, h, 'FASTER', 'optional', C.pink, bp.aggressive, dir, noWorkout)
 
