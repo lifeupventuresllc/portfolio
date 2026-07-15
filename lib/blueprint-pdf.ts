@@ -291,6 +291,27 @@ function buildPlatePage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
     'Half your plate veggies, a palm of protein, a handful of carbs, a thumb of fat.',
     'Use your hand or the ounces — do this every meal and your numbers take care of themselves.',
   ], f.reg)
+
+  // ---- Personalized: THIS person's macros translated into hand portions ----
+  const wm = bp.current.workout.macros
+  const palms = Math.max(1, Math.round(wm.protein_g / 30))
+  const handfuls = Math.max(1, Math.round(wm.carbs_g / 30))
+  const thumbs = Math.max(1, Math.round(wm.fats_g / 12))
+  const pyTop = H - 560, ph = 92
+  card(p, 36, pyTop - ph, W - 72, ph, C.card, C.gold, 1.8)
+  textL(p, 'YOUR DAY, IN PORTIONS', 52, pyTop - 24, 10, f.bold, C.gold)
+  textL(p, 'A full training day in hand portions — spread across 3 meals + a snack. Rest days: about 1 fewer handful of carbs.', 52, pyTop - 40, 8.5, f.reg, C.grayLight)
+  const cols3: [number, string, string, RGB][] = [
+    [palms, palms === 1 ? 'palm' : 'palms', 'PROTEIN', C.protein],
+    [handfuls, handfuls === 1 ? 'handful' : 'handfuls', 'CARBS', C.carbs],
+    [thumbs, thumbs === 1 ? 'thumb' : 'thumbs', 'FAT', C.fat],
+  ]
+  const seg3 = (W - 72) / 3
+  cols3.forEach(([n, unit, mac, c], i) => {
+    const cxp = 36 + seg3 * i + seg3 / 2
+    textC(p, `${n} ${unit}`, cxp, pyTop - 68, 16, f.bold, c)
+    textC(p, mac, cxp, pyTop - 82, 7.5, f.reg, C.gray)
+  })
 }
 
 // ---- PAGE 5: WHERE YOUR CALORIES COME FROM (by activity level) ----
