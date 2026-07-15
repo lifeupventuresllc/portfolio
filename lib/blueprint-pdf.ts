@@ -349,6 +349,15 @@ function buildPlatePage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   textC(p, 'CARBS', cx + 42, cy - 20, 7.5, f.bold, C.white)
   textC(p, 'handful', cx + 42, cy - 30, 6.5, f.reg, C.grayLight)
   textC(p, '3–4 oz', cx + 42, cy - 41, 7, f.bold, C.gold)
+  // fork (left) + knife (right) flanking the plate, like a place setting
+  const fx = cx - R - 22
+  p.drawRectangle({ x: fx - 1.6, y: cy - 40, width: 3.2, height: 44, color: steel })      // fork handle
+  p.drawRectangle({ x: fx - 6, y: cy + 2, width: 12, height: 3.5, color: steel })          // tine base
+  ;[-6, -2, 2, 6].forEach((dx) => p.drawLine({ start: { x: fx + dx, y: cy + 6 }, end: { x: fx + dx, y: cy + 30 }, thickness: 2, color: steel }))
+  const kx = cx + R + 22
+  p.drawRectangle({ x: kx - 1.6, y: cy - 40, width: 3.2, height: 40, color: steel })       // knife handle
+  p.drawRectangle({ x: kx - 2.6, y: cy, width: 5.2, height: 26, color: steel })            // blade body
+  p.drawSvgPath('M 0 0 L 5.2 0 L 2.6 -9 Z', { x: kx - 2.6, y: cy + 26, color: steel })     // blade tip
   textC(p, 'plus a thumb of fat (about ½ oz) for cooking', cx, cy - R - 22, 8, f.reg, C.grayLight)
 
   // ---- The 4 parts (right) — hand example + ounces underneath ----

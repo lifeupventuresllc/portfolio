@@ -223,6 +223,12 @@ export default function BlueprintPage() {
       ) : (
         <section className="pb-24 px-4">
           <div className="max-w-lg mx-auto">
+            {/* Top offer — seamless, clickable (matches the PDF) */}
+            <a href="/challenge"
+              className="flex items-center justify-between gap-3 bg-gold/5 border border-gold/40 rounded-2xl px-4 py-3 mb-4 transition-colors hover:bg-gold/10 hover:border-gold/70">
+              <span className="text-gold/80 text-sm">Need personal training?</span>
+              <span className="text-gold text-sm font-bold whitespace-nowrap">Join the 6-Week Challenge →</span>
+            </a>
             <div className="bg-charcoal border-2 border-gold/40 rounded-3xl p-8 text-center">
               <p className="text-green-400 text-sm font-semibold mb-1">✓ Your blueprint downloaded</p>
               <p className="text-ivory/50 text-xs mb-1">📩 I also emailed a copy to {form.email}</p>
