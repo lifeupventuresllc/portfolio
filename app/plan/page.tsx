@@ -95,6 +95,18 @@ export default async function PlanDashboard() {
 
   return shell(
     <div className="space-y-8">
+      {/* Today — the daily view: today's food log + today's meals + today's workout */}
+      <Link href="/plan/today" className="group block bg-gradient-to-br from-gold/20 to-charcoal border border-gold/40 rounded-2xl p-5 hover:border-gold/70 hover:-translate-y-0.5 transition-all">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-0.5">Your day, front and center</p>
+            <p className="text-white font-bold text-base">Open Today ☀️</p>
+            <p className="text-ivory/50 text-xs mt-0.5">Log what you eat, see today&apos;s meals + workout in one place</p>
+          </div>
+          <span className="shrink-0 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl group-hover:scale-[1.03] transition-transform">Go →</span>
+        </div>
+      </Link>
+
       {/* Daily accountability + live call — the "I'm with you" touchpoints */}
       <section className="grid sm:grid-cols-2 gap-3">
         <DailyCheckin />
