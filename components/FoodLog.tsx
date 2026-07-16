@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Ring from '@/components/Ring'
+import VoiceButton from '@/components/VoiceButton'
+
+type SearchFood = {
+  name: string; brand: string | null; servings: number; serving_label: string | null
+  calories: number; protein_g: number; carbs_g: number; fats_g: number; source: 'nutritionix' | 'estimated'; photo?: string | null
+}
 
 type Entry = {
   id: string; meal: string; name: string; brand: string | null
@@ -41,6 +47,45 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
   const [pop, setPop] = useState(false)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ name: '', meal: 'breakfast', servings: '1', calories: '', protein_g: '', carbs_g: '', fats_g: '' })
+  // Accurate food search (Nutritionix) + voice + AI-estimate fallback
+  const [q, setQ] = useState('')
+  const [searchMeal, setSearchMeal] = useState('breakfast')
+  const [results, setResults] = useState<SearchFood[]>([])
+  const [searching, setSearching] = useState(false)
+  const [searched, setSearched] = useState(false)
+  const [notConfigured, setNotConfigured] = useState(false)
+  const [manual, setManual] = useState(false)
+
+  async function runSearch(query: string) {
+    const text = query.trim()
+    if (!text) return
+    setSearching(true); setSearched(true); setResults([])
+    try {
+      const r = await fetch('/api/plan/food-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: text }) })
+      const d = await r.json()
+      if (d.configured === false) { setNotConfigured(true); setResults([]) }
+      else { setNotConfigured(false); setResults(d.foods || []) }
+    } finally { setSearching(false) }
+  }
+
+  async function aiEstimate() {
+    const text = q.trim()
+    if (!text) return
+    setSearching(true)
+    try {
+      const r = await fetch('/api/plan/food-estimate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description: text }) })
+      const d = await r.json()
+      setResults((prev) => [...prev, ...(d.foods || [])])
+    } finally { setSearching(false) }
+  }
+
+  async function logSearchFood(f: SearchFood) {
+    await post({
+      name: f.brand ? `${f.name} (${f.brand})` : f.name, meal: searchMeal, servings: f.servings,
+      serving_label: f.serving_label, calories: f.calories, protein_g: f.protein_g, carbs_g: f.carbs_g, fats_g: f.fats_g,
+      source: f.source,
+    })
+  }
 
   useEffect(() => {
     fetch('/api/plan/food-log').then((r) => r.json()).then((d) => { setData(d); setLoading(false) }).catch(() => setLoading(false))
@@ -146,26 +191,69 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
         </div>
       )}
 
-      {/* Manual add form */}
+      {/* Search (accurate DB) + voice + AI fallback + manual */}
       {open && (
-        <form onSubmit={addManual} className="bg-obsidian/60 border border-smoke rounded-xl p-3 mb-4 space-y-2.5">
-          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="What did you eat? (e.g. Chipotle bowl)" autoFocus className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
-          <div className="grid grid-cols-2 gap-2">
-            <select value={form.meal} onChange={(e) => setForm({ ...form, meal: e.target.value })} className="bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm focus:border-gold/60 outline-none">
+        <div className="bg-obsidian/60 border border-smoke rounded-xl p-3 mb-4 space-y-3">
+          {/* Meal + search bar with mic */}
+          <div className="flex gap-2">
+            <select value={searchMeal} onChange={(e) => setSearchMeal(e.target.value)} className="bg-charcoal border border-smoke rounded-lg px-2 py-2 text-white text-xs focus:border-gold/60 outline-none">
               {MEALS.map((m) => <option key={m} value={m}>{MEAL_LABEL[m]}</option>)}
             </select>
-            <input value={form.servings} onChange={(e) => setForm({ ...form, servings: e.target.value })} inputMode="decimal" placeholder="Servings" className="bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+            <form onSubmit={(e) => { e.preventDefault(); runSearch(q) }} className="flex-1 flex gap-2">
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a food, or say it 🎤" autoFocus className="flex-1 min-w-0 bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+              <VoiceButton onInterim={(t) => setQ(t)} onResult={(t) => { setQ(t); runSearch(t) }} />
+              <button type="submit" disabled={searching || !q.trim()} className="shrink-0 bg-gold text-obsidian px-3 rounded-lg font-bold text-xs uppercase disabled:opacity-50">{searching ? '…' : 'Go'}</button>
+            </form>
           </div>
-          <div className="grid grid-cols-4 gap-2">
-            {([['calories', 'Cal'], ['protein_g', 'Protein'], ['carbs_g', 'Carbs'], ['fats_g', 'Fats']] as const).map(([k, lbl]) => (
-              <div key={k}>
-                <label className="text-ivory/40 text-[9px] uppercase tracking-wider block mb-1">{lbl}</label>
-                <input value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} inputMode="numeric" placeholder="0" className="w-full bg-charcoal border border-smoke rounded-lg px-2 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+
+          {/* Results — verified DB facts (green) vs AI estimate (amber) */}
+          {results.length > 0 && (
+            <div className="space-y-1.5 max-h-72 overflow-y-auto">
+              {results.map((f, i) => (
+                <button key={i} onClick={() => logSearchFood(f)} disabled={saving} className="w-full text-left flex items-center gap-2 bg-charcoal border border-smoke rounded-lg px-3 py-2 hover:border-gold/50 transition-colors disabled:opacity-50">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-xs font-medium truncate">{f.name}{f.brand ? <span className="text-ivory/40"> · {f.brand}</span> : null}</p>
+                    <p className="text-ivory/40 text-[10px]">{f.servings}{f.serving_label ? ` ${f.serving_label}` : ''} · {f.calories} cal · {f.protein_g}P · {f.carbs_g}C · {f.fats_g}F</p>
+                  </div>
+                  <span className={`shrink-0 text-[8px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${f.source === 'nutritionix' ? 'bg-green-500/15 text-green-400' : 'bg-amber-500/15 text-amber-400'}`}>{f.source === 'nutritionix' ? '✓ verified' : '~ estimate'}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Empty state → offer AI estimate (clearly labeled) */}
+          {searched && !searching && results.length === 0 && !notConfigured && (
+            <div className="text-center py-1">
+              <p className="text-ivory/40 text-xs mb-2">Not in the database. Want an AI estimate?</p>
+              <button onClick={aiEstimate} className="bg-amber-500/15 text-amber-300 px-4 py-2 rounded-lg text-xs font-semibold hover:bg-amber-500/25 transition-colors">✨ Estimate with AI</button>
+              <p className="text-ivory/25 text-[10px] mt-1.5">Estimates are approximate — verified foods are always more accurate.</p>
+            </div>
+          )}
+          {notConfigured && <p className="text-ivory/30 text-[11px] text-center py-1">Food search comes online once the database is connected. Enter macros manually below for now.</p>}
+
+          {/* Manual entry (fallback / custom foods) */}
+          <button onClick={() => setManual((m) => !m)} className="text-ivory/40 text-[11px] hover:text-gold underline">{manual ? 'Hide manual entry' : 'Enter a food manually'}</button>
+          {manual && (
+            <form onSubmit={addManual} className="space-y-2.5 pt-1">
+              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Food name" className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+              <div className="grid grid-cols-2 gap-2">
+                <select value={form.meal} onChange={(e) => setForm({ ...form, meal: e.target.value })} className="bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm focus:border-gold/60 outline-none">
+                  {MEALS.map((m) => <option key={m} value={m}>{MEAL_LABEL[m]}</option>)}
+                </select>
+                <input value={form.servings} onChange={(e) => setForm({ ...form, servings: e.target.value })} inputMode="decimal" placeholder="Servings" className="bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
               </div>
-            ))}
-          </div>
-          <button type="submit" disabled={saving || !form.name.trim()} className="w-full bg-gold text-obsidian py-2.5 font-bold text-xs uppercase tracking-wider rounded-lg disabled:opacity-50">{saving ? 'Saving…' : 'Add to today'}</button>
-        </form>
+              <div className="grid grid-cols-4 gap-2">
+                {([['calories', 'Cal'], ['protein_g', 'Protein'], ['carbs_g', 'Carbs'], ['fats_g', 'Fats']] as const).map(([k, lbl]) => (
+                  <div key={k}>
+                    <label className="text-ivory/40 text-[9px] uppercase tracking-wider block mb-1">{lbl}</label>
+                    <input value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} inputMode="numeric" placeholder="0" className="w-full bg-charcoal border border-smoke rounded-lg px-2 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+                  </div>
+                ))}
+              </div>
+              <button type="submit" disabled={saving || !form.name.trim()} className="w-full bg-gold text-obsidian py-2.5 font-bold text-xs uppercase tracking-wider rounded-lg disabled:opacity-50">{saving ? 'Saving…' : 'Add to today'}</button>
+            </form>
+          )}
+        </div>
       )}
 
       {/* Logged entries, grouped by meal */}
