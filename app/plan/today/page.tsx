@@ -65,8 +65,9 @@ export default async function TodayView() {
         <h1 className="text-3xl font-bold text-white mb-6">Today, {firstName}</h1>
 
         <div className="space-y-6">
-          {/* Food log — the heartbeat of the daily view */}
-          <FoodLog planned={planned} />
+          {/* Food log — the heartbeat of the daily view. Budget = TODAY'S calorie target
+              (workout days higher, rest days lower); the app already knows which day this is. */}
+          <FoodLog planned={planned} budget={todayMeals?.target ?? null} dayType={todayMeals?.dayType ?? null} />
 
           {/* Today's planned meals */}
           <section>

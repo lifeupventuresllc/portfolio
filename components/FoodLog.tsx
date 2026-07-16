@@ -34,7 +34,7 @@ function MacroBar({ label, val, target, color }: { label: string; val: number; t
   )
 }
 
-export default function FoodLog({ planned = [] }: { planned?: PlannedItem[] }) {
+export default function FoodLog({ planned = [], budget = null, dayType = null }: { planned?: PlannedItem[]; budget?: number | null; dayType?: 'workout' | 'rest' | null }) {
   const [data, setData] = useState<Payload | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -88,27 +88,36 @@ export default function FoodLog({ planned = [] }: { planned?: PlannedItem[] }) {
 
   const t = data?.totals || { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 }
   const tar = data?.target || { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 }
-  const calPct = tar.calories > 0 ? Math.round((t.calories / tar.calories) * 100) : 0
-  const remaining = tar.calories - t.calories
+  // Calories are money 💵 — TODAY'S budget = today's calorie target (workout day higher, rest day lower).
+  const calBudget = budget != null && budget > 0 ? budget : tar.calories
+  const calPct = calBudget > 0 ? Math.round((t.calories / calBudget) * 100) : 0
+  const remaining = calBudget - t.calories
   const calOver = remaining < 0
 
   return (
     <div className="bg-charcoal border border-gold/30 rounded-2xl p-5">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-1">
         <div>
-          <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-0.5">Food log · today</p>
-          <p className="text-white font-semibold text-sm">What you actually ate</p>
+          <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-0.5">Today&apos;s budget 💵</p>
+          <p className="text-white font-semibold text-sm">Calories are your money — spend them well</p>
         </div>
         <button onClick={() => setOpen((o) => !o)} className="bg-gold text-obsidian px-3.5 py-2 font-bold text-[11px] uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform">{open ? 'Close' : '+ Log food'}</button>
       </div>
+      {dayType && (
+        <p className="text-ivory/45 text-[11px] mb-4">
+          <span className={`inline-block px-2 py-0.5 rounded-full font-semibold ${dayType === 'workout' ? 'bg-gold/15 text-gold' : 'bg-white/8 text-ivory/60'}`}>{dayType === 'workout' ? '💪🏽 Workout day' : '🌿 Rest day'}</span>
+          <span className="ml-2">bigger budget on training days, leaner on rest.</span>
+        </p>
+      )}
 
-      {/* Calories ring + macro bars vs target */}
+      {/* Money ring (calories = dollars) + macro bars vs target */}
       <div className="flex items-center gap-5 mb-4">
         <div className={pop ? 'luf-pop' : ''}>
-          <Ring pct={calPct} size={96} stroke={9} color={calOver ? '#f59e0b' : '#c9a84c'}>
+          <Ring pct={calPct} size={104} stroke={9} color={calOver ? '#f59e0b' : '#c9a84c'}>
             <div className="text-center leading-none">
-              <p className="text-white font-bold text-lg">{t.calories}</p>
-              <p className="text-ivory/40 text-[9px] uppercase tracking-wider mt-0.5">of {tar.calories}</p>
+              <p className="text-ivory/40 text-[8px] uppercase tracking-wider mb-0.5">{calOver ? 'over' : 'left'}</p>
+              <p className={`font-bold text-xl ${calOver ? 'text-amber-400' : 'text-gold'}`}>{calOver ? '-' : ''}${Math.abs(remaining)}</p>
+              <p className="text-ivory/40 text-[9px] tracking-wider mt-0.5">of ${calBudget}</p>
             </div>
           </Ring>
         </div>
@@ -119,7 +128,7 @@ export default function FoodLog({ planned = [] }: { planned?: PlannedItem[] }) {
         </div>
       </div>
       <p className={`text-xs text-center mb-4 ${calOver ? 'text-amber-400 font-semibold' : 'text-ivory/50'}`}>
-        {loading ? 'Loading your day…' : calOver ? `${Math.abs(remaining)} cal over — no guilt, just data. Tomorrow's a fresh page.` : `${remaining} cal left today${t.calories === 0 ? ' — log your first meal below 👇' : ''}`}
+        {loading ? 'Loading your day…' : calOver ? `$${Math.abs(remaining)} over budget — no guilt, fresh budget tomorrow.` : `Spent $${t.calories} · $${remaining} left${t.calories === 0 ? ' — log your first meal below 👇' : ''}`}
       </p>
 
       {/* One-tap: log a meal straight from today's plan */}
