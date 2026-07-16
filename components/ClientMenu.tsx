@@ -1,0 +1,105 @@
+'use client'
+
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+
+// The ☰ menu on the client home dashboard — keeps the home screen simple while
+// everything deeper lives one tap away: profile, meals + how-to, cookbook,
+// live calls, progress, previous weeks, community + extras.
+
+type Item = { href: string; label: string; icon: string; external?: boolean }
+
+export default function ClientMenu({ firstName, liveUrl, innerCircle }: { firstName: string; liveUrl?: string; innerCircle?: boolean }) {
+  const [open, setOpen] = useState(false)
+
+  // Lock body scroll while the drawer is open
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
+  const sections: { title: string; items: Item[] }[] = [
+    {
+      title: 'Today & Plan',
+      items: [
+        { href: '/plan/today', label: 'Today', icon: '☀️' },
+        { href: '/plan/meals', label: 'My meals — what I’m cooking & how', icon: '🍽️' },
+        { href: '/plan/library', label: 'The Cookbook', icon: '📖' },
+        { href: '/plan/workout', label: 'Today’s workout', icon: '💪🏽' },
+      ],
+    },
+    {
+      title: 'Progress',
+      items: [
+        { href: '/plan/checkin', label: 'My progress & previous weeks', icon: '📈' },
+        { href: '/plan/achievements', label: 'My badges', icon: '🏅' },
+      ],
+    },
+    {
+      title: 'With Coach Asa',
+      items: [
+        liveUrl
+          ? { href: liveUrl, label: 'Live video call with Coach Asa', icon: '📹', external: true }
+          : { href: innerCircle ? '/book' : '/plan/checkin', label: innerCircle ? 'Book my 1:1 call' : 'Live with Coach Asa', icon: '📹' },
+        { href: '/plan/community', label: 'The Curve Collective', icon: '💛' },
+      ],
+    },
+    {
+      title: 'Extras',
+      items: [
+        { href: '/plan/jumpstart', label: '7-Day Jump Start', icon: '⚡' },
+        { href: '/plan/reset', label: '21-Day Habit Reset', icon: '🔁' },
+        { href: '/plan/intake', label: 'My profile & stats', icon: '👤' },
+      ],
+    },
+  ]
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        aria-label="Open menu"
+        className="h-10 w-10 rounded-xl bg-charcoal border border-smoke flex flex-col items-center justify-center gap-[5px] hover:border-gold/60 transition-colors"
+      >
+        <span className="block h-0.5 w-5 bg-ivory/80 rounded-full" />
+        <span className="block h-0.5 w-5 bg-ivory/80 rounded-full" />
+        <span className="block h-0.5 w-5 bg-ivory/80 rounded-full" />
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-0 h-full w-[85%] max-w-xs bg-obsidian border-l border-smoke overflow-y-auto luf-page">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-smoke">
+              <div>
+                <p className="text-gold text-[10px] uppercase tracking-[0.25em] font-semibold">Life-Up Fitness</p>
+                <p className="text-white font-bold">Hey {firstName} 👋</p>
+              </div>
+              <button onClick={() => setOpen(false)} aria-label="Close menu" className="text-ivory/50 hover:text-white text-2xl leading-none px-2">×</button>
+            </div>
+            <nav className="px-3 py-3">
+              {sections.map((sec) => (
+                <div key={sec.title} className="mb-4">
+                  <p className="text-ivory/35 text-[10px] uppercase tracking-wider font-semibold px-2 mb-1.5">{sec.title}</p>
+                  {sec.items.map((it) =>
+                    it.external ? (
+                      <a key={it.label} href={it.href} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-charcoal transition-colors">
+                        <span className="text-lg">{it.icon}</span>
+                        <span className="text-ivory/85 text-sm">{it.label}</span>
+                      </a>
+                    ) : (
+                      <Link key={it.label} href={it.href} onClick={() => setOpen(false)} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-charcoal transition-colors">
+                        <span className="text-lg">{it.icon}</span>
+                        <span className="text-ivory/85 text-sm">{it.label}</span>
+                      </Link>
+                    )
+                  )}
+                </div>
+              ))}
+            </nav>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}

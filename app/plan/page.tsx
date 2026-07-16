@@ -7,7 +7,9 @@ import DailyCheckin from '@/components/DailyCheckin'
 import RebuildPlanButton from '@/components/RebuildPlanButton'
 import CoachMedia from '@/components/CoachMedia'
 import CountUp from '@/components/CountUp'
+import ClientMenu from '@/components/ClientMenu'
 import { LIVE_CALL } from '@/lib/live-call'
+import { affirmationForToday } from '@/lib/affirmations'
 import type { WorkoutProgram } from '@/lib/workout'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import type { WeekPlan } from '@/lib/meal-plan'
@@ -44,11 +46,16 @@ export default async function PlanDashboard() {
 
   const firstName = (enrollment?.name || user.email?.split('@')[0] || 'there').split(' ')[0]
 
-  const shell = (children: React.ReactNode) => (
+  const shell = (children: React.ReactNode, menu: React.ReactNode = null) => (
     <div className="min-h-screen bg-obsidian px-4 py-12">
       <div className="max-w-3xl mx-auto">
-        <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Life-Up Fitness</p>
-        <h1 className="text-3xl font-bold text-white mb-8">Hey {firstName} 👋</h1>
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Life-Up Fitness</p>
+            <h1 className="text-3xl font-bold text-white">Hey {firstName} 👋</h1>
+          </div>
+          {menu}
+        </div>
         {children}
       </div>
     </div>
@@ -76,11 +83,12 @@ export default async function PlanDashboard() {
     )
   }
 
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: latestCheckin }, { data: intake }] = await Promise.all([
+  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: latestCheckin }, { data: intake }, { data: doneRows }] = await Promise.all([
     svc.from('challenge_workout_plans').select('*').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('*').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_checkins').select('*').eq('enrollment_id', enrollment.id).order('week_number', { ascending: false }).limit(1).maybeSingle(),
     svc.from('challenge_intake').select('experience_level, form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
+    svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
   ])
 
   // Her real level + injuries — so exercise swaps stay in-system and injury-aware
@@ -93,19 +101,85 @@ export default async function PlanDashboard() {
   const hasMeals = !!(weekPlan?.days?.length)
   const goalLabel = enrollment.goal === 'gain' ? 'Build & tone' : enrollment.goal === 'maintain' ? 'Maintain' : 'Lose fat'
 
+  // ── TODAY at a glance — powers the simple home dashboard (workout · calories · meals) ──
+  const now = new Date()
+  const mealIdx = (now.getDay() + 6) % 7 // Mon=0 … Sat=5, Sun=6
+  const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
+  const calBudget = (todayMeals?.target && todayMeals.target > 0) ? todayMeals.target : (Number(nutritionPlan?.calories) || 0)
+  const todayDayType = todayMeals?.dayType ?? null
+
+  const program = (workoutPlan?.plan as WorkoutProgram) || null
+  let todayWorkout: { title: string; muscles?: string[] } | null = null
+  if (program) {
+    const numDays = program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)
+    const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
+    const startDay = numDays > 0 ? completed % numDays : 0
+    if (program.track === 'home') {
+      const d = program.home?.days[startDay]
+      if (d) todayWorkout = { title: d.title }
+    } else {
+      const d = program.gymDays?.[startDay]
+      if (d) todayWorkout = { title: d.title, muscles: d.muscles }
+    }
+  }
+  const affirmation = affirmationForToday()
+
   return shell(
     <div className="space-y-8">
-      {/* Today — the daily view: today's food log + today's meals + today's workout */}
-      <Link href="/plan/today" className="group block bg-gradient-to-br from-gold/20 to-charcoal border border-gold/40 rounded-2xl p-5 hover:border-gold/70 hover:-translate-y-0.5 transition-all">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-0.5">Your day, front and center</p>
-            <p className="text-white font-bold text-base">Open Today ☀️</p>
-            <p className="text-ivory/50 text-xs mt-0.5">Log what you eat, see today&apos;s meals + workout in one place</p>
-          </div>
-          <span className="shrink-0 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl group-hover:scale-[1.03] transition-transform">Go →</span>
+      {/* ── SIMPLE HOME DASHBOARD ── daily self-talk + 3 bubbly boxes: workout · calories · meals */}
+      {/* Daily affirmation / self-talk */}
+      <div className="bg-emerald-500/10 border border-emerald-400/25 rounded-3xl px-5 py-4 flex items-start gap-3">
+        <span className="text-xl mt-0.5">💚</span>
+        <div>
+          <p className="text-emerald-300/80 text-[10px] uppercase tracking-wider font-semibold mb-0.5">Today’s reminder</p>
+          <p className="text-white text-sm leading-snug font-medium">{affirmation}</p>
         </div>
+      </div>
+
+      {/* 1 — Today's workout (bubbly hero box) */}
+      <Link href="/plan/workout" className="group block bg-gradient-to-br from-gold/20 to-charcoal border border-gold/40 rounded-[2rem] p-6 hover:border-gold/70 hover:-translate-y-0.5 transition-all">
+        <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1">Today’s workout 💪🏽</p>
+        {todayWorkout ? (
+          <>
+            <p className="text-white font-bold text-xl leading-tight">{todayWorkout.title}</p>
+            {todayWorkout.muscles?.length ? <p className="text-ivory/50 text-xs mt-1">{todayWorkout.muscles.join(' · ')}</p> : null}
+            <span className="luf-pulse mt-4 inline-flex items-center gap-1.5 bg-gold text-obsidian px-5 py-2.5 font-bold text-xs uppercase tracking-wider rounded-2xl group-hover:scale-[1.03] transition-transform">▶ Start session</span>
+          </>
+        ) : (
+          <p className="text-ivory/60 text-sm mt-1">Your workout is being prepared — refresh in a moment.</p>
+        )}
       </Link>
+
+      {/* 2 & 3 — Calories (money budget) + Today's meals */}
+      <div className="grid grid-cols-2 gap-3">
+        <Link href="/plan/today" className="group bg-charcoal border border-smoke rounded-[2rem] p-5 flex flex-col hover:border-gold/50 hover:-translate-y-0.5 transition-all">
+          <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1">Today’s calories 💵</p>
+          <p className="text-gold font-bold text-3xl leading-none">${calBudget}</p>
+          <p className="text-ivory/40 text-[11px] mt-1">your budget to spend</p>
+          {todayDayType && <span className={`mt-3 self-start text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold ${todayDayType === 'workout' ? 'bg-gold/15 text-gold' : 'bg-white/8 text-ivory/60'}`}>{todayDayType === 'workout' ? '💪🏽 Workout day' : '🌿 Rest day'}</span>}
+          <span className="text-ivory/40 text-[11px] mt-auto pt-3 group-hover:text-gold transition-colors">Track / log →</span>
+        </Link>
+
+        <Link href="/plan/today" className="group bg-charcoal border border-smoke rounded-[2rem] p-5 flex flex-col hover:border-gold/50 hover:-translate-y-0.5 transition-all">
+          <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1">Today’s meals 🍽️</p>
+          {todayMeals ? (
+            <>
+              <p className="text-white font-bold text-lg leading-tight">{todayMeals.meals.length} meals</p>
+              <p className="text-ivory/40 text-[11px] mt-1">{todayMeals.totalProtein}g protein planned</p>
+              <div className="mt-2 space-y-0.5">
+                {todayMeals.meals.slice(0, 3).map((m, i) => (
+                  <p key={i} className="text-ivory/60 text-[11px] truncate">• {m.name}</p>
+                ))}
+              </div>
+            </>
+          ) : hasMeals ? (
+            <p className="text-ivory/60 text-sm mt-1">Recovery day 🌿 — eat mindful.</p>
+          ) : (
+            <p className="text-ivory/60 text-sm mt-1">Tap to build this week’s meals.</p>
+          )}
+          <span className="text-ivory/40 text-[11px] mt-auto pt-3 group-hover:text-gold transition-colors">See today →</span>
+        </Link>
+      </div>
 
       {/* Daily accountability + live call — the "I'm with you" touchpoints */}
       <section className="grid sm:grid-cols-2 gap-3">
@@ -243,6 +317,7 @@ export default async function PlanDashboard() {
           </div>
         )}
       </section>
-    </div>
+    </div>,
+    <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} innerCircle={enrollment.tier === 'inner_circle'} />
   )
 }
