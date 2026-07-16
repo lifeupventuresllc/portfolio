@@ -70,7 +70,11 @@ body {
 }
 .luf-glow { animation: lufGlow 2.6s ease-in-out infinite; }
 
-@media (prefers-reduced-motion: reduce) { .luf-pop, .luf-glow { animation: none !important; } }
+/* Gentle up/down pulse for primary CTAs (P4b) */
+@keyframes lufPulse { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.035); } }
+.luf-pulse { animation: lufPulse 2.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) { .luf-pop, .luf-glow, .luf-pulse { animation: none !important; } }
 
 @keyframes lufPage { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .luf-page { animation: lufPage .42s cubic-bezier(.22,.61,.36,1) both; }

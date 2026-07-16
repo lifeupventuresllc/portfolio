@@ -14,7 +14,7 @@ export default async function Library() {
     <div className="min-h-screen bg-obsidian px-4 py-12">
       <div className="max-w-3xl mx-auto">
         <Link href="/plan" className="text-ivory/40 text-xs hover:text-gold mb-2 inline-block">← Back to my plan</Link>
-        <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Library</p>
+        <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Cookbook</p>
         <h1 className="text-3xl font-bold text-white mb-2">Explore everything</h1>
         <p className="text-ivory/50 text-sm mb-8">Every recipe on The Menu and every move in your training — browse, search, and get inspired.</p>
         <LibraryBrowser />

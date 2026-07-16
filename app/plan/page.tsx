@@ -98,17 +98,23 @@ export default async function PlanDashboard() {
       {/* Daily accountability + live call — the "I'm with you" touchpoints */}
       <section className="grid sm:grid-cols-2 gap-3">
         <DailyCheckin />
-        <div className="bg-charcoal border border-gold/30 rounded-2xl p-5 flex flex-col">
-          <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1">Live with me</p>
-          <p className="text-white font-semibold text-sm">{LIVE_CALL.title}</p>
-          <p className="text-ivory/50 text-xs mt-0.5 mb-2">{LIVE_CALL.whenLabel}</p>
-          <p className="text-ivory/50 text-xs flex-1">{LIVE_CALL.blurb}</p>
-          {LIVE_CALL.zoomUrl ? (
-            <a href={LIVE_CALL.zoomUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block bg-gold text-obsidian px-5 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl text-center">Join the call</a>
-          ) : (
+        {LIVE_CALL.zoomUrl ? (
+          <a href={LIVE_CALL.zoomUrl} target="_blank" rel="noopener noreferrer" className="group bg-charcoal border border-gold/30 rounded-2xl p-5 flex flex-col cursor-pointer transition-all hover:border-gold/60 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(201,168,76,.18)]">
+            <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1">Live with me</p>
+            <p className="text-white font-semibold text-sm">{LIVE_CALL.title}</p>
+            <p className="text-ivory/50 text-xs mt-0.5 mb-2">{LIVE_CALL.whenLabel}</p>
+            <p className="text-ivory/50 text-xs flex-1">{LIVE_CALL.blurb}</p>
+            <span className="mt-3 inline-block bg-gold text-obsidian px-5 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl text-center group-hover:scale-[1.02] transition-transform">Join the call →</span>
+          </a>
+        ) : (
+          <div className="bg-charcoal border border-gold/30 rounded-2xl p-5 flex flex-col">
+            <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1">Live with me</p>
+            <p className="text-white font-semibold text-sm">{LIVE_CALL.title}</p>
+            <p className="text-ivory/50 text-xs mt-0.5 mb-2">{LIVE_CALL.whenLabel}</p>
+            <p className="text-ivory/50 text-xs flex-1">{LIVE_CALL.blurb}</p>
             <p className="text-ivory/30 text-xs mt-3">Your call link drops here before we go live.</p>
-          )}
-        </div>
+          </div>
+        )}
       </section>
 
       {/* Targets */}
@@ -156,7 +162,7 @@ export default async function PlanDashboard() {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-white font-bold text-lg">Your training this week</h2>
-          {workoutPlan?.plan && <Link href="/plan/workout" className="inline-flex items-center gap-1.5 bg-gold text-obsidian px-4 py-2 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform">▶ Start session</Link>}
+          {workoutPlan?.plan && <Link href="/plan/workout" className="luf-pulse inline-flex items-center gap-1.5 bg-gold text-obsidian px-4 py-2 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform">▶ Start session</Link>}
         </div>
         {workoutPlan?.plan && <div className="mb-3"><RebuildPlanButton /></div>}
         {workoutPlan?.plan ? (
@@ -186,7 +192,7 @@ export default async function PlanDashboard() {
           <div className="luf-float bg-charcoal border border-gold/30 rounded-2xl p-6 text-center">
             <p className="text-white font-semibold mb-1">Let&apos;s check in, {firstName}</p>
             <p className="text-ivory/50 text-sm mb-4">Every week you check in with me and I adjust your plan around your real progress. This is the part that gets you results — not a PDF, not a bot. Me.</p>
-            <Link href="/plan/checkin" className="inline-block bg-gold text-obsidian px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl">Do my check-in</Link>
+            <Link href="/plan/checkin" className="luf-pulse inline-block bg-gold text-obsidian px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl">Do my check-in</Link>
           </div>
         )}
       </section>
@@ -208,7 +214,7 @@ export default async function PlanDashboard() {
             <p className="text-ivory/50 text-xs mt-1">Your private community</p>
           </Link>
           <Link href="/plan/library" className="block bg-charcoal border border-smoke rounded-2xl p-4 hover:border-gold/50 transition-colors">
-            <p className="text-white font-semibold text-sm">The Library 📚</p>
+            <p className="text-white font-semibold text-sm">The Cookbook 📖</p>
             <p className="text-ivory/50 text-xs mt-1">Every recipe + every move, searchable</p>
           </Link>
           <Link href="/plan/achievements" className="block bg-charcoal border border-smoke rounded-2xl p-4 hover:border-gold/50 transition-colors sm:col-span-2">
