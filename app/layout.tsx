@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import SiteChrome from "@/components/SiteChrome";
 import JsonLd, { organizationSchema } from "@/components/JsonLd";
+import PWARegister from "@/components/PWARegister";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -36,6 +37,16 @@ export const metadata: Metadata = {
     title: 'Asa Luke — Content Editing | Audio Engineering | Fitness',
     description: 'I edit your content. I mix your music. I build your body.',
   },
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, title: 'Life-Up Fitness', statusBarStyle: 'black-translucent' },
+  icons: {
+    icon: [{ url: '/favicon.png', sizes: '32x32', type: 'image/png' }, { url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0b0b0f',
 };
 
 export default function RootLayout({
@@ -51,6 +62,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-obsidian min-h-screen flex flex-col`}
       >
+        <PWARegister />
         <SiteChrome>{children}</SiteChrome>
       </body>
     </html>

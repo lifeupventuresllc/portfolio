@@ -18,12 +18,13 @@ export default async function ClientProfile({ params }: { params: { id: string }
   const { data: enrollment } = await svc.from('challenge_enrollments').select('*').eq('id', id).maybeSingle()
   if (!enrollment) notFound()
 
-  const [{ data: intake }, { data: workout }, { data: nutrition }, { data: checkins }, { data: progress }] = await Promise.all([
+  const [{ data: intake }, { data: workout }, { data: nutrition }, { data: checkins }, { data: progress }, { data: foodLog }] = await Promise.all([
     svc.from('challenge_intake').select('*').eq('enrollment_id', id).maybeSingle(),
     svc.from('challenge_workout_plans').select('plan, week_number').eq('enrollment_id', id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('calories, protein_g, carbs_g, fats_g').eq('enrollment_id', id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_checkins').select('*').eq('enrollment_id', id).order('week_number', { ascending: false }),
     svc.from('challenge_progress').select('note, photo_urls, logged_on, measurements').eq('enrollment_id', id),
+    svc.from('challenge_food_log').select('logged_on, name, calories, protein_g').eq('enrollment_id', id).order('logged_on', { ascending: false }).order('created_at', { ascending: true }).limit(500),
   ])
 
   // Sign the private progress photos for display
@@ -38,6 +39,27 @@ export default async function ClientProfile({ params }: { params: { id: string }
   const name = (e.name as string) || (e.email as string)?.split('@')[0] || 'Client'
   const workoutPlan = workout?.plan as { levelLabel?: string; track?: string; daysPerWeek?: number } | undefined
   const pending = (checkins || []).filter((c) => c.status === 'submitted').length
+
+  // ── Daily activity: habits (showed up) + food log, day by day ──
+  const isoOf = (d: Date) => d.toISOString().slice(0, 10)
+  const dailyRows = (progress || []).filter((p) => p.note === '__daily__')
+  const showedDates = new Set<string>(dailyRows.map((r) => r.logged_on as string))
+  const habitByDate = new Map(dailyRows.map((r) => [r.logged_on as string, (r.measurements || {}) as { workout?: boolean; nutrition?: boolean }]))
+  let dailyStreak = 0
+  { const cur = new Date(); if (!showedDates.has(isoOf(cur))) cur.setDate(cur.getDate() - 1); while (showedDates.has(isoOf(cur))) { dailyStreak++; cur.setDate(cur.getDate() - 1) } }
+  const last14 = Array.from({ length: 14 }, (_, k) => { const d = new Date(); d.setDate(d.getDate() - (13 - k)); const ds = isoOf(d); return { ds, showed: showedDates.has(ds) } })
+
+  const foodByDay = new Map<string, { items: string[]; cal: number; protein: number }>()
+  for (const f of (foodLog || [])) {
+    const d = f.logged_on as string
+    const cur = foodByDay.get(d) || { items: [], cal: 0, protein: 0 }
+    cur.items.push(f.name as string); cur.cal += Number(f.calories) || 0; cur.protein += Number(f.protein_g) || 0
+    foodByDay.set(d, cur)
+  }
+  const calTarget = Number(nutrition?.calories) || 0
+  const proteinTarget = Number(nutrition?.protein_g) || 0
+  const activeDays = Array.from(new Set<string>(Array.from(showedDates).concat(Array.from(foodByDay.keys())))).sort().reverse().slice(0, 14)
+  const weekdayOf = (ds: string) => new Date(ds + 'T00:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short' })
 
   const stat = (label: string, value: React.ReactNode) => (
     <div className="bg-obsidian border border-smoke rounded-xl p-3">
@@ -104,6 +126,47 @@ export default async function ClientProfile({ params }: { params: { id: string }
             {stat('Protein', nutrition?.protein_g ? `${nutrition.protein_g}g` : '')}
             {stat('Days/wk', workoutPlan?.daysPerWeek)}
           </div>
+        </Section>
+
+        <Section title="Daily activity" extra={<span className="text-gold text-xs font-semibold">🔥 {dailyStreak}-day streak</span>}>
+          {/* Last 14 days — did she show up? */}
+          <div className="flex items-center justify-between gap-1 mb-4">
+            {last14.map((d) => (
+              <div key={d.ds} className="flex flex-col items-center gap-1" title={d.ds}>
+                <span className={`h-2.5 w-2.5 rounded-full ${d.showed ? 'bg-gold' : 'bg-white/10'}`} />
+                <span className="text-ivory/30 text-[8px]">{weekdayOf(d.ds).slice(0, 1)}</span>
+              </div>
+            ))}
+          </div>
+          {activeDays.length ? (
+            <div className="space-y-2">
+              {activeDays.map((ds) => {
+                const habit = habitByDate.get(ds)
+                const food = foodByDay.get(ds)
+                return (
+                  <div key={ds} className="bg-obsidian border border-smoke rounded-xl p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-white text-sm font-semibold">{weekdayOf(ds)} {shortDate(ds)}</p>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className={habit?.workout ? '' : 'opacity-25 grayscale'} title="Workout">💪🏽</span>
+                        <span className={habit?.nutrition ? '' : 'opacity-25 grayscale'} title="Nutrition">🍽️</span>
+                      </div>
+                    </div>
+                    {food ? (
+                      <>
+                        <p className="text-ivory/50 text-xs mt-1">
+                          {food.cal}{calTarget ? `/${calTarget}` : ''} cal · {food.protein}{proteinTarget ? `/${proteinTarget}` : ''}g protein · {food.items.length} item{food.items.length === 1 ? '' : 's'}
+                        </p>
+                        <p className="text-ivory/40 text-[11px] mt-1 leading-snug">{food.items.join(' · ')}</p>
+                      </>
+                    ) : (
+                      <p className="text-ivory/30 text-xs mt-1">Showed up — no food logged this day.</p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : <p className="text-ivory/40 text-sm">No daily activity logged yet.</p>}
         </Section>
 
         <Section title={`Check-ins (${(checkins || []).length})`}>
