@@ -5,6 +5,7 @@ import ClientMenu from '@/components/ClientMenu'
 import CaloriesTodayCard from '@/components/CaloriesTodayCard'
 import WorkoutStatusCard from '@/components/WorkoutStatusCard'
 import StreakChip from '@/components/StreakChip'
+import CoachStrip from '@/components/CoachStrip'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForToday } from '@/lib/affirmations'
 import type { WorkoutProgram } from '@/lib/workout'
@@ -129,6 +130,9 @@ export default async function PlanDashboard() {
         <p className="text-white text-xl sm:text-2xl leading-snug font-semibold text-balance">“{affirmation}”</p>
         <p className="text-emerald-300/50 text-[11px] mt-4">Say it out loud. Say it like you mean it.</p>
       </div>
+
+      {/* Coach strip — week momentum + one next-best-action (+ "perfect day" celebration) */}
+      <CoachStrip />
 
       {/* 2 — Your calories for the day (live) */}
       <CaloriesTodayCard budget={calBudget} dayType={todayDayType} />

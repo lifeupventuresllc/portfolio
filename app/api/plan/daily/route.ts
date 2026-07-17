@@ -13,6 +13,19 @@ function streakFrom(dates: Set<string>): number {
   return streak
 }
 
+// The current Mon–Sun week as 7 dots for the momentum strip.
+function weekFrom(dates: Set<string>): { date: string; showed: boolean; isToday: boolean; isFuture: boolean }[] {
+  const now = new Date()
+  const todayIso = iso(now)
+  const dow = (now.getDay() + 6) % 7 // Mon=0 … Sun=6
+  const monday = new Date(now); monday.setDate(now.getDate() - dow)
+  return Array.from({ length: 7 }, (_, d) => {
+    const day = new Date(monday); day.setDate(monday.getDate() + d)
+    const ds = iso(day)
+    return { date: ds, showed: dates.has(ds), isToday: ds === todayIso, isFuture: ds > todayIso }
+  })
+}
+
 async function resolve() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -30,12 +43,12 @@ async function loadState(svc: ReturnType<typeof createServiceClient>, enrollment
   const { data } = await svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollmentId).eq('note', '__daily__')
   const dates = new Set<string>((data || []).map((r) => r.logged_on as string))
   const today = (data || []).find((r) => r.logged_on === iso(new Date()))
-  return { streak: streakFrom(dates), today: today?.measurements || null }
+  return { streak: streakFrom(dates), today: today?.measurements || null, week: weekFrom(dates) }
 }
 
 export async function GET() {
   const { user, enrollment, svc } = await resolve()
-  if (!user || !enrollment || !svc) return NextResponse.json({ streak: 0, today: null })
+  if (!user || !enrollment || !svc) return NextResponse.json({ streak: 0, today: null, week: [] })
   return NextResponse.json(await loadState(svc, enrollment.id as string))
 }
 
