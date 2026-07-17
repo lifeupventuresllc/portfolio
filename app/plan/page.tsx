@@ -134,6 +134,16 @@ export default async function PlanDashboard() {
         <p className="text-emerald-300/50 text-[11px] mt-4">Say it out loud. Say it like you mean it.</p>
       </div>
 
+      {/* Operator — talk to Coach Asa right from home ("my schedule changed", "only 20 min"…) */}
+      <Link href="/plan/coach" className="luf-glow group flex items-center gap-3 bg-gradient-to-br from-gold/15 to-charcoal border border-gold/40 rounded-2xl px-4 py-4 hover:border-gold/70 hover:-translate-y-0.5 transition-all">
+        <span className="text-2xl">💬</span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-white text-sm font-semibold">Talk to Coach Asa</span>
+          <span className="block text-ivory/45 text-[12px]">Life change today? I&apos;ll adjust your plan around it.</span>
+        </span>
+        <span className="text-gold text-lg font-bold group-hover:translate-x-0.5 transition-transform">→</span>
+      </Link>
+
       {/* Coach strip — week momentum + one next-best-action (+ "perfect day" celebration) */}
       <CoachStrip />
 
