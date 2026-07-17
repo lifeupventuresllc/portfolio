@@ -38,6 +38,7 @@ export default function ClientMenu({ firstName, liveUrl, innerCircle }: { firstN
     {
       title: 'With Coach Asa',
       items: [
+        { href: '/plan/coach', label: 'Tell Coach Asa about your day', icon: '🧠' },
         liveUrl
           ? { href: liveUrl, label: 'Live video call with Coach Asa', icon: '📹', external: true }
           : { href: innerCircle ? '/book' : '/plan/checkin', label: innerCircle ? 'Book my 1:1 call' : 'Live with Coach Asa', icon: '📹' },

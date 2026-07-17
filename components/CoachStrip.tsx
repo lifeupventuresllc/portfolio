@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import Celebration from '@/components/Celebration'
 import { useLiveRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { winAffirmation } from '@/lib/affirmations'
@@ -60,11 +61,14 @@ export default function CoachStrip() {
           <span className="text-ivory/40 text-[10px] font-semibold ml-1 whitespace-nowrap">{showedThisWeek}/7</span>
         )}
       </div>
-      {/* Next-best-action */}
-      <p className="text-ivory/80 text-[13px] leading-snug flex items-start gap-2">
-        <span className="text-gold shrink-0">▸</span>
-        <span>{nudge}</span>
-      </p>
+      {/* Next-best-action — tap to talk to the operator */}
+      <Link href="/plan/coach" className="group block">
+        <p className="text-ivory/80 text-[13px] leading-snug flex items-start gap-2">
+          <span className="text-gold shrink-0">▸</span>
+          <span>{nudge}</span>
+        </p>
+        <p className="text-gold/70 text-[11px] mt-1.5 pl-4 group-hover:text-gold transition-colors">Life change today? Tell Coach Asa →</p>
+      </Link>
       <Celebration trigger={perfectDay} message={winAffirmation('allDone')} dedupeKey={`perfectday-${today}`} />
     </div>
   )
