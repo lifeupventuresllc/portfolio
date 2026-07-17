@@ -85,7 +85,6 @@ export default async function PlanDashboard() {
 
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
     ? (nutritionPlan.meals as WeekPlan) : null
-  const hasMeals = !!(weekPlan?.days?.length)
 
   // ── TODAY at a glance — powers the simple home dashboard (workout · calories · meals) ──
   const now = new Date()
@@ -111,20 +110,23 @@ export default async function PlanDashboard() {
   const affirmation = affirmationForToday()
 
   return shell(
-    <div className="space-y-8">
-      {/* ── SIMPLE HOME DASHBOARD ── daily self-talk + 3 bubbly boxes: workout · calories · meals */}
-      {/* Daily affirmation / self-talk */}
-      <div className="bg-emerald-500/10 border border-emerald-400/25 rounded-3xl px-5 py-4 flex items-start gap-3">
-        <span className="text-xl mt-0.5">💚</span>
-        <div>
-          <p className="text-emerald-300/80 text-[10px] uppercase tracking-wider font-semibold mb-0.5">Today’s reminder</p>
-          <p className="text-white text-sm leading-snug font-medium">{affirmation}</p>
-        </div>
+    <div className="space-y-7">
+      {/* ── SIMPLE HOME DASHBOARD ── just three things: self-talk · calories · your workout.
+          Everything else lives one tap away in the ☰ menu. */}
+
+      {/* 1 — Self-talk of the day (the alive centerpiece at the top) */}
+      <div className="luf-breathe relative overflow-hidden rounded-[2rem] border border-emerald-400/25 bg-gradient-to-br from-emerald-500/12 via-charcoal to-obsidian px-6 py-7 text-center">
+        <p className="text-emerald-300/80 text-[10px] uppercase tracking-[0.25em] font-semibold mb-3">Today’s self-talk</p>
+        <p className="text-white text-xl sm:text-2xl leading-snug font-semibold text-balance">“{affirmation}”</p>
+        <p className="text-emerald-300/50 text-[11px] mt-4">Say it out loud. Say it like you mean it.</p>
       </div>
 
-      {/* 1 — Today's workout (bubbly hero box) */}
+      {/* 2 — Your calories for the day (live) */}
+      <CaloriesTodayCard budget={calBudget} dayType={todayDayType} />
+
+      {/* 3 — Your workout for the day */}
       <Link href="/plan/workout" className="luf-glow group block bg-gradient-to-br from-gold/20 to-charcoal border border-gold/40 rounded-[2rem] p-6 hover:border-gold/70 hover:-translate-y-0.5 transition-all">
-        <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1">Today’s workout 💪🏽</p>
+        <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1">Your workout 💪🏽</p>
         {todayWorkout ? (
           <>
             <p className="text-white font-bold text-xl leading-tight">{todayWorkout.title}</p>
@@ -135,29 +137,6 @@ export default async function PlanDashboard() {
           <p className="text-ivory/60 text-sm mt-1">Your workout is being prepared — refresh in a moment.</p>
         )}
       </Link>
-
-      {/* 2 — What to eat today (the 3 meals) */}
-      <Link href="/plan/today" className="group block bg-gradient-to-br from-charcoal to-obsidian border border-smoke rounded-[2rem] p-6 hover:border-gold/60 hover:-translate-y-0.5 transition-all">
-        <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-2">What to eat today 🍽️</p>
-        {todayMeals ? (
-          <div className="space-y-2.5">
-            {todayMeals.meals.slice(0, 3).map((m, i) => (
-              <div key={i} className="flex items-center justify-between gap-3 border-b border-smoke/40 last:border-0 pb-2.5 last:pb-0">
-                <p className="text-white text-sm font-medium truncate">{m.name}</p>
-                <p className="text-ivory/40 text-[11px] whitespace-nowrap">{m.cal} cal · {m.protein}g P</p>
-              </div>
-            ))}
-            <p className="text-ivory/40 text-[11px] pt-1 group-hover:text-gold transition-colors">See the full day →</p>
-          </div>
-        ) : hasMeals ? (
-          <p className="text-ivory/60 text-sm">Recovery day 🌿 — eat mindful, hit your protein.</p>
-        ) : (
-          <p className="text-ivory/60 text-sm">Tap to build this week’s meals →</p>
-        )}
-      </Link>
-
-      {/* 3 — Calories left today (live) */}
-      <CaloriesTodayCard budget={calBudget} dayType={todayDayType} />
 
     </div>,
     <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} innerCircle={enrollment.tier === 'inner_circle'} />
