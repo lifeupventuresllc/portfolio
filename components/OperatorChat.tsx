@@ -44,8 +44,9 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
     setMessages((m) => [...m, { role: 'user', content: msg }])
     try {
       const r = await fetch('/api/plan/operator', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) })
-      const d = await r.json()
+      const d = await r.json().catch(() => ({}))
       if (d?.reply) setMessages((m) => [...m, { role: 'operator', content: d.reply }])
+      else setMessages((m) => [...m, { role: 'operator', content: "I didn't quite catch that — tell me about your time, energy, or what changed today and I'll adjust your plan." }])
       if (d?.adjustment) setPending(d.adjustment as Adjustment)
     } catch { setMessages((m) => [...m, { role: 'operator', content: "I couldn't reach the plan just now — try that again in a sec." }]) }
     setSending(false)

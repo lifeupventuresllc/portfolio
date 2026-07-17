@@ -41,7 +41,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const { user, enrollment, svc } = await resolve()
   if (!user || !enrollment || !svc) return NextResponse.json({ error: 'Not enrolled.' }, { status: 401 })
-  const body = await request.json()
+  let body
+  try { body = await request.json() } catch { return NextResponse.json({ error: 'Bad request.' }, { status: 400 }) }
   const today = localDateISO()
   const eid = enrollment.id as string
 
