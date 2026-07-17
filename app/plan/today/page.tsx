@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import FoodLog, { type PlannedItem } from '@/components/FoodLog'
+import { getTimezone, localMondayIndex } from '@/lib/localdate'
 import type { WorkoutProgram } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
 
@@ -31,9 +32,9 @@ export default async function TodayView() {
     svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
   ])
 
-  const now = new Date()
-  const weekdayLabel = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
-  const mealIdx = (now.getDay() + 6) % 7 // Mon=0 … Sat=5, Sun=6
+  const tz = getTimezone()
+  const weekdayLabel = new Date().toLocaleDateString('en-US', { timeZone: tz, weekday: 'long', month: 'short', day: 'numeric' })
+  const mealIdx = localMondayIndex(tz) // Mon=0 … Sat=5, Sun=6, in the user's timezone
 
   // Today's meals from the weekly plan (Mon–Sat). Sunday = recovery, no cook plan.
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)

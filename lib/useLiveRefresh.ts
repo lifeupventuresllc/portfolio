@@ -36,3 +36,9 @@ export function useLiveRefresh(refresh: () => void) {
 export function broadcastRefresh() {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('luf:refresh'))
 }
+
+// Today's date (YYYY-MM-DD) in the BROWSER's local timezone — matches the server's
+// tz-cookie day, so celebration dedupe keys and workout progress line up per real day.
+export function localTodayISO(): string {
+  return new Date().toLocaleDateString('en-CA')
+}

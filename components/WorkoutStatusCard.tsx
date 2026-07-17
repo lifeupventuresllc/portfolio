@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import Ring from '@/components/Ring'
 import Celebration from '@/components/Celebration'
-import { useLiveRefresh } from '@/lib/useLiveRefresh'
+import { useLiveRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { winAffirmation } from '@/lib/affirmations'
 
 type Progress = { date: string; i: number; total: number; done: boolean }
@@ -16,7 +16,7 @@ type Progress = { date: string; i: number; total: number; done: boolean }
 export default function WorkoutStatusCard({ title, muscles, doneTodayServer }: { title: string | null; muscles?: string[]; doneTodayServer: boolean }) {
   const [doneToday, setDoneToday] = useState(doneTodayServer)
   const [progress, setProgress] = useState<Progress | null>(null)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localTodayISO()
 
   useLiveRefresh(() => {
     fetch('/api/plan/daily').then((r) => r.json()).then((d) => setDoneToday(!!d?.today?.workout)).catch(() => {})

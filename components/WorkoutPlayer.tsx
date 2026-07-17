@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Ring from '@/components/Ring'
 import Confetti from '@/components/Confetti'
-import { broadcastRefresh } from '@/lib/useLiveRefresh'
+import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { buildSteps, dayLabels, type WorkoutStep } from '@/lib/workout-steps'
 import type { WorkoutProgram } from '@/lib/workout'
 
@@ -41,7 +41,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
   }
   function finish() {
     setDone(true)
-    const today = new Date().toISOString().slice(0, 10)
+    const today = localTodayISO()
     try {
       localStorage.setItem('luf_workout_progress', JSON.stringify({ date: today, i: steps.length, total: steps.length, done: true }))
       // Pre-mark today's workout celebration so the dashboard shows ✅ without re-confetti.
@@ -59,7 +59,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
   useEffect(() => {
     try {
       localStorage.setItem('luf_workout_progress', JSON.stringify({
-        date: new Date().toISOString().slice(0, 10), i, total: steps.length, done,
+        date: localTodayISO(), i, total: steps.length, done,
       }))
     } catch { /* ignore */ }
   }, [i, steps.length, done])

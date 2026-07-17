@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Celebration from '@/components/Celebration'
-import { useLiveRefresh } from '@/lib/useLiveRefresh'
+import { useLiveRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { winAffirmation } from '@/lib/affirmations'
 
 // One compact "coach strip" that keeps the home simple while adding two high-retention
@@ -16,7 +16,7 @@ export default function CoachStrip() {
   const [week, setWeek] = useState<WeekDay[]>([])
   const [workoutDone, setWorkoutDone] = useState(false)
   const [nutri, setNutri] = useState<{ protein: number; target: number } | null>(null)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localTodayISO()
 
   useLiveRefresh(() => {
     fetch('/api/plan/daily').then((r) => r.json()).then((d) => {

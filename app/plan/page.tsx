@@ -6,8 +6,10 @@ import CaloriesTodayCard from '@/components/CaloriesTodayCard'
 import WorkoutStatusCard from '@/components/WorkoutStatusCard'
 import StreakChip from '@/components/StreakChip'
 import CoachStrip from '@/components/CoachStrip'
+import TimezoneSync from '@/components/TimezoneSync'
 import { LIVE_CALL } from '@/lib/live-call'
-import { affirmationForToday } from '@/lib/affirmations'
+import { affirmationForDay } from '@/lib/affirmations'
+import { localDateISO, localMondayIndex, localDayNumber } from '@/lib/localdate'
 import type { WorkoutProgram } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
 
@@ -45,6 +47,7 @@ export default async function PlanDashboard() {
 
   const shell = (children: React.ReactNode, menu: React.ReactNode = null) => (
     <div className="min-h-screen bg-obsidian px-4 py-12">
+      <TimezoneSync />
       <div className="max-w-3xl mx-auto">
         <div className="flex items-start justify-between mb-8">
           <div>
@@ -91,8 +94,8 @@ export default async function PlanDashboard() {
     ? (nutritionPlan.meals as WeekPlan) : null
 
   // ── TODAY at a glance — powers the simple home dashboard (workout · calories · meals) ──
-  const now = new Date()
-  const mealIdx = (now.getDay() + 6) % 7 // Mon=0 … Sat=5, Sun=6
+  // All day-boundaries use the user's LOCAL day (their timezone), not UTC.
+  const mealIdx = localMondayIndex() // Mon=0 … Sat=5, Sun=6
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
   const calBudget = (todayMeals?.target && todayMeals.target > 0) ? todayMeals.target : (Number(nutritionPlan?.calories) || 0)
   const todayDayType = todayMeals?.dayType ?? null
@@ -111,10 +114,10 @@ export default async function PlanDashboard() {
       if (d) todayWorkout = { title: d.title, muscles: d.muscles }
     }
   }
-  const affirmation = affirmationForToday()
+  const affirmation = affirmationForDay(localDayNumber())
 
   // Did she already finish today's workout? (server truth for the workout ring's ✅ state)
-  const todayIso = now.toISOString().slice(0, 10)
+  const todayIso = localDateISO()
   const workoutDoneToday = (doneRows || []).some(
     (r) => (r as { logged_on?: string }).logged_on === todayIso && (r.measurements as { workout?: boolean } | null)?.workout
   )

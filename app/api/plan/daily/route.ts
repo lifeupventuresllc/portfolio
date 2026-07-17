@@ -1,28 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { localDateISO, addDaysISO } from '@/lib/localdate'
 
-// Daily accountability check-in ("did you show up today?") + streak.
-// Stored as a challenge_progress row per day (note '__daily__', no weight → excluded from the weight chart).
-const iso = (d: Date) => d.toISOString().slice(0, 10)
+// Daily accountability check-in ("did you show up today?") + streak. Stored as a
+// challenge_progress row per day (note '__daily__'). All day-boundaries use the user's
+// LOCAL day (localDateISO) so a "day" is their real 24h, not UTC's.
 
-function streakFrom(dates: Set<string>): number {
+function streakFrom(dates: Set<string>, todayISO: string): number {
   let streak = 0
-  const cur = new Date()
-  if (!dates.has(iso(cur))) cur.setDate(cur.getDate() - 1) // grace: streak holds through yesterday
-  while (dates.has(iso(cur))) { streak++; cur.setDate(cur.getDate() - 1) }
+  let cur = todayISO
+  if (!dates.has(cur)) cur = addDaysISO(cur, -1) // grace: streak holds through yesterday
+  while (dates.has(cur)) { streak++; cur = addDaysISO(cur, -1) }
   return streak
 }
 
 // The current Mon–Sun week as 7 dots for the momentum strip.
-function weekFrom(dates: Set<string>): { date: string; showed: boolean; isToday: boolean; isFuture: boolean }[] {
-  const now = new Date()
-  const todayIso = iso(now)
-  const dow = (now.getDay() + 6) % 7 // Mon=0 … Sun=6
-  const monday = new Date(now); monday.setDate(now.getDate() - dow)
+function weekFrom(dates: Set<string>, todayISO: string): { date: string; showed: boolean; isToday: boolean; isFuture: boolean }[] {
+  const dow = (new Date(todayISO + 'T00:00:00Z').getUTCDay() + 6) % 7 // Mon=0 … Sun=6
+  const monday = addDaysISO(todayISO, -dow)
   return Array.from({ length: 7 }, (_, d) => {
-    const day = new Date(monday); day.setDate(monday.getDate() + d)
-    const ds = iso(day)
-    return { date: ds, showed: dates.has(ds), isToday: ds === todayIso, isFuture: ds > todayIso }
+    const ds = addDaysISO(monday, d)
+    return { date: ds, showed: dates.has(ds), isToday: ds === todayISO, isFuture: ds > todayISO }
   })
 }
 
@@ -40,10 +38,11 @@ async function resolve() {
 }
 
 async function loadState(svc: ReturnType<typeof createServiceClient>, enrollmentId: string) {
+  const todayISO = localDateISO()
   const { data } = await svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollmentId).eq('note', '__daily__')
   const dates = new Set<string>((data || []).map((r) => r.logged_on as string))
-  const today = (data || []).find((r) => r.logged_on === iso(new Date()))
-  return { streak: streakFrom(dates), today: today?.measurements || null, week: weekFrom(dates) }
+  const today = (data || []).find((r) => r.logged_on === todayISO)
+  return { streak: streakFrom(dates, todayISO), today: today?.measurements || null, week: weekFrom(dates, todayISO) }
 }
 
 export async function GET() {
@@ -57,7 +56,7 @@ export async function POST(request: NextRequest) {
   if (!user || !enrollment || !svc) return NextResponse.json({ error: 'Not enrolled.' }, { status: 401 })
   const body = await request.json()
   const measurements = { workout: !!body.workout, nutrition: !!body.nutrition }
-  const today = iso(new Date())
+  const today = localDateISO()
 
   const { data: existing } = await svc.from('challenge_progress')
     .select('id').eq('enrollment_id', enrollment.id).eq('note', '__daily__').eq('logged_on', today).maybeSingle()

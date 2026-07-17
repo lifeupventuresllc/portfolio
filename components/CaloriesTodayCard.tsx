@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import Ring from '@/components/Ring'
 import Celebration from '@/components/Celebration'
-import { useLiveRefresh } from '@/lib/useLiveRefresh'
+import { useLiveRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { winAffirmation } from '@/lib/affirmations'
 
 // Home-dashboard "calories left today" box. Calories are money 💵 — a ring FILLS as
@@ -29,7 +29,7 @@ export default function CaloriesTodayCard({ budget, dayType }: { budget: number;
   const over = spent != null && spent > budget
   const pct = budget > 0 && spent != null ? Math.min(100, Math.round((spent / budget) * 100)) : 0
   const ringColor = over ? '#f59e0b' : '#c9a84c'
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localTodayISO()
 
   // Win = fueled enough to hit the protein target while staying at/under budget.
   const proteinHit = !!data && data.proteinTarget > 0 && data.protein >= data.proteinTarget

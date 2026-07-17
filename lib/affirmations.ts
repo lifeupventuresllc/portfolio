@@ -1072,10 +1072,16 @@ export const AFFIRMATIONS: string[] = [
 
 // Pick one affirmation for the whole day. Spread across the pool so consecutive
 // days aren't neighbors, and every line eventually gets its turn.
-export function affirmationForToday(): string {
-  const dayNumber = Math.floor(Date.now() / 86400000) // whole days since epoch (UTC)
-  const idx = (dayNumber * 919) % AFFIRMATIONS.length // 919 is prime → walks the whole pool
+// Pick the affirmation for a given day-number. Callers pass the USER'S local day
+// (see lib/localdate) so it switches at their midnight, not UTC's.
+export function affirmationForDay(dayNumber: number): string {
+  const len = AFFIRMATIONS.length
+  const idx = (((dayNumber * 919) % len) + len) % len // 919 is prime → walks the whole pool
   return AFFIRMATIONS[idx]
+}
+
+export function affirmationForToday(): string {
+  return affirmationForDay(Math.floor(Date.now() / 86400000))
 }
 
 // A celebration line pulled DYNAMICALLY from the same pool, matched to the win the

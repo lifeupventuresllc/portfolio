@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { localDateISO } from '@/lib/localdate'
 
 // Food log — what she ACTUALLY ate today (MyFitnessPal-style), tracked vs her daily target.
 // Rows live in challenge_food_log (migration 016). One row per food, grouped by `meal`.
-const iso = (d: Date) => d.toISOString().slice(0, 10)
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const
 type Meal = (typeof MEALS)[number]
 const num = (v: unknown, d = 0) => { const n = Number(v); return Number.isFinite(n) ? n : d }
@@ -52,7 +52,7 @@ async function loadDay(svc: ReturnType<typeof createServiceClient>, enrollmentId
 
 export async function GET(request: NextRequest) {
   const { user, enrollment, svc } = await resolve()
-  const day = request.nextUrl.searchParams.get('date') || iso(new Date())
+  const day = request.nextUrl.searchParams.get('date') || localDateISO()
   if (!user || !enrollment || !svc) return NextResponse.json({ date: day, entries: [], totals: { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 }, target: { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 } })
   return NextResponse.json(await loadDay(svc, enrollment.id as string, day))
 }
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
   const name = (b.name || '').toString().trim()
   if (!name) return NextResponse.json({ error: 'Name is required.' }, { status: 400 })
   const meal: Meal = MEALS.includes(b.meal) ? b.meal : 'snack'
-  const day = (b.logged_on || iso(new Date())).toString().slice(0, 10)
+  const day = (b.logged_on || localDateISO()).toString().slice(0, 10)
   const servings = Math.max(0.1, num(b.servings, 1))
   await svc.from('challenge_food_log').insert({
     enrollment_id: enrollment.id, user_id: user.id, logged_on: day, meal, name,
@@ -81,7 +81,7 @@ export async function DELETE(request: NextRequest) {
   const { user, enrollment, svc } = await resolve()
   if (!user || !enrollment || !svc) return NextResponse.json({ error: 'Not enrolled.' }, { status: 401 })
   const id = request.nextUrl.searchParams.get('id')
-  const day = request.nextUrl.searchParams.get('date') || iso(new Date())
+  const day = request.nextUrl.searchParams.get('date') || localDateISO()
   if (!id) return NextResponse.json({ error: 'Missing id.' }, { status: 400 })
   // Scope the delete to this enrollment so a user can only remove their own rows.
   await svc.from('challenge_food_log').delete().eq('id', id).eq('enrollment_id', enrollment.id)
