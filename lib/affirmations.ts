@@ -1077,3 +1077,18 @@ export function affirmationForToday(): string {
   const idx = (dayNumber * 919) % AFFIRMATIONS.length // 919 is prime → walks the whole pool
   return AFFIRMATIONS[idx]
 }
+
+// A celebration line pulled DYNAMICALLY from the same pool, matched to the win the
+// user just earned — so the reward reinforces self-talk tied to what they did.
+export type WinType = 'calories' | 'workout' | 'allDone'
+export function winAffirmation(type: WinType): string {
+  const res: Record<WinType, RegExp> = {
+    workout: /workout|train|strong|rep\b|session|sweat|gym|lift|finish|power|capable/i,
+    calories: /eat|nourish|food|protein|fuel|plate|meal|craving|portion/i,
+    allDone: /discipline|consistent|show up|promise|becoming|proud|identity|kind of person|keep/i,
+  }
+  const pool = AFFIRMATIONS.filter((a) => res[type].test(a))
+  if (!pool.length) return affirmationForToday()
+  const dayNumber = Math.floor(Date.now() / 86400000)
+  return pool[(dayNumber * 919) % pool.length]
+}

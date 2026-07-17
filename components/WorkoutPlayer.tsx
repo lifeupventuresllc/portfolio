@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Ring from '@/components/Ring'
+import Confetti from '@/components/Confetti'
+import { broadcastRefresh } from '@/lib/useLiveRefresh'
 import { buildSteps, dayLabels, type WorkoutStep } from '@/lib/workout-steps'
 import type { WorkoutProgram } from '@/lib/workout'
 
@@ -39,11 +41,28 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
   }
   function finish() {
     setDone(true)
-    fetch('/api/plan/daily', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workout: true }) }).catch(() => {})
+    const today = new Date().toISOString().slice(0, 10)
+    try {
+      localStorage.setItem('luf_workout_progress', JSON.stringify({ date: today, i: steps.length, total: steps.length, done: true }))
+      // Pre-mark today's workout celebration so the dashboard shows ✅ without re-confetti.
+      localStorage.setItem('luf_celebrated_workout-' + today, '1')
+    } catch { /* ignore */ }
+    fetch('/api/plan/daily', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workout: true }) })
+      .catch(() => {})
+      .finally(() => broadcastRefresh())
   }
 
   // Reset the countdown when the step (or day) changes.
   useEffect(() => { setLeft(step?.seconds ?? null) }, [i, dayIdx, step?.seconds])
+
+  // Persist live progress so the dashboard's workout ring reflects mid-session state.
+  useEffect(() => {
+    try {
+      localStorage.setItem('luf_workout_progress', JSON.stringify({
+        date: new Date().toISOString().slice(0, 10), i, total: steps.length, done,
+      }))
+    } catch { /* ignore */ }
+  }, [i, steps.length, done])
 
   // ONE interval per step — decrements each second, advances at zero. No churn.
   useEffect(() => {
@@ -62,6 +81,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
   if (done) {
     return (
       <div className="max-w-lg mx-auto text-center q-in-fwd py-10">
+        <Confetti fire={done} />
         <p className="text-6xl mb-4">🔥</p>
         <h1 className="text-3xl font-bold text-white mb-2">That&apos;s done, {firstName}.</h1>
         <p className="text-ivory/60 text-sm mb-8">You showed up and you finished. That&apos;s the whole game. I logged it for your streak.</p>

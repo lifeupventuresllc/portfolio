@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import ClientMenu from '@/components/ClientMenu'
 import CaloriesTodayCard from '@/components/CaloriesTodayCard'
+import WorkoutStatusCard from '@/components/WorkoutStatusCard'
+import StreakChip from '@/components/StreakChip'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForToday } from '@/lib/affirmations'
 import type { WorkoutProgram } from '@/lib/workout'
@@ -47,6 +49,7 @@ export default async function PlanDashboard() {
           <div>
             <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Life-Up Fitness</p>
             <h1 className="text-3xl font-bold text-white">Hey {firstName} 👋</h1>
+            <StreakChip />
           </div>
           {menu}
         </div>
@@ -80,7 +83,7 @@ export default async function PlanDashboard() {
   const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('calories, meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
-    svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
+    svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
   ])
 
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
@@ -109,6 +112,12 @@ export default async function PlanDashboard() {
   }
   const affirmation = affirmationForToday()
 
+  // Did she already finish today's workout? (server truth for the workout ring's ✅ state)
+  const todayIso = now.toISOString().slice(0, 10)
+  const workoutDoneToday = (doneRows || []).some(
+    (r) => (r as { logged_on?: string }).logged_on === todayIso && (r.measurements as { workout?: boolean } | null)?.workout
+  )
+
   return shell(
     <div className="space-y-7">
       {/* ── SIMPLE HOME DASHBOARD ── just three things: self-talk · calories · your workout.
@@ -124,19 +133,8 @@ export default async function PlanDashboard() {
       {/* 2 — Your calories for the day (live) */}
       <CaloriesTodayCard budget={calBudget} dayType={todayDayType} />
 
-      {/* 3 — Your workout for the day */}
-      <Link href="/plan/workout" className="luf-glow group block bg-gradient-to-br from-gold/20 to-charcoal border border-gold/40 rounded-[2rem] p-6 hover:border-gold/70 hover:-translate-y-0.5 transition-all">
-        <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1">Your workout 💪🏽</p>
-        {todayWorkout ? (
-          <>
-            <p className="text-white font-bold text-xl leading-tight">{todayWorkout.title}</p>
-            {todayWorkout.muscles?.length ? <p className="text-ivory/50 text-xs mt-1">{todayWorkout.muscles.join(' · ')}</p> : null}
-            <span className="luf-pulse mt-4 inline-flex items-center gap-1.5 bg-gold text-obsidian px-5 py-2.5 font-bold text-xs uppercase tracking-wider rounded-2xl group-hover:scale-[1.03] transition-transform">▶ Start session</span>
-          </>
-        ) : (
-          <p className="text-ivory/60 text-sm mt-1">Your workout is being prepared — refresh in a moment.</p>
-        )}
-      </Link>
+      {/* 3 — Your workout for the day (live status ring: start → in-progress % → ✅ complete) */}
+      <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} />
 
     </div>,
     <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} innerCircle={enrollment.tier === 'inner_circle'} />
