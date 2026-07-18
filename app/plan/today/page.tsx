@@ -61,7 +61,7 @@ export default async function TodayView() {
   return (
     <div className="min-h-screen bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto">
-        <Link href="/plan" className="text-ivory/40 text-xs hover:text-gold mb-2 inline-block">← My full plan</Link>
+        <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← My full plan</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">{weekdayLabel}</p>
         <h1 className="text-3xl font-bold text-white mb-6">Today, {firstName}</h1>
 
