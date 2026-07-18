@@ -10,6 +10,7 @@ import TimezoneSync from '@/components/TimezoneSync'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
 import { localDateISO, localMondayIndex, localDayNumber } from '@/lib/localdate'
+import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import type { WorkoutProgram } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
 
@@ -84,10 +85,12 @@ export default async function PlanDashboard() {
     )
   }
 
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }] = await Promise.all([
+  const todayIso = localDateISO()
+  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('calories, meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
+    getApprovedTodayAdjustment(enrollment.id as string, todayIso),
   ])
 
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
@@ -97,7 +100,10 @@ export default async function PlanDashboard() {
   // All day-boundaries use the user's LOCAL day (their timezone), not UTC.
   const mealIdx = localMondayIndex() // Mon=0 … Sat=5, Sun=6
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
-  const calBudget = (todayMeals?.target && todayMeals.target > 0) ? todayMeals.target : (Number(nutritionPlan?.calories) || 0)
+  let calBudget = (todayMeals?.target && todayMeals.target > 0) ? todayMeals.target : (Number(nutritionPlan?.calories) || 0)
+  // Coach Asa adjusted today's calories? Reflect it in the budget.
+  const calDelta = Number(todayAdjustment?.nutritionChange?.calorieDelta) || 0
+  if (calDelta) calBudget = Math.max(0, calBudget + calDelta)
   const todayDayType = todayMeals?.dayType ?? null
 
   const program = (workoutPlan?.plan as WorkoutProgram) || null
@@ -117,7 +123,6 @@ export default async function PlanDashboard() {
   const affirmation = affirmationForDay(localDayNumber())
 
   // Did she already finish today's workout? (server truth for the workout ring's ✅ state)
-  const todayIso = localDateISO()
   const workoutDoneToday = (doneRows || []).some(
     (r) => (r as { logged_on?: string }).logged_on === todayIso && (r.measurements as { workout?: boolean } | null)?.workout
   )
@@ -151,7 +156,7 @@ export default async function PlanDashboard() {
       <CaloriesTodayCard budget={calBudget} dayType={todayDayType} />
 
       {/* 3 — Your workout for the day (live status ring: start → in-progress % → ✅ complete) */}
-      <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} />
+      <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} />
 
     </div>,
     <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} innerCircle={enrollment.tier === 'inner_circle'} />

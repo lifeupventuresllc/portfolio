@@ -44,6 +44,22 @@ export async function logEvent(enrollmentId: string, userId: string | null, ev: 
   })
 }
 
+// The adjustment she APPROVED for today (if any) — so the dashboard reflects the
+// adapted plan. Newest approved wins if she adjusted more than once.
+export async function getApprovedTodayAdjustment(enrollmentId: string, todayISO: string) {
+  const { data } = await svc()
+    .from('fos_adjustments')
+    .select('workout_change, nutrition_change, message')
+    .eq('enrollment_id', enrollmentId).eq('for_date', todayISO).eq('status', 'approved')
+    .order('created_at', { ascending: false }).limit(1).maybeSingle()
+  if (!data) return null
+  return {
+    workoutChange: (data.workout_change as { toMinutes?: number; swapTo?: string; reason?: string } | null) ?? null,
+    nutritionChange: (data.nutrition_change as { calorieDelta?: number; dinnerSuggestion?: string; reason?: string } | null) ?? null,
+    message: (data.message as string | null) ?? null,
+  }
+}
+
 // Recent life events (defaults to on/after `sinceISO`), newest first — the operator's
 // short-term memory window.
 export async function recentEvents(enrollmentId: string, sinceISO: string): Promise<FosEvent[]> {

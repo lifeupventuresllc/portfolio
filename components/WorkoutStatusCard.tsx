@@ -13,7 +13,7 @@ type Progress = { date: string; i: number; total: number; done: boolean }
 //   not started → 💪🏽 empty ring → "Start session"
 //   mid-session → ⏱️ ring fills to % done → "Resume session"  (progress kept in localStorage by the player)
 //   finished    → ✅ green full ring → "Workout complete" + confetti
-export default function WorkoutStatusCard({ title, muscles, doneTodayServer }: { title: string | null; muscles?: string[]; doneTodayServer: boolean }) {
+export default function WorkoutStatusCard({ title, muscles, doneTodayServer, adjusted }: { title: string | null; muscles?: string[]; doneTodayServer: boolean; adjusted?: { toMinutes?: number; swapTo?: string; reason?: string } | null }) {
   const [doneToday, setDoneToday] = useState(doneTodayServer)
   const [progress, setProgress] = useState<Progress | null>(null)
   const today = localTodayISO()
@@ -45,6 +45,9 @@ export default function WorkoutStatusCard({ title, muscles, doneTodayServer }: {
             <>
               <p className="text-white font-bold text-lg leading-tight truncate">{title}</p>
               {muscles?.length ? <p className="text-ivory/50 text-xs mt-0.5 truncate">{muscles.join(' · ')}</p> : null}
+              {adjusted && !doneToday && (
+                <p className="text-gold text-[11px] mt-1 font-semibold">✨ Adjusted: {adjusted.toMinutes ? `${adjusted.toMinutes}-min ` : ''}{adjusted.swapTo || 'adapted for today'}</p>
+              )}
             </>
           ) : (
             <p className="text-ivory/60 text-sm">Being prepared — refresh in a moment.</p>
