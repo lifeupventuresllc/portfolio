@@ -35,7 +35,9 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
     }).catch(() => setMessages([{ role: 'operator', content: `Hey ${firstName} — tell me about your day and I'll adjust your plan around it.` }]))
   }, [firstName])
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, pending])
+  // Only scroll when the message COUNT changes (a real new message), instantly — not
+  // on every keystroke/render — so the page never jumps while you're typing.
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' }) }, [messages.length, pending])
 
   async function send(text: string) {
     const msg = text.trim()
@@ -74,13 +76,13 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
   }
 
   return (
-    <div className="max-w-2xl mx-auto flex flex-col min-h-[80vh]">
+    <div className="max-w-2xl mx-auto pb-6">
       <div className="flex items-center justify-between mb-4">
         <Link href="/plan" className="text-ivory/40 text-xs hover:text-gold">← My plan</Link>
         <p className="text-gold text-[10px] uppercase tracking-[0.2em] font-semibold">Coach Asa · your operator</p>
       </div>
 
-      <div className="flex-1 space-y-3">
+      <div className="space-y-3 mb-4">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-sm leading-snug ${m.role === 'user' ? 'bg-gold text-obsidian font-medium rounded-br-sm' : 'bg-charcoal border border-smoke text-ivory/90 rounded-bl-sm'}`}>
@@ -116,12 +118,13 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
         ))}
       </div>
 
-      {/* Composer */}
-      <form onSubmit={(e) => { e.preventDefault(); send(input) }} className="flex gap-2 sticky bottom-3">
+      {/* Composer — normal flow (no sticky) so the iOS keyboard doesn't make it jump */}
+      <form onSubmit={(e) => { e.preventDefault(); send(input) }} className="flex gap-2">
         <input
           value={input} onChange={(e) => setInput(e.target.value)} disabled={sending}
           placeholder="Tell me about your day…"
-          className="flex-1 bg-charcoal border border-smoke rounded-2xl px-4 py-3 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 focus:outline-none"
+          autoComplete="off" autoCorrect="on" enterKeyHint="send" inputMode="text"
+          className="flex-1 bg-charcoal border border-smoke rounded-2xl px-4 py-3 text-base text-white placeholder:text-ivory/30 focus:border-gold/60 focus:outline-none"
         />
         <button type="submit" disabled={sending || !input.trim()} className="bg-gold text-obsidian px-5 py-3 font-bold text-sm rounded-2xl disabled:opacity-40 active:scale-95 transition-transform">{sending ? '…' : 'Send'}</button>
       </form>

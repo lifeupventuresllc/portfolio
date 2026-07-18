@@ -80,6 +80,14 @@ body {
 .luf-page { animation: lufPage .42s cubic-bezier(.22,.61,.36,1) both; }
 @media (prefers-reduced-motion: reduce) { .luf-page { animation: none !important; } }
 
+/* iOS auto-zooms (and the page "shakes") when focusing an input under 16px. Force a
+   16px minimum on phones so typing is stable everywhere in the app. */
+@media (max-width: 640px) {
+  input:not([type='checkbox']):not([type='radio']),
+  textarea,
+  select { font-size: 16px !important; }
+}
+
 /* Celebration confetti — falls the height of the screen while spinning, then fades. */
 @keyframes lufConfetti {
   0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
