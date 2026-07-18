@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import PushToggle from '@/components/PushToggle'
 
 // The ☰ menu on the client home dashboard — keeps the home screen simple while
 // everything deeper lives one tap away: profile, meals + how-to, cookbook,
@@ -97,6 +98,9 @@ export default function ClientMenu({ firstName, liveUrl, innerCircle }: { firstN
                   )}
                 </div>
               ))}
+              <div className="px-2 pt-3 mt-1 border-t border-smoke">
+                <PushToggle />
+              </div>
             </nav>
           </div>
         </div>
