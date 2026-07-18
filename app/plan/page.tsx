@@ -5,7 +5,7 @@ import ClientMenu from '@/components/ClientMenu'
 import CaloriesTodayCard from '@/components/CaloriesTodayCard'
 import WorkoutStatusCard from '@/components/WorkoutStatusCard'
 import StreakChip from '@/components/StreakChip'
-import CoachStrip from '@/components/CoachStrip'
+import CoachHero from '@/components/CoachHero'
 import TimezoneSync from '@/components/TimezoneSync'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
@@ -128,36 +128,23 @@ export default async function PlanDashboard() {
   )
 
   return shell(
-    <div className="space-y-7">
-      {/* ── SIMPLE HOME DASHBOARD ── just three things: self-talk · calories · your workout.
-          Everything else lives one tap away in the ☰ menu. */}
+    <div className="space-y-5">
+      {/* Conversational home: self-talk banner → Coach Asa (centerpiece) → calories + workout (supporting) */}
 
-      {/* 1 — Self-talk of the day (the alive centerpiece at the top) */}
-      <div className="luf-breathe relative overflow-hidden rounded-[2rem] border border-emerald-400/25 bg-gradient-to-br from-emerald-500/12 via-charcoal to-obsidian px-6 py-7 text-center">
-        <p className="text-emerald-300/80 text-[10px] uppercase tracking-[0.25em] font-semibold mb-3">Today’s self-talk</p>
-        <p className="text-white text-xl sm:text-2xl leading-snug font-semibold text-balance">“{affirmation}”</p>
-        <p className="text-emerald-300/50 text-[11px] mt-4">Say it out loud. Say it like you mean it.</p>
+      {/* Self-talk — compact top banner */}
+      <div className="luf-breathe rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-500/10 via-charcoal to-obsidian px-5 py-3.5 text-center">
+        <p className="text-emerald-300/70 text-[9px] uppercase tracking-[0.25em] font-semibold mb-1">Today’s self-talk</p>
+        <p className="text-white text-[15px] sm:text-base leading-snug font-medium text-balance">“{affirmation}”</p>
       </div>
 
-      {/* Operator — talk to Coach Asa right from home ("my schedule changed", "only 20 min"…) */}
-      <Link href="/plan/coach" className="luf-glow group flex items-center gap-3 bg-gradient-to-br from-gold/15 to-charcoal border border-gold/40 rounded-2xl px-4 py-4 hover:border-gold/70 hover:-translate-y-0.5 transition-all">
-        <span className="text-2xl">💬</span>
-        <span className="flex-1 min-w-0">
-          <span className="block text-white text-sm font-semibold">Talk to Coach Asa</span>
-          <span className="block text-ivory/45 text-[12px]">Life change today? I&apos;ll adjust your plan around it.</span>
-        </span>
-        <span className="text-gold text-lg font-bold group-hover:translate-x-0.5 transition-transform">→</span>
-      </Link>
+      {/* Coach Asa — the conversational centerpiece (absorbs the old next-best-action) */}
+      <CoachHero firstName={firstName} />
 
-      {/* Coach strip — week momentum + one next-best-action (+ "perfect day" celebration) */}
-      <CoachStrip />
-
-      {/* 2 — Your calories for the day (live) */}
+      {/* Supporting — your calories for the day (live) */}
       <CaloriesTodayCard budget={calBudget} dayType={todayDayType} />
 
-      {/* 3 — Your workout for the day (live status ring: start → in-progress % → ✅ complete) */}
+      {/* Supporting — your workout for the day (live ring: start → % → ✅) */}
       <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} />
-
     </div>,
     <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} innerCircle={enrollment.tier === 'inner_circle'} />
   )
