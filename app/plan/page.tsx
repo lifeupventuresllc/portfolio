@@ -137,14 +137,14 @@ export default async function PlanDashboard() {
         <p className="text-white text-[15px] sm:text-base leading-snug font-medium text-balance">“{affirmation}”</p>
       </div>
 
-      {/* Coach Asa — the conversational centerpiece (absorbs the old next-best-action) */}
+      {/* Coach Asa — the living centerpiece; she talks right here */}
       <CoachHero firstName={firstName} />
 
-      {/* Supporting — your calories for the day (live) */}
-      <CaloriesTodayCard budget={calBudget} dayType={todayDayType} />
-
-      {/* Supporting — your workout for the day (live ring: start → % → ✅) */}
-      <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} />
+      {/* Supporting, side by side — calories (left) · workout (right) */}
+      <div className="grid grid-cols-2 gap-3.5">
+        <CaloriesTodayCard budget={calBudget} dayType={todayDayType} compact />
+        <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} compact />
+      </div>
     </div>,
     <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} innerCircle={enrollment.tier === 'inner_circle'} />
   )

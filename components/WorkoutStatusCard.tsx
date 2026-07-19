@@ -13,7 +13,7 @@ type Progress = { date: string; i: number; total: number; done: boolean }
 //   not started → 💪🏽 empty ring → "Start session"
 //   mid-session → ⏱️ ring fills to % done → "Resume session"  (progress kept in localStorage by the player)
 //   finished    → ✅ green full ring → "Workout complete" + confetti
-export default function WorkoutStatusCard({ title, muscles, doneTodayServer, adjusted }: { title: string | null; muscles?: string[]; doneTodayServer: boolean; adjusted?: { toMinutes?: number; swapTo?: string; reason?: string } | null }) {
+export default function WorkoutStatusCard({ title, muscles, doneTodayServer, adjusted, compact }: { title: string | null; muscles?: string[]; doneTodayServer: boolean; adjusted?: { toMinutes?: number; swapTo?: string; reason?: string } | null; compact?: boolean }) {
   const [doneToday, setDoneToday] = useState(doneTodayServer)
   const [progress, setProgress] = useState<Progress | null>(null)
   const today = localTodayISO()
@@ -32,6 +32,26 @@ export default function WorkoutStatusCard({ title, muscles, doneTodayServer, adj
   const ringColor = doneToday ? '#46c46f' : '#f5a623'
   const cta = doneToday ? 'Do it again' : inProgress ? 'Resume session' : 'Start session'
   const eyebrow = doneToday ? 'Workout complete 🎉' : inProgress ? `In progress · ${pct}%` : 'Your workout 💪🏽'
+
+  // Compact (stacked) variant — used side-by-side with the calories card on the home screen.
+  if (compact) {
+    return (
+      <Link href="/plan/workout" className="luf-glow group flex flex-col items-center text-center bg-gradient-to-br from-gold/20 to-charcoal border border-gold/40 rounded-[1.75rem] p-4 hover:border-gold/70 transition-all">
+        <p className="text-gold text-[9px] uppercase tracking-wider font-semibold mb-2.5">{doneToday ? 'Complete 🎉' : inProgress ? `In progress · ${pct}%` : 'Your workout'}</p>
+        <Ring pct={pct} size={84} stroke={8} color={ringColor}>
+          <span className="text-2xl">{doneToday ? '✅' : inProgress ? '⏱️' : '💪🏽'}</span>
+        </Ring>
+        {title ? (
+          <>
+            <p className="text-white font-bold text-sm leading-tight mt-2.5 line-clamp-2">{title}</p>
+            {adjusted && !doneToday && <p className="text-gold text-[10px] mt-1 font-semibold">✨ {adjusted.toMinutes ? `${adjusted.toMinutes}-min` : 'adapted'}</p>}
+            <p className="text-gold/70 text-[10px] mt-2 group-hover:text-gold transition-colors">{doneToday ? '↻ Do it again' : inProgress ? '▶ Resume' : '▶ Start session'}</p>
+          </>
+        ) : <p className="text-ivory/60 text-xs mt-2">Being prepared…</p>}
+        <Celebration trigger={doneToday} message={winAffirmation('workout')} dedupeKey={`workout-${today}`} />
+      </Link>
+    )
+  }
 
   return (
     <Link href="/plan/workout" className="luf-glow group block bg-gradient-to-br from-gold/20 to-charcoal border border-gold/40 rounded-[2rem] p-6 hover:border-gold/70 hover:-translate-y-0.5 transition-all">

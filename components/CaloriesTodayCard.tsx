@@ -10,7 +10,7 @@ import { winAffirmation } from '@/lib/affirmations'
 // Home-dashboard "calories left today" box. Calories are money 💵 — a ring FILLS as
 // she logs food, so at a glance she sees how much budget is left. Auto-refreshes when
 // she returns to the tab or logs food, and celebrates when she nails her protein goal.
-export default function CaloriesTodayCard({ budget, dayType }: { budget: number; dayType?: 'workout' | 'rest' | null }) {
+export default function CaloriesTodayCard({ budget, dayType, compact }: { budget: number; dayType?: 'workout' | 'rest' | null; compact?: boolean }) {
   const [data, setData] = useState<{ calories: number; protein: number; proteinTarget: number } | null>(null)
 
   useLiveRefresh(() => {
@@ -34,6 +34,26 @@ export default function CaloriesTodayCard({ budget, dayType }: { budget: number;
   // Win = fueled enough to hit the protein target while staying at/under budget.
   const proteinHit = !!data && data.proteinTarget > 0 && data.protein >= data.proteinTarget
   const win = !!spent && spent > 0 && proteinHit && !over
+
+  // Compact (stacked) variant — used side-by-side with the workout card on the home screen.
+  if (compact) {
+    return (
+      <Link href="/plan/today" className="group flex flex-col items-center text-center bg-gradient-to-br from-charcoal to-obsidian border border-smoke rounded-[1.75rem] p-4 hover:border-gold/60 transition-all">
+        <p className="text-gold text-[9px] uppercase tracking-wider font-semibold mb-2.5">Calories 💵</p>
+        <Ring pct={over ? 100 : pct} size={84} stroke={8} color={ringColor}>
+          <div className="text-center leading-none">
+            <p className={`font-bold text-base ${over ? 'text-amber-400' : 'text-gold'}`}>{over ? '-' : ''}${over ? (spent! - budget) : left}</p>
+            <p className="text-ivory/40 text-[8px] uppercase tracking-[0.15em] mt-0.5">{over ? 'over' : 'left'}</p>
+          </div>
+        </Ring>
+        {data && data.proteinTarget > 0 && (
+          <p className="text-ivory/50 text-[11px] mt-2.5">Protein {data.protein}/{data.proteinTarget}g {proteinHit ? '✓' : ''}</p>
+        )}
+        <p className="text-gold/70 text-[10px] mt-2 group-hover:text-gold transition-colors">＋ Log food</p>
+        <Celebration trigger={win} message={winAffirmation('calories')} dedupeKey={`calories-${today}`} />
+      </Link>
+    )
+  }
 
   return (
     <Link href="/plan/today" className="group block bg-gradient-to-br from-charcoal to-obsidian border border-smoke rounded-[2rem] p-6 hover:border-gold/60 hover:-translate-y-0.5 transition-all">
