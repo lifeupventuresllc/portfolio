@@ -71,8 +71,11 @@ export async function POST(request: NextRequest) {
         sessionParams.customer_email = user.email
       }
 
-      // Challenge tiers: tag metadata + route to the challenge onboarding page
+      // Challenge tiers: tag metadata + route to the challenge onboarding page.
+      // allow_promotion_codes lets a Stripe promo code (e.g. a 100%-off beta-test
+      // coupon) be entered at checkout, without touching the live price for anyone else.
       if (packageSlug.startsWith('snatched-')) {
+        sessionParams.allow_promotion_codes = true
         const tier = packageSlug === 'snatched-inner-circle' ? 'inner_circle' : 'challenge'
         // After payment, guide her to create her account → straight into onboarding
         sessionParams.success_url = `${process.env.NEXT_PUBLIC_APP_URL}/signup?redirect=/plan/intake&success=true`

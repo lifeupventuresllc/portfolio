@@ -13,6 +13,8 @@ export type RosterRow = {
   pending: number // check-ins awaiting your reply
   lastCheckin: string | null
   createdAt: string
+  isBeta: boolean // comped $0 enrollment (e.g. a beta-test promo code)
+  hasNegativeFeedback: boolean // submitted a 👎 quick-feedback
 }
 
 function ago(s: string | null): string {
@@ -25,18 +27,20 @@ function ago(s: string | null): string {
 
 export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
   const [q, setQ] = useState('')
-  const [filter, setFilter] = useState<'all' | 'attention' | 'active'>('all')
+  const [filter, setFilter] = useState<'all' | 'attention' | 'active' | 'beta'>('all')
 
-  const needsAttention = (r: RosterRow) => r.pending > 0 || !r.intakeDone
+  const needsAttention = (r: RosterRow) => r.pending > 0 || !r.intakeDone || r.hasNegativeFeedback
   const counts = useMemo(() => ({
     all: rows.length,
     attention: rows.filter(needsAttention).length,
     active: rows.filter((r) => r.status === 'active').length,
+    beta: rows.filter((r) => r.isBeta).length,
   }), [rows])
 
   const shown = useMemo(() => rows.filter((r) => {
     if (filter === 'attention' && !needsAttention(r)) return false
     if (filter === 'active' && r.status !== 'active') return false
+    if (filter === 'beta' && !r.isBeta) return false
     const hay = `${r.name || ''} ${r.email || ''}`.toLowerCase()
     return hay.includes(q.toLowerCase())
   }), [rows, q, filter])
@@ -54,6 +58,7 @@ export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
         {chip('all', 'All', counts.all)}
         {chip('attention', '⚠ Needs you', counts.attention)}
         {chip('active', 'Active', counts.active)}
+        {counts.beta > 0 && chip('beta', '🎁 Beta testers', counts.beta)}
       </div>
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or email…"
         className="w-full px-4 py-3 bg-obsidian border border-smoke rounded-xl text-white text-sm mb-4 focus:outline-none focus:border-gold" />
@@ -67,10 +72,12 @@ export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
                 <p className="text-white font-semibold text-sm truncate">
                   {r.name || r.email?.split('@')[0] || 'Client'}
                   {r.tier === 'inner_circle' && <span className="ml-2 text-[9px] bg-gold/15 text-gold px-2 py-0.5 rounded-full uppercase tracking-wider">Inner Circle</span>}
+                  {r.isBeta && <span className="ml-2 text-[9px] bg-blue-500/15 text-blue-300 px-2 py-0.5 rounded-full uppercase tracking-wider">🎁 Beta</span>}
                 </p>
                 <p className="text-ivory/40 text-xs truncate">{r.email} · {ago(r.lastCheckin)}</p>
               </div>
               <div className="flex items-center gap-2 flex-none">
+                {r.hasNegativeFeedback && <span className="text-[10px] bg-red-500/15 text-red-400 px-2 py-1 rounded-full font-semibold whitespace-nowrap">👎 feedback</span>}
                 {r.pending > 0 && <span className="text-[10px] bg-red-500/15 text-red-400 px-2 py-1 rounded-full font-semibold whitespace-nowrap">{r.pending} to reply</span>}
                 {!r.intakeDone && <span className="text-[10px] bg-amber-500/15 text-amber-400 px-2 py-1 rounded-full font-semibold whitespace-nowrap">no intake</span>}
                 <span className="text-ivory/30">→</span>

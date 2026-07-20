@@ -53,6 +53,7 @@ export default function ClientMenu({ firstName, liveUrl, innerCircle }: { firstN
         { href: '/plan/jumpstart', label: '7-Day Jump Start', icon: '⚡' },
         { href: '/plan/reset', label: '21-Day Habit Reset', icon: '🔁' },
         { href: '/plan/intake', label: 'My profile & stats', icon: '👤' },
+        { href: '/plan/feedback', label: 'Send feedback', icon: '💬' },
       ],
     },
   ]

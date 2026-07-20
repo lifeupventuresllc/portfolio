@@ -7,12 +7,17 @@ export const dynamic = 'force-dynamic'
 export default async function ClientsPage() {
   const { svc } = await requireAdmin('/admin/clients')
 
-  const [{ data: enrollments }, { data: checkins }] = await Promise.all([
+  const [{ data: enrollments }, { data: checkins }, { data: feedback }] = await Promise.all([
     svc.from('challenge_enrollments')
-      .select('id, name, email, tier, status, intake_completed, created_at')
+      .select('id, name, email, tier, status, intake_completed, created_at, amount')
       .order('created_at', { ascending: false }),
     svc.from('challenge_checkins').select('enrollment_id, status, submitted_at'),
+    svc.from('challenge_progress').select('enrollment_id, measurements').eq('note', '__feedback__'),
   ])
+
+  const negativeFeedback = new Set<string>(
+    (feedback || []).filter((f) => (f.measurements as { rating?: string } | null)?.rating === 'down').map((f) => f.enrollment_id as string)
+  )
 
   const byEnroll = new Map<string, { pending: number; last: string | null }>()
   for (const c of checkins || []) {
@@ -36,6 +41,8 @@ export default async function ClientsPage() {
       pending: stats.pending,
       lastCheckin: stats.last,
       createdAt: e.created_at as string,
+      isBeta: e.amount === 0,
+      hasNegativeFeedback: negativeFeedback.has(e.id as string),
     }
   })
 

@@ -49,6 +49,11 @@ export default async function ClientProfile({ params }: { params: { id: string }
   { const cur = new Date(); if (!showedDates.has(isoOf(cur))) cur.setDate(cur.getDate() - 1); while (showedDates.has(isoOf(cur))) { dailyStreak++; cur.setDate(cur.getDate() - 1) } }
   const last14 = Array.from({ length: 14 }, (_, k) => { const d = new Date(); d.setDate(d.getDate() - (13 - k)); const ds = isoOf(d); return { ds, showed: showedDates.has(ds) } })
 
+  const feedbackRows = (progress || [])
+    .filter((p) => p.note === '__feedback__')
+    .sort((a, b) => (b.logged_on as string).localeCompare(a.logged_on as string))
+    .map((p) => ({ ds: p.logged_on as string, ...(p.measurements as { rating?: 'up' | 'down'; text?: string }) }))
+
   const foodByDay = new Map<string, { items: string[]; cal: number; protein: number }>()
   for (const f of (foodLog || [])) {
     const d = f.logged_on as string
@@ -168,6 +173,22 @@ export default async function ClientProfile({ params }: { params: { id: string }
             </div>
           ) : <p className="text-ivory/40 text-sm">No daily activity logged yet.</p>}
         </Section>
+
+        {feedbackRows.length > 0 && (
+          <Section title={`Feedback (${feedbackRows.length})`}>
+            <div className="space-y-2">
+              {feedbackRows.map((f, idx) => (
+                <div key={idx} className={`rounded-xl p-3 border ${f.rating === 'down' ? 'bg-red-500/[0.06] border-red-500/30' : 'bg-obsidian border-smoke'}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg">{f.rating === 'down' ? '👎' : '👍'}</span>
+                    <span className="text-ivory/40 text-xs">{shortDate(f.ds)}</span>
+                  </div>
+                  {f.text ? <p className="text-ivory/70 text-sm mt-1">{f.text}</p> : null}
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
 
         <Section title={`Check-ins (${(checkins || []).length})`}>
           {(checkins || []).length ? (
