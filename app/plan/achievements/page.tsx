@@ -8,11 +8,19 @@ export const dynamic = 'force-dynamic'
 
 const iso = (d: Date) => d.toISOString().slice(0, 10)
 
+// Streak-insurance: one missed day anywhere in the streak doesn't zero it out — the
+// count skips over that single gap. A second gap ends the streak. Mirrors the same
+// rule in app/api/plan/daily/route.ts so the number matches everywhere it's shown.
 function streakFrom(dates: Set<string>): number {
   let streak = 0
   const cur = new Date()
   if (!dates.has(iso(cur))) cur.setDate(cur.getDate() - 1) // grace: holds through yesterday
-  while (dates.has(iso(cur))) { streak++; cur.setDate(cur.getDate() - 1) }
+  let graceUsed = false
+  for (;;) {
+    if (dates.has(iso(cur))) { streak++; cur.setDate(cur.getDate() - 1); continue }
+    if (!graceUsed) { graceUsed = true; cur.setDate(cur.getDate() - 1); continue }
+    break
+  }
   return streak
 }
 

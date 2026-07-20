@@ -6,11 +6,19 @@ import { localDateISO, addDaysISO } from '@/lib/localdate'
 // challenge_progress row per day (note '__daily__'). All day-boundaries use the user's
 // LOCAL day (localDateISO) so a "day" is their real 24h, not UTC's.
 
+// Streak-insurance: life happens, so one missed day anywhere in the streak doesn't zero
+// it out — the count just skips over that single gap. A second gap ends the streak.
+// Fully automatic (no decision for her to make) — matches "recovery, not punishment."
 function streakFrom(dates: Set<string>, todayISO: string): number {
   let streak = 0
   let cur = todayISO
   if (!dates.has(cur)) cur = addDaysISO(cur, -1) // grace: streak holds through yesterday
-  while (dates.has(cur)) { streak++; cur = addDaysISO(cur, -1) }
+  let graceUsed = false
+  for (;;) {
+    if (dates.has(cur)) { streak++; cur = addDaysISO(cur, -1); continue }
+    if (!graceUsed) { graceUsed = true; cur = addDaysISO(cur, -1); continue }
+    break
+  }
   return streak
 }
 

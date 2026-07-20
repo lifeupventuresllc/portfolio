@@ -53,7 +53,7 @@ const DEFS: Def[] = [
     lockedBlurb: 'Upload your first progress photo to unlock this.' },
   { id: 'streak-3', icon: '🔥', title: '3-Day Streak', goal: 3, value: (s) => s.streak,
     earnedBlurb: 'Three days straight. Momentum is real now — keep it lit.',
-    lockedBlurb: 'Show up 3 days in a row to light this up.' },
+    lockedBlurb: 'Show up 3 days in a row to light this up. (One off day won’t reset you — I’ve got a grace day built in.)' },
   { id: 'streak-7', icon: '🔥', title: 'One Week Strong', goal: 7, value: (s) => s.streak,
     earnedBlurb: 'A full week without missing. This is who you are now.',
     lockedBlurb: 'Keep your streak going to 7 days.' },
