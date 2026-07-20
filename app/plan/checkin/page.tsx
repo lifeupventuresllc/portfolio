@@ -5,6 +5,7 @@ import CheckinForm from '@/components/CheckinForm'
 import ProgressChart, { type ProgressPoint } from '@/components/ProgressChart'
 import CoachMedia from '@/components/CoachMedia'
 import PhotoUpload from '@/components/PhotoUpload'
+import { localDateISO, addDaysISO } from '@/lib/localdate'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,6 +39,23 @@ export default async function CheckinPage() {
     .filter((p) => p.weight_lbs != null)
     .map((p) => ({ label: shortDate(p.created_at), weight: Number(p.weight_lbs) }))
 
+  // This week's eating, at a glance — so logging (done on /plan/today) visibly adds up
+  // here too, not just on the single day it happened. Peace of mind: "it's all being tracked."
+  const todayIso = localDateISO()
+  const weekAgoIso = addDaysISO(todayIso, -6)
+  const { data: foodRows } = await svc.from('challenge_food_log')
+    .select('logged_on, calories, protein_g').eq('enrollment_id', enrollment.id).gte('logged_on', weekAgoIso)
+  const foodByDay = new Map<string, { cal: number; protein: number }>()
+  for (const r of (foodRows || [])) {
+    const day = r.logged_on as string
+    const cur = foodByDay.get(day) || { cal: 0, protein: 0 }
+    cur.cal += Number(r.calories) || 0
+    cur.protein += Number(r.protein_g) || 0
+    foodByDay.set(day, cur)
+  }
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDaysISO(weekAgoIso, i))
+  const anyLogged = weekDays.some((d) => foodByDay.has(d))
+
   // progress photos → private signed URLs
   const { data: photoRows } = await svc.from('challenge_progress')
     .select('created_at, photo_urls').eq('enrollment_id', enrollment.id).eq('note', 'photo')
@@ -61,6 +79,32 @@ export default async function CheckinPage() {
           <div className="mb-8">
             <h2 className="text-white font-bold text-lg mb-3">Your progress</h2>
             <ProgressChart points={points} />
+          </div>
+        )}
+
+        {anyLogged && (
+          <div className="mb-8">
+            <h2 className="text-white font-bold text-lg mb-3">This week&apos;s eating</h2>
+            <div className="bg-charcoal border border-smoke rounded-2xl p-5 grid grid-cols-7 gap-2">
+              {weekDays.map((d) => {
+                const w = foodByDay.get(d)
+                const label = new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })
+                return (
+                  <div key={d} className="text-center">
+                    <p className="text-ivory/40 text-[9px] uppercase tracking-wider mb-1">{label}</p>
+                    {w ? (
+                      <>
+                        <p className="text-gold text-xs font-bold">{w.cal}</p>
+                        <p className="text-green-400 text-[10px]">{w.protein}g P</p>
+                      </>
+                    ) : (
+                      <p className="text-ivory/25 text-xs">—</p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-ivory/40 text-xs mt-2">Every meal you log shows up here — it&apos;s all being tracked, week over week.</p>
           </div>
         )}
 
