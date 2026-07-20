@@ -26,6 +26,7 @@ export const RECIPES: Recipe[] = [
   r('Beef & Egg Breakfast Power Bowl', 'breakfast', 552, 51, 40, 20),
   r('Steak, Egg & Cheese Breakfast Bagels', 'breakfast', 495, 71, 36, 21),
   r('Turkey Sausage Sweet Potato Hash', 'breakfast', 475, 39, 43, 10),
+  r('Protein Overnight Oats', 'breakfast', 540, 34, 58, 20),
 
   // ---------- MAINS (lunch / dinner) ----------
   r('BBQ Chicken Pizza', 'main', 280, 32, 22, 10),

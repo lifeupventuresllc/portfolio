@@ -2312,5 +2312,54 @@ export const COOKBOOK_INGREDIENTS: RawRecipeIngredients[] = [
         "aisle": "Pantry"
       }
     ]
+  },
+  {
+    "name": "Protein Overnight Oats",
+    "servings": 1,
+    "basis": "per_serving",
+    "ingredients": [
+      {
+        "item": "rolled oats",
+        "qty": 0.5,
+        "unit": "cup",
+        "aisle": "Grains/Carbs"
+      },
+      {
+        "item": "chia seeds",
+        "qty": 1,
+        "unit": "tbsp",
+        "aisle": "Pantry"
+      },
+      {
+        "item": "low-fat milk",
+        "qty": 1,
+        "unit": "cup",
+        "aisle": "Dairy"
+      },
+      {
+        "item": "plain nonfat Greek yogurt",
+        "qty": 0.5,
+        "unit": "cup",
+        "aisle": "Dairy"
+      },
+      {
+        "item": "peanut butter",
+        "qty": 1,
+        "unit": "tbsp",
+        "aisle": "Pantry"
+      },
+      {
+        "item": "ground cinnamon",
+        "qty": 0.5,
+        "unit": "tsp",
+        "aisle": "Pantry"
+      },
+      {
+        "item": "sliced strawberries",
+        "qty": 0.5,
+        "unit": "cup",
+        "aisle": "Produce"
+      }
+    ]
   }
 ]
