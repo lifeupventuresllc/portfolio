@@ -145,6 +145,16 @@ export default async function PlanDashboard() {
         <CaloriesTodayCard budget={calBudget} dayType={todayDayType} compact />
         <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} compact />
       </div>
+
+      {/* The core promise, always visible on login: Decided For You — she never has to
+          figure out what to eat when she's off her plan. */}
+      <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-blue-500/[0.08] border border-blue-500/30 rounded-2xl px-5 py-3.5 hover:border-blue-400/60 transition-colors">
+        <div>
+          <p className="text-white font-semibold text-sm">🍔 Away from home right now?</p>
+          <p className="text-ivory/50 text-xs mt-0.5">Tap for exactly what to order — no thinking, no searching.</p>
+        </div>
+        <span className="text-blue-300 text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
+      </Link>
     </div>,
     <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} innerCircle={enrollment.tier === 'inner_circle'} />
   )
