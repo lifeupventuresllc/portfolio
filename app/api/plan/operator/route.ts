@@ -29,6 +29,8 @@ const eventKindFor = (s: LifeSignal): FosEventKind =>
   : s.kind === 'schedule_change' ? 'schedule_change'
   : s.kind === 'exhausted' ? 'low_energy'
   : s.kind === 'poor_sleep' ? 'poor_sleep'
+  : s.kind === 'craving' ? 'craving'
+  : s.kind === 'stressed' ? 'stressed'
   : 'message'
 
 export async function GET() {

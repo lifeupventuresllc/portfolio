@@ -11,6 +11,9 @@ export function parseSignal(text: string): LifeSignal | null {
   if (mMatch || /short on time|only have|not much time|in a hurry|quick workout|no time/.test(t)) {
     return { kind: 'time_crunch', minutes: mMatch ? parseInt(mMatch[1], 10) : 20 }
   }
+  // Craving / stress-eating — checked early so it doesn't fall into a generic bucket
+  if (/craving|crave|want (some )?junk|want sugar|want something sweet|stress eat|emotional eat|binge|can'?t stop eating|want to eat everything/.test(t)) return { kind: 'craving' }
+  if (/stress(ed)?|overwhelm(ed)?|anxious|anxiety|can'?t handle|too much on my plate|breaking down|losing it/.test(t)) return { kind: 'stressed' }
   if (/exhaust|drained|no energy|so tired|wiped|burnt out|burned out|worn out|low energy/.test(t)) return { kind: 'exhausted' }
   if (/didn'?t sleep|no sleep|couldn'?t sleep|bad sleep|slept (bad|poorly|terrible)|up all night|insomnia|barely slept/.test(t)) return { kind: 'poor_sleep' }
   if (/eat(ing)? out|lunch meeting|dinner out|restaurant|going out to (eat|lunch|dinner)|coworkers? for lunch|grabbing (lunch|dinner|food)|ordering out/.test(t)) return { kind: 'eat_out' }

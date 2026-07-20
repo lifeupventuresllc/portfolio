@@ -12,6 +12,8 @@ export type LifeSignal =
   | { kind: 'schedule_change'; freeAt?: string }
   | { kind: 'eat_out' }
   | { kind: 'missed'; days: number }
+  | { kind: 'craving' }
+  | { kind: 'stressed' }
 
 export type RecoveryPlan = {
   message: string
@@ -57,6 +59,16 @@ export function recover(signal: LifeSignal, normalMinutes = 45): RecoveryPlan {
           ? `Life happened — that's all. You're not starting over; you're continuing. Here's today's path forward.`
           : `A few days off doesn't erase your progress. We don't start over here — we pick the path back up. I made today an easy re-entry so it feels good to be back.`,
         workoutChange: { toMinutes: 20, swapTo: 'easy re-entry', reason: 'returning after a break' },
+      }
+    case 'craving':
+      return {
+        message: `A craving isn't a failure — it's your body asking for fuel. Get some protein in you now (tap "Away from home right now?" if you're out) and it'll ease off in a few minutes. No guilt, no starting over.`,
+        nutritionChange: { reason: 'craving — protein-first to quiet it' },
+      }
+    case 'stressed':
+      return {
+        message: `Stress is real, and today doesn't have to be perfect — it just has to be something. I kept today short and simple so you're not adding pressure on top of pressure. One small win still counts.`,
+        workoutChange: { toMinutes: 20, swapTo: 'light mobility + short circuit', reason: 'high stress' },
       }
   }
 }

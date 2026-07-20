@@ -27,6 +27,7 @@ export type FosProfile = {
 export type FosEventKind =
   | 'message' | 'adjustment' | 'win' | 'miss' | 'excuse'
   | 'schedule_change' | 'eat_out' | 'travel' | 'low_energy' | 'poor_sleep' | 'note'
+  | 'craving' | 'stressed'
 
 export type FosEvent = {
   id?: string
