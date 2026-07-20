@@ -1,0 +1,67 @@
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { weightClassFor } from '@/lib/escape-plan'
+import { localMondayIndex } from '@/lib/localdate'
+
+export const dynamic = 'force-dynamic'
+
+const SLOT_ICON: Record<string, string> = { Breakfast: '🌅', Lunch: '☀️', Snack: '🥤', Dinner: '🌙' }
+
+// The zero-decision escape hatch: she's out, hasn't planned, and would normally have to
+// choose between "wing it" (breaks the plan, feeds the craving spiral) or "skip it"
+// (the forgot-to-eat pattern). This removes the decision entirely — one screen, no typing,
+// no searching: exactly what to order, already picked for her.
+export default async function EatingOutNow() {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login?redirect=/plan/eating-out')
+
+  const svc = createServiceClient()
+  let { data: enrollment } = await svc
+    .from('challenge_enrollments').select('*')
+    .eq('user_id', user.id).order('created_at', { ascending: false }).maybeSingle()
+  if (!enrollment && user.email) {
+    const { data: byEmail } = await svc
+      .from('challenge_enrollments').select('*')
+      .eq('email', user.email).order('created_at', { ascending: false }).maybeSingle()
+    enrollment = byEmail || null
+  }
+  if (!enrollment) redirect('/plan')
+
+  const { data: intake } = await svc.from('challenge_intake').select('weight_lbs').eq('enrollment_id', enrollment.id).maybeSingle()
+  const wc = weightClassFor(Number(intake?.weight_lbs) || 170)
+  const day = wc.days[localMondayIndex() % wc.days.length]
+
+  return (
+    <div className="min-h-screen bg-obsidian px-4 py-12">
+      <div className="max-w-2xl mx-auto">
+        <Link href="/plan/today" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Back to today</Link>
+
+        <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Away from home right now</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Don&apos;t think about it — order this.</h1>
+        <p className="text-ivory/55 text-sm mb-8">No planning, no guessing. High protein keeps you full and stops the crash-and-crave cycle. Just order what&apos;s below.</p>
+
+        <div className="bg-gradient-to-br from-gold/10 to-charcoal border border-gold/30 rounded-2xl p-5 mb-6 flex flex-wrap gap-x-6 gap-y-1 justify-between">
+          <div><p className="text-ivory/40 text-[10px] uppercase tracking-wider">Today&apos;s target</p><p className="text-gold font-bold">{day.total.toLocaleString()} cal</p></div>
+          <div><p className="text-ivory/40 text-[10px] uppercase tracking-wider">Protein</p><p className="text-white font-bold">{wc.proteinTarget}g</p></div>
+        </div>
+
+        <div className="space-y-3">
+          {day.meals.map((m, i) => (
+            <div key={i} className="bg-charcoal border border-smoke rounded-2xl p-5">
+              <div className="flex items-start justify-between gap-3 mb-1">
+                <p className="text-gold text-xs font-bold uppercase tracking-wider">{SLOT_ICON[m.slot] || ''} {m.slot}</p>
+                <p className="text-ivory/50 text-xs whitespace-nowrap">{m.cal} cal · {m.protein}g P</p>
+              </div>
+              <p className="text-white font-semibold text-sm">{m.restaurant}</p>
+              <p className="text-ivory/60 text-sm mt-0.5">{m.order}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-ivory/35 text-xs mt-6 text-center">This is your Escape Plan — swapped in automatically for your weight range. No cooking, no tracking, just order and go.</p>
+      </div>
+    </div>
+  )
+}

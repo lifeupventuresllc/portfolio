@@ -66,6 +66,16 @@ export default async function TodayView() {
         <h1 className="text-3xl font-bold text-white mb-6">Today, {firstName}</h1>
 
         <div className="space-y-6">
+          {/* The zero-decision escape hatch — for the moment she's out, off-plan, and
+              would otherwise have to decide (or skip eating entirely). */}
+          <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-blue-500/[0.08] border border-blue-500/30 rounded-2xl px-5 py-4 hover:border-blue-400/60 transition-colors">
+            <div>
+              <p className="text-white font-semibold text-sm">🍔 Away from home right now?</p>
+              <p className="text-ivory/50 text-xs mt-0.5">Tap for exactly what to order — no thinking, no searching.</p>
+            </div>
+            <span className="text-blue-300 text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
+          </Link>
+
           {/* Food log — the heartbeat of the daily view. Budget = TODAY'S calorie target
               (workout days higher, rest days lower); the app already knows which day this is. */}
           <FoodLog planned={planned} budget={todayMeals?.target ?? null} dayType={todayMeals?.dayType ?? null} />

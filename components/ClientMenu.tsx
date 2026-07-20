@@ -24,6 +24,7 @@ export default function ClientMenu({ firstName, liveUrl, innerCircle }: { firstN
       title: 'Today & Plan',
       items: [
         { href: '/plan/today', label: 'Today', icon: '☀️' },
+        { href: '/plan/eating-out', label: 'Away from home right now?', icon: '🍔' },
         { href: '/plan/meals', label: 'My meals — what I’m cooking & how', icon: '🍽️' },
         { href: '/plan/library', label: 'The Cookbook', icon: '📖' },
         { href: '/plan/workout', label: 'Today’s workout', icon: '💪🏽' },
