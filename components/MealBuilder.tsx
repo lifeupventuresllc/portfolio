@@ -118,6 +118,7 @@ export default function MealBuilder({ initial }: {
 
       {/* ✨ Auto-build — the seamless one-tap option */}
       <div className="bg-gradient-to-br from-gold/15 to-charcoal border border-gold/40 rounded-2xl p-5 text-center">
+        <span className="inline-block text-[9px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold mb-2">✓ Decided For You</span>
         <p className="text-white font-bold text-lg mb-1">Want me to build your week for you?</p>
         <p className="text-ivory/55 text-sm mb-4">One tap and I&apos;ll pick your meals, portion every day to your calories, and set your cook schedule. Tweak anything after.</p>
         <button onClick={autoBuild} className="luf-glow bg-gold text-obsidian px-8 py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl hover:scale-[1.02] active:scale-[.98] transition-transform">✨ Auto-build my week</button>

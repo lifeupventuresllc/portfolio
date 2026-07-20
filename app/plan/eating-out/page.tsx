@@ -38,7 +38,10 @@ export default async function EatingOutNow() {
       <div className="max-w-2xl mx-auto">
         <Link href="/plan/today" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Back to today</Link>
 
-        <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Away from home right now</p>
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase">Away from home right now</p>
+          <span className="text-[9px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">✓ Decided For You</span>
+        </div>
         <h1 className="text-3xl font-bold text-white mb-2">Don&apos;t think about it — order this.</h1>
         <p className="text-ivory/55 text-sm mb-8">No planning, no guessing. High protein keeps you full and stops the crash-and-crave cycle. Just order what&apos;s below.</p>
 
