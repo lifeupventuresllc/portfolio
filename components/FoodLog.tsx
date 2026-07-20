@@ -170,6 +170,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
           <MacroBar label="Protein" val={t.protein_g} target={tar.protein_g} color="#46c46f" />
           <MacroBar label="Carbs" val={t.carbs_g} target={tar.carbs_g} color="#60a5fa" />
           <MacroBar label="Fats" val={t.fats_g} target={tar.fats_g} color="#e5b567" />
+          <p className="text-ivory/35 text-[10px]">Hit your protein and cravings get quieter — that&apos;s the goal, not just the number.</p>
         </div>
       </div>
       <p className={`text-xs text-center mb-4 ${calOver ? 'text-amber-400 font-semibold' : 'text-ivory/50'}`}>
