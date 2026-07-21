@@ -16,6 +16,26 @@ const parseSecs = (s?: string): number | undefined => {
   return m ? Number(m[1]) : undefined
 }
 
+// Rough total session length. Timed steps (home exercises, rest) use their real
+// seconds; rep-based work steps (gym supersets/accessory/abs) get a ~40s working-set
+// estimate since reps aren't time-denominated. Good enough for "About N min" at the
+// top of the player — not meant to be exact to the second.
+const DEFAULT_WORK_SECONDS = 40
+const parseMins = (s?: string): number | undefined => {
+  if (!s) return undefined
+  const m = s.match(/(\d+)\s*min/i)
+  return m ? Number(m[1]) : undefined
+}
+export function estimateWorkoutMinutes(steps: WorkoutStep[]): number {
+  const totalSeconds = steps.reduce((sum, s) => {
+    if (s.seconds != null) return sum + s.seconds
+    const mins = parseMins(s.detail)
+    if (mins != null) return sum + mins * 60
+    return sum + DEFAULT_WORK_SECONDS
+  }, 0)
+  return Math.max(1, Math.round(totalSeconds / 60))
+}
+
 export function dayLabels(program: WorkoutProgram): string[] {
   if (program.track === 'home' && program.home) return program.home.days.map((d) => d.title)
   return (program.gymDays || []).map((d) => `Day ${d.dayNum}: ${d.title}`)

@@ -38,7 +38,7 @@ export type FosEvent = {
 }
 
 export type AdjustmentStatus = 'recommended' | 'approved' | 'modified' | 'rejected'
-export type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string }
+export type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home' }
 export type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string }
 
 export type FosAdjustment = {

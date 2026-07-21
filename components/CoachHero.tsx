@@ -10,30 +10,19 @@ import { winAffirmation } from '@/lib/affirmations'
 // page jump. Warm, minimal, alive: a gold "A" avatar, a personal greeting, and an
 // inline conversation. Approving a change refreshes the supporting cards on the spot.
 type Msg = { role: 'user' | 'operator'; content: string }
-type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string }
+type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home' }
 type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string }
 type Adjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionChange?: NutritionChange }
 
 // The 4 proactive daily-context questions — Coach Asa asks these FIRST, every
-// morning, instead of waiting for her to type. Answers become a synthesized
-// message sent through the same rule-based operator as free-typed chat, so
-// they get the exact same recommend/approve flow with zero new backend code.
+// morning, instead of waiting for her to type. Answers go to /api/plan/daily-context,
+// which plans DIRECTLY from the structured fields (not a synthesized sentence run
+// through regex matching) — that's what actually swaps today's workout to a home/gym
+// track based on where she says she is, instead of just producing a cosmetic label.
 const FEELING = [{ v: 'great', l: '😊 Great' }, { v: 'okay', l: '😐 Okay' }, { v: 'tired', l: '😴 Tired' }, { v: 'stressed', l: '😣 Stressed' }]
 const TIME = [{ v: 'short', l: '⏱️ 15-20 min' }, { v: 'normal', l: '🕐 About 45 min' }, { v: 'plenty', l: '🕒 Plenty of time' }]
 const WHERE = [{ v: 'home', l: '🏠 Home' }, { v: 'gym', l: '🏋️ Gym' }, { v: 'traveling', l: '✈️ Traveling' }]
 const GOAL = [{ v: 'push', l: '🔥 Push hard' }, { v: 'showup', l: '💪 Just show up' }, { v: 'recover', l: '🌿 Recover' }]
-
-function synthesizeMessage(feeling: string, time: string, where: string, goal: string): string {
-  const parts: string[] = []
-  parts.push(feeling === 'tired' ? "I'm so tired today" : feeling === 'stressed' ? "I'm feeling stressed today" : feeling === 'great' ? "I'm feeling great today" : "I'm feeling okay today")
-  if (time === 'short') parts.push('I only have 20 minutes')
-  else if (time === 'plenty') parts.push('I have plenty of time')
-  if (where === 'traveling') parts.push("I'm traveling and eating out")
-  else if (where === 'gym') parts.push("I'm at the gym")
-  else parts.push("I'm at home")
-  parts.push(goal === 'push' ? 'I want to push hard today' : goal === 'recover' ? 'I just want to recover today' : 'I just want to show up today')
-  return parts.join(', ') + '.'
-}
 
 export default function CoachHero({ firstName }: { firstName: string }) {
   const [workoutDone, setWorkoutDone] = useState(false)
@@ -60,7 +49,16 @@ export default function CoachHero({ firstName }: { firstName: string }) {
     if (!feeling || !time || !where || !goal) return
     try { localStorage.setItem('luf_daily_context', today) } catch { /* noop */ }
     setCtxDone(true)
-    await send(synthesizeMessage(feeling, time, where, goal))
+    setSending(true)
+    const userSummary = `Feeling ${feeling} · ${time === 'short' ? '15-20 min' : time === 'plenty' ? 'plenty of time' : '~45 min'} · ${where} · ${goal === 'push' ? 'push hard' : goal === 'recover' ? 'recover' : 'just show up'}`
+    setMessages((m) => [...m, { role: 'user', content: userSummary }])
+    try {
+      const r = await fetch('/api/plan/daily-context', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ feeling, time, where, goal }) })
+      const d = await r.json().catch(() => ({}))
+      setMessages((m) => [...m, { role: 'operator', content: d?.reply || "Got it — let's build today around you." }])
+      if (d?.adjustment) setPending(d.adjustment as Adjustment)
+    } catch { setMessages((m) => [...m, { role: 'operator', content: "I couldn't reach your plan just now — try that again in a sec." }]) }
+    setSending(false)
   }
 
   useLiveRefresh(() => {
@@ -106,7 +104,8 @@ export default function CoachHero({ firstName }: { firstName: string }) {
 
   const adjLines = (a: Adjustment) => {
     const out: string[] = []; const w = a.workoutChange, n = a.nutritionChange
-    if (w?.toMinutes) out.push(`Workout → ${w.toMinutes}-min ${w.swapTo || 'session'}`)
+    if (w?.trackOverride) out.push(`Workout → swapped to a ${w.trackOverride === 'home' ? 'bodyweight home' : 'gym'} session${w.toMinutes ? `, ${w.toMinutes} min` : ''}`)
+    else if (w?.toMinutes) out.push(`Workout → ${w.toMinutes}-min ${w.swapTo || 'session'}`)
     else if (w?.reason) out.push('Workout → re-slotted for today')
     if (n?.dinnerSuggestion) out.push(`Nutrition → ${n.dinnerSuggestion}`)
     if (n?.calorieDelta) out.push(`Calories → ${n.calorieDelta > 0 ? '+' : ''}${n.calorieDelta}`)

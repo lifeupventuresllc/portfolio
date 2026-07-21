@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Ring from '@/components/Ring'
 import Confetti from '@/components/Confetti'
 import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
-import { buildSteps, dayLabels, type WorkoutStep } from '@/lib/workout-steps'
+import { buildSteps, dayLabels, estimateWorkoutMinutes, type WorkoutStep } from '@/lib/workout-steps'
 import type { WorkoutProgram } from '@/lib/workout'
 
 // Guided in-workout player. Opens straight into TODAY'S session (no picker
@@ -101,7 +101,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
       <div className="flex items-center justify-between gap-3 mb-3">
         <button onClick={() => router.push('/plan')} className="text-ivory/40 hover:text-gold text-xs font-semibold">← My week</button>
         <button onClick={() => setSwitching((s) => !s)} className="text-center">
-          <p className="text-gold text-[10px] font-semibold tracking-[0.2em] uppercase">Today&apos;s session</p>
+          <p className="text-gold text-[10px] font-semibold tracking-[0.2em] uppercase">Today&apos;s session · about {estimateWorkoutMinutes(steps)} min</p>
           <p className="text-white text-sm font-bold leading-tight">{labels[dayIdx]} <span className="text-ivory/40">▾</span></p>
         </button>
         <span className="text-ivory/40 text-xs tabular-nums w-10 text-right">{i + 1}/{steps.length}</span>

@@ -72,3 +72,46 @@ export function recover(signal: LifeSignal, normalMinutes = 45): RecoveryPlan {
       }
   }
 }
+
+// The daily proactive check-in (feeling/time/location/goal) has STRUCTURED answers
+// already — this plans directly from them instead of round-tripping through a
+// synthesized sentence + regex matching, which is lossy (free text can't reliably
+// carry "swap to a home-only workout" the way an explicit field can). This is the
+// fix for: she says "home" but the session still shows gym-only moves like barbell
+// squats — trackOverride actually swaps which track's exercises get generated for
+// today, not just a cosmetic duration label.
+export type DailyContext = {
+  feeling: 'great' | 'okay' | 'tired' | 'stressed'
+  time: 'short' | 'normal' | 'plenty'
+  where: 'home' | 'gym' | 'traveling'
+  goal: 'push' | 'showup' | 'recover'
+}
+
+export function planForDailyContext(ctx: DailyContext, normalMinutes = 45): RecoveryPlan {
+  const wantsLight = ctx.feeling === 'tired' || ctx.feeling === 'stressed' || ctx.goal === 'recover'
+  const wantsShort = ctx.time === 'short'
+  let toMinutes: number | undefined
+  if (wantsShort) toMinutes = 20
+  else if (wantsLight) toMinutes = 25
+  const swapTo = wantsLight ? 'light mobility + short circuit' : wantsShort ? 'high-impact express' : undefined
+  const trackOverride: 'gym' | 'home' | undefined = ctx.where === 'home' ? 'home' : ctx.where === 'gym' ? 'gym' : undefined
+
+  const messages: string[] = []
+  if (ctx.feeling === 'stressed') messages.push(`Stress is real — today doesn't have to be perfect, it just has to be something.`)
+  else if (ctx.feeling === 'tired') messages.push(`Rough day — I hear you. Keeping it light so you still move without wrecking yourself.`)
+  else if (ctx.feeling === 'great') messages.push(`Love that energy — let's use it.`)
+  else messages.push(`Got it — building today around where you're at.`)
+  if (trackOverride) messages.push(`Since you're ${ctx.where === 'home' ? 'at home' : 'at the gym'} today, I swapped your session to ${ctx.where === 'home' ? 'a bodyweight home' : 'a gym'} workout.`)
+  if (toMinutes) messages.push(`Trimmed it to about ${toMinutes} minutes so it actually fits.`)
+  if (ctx.where === 'traveling') messages.push(`Traveling — tap "Away from home right now?" any time and I've got your order ready.`)
+
+  const workoutChange: WorkoutChange | undefined = (trackOverride || toMinutes)
+    ? { fromMinutes: normalMinutes, toMinutes, swapTo, trackOverride, reason: [wantsShort && 'short on time', trackOverride && `at ${ctx.where}`, wantsLight && ctx.feeling !== 'great' && `feeling ${ctx.feeling}`].filter(Boolean).join(' + ') || undefined }
+    : undefined
+
+  return {
+    message: messages.join(' '),
+    workoutChange,
+    nutritionChange: ctx.where === 'traveling' ? { reason: 'traveling — use the eating-out escape hatch' } : undefined,
+  }
+}

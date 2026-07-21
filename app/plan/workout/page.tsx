@@ -2,7 +2,10 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import WorkoutPlayer from '@/components/WorkoutPlayer'
-import type { WorkoutProgram } from '@/lib/workout'
+import { generateWorkout, type WorkoutProgram } from '@/lib/workout'
+import type { Level, Injury } from '@/lib/workout-exercises'
+import { getApprovedTodayAdjustment } from '@/lib/fos/context'
+import { localDateISO } from '@/lib/localdate'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,9 +27,11 @@ export default async function WorkoutSession() {
   if (!enrollment) redirect('/plan')
 
   const firstName = (enrollment.name || user.email?.split('@')[0] || 'there').split(' ')[0]
-  const [{ data: workoutPlan }, { data: doneRows }] = await Promise.all([
+  const [{ data: workoutPlan }, { data: doneRows }, { data: intake }, todayAdjustment] = await Promise.all([
     svc.from('challenge_workout_plans').select('*').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
+    svc.from('challenge_intake').select('*').eq('enrollment_id', enrollment.id).maybeSingle(),
+    getApprovedTodayAdjustment(enrollment.id as string, localDateISO()),
   ])
 
   if (!workoutPlan?.plan) {
@@ -42,7 +47,25 @@ export default async function WorkoutSession() {
   }
 
   // "Today" = the next day in her week, rotating by how many workouts she's finished.
-  const program = workoutPlan.plan as WorkoutProgram
+  let program = workoutPlan.plan as WorkoutProgram
+
+  // She told the daily check-in she's somewhere different than her stored program's
+  // track (e.g. plan says gym, she said home today) — regenerate a TODAY-ONLY session
+  // on the track she's actually on, from the same stored intake, without touching her
+  // permanent plan. This is the fix for "I said home but still got barbell squats."
+  const trackOverride = todayAdjustment?.workoutChange?.trackOverride
+  if (trackOverride && trackOverride !== program.track && intake) {
+    const level = (intake.experience_level === 'advanced' ? 3 : intake.experience_level === 'intermediate' ? 2 : 1) as Level
+    const goal = (intake.goal === 'gain' || intake.goal === 'maintain' ? intake.goal : 'lose') as 'lose' | 'gain' | 'maintain'
+    const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
+    const injuries = (Array.isArray((intake.form_data as { injuries?: Injury[] } | null)?.injuries)
+      ? (intake.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
+    program = generateWorkout({
+      name: (enrollment.name as string) || 'Your', sex, track: trackOverride, level, goal,
+      daysPerWeek: Number(intake.days_per_week) || 3, weekNumber: 1, injuries,
+    })
+  }
+
   const numDays = program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)
   const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
   const startDay = numDays > 0 ? completed % numDays : 0
