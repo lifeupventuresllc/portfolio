@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 // Degrades gracefully (hidden) on browsers without support.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export default function VoiceButton({ onResult, onInterim }: { onResult: (text: string) => void; onInterim?: (text: string) => void }) {
+export default function VoiceButton({ onResult, onInterim, idleLabel = 'Speak what you ate' }: { onResult: (text: string) => void; onInterim?: (text: string) => void; idleLabel?: string }) {
   const [supported, setSupported] = useState(false)
   const [listening, setListening] = useState(false)
   const recRef = useRef<any>(null)
@@ -50,7 +50,7 @@ export default function VoiceButton({ onResult, onInterim }: { onResult: (text: 
     <button
       type="button"
       onClick={toggle}
-      aria-label={listening ? 'Stop listening' : 'Speak what you ate'}
+      aria-label={listening ? 'Stop listening' : idleLabel}
       className={`shrink-0 h-10 w-10 rounded-xl flex items-center justify-center transition-all ${listening ? 'bg-red-500/90 text-white luf-glow scale-105' : 'bg-obsidian/60 border border-smoke text-ivory/70 hover:border-gold/50'}`}
     >
       {listening ? (

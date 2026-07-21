@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Celebration from '@/components/Celebration'
+import VoiceButton from '@/components/VoiceButton'
 import { useLiveRefresh, localTodayISO, broadcastRefresh } from '@/lib/useLiveRefresh'
 import { winAffirmation } from '@/lib/affirmations'
 
@@ -119,6 +120,7 @@ export default function CoachHero({ firstName }: { firstName: string }) {
           autoComplete="off" autoCorrect="on" enterKeyHint="send" inputMode="text"
           className="flex-1 bg-obsidian/60 border border-smoke rounded-2xl px-4 py-3 text-base text-white placeholder:text-ivory/35 focus:border-gold/60 focus:outline-none"
         />
+        <VoiceButton idleLabel="Talk to Coach Asa" onInterim={setInput} onResult={(t) => { setInput(t); send(t) }} />
         <button type="submit" disabled={sending || !input.trim()} className="h-12 w-12 shrink-0 rounded-full bg-gold text-obsidian font-bold text-lg flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform">{sending ? '…' : '➤'}</button>
       </form>
 
