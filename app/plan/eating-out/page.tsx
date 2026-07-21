@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { weightClassFor } from '@/lib/escape-plan'
-import { localMondayIndex } from '@/lib/localdate'
+import { localDateISO } from '@/lib/localdate'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,7 +31,11 @@ export default async function EatingOutNow() {
 
   const { data: intake } = await svc.from('challenge_intake').select('weight_lbs').eq('enrollment_id', enrollment.id).maybeSingle()
   const wc = weightClassFor(Number(intake?.weight_lbs) || 170)
-  const day = wc.days[localMondayIndex() % wc.days.length]
+  // Rotate by calendar day (not day-of-week) so she cycles through every option
+  // before repeating, instead of seeing the same "Monday" order every single week.
+  // Stable within a day (same recommendation if she checks twice today).
+  const epochDays = Math.floor(new Date(`${localDateISO()}T00:00:00Z`).getTime() / 86400000)
+  const day = wc.days[epochDays % wc.days.length]
 
   return (
     <div className="min-h-screen bg-obsidian px-4 py-12">
