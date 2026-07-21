@@ -42,6 +42,7 @@ export default function CoachHero({ firstName }: { firstName: string }) {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [pending, setPending] = useState<Adjustment | null>(null)
+  const [recordingMemo, setRecordingMemo] = useState(false)
   const today = localTodayISO()
 
   // Daily context quiz — shown once per day until she's answered (or already talked today)
@@ -177,6 +178,10 @@ export default function CoachHero({ firstName }: { firstName: string }) {
         </div>
       )}
 
+      {recordingMemo && (
+        <p className="luf-flame text-red-400 text-[10px] uppercase tracking-wider font-bold mb-1.5">● Recording your memo — tap 🎙️ again when you&apos;re done</p>
+      )}
+
       {/* talk right here — no page jump */}
       <form onSubmit={(e) => { e.preventDefault(); send(input) }} className="flex gap-2">
         <input
@@ -186,8 +191,14 @@ export default function CoachHero({ firstName }: { firstName: string }) {
           className="flex-1 bg-obsidian/60 border border-smoke rounded-2xl px-4 py-3 text-base text-white placeholder:text-ivory/35 focus:border-gold/60 focus:outline-none"
         />
         <VoiceButton idleLabel="Talk to Coach Asa" onInterim={setInput} onResult={(t) => { setInput(t); send(t) }} />
+        <VoiceButton
+          icon="🎙️" idleLabel="Record a longer memo" continuous
+          onInterim={(t) => { setRecordingMemo(true); setInput(t) }}
+          onResult={(t) => { setRecordingMemo(false); setInput(t); send(t) }}
+        />
         <button type="submit" disabled={sending || !input.trim()} className="h-12 w-12 shrink-0 rounded-full bg-gold text-obsidian font-bold text-lg flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform">{sending ? '…' : '➤'}</button>
       </form>
+      <p className="text-ivory/30 text-[10px] mt-1.5">🎤 quick chat · 🎙️ record a longer memo — thoughts, questions, or your daily check-in</p>
 
       <Celebration trigger={perfectDay} message={winAffirmation('allDone')} dedupeKey={`perfectday-${today}`} />
     </div>
