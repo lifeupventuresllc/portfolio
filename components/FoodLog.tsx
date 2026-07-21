@@ -6,7 +6,7 @@ import VoiceButton from '@/components/VoiceButton'
 
 type SearchFood = {
   name: string; brand: string | null; servings: number; serving_label: string | null
-  calories: number; protein_g: number; carbs_g: number; fats_g: number; source: 'nutritionix' | 'estimated'; photo?: string | null
+  calories: number; protein_g: number; carbs_g: number; fats_g: number; source: 'usda' | 'estimated'; photo?: string | null
 }
 
 type Entry = {
@@ -47,7 +47,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
   const [pop, setPop] = useState(false)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ name: '', meal: 'breakfast', servings: '1', calories: '', protein_g: '', carbs_g: '', fats_g: '' })
-  // Accurate food search (Nutritionix) + voice + AI-estimate fallback
+  // Accurate food search (USDA FoodData Central) + voice + AI-estimate fallback
   const [q, setQ] = useState('')
   const [searchMeal, setSearchMeal] = useState('breakfast')
   const [results, setResults] = useState<SearchFood[]>([])
@@ -216,7 +216,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
                     <p className="text-white text-xs font-medium truncate">{f.name}{f.brand ? <span className="text-ivory/40"> · {f.brand}</span> : null}</p>
                     <p className="text-ivory/40 text-[10px]">{f.servings}{f.serving_label ? ` ${f.serving_label}` : ''} · {f.calories} cal · {f.protein_g}P · {f.carbs_g}C · {f.fats_g}F</p>
                   </div>
-                  <span className={`shrink-0 text-[8px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${f.source === 'nutritionix' ? 'bg-green-500/15 text-green-400' : 'bg-amber-500/15 text-amber-400'}`}>{f.source === 'nutritionix' ? '✓ verified' : '~ estimate'}</span>
+                  <span className={`shrink-0 text-[8px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${f.source === 'usda' ? 'bg-green-500/15 text-green-400' : 'bg-amber-500/15 text-amber-400'}`}>{f.source === 'usda' ? '✓ verified' : '~ estimate'}</span>
                 </button>
               ))}
             </div>

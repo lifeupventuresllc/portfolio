@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 
-// FALLBACK ONLY — when a food isn't in the Nutritionix database, Claude estimates
+// FALLBACK ONLY — when a food isn't in the USDA database, Claude estimates
 // its macros from the description. Results are clearly labeled "estimated" in the UI
 // so verified DB facts and AI guesses never get confused (accuracy is the priority).
 
