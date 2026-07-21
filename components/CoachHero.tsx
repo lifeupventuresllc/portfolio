@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Celebration from '@/components/Celebration'
 import VoiceButton from '@/components/VoiceButton'
 import { useLiveRefresh, localTodayISO, broadcastRefresh } from '@/lib/useLiveRefresh'
@@ -14,6 +14,27 @@ type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string
 type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string }
 type Adjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionChange?: NutritionChange }
 
+// The 4 proactive daily-context questions — Coach Asa asks these FIRST, every
+// morning, instead of waiting for her to type. Answers become a synthesized
+// message sent through the same rule-based operator as free-typed chat, so
+// they get the exact same recommend/approve flow with zero new backend code.
+const FEELING = [{ v: 'great', l: '😊 Great' }, { v: 'okay', l: '😐 Okay' }, { v: 'tired', l: '😴 Tired' }, { v: 'stressed', l: '😣 Stressed' }]
+const TIME = [{ v: 'short', l: '⏱️ 15-20 min' }, { v: 'normal', l: '🕐 About 45 min' }, { v: 'plenty', l: '🕒 Plenty of time' }]
+const WHERE = [{ v: 'home', l: '🏠 Home' }, { v: 'gym', l: '🏋️ Gym' }, { v: 'traveling', l: '✈️ Traveling' }]
+const GOAL = [{ v: 'push', l: '🔥 Push hard' }, { v: 'showup', l: '💪 Just show up' }, { v: 'recover', l: '🌿 Recover' }]
+
+function synthesizeMessage(feeling: string, time: string, where: string, goal: string): string {
+  const parts: string[] = []
+  parts.push(feeling === 'tired' ? "I'm so tired today" : feeling === 'stressed' ? "I'm feeling stressed today" : feeling === 'great' ? "I'm feeling great today" : "I'm feeling okay today")
+  if (time === 'short') parts.push('I only have 20 minutes')
+  else if (time === 'plenty') parts.push('I have plenty of time')
+  if (where === 'traveling') parts.push("I'm traveling and eating out")
+  else if (where === 'gym') parts.push("I'm at the gym")
+  else parts.push("I'm at home")
+  parts.push(goal === 'push' ? 'I want to push hard today' : goal === 'recover' ? 'I just want to recover today' : 'I just want to show up today')
+  return parts.join(', ') + '.'
+}
+
 export default function CoachHero({ firstName }: { firstName: string }) {
   const [workoutDone, setWorkoutDone] = useState(false)
   const [nutri, setNutri] = useState<{ protein: number; target: number } | null>(null)
@@ -22,6 +43,24 @@ export default function CoachHero({ firstName }: { firstName: string }) {
   const [sending, setSending] = useState(false)
   const [pending, setPending] = useState<Adjustment | null>(null)
   const today = localTodayISO()
+
+  // Daily context quiz — shown once per day until she's answered (or already talked today)
+  const [ctxDone, setCtxDone] = useState(true) // default true so it never flashes before the client check runs
+  const [feeling, setFeeling] = useState<string | null>(null)
+  const [time, setTime] = useState<string | null>(null)
+  const [where, setWhere] = useState<string | null>(null)
+  const [goal, setGoal] = useState<string | null>(null)
+
+  useEffect(() => {
+    try { setCtxDone(localStorage.getItem('luf_daily_context') === today) } catch { /* noop */ }
+  }, [today])
+
+  async function submitContext() {
+    if (!feeling || !time || !where || !goal) return
+    try { localStorage.setItem('luf_daily_context', today) } catch { /* noop */ }
+    setCtxDone(true)
+    await send(synthesizeMessage(feeling, time, where, goal))
+  }
 
   useLiveRefresh(() => {
     fetch('/api/plan/daily').then((r) => r.json()).then((d) => setWorkoutDone(!!d?.today?.workout)).catch(() => {})
@@ -84,8 +123,34 @@ export default function CoachHero({ firstName }: { firstName: string }) {
         </div>
       </div>
 
-      {/* opening greeting, or the live conversation once she talks */}
-      {messages.length === 0 ? (
+      {/* proactive daily check-in — asked FIRST, every morning, before anything else */}
+      {!ctxDone && messages.length === 0 ? (
+        <div className="mb-5 space-y-3.5">
+          <p className="text-white text-lg leading-snug font-medium text-balance">How&apos;s today looking, {firstName}?</p>
+          {[
+            { label: 'Feeling', opts: FEELING, val: feeling, set: setFeeling },
+            { label: 'Time you have', opts: TIME, val: time, set: setTime },
+            { label: 'Where you are', opts: WHERE, val: where, set: setWhere },
+            { label: "Today's goal", opts: GOAL, val: goal, set: setGoal },
+          ].map((row) => (
+            <div key={row.label}>
+              <p className="text-gold/70 text-[10px] uppercase tracking-wider font-semibold mb-1.5">{row.label}</p>
+              <div className="flex gap-2 flex-wrap">
+                {row.opts.map((o) => (
+                  <button key={o.v} type="button" onClick={() => row.set(o.v)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${row.val === o.v ? 'bg-gold text-obsidian scale-[1.03]' : 'bg-obsidian/60 border border-smoke text-ivory/70 hover:border-gold/50'}`}>
+                    {o.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button onClick={submitContext} disabled={!feeling || !time || !where || !goal || sending}
+            className="w-full bg-gold text-obsidian px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-2xl disabled:opacity-40 active:scale-95 transition-transform">
+            {sending ? 'Building your day…' : 'Build my day →'}
+          </button>
+        </div>
+      ) : messages.length === 0 ? (
         <p className="text-white text-lg leading-snug font-medium text-balance mb-5">{greeting}</p>
       ) : (
         <div className="space-y-2 mb-4 max-h-64 overflow-y-auto pr-1">
