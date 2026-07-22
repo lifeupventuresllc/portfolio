@@ -1,7 +1,7 @@
 // Life-Up Fitness service worker — makes the app installable, gives an offline
 // fallback, and receives push reminders. Network-FIRST (so new deploys are always
 // fresh), cache as backup. Never touches API or auth requests.
-const CACHE = 'luf-v2'
+const CACHE = 'luf-v3'
 
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()))
