@@ -41,7 +41,7 @@ export default function MoveBrowser() {
           </div>
         ))}
       </div>
-      {moves.length === 0 && <p className="text-ivory/40 text-sm text-center py-8">No moves match &ldquo;{q}&rdquo;.</p>}
+      {moves.length === 0 && <p className="text-ink/50 text-sm text-center py-8">No moves match &ldquo;{q}&rdquo;.</p>}
     </div>
   )
 }

@@ -64,7 +64,7 @@ export default function LibraryBrowser() {
           )
         })}
       </div>
-      {recipes.length === 0 && <p className="text-ivory/40 text-sm text-center py-8">No recipes match &ldquo;{q}&rdquo;.</p>}
+      {recipes.length === 0 && <p className="text-ink/50 text-sm text-center py-8">No recipes match &ldquo;{q}&rdquo;.</p>}
     </div>
   )
 }
