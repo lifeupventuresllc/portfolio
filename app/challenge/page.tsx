@@ -24,7 +24,7 @@ const FAQ = [
 
 export default function ChallengePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-obsidian" />}>
+    <Suspense fallback={<div className="min-h-screen bg-paper" />}>
       <ChallengeContent />
     </Suspense>
   )
