@@ -36,10 +36,10 @@ export default async function WorkoutSession() {
 
   if (!workoutPlan?.plan) {
     return (
-      <div className="min-h-screen bg-obsidian px-4 py-16">
+      <div className="min-h-screen bg-paper px-4 py-16">
         <div className="max-w-md mx-auto text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">No workout yet</h1>
-          <p className="text-ivory/50 text-sm mb-6">Finish your quick intake and I&apos;ll build your training.</p>
+          <h1 className="text-2xl font-bold text-ink mb-2">No workout yet</h1>
+          <p className="text-ink/60 text-sm mb-6">Finish your quick intake and I&apos;ll build your training.</p>
           <Link href="/plan/intake" className="inline-block bg-gold text-obsidian px-8 py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl">Build my plan</Link>
         </div>
       </div>
@@ -71,7 +71,7 @@ export default async function WorkoutSession() {
   const startDay = numDays > 0 ? completed % numDays : 0
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-8">
+    <div className="min-h-screen bg-paper px-4 py-8">
       <WorkoutPlayer program={program} firstName={firstName} startDay={startDay} />
     </div>
   )
