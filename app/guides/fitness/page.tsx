@@ -70,24 +70,24 @@ export default function FitnessGuide() {
   const [weightClass, setWeightClass] = useState(1)
 
   return (
-    <div className="min-h-screen bg-obsidian">
+    <div className="min-h-screen bg-paper">
       <div className="max-w-3xl mx-auto px-6 py-16">
         {/* Header */}
         <div className="text-center mb-16">
           <span className="inline-block bg-emerald-500 text-white text-xs font-bold uppercase px-4 py-1 rounded-full tracking-wider mb-4">100% FREE</span>
           <p className="text-gold text-xs font-semibold tracking-[0.3em] uppercase mb-4">3 Free Digital Assets</p>
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-2 leading-tight">
+          <h1 className="text-4xl sm:text-5xl font-bold text-ink mb-2 leading-tight">
             <span className="text-gold">The Fast Food Flip</span>
           </h1>
-          <p className="text-ivory/40 text-lg mb-1">+</p>
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-2 leading-tight">
+          <p className="text-ink/50 text-lg mb-1">+</p>
+          <h1 className="text-4xl sm:text-5xl font-bold text-ink mb-2 leading-tight">
             <span className="text-gold">The Compound Comeback</span>
           </h1>
-          <p className="text-ivory/40 text-lg mb-1">+</p>
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
+          <p className="text-ink/50 text-lg mb-1">+</p>
+          <h1 className="text-4xl sm:text-5xl font-bold text-ink mb-6 leading-tight">
             <span className="text-gold">The Protein Cheat Sheet</span>
           </h1>
-          <p className="text-ivory/60 max-w-lg mx-auto mb-6">5-day fast food meal plans for 3 weight classes, a 7-day progressive overload program, and the top 20 cheapest protein sources ranked by cost per gram. By Asa Luke.</p>
+          <p className="text-ink/70 max-w-lg mx-auto mb-6">5-day fast food meal plans for 3 weight classes, a 7-day progressive overload program, and the top 20 cheapest protein sources ranked by cost per gram. By Asa Luke.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4">
             <button onClick={() => window.print()} className="inline-flex items-center gap-2 border-2 border-gold text-gold px-6 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl hover:bg-gold/10 transition-all">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
@@ -106,8 +106,8 @@ export default function FitnessGuide() {
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-gold text-obsidian rounded-xl flex items-center justify-center font-bold text-sm">1</div>
             <div>
-              <h2 className="text-2xl font-bold text-white">The Fast Food Flip</h2>
-              <p className="text-ivory/40 text-sm">No time to cook? No problem.</p>
+              <h2 className="text-2xl font-bold text-ink">The Fast Food Flip</h2>
+              <p className="text-ink/50 text-sm">No time to cook? No problem.</p>
             </div>
           </div>
 
@@ -128,8 +128,8 @@ export default function FitnessGuide() {
                 }`}
               >
                 <p className="text-gold text-3xl sm:text-4xl font-bold mb-2">{cls.id}</p>
-                <p className="text-white font-bold text-base sm:text-lg">{cls.label}</p>
-                <p className="text-ivory/40 text-sm mt-1">{cls.desc}</p>
+                <p className={`font-bold text-base sm:text-lg ${weightClass === cls.id ? 'text-ink' : 'text-white'}`}>{cls.label}</p>
+                <p className={`text-sm mt-1 ${weightClass === cls.id ? 'text-ink/60' : 'text-ivory/40'}`}>{cls.desc}</p>
               </button>
             ))}
           </div>
@@ -158,8 +158,8 @@ export default function FitnessGuide() {
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-gold text-obsidian rounded-xl flex items-center justify-center font-bold text-sm">2</div>
             <div>
-              <h2 className="text-2xl font-bold text-white">The Compound Comeback</h2>
-              <p className="text-ivory/40 text-sm">7-day progressive overload — compound movements only</p>
+              <h2 className="text-2xl font-bold text-ink">The Compound Comeback</h2>
+              <p className="text-ink/50 text-sm">7-day progressive overload — compound movements only</p>
             </div>
           </div>
 
@@ -201,8 +201,8 @@ export default function FitnessGuide() {
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-gold text-obsidian rounded-xl flex items-center justify-center font-bold text-sm">3</div>
             <div>
-              <h2 className="text-2xl font-bold text-white">The Protein Cheat Sheet</h2>
-              <p className="text-ivory/40 text-sm">Top 20 cheapest protein sources ranked by cost per gram</p>
+              <h2 className="text-2xl font-bold text-ink">The Protein Cheat Sheet</h2>
+              <p className="text-ink/50 text-sm">Top 20 cheapest protein sources ranked by cost per gram</p>
             </div>
           </div>
 
@@ -282,7 +282,7 @@ export default function FitnessGuide() {
         </div>
 
         {/* CTA */}
-        <div className="mt-16 text-center bg-gradient-to-br from-charcoal to-gold/5 border border-gold/30 rounded-2xl p-10">
+        <div className="mt-16 text-center bg-charcoal bg-gradient-to-br from-charcoal to-gold/5 border border-gold/30 rounded-2xl p-10">
           <h3 className="text-2xl font-bold text-white mb-3">Ready for the real thing?</h3>
           <p className="text-ivory/60 mb-8 max-w-md mx-auto">Get a custom workout, done-for-you weekly meals built around food you love, and me coaching you every week — the Snatched Without Starving 6-week challenge.</p>
           <Link href="/challenge" className="inline-block bg-gold text-obsidian px-10 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]">
@@ -290,7 +290,7 @@ export default function FitnessGuide() {
           </Link>
         </div>
 
-        <p className="text-center text-ivory/20 text-xs mt-10">&copy; {new Date().getFullYear()} Asa Luke. All rights reserved.</p>
+        <p className="text-center text-ink/40 text-xs mt-10">&copy; {new Date().getFullYear()} Asa Luke. All rights reserved.</p>
       </div>
     </div>
   )
