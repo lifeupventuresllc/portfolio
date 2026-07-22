@@ -129,16 +129,17 @@ export default async function PlanDashboard() {
 
   return shell(
     <div className="space-y-5">
-      {/* Conversational home: self-talk banner → Coach Asa (centerpiece) → calories + workout (supporting) */}
+      {/* Conversational home: Coach Asa FIRST (the actual #1-problem solution — she
+          removes the decision entirely) → self-talk → calories + workout (supporting) */}
 
-      {/* Self-talk — compact top banner */}
+      {/* Coach Asa — the living centerpiece; she talks right here */}
+      <CoachHero firstName={firstName} />
+
+      {/* Self-talk — compact banner */}
       <div className="luf-breathe rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-500/10 via-charcoal to-obsidian px-5 py-3.5 text-center">
         <p className="text-emerald-300/70 text-[9px] uppercase tracking-[0.25em] font-semibold mb-1">Today’s self-talk</p>
         <p className="text-white text-[15px] sm:text-base leading-snug font-medium text-balance">“{affirmation}”</p>
       </div>
-
-      {/* Coach Asa — the living centerpiece; she talks right here */}
-      <CoachHero firstName={firstName} />
 
       {/* Supporting, side by side — calories (left) · workout (right) */}
       <div className="grid grid-cols-2 gap-3.5">
