@@ -31,32 +31,35 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
-    if (!error) {
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (user?.email) {
-        // Check if welcome email was already sent
-        const service = createServiceClient()
-        const { data: existing } = await service
-          .from('emails')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('type', 'welcome')
-          .limit(1)
-
-        if (!existing || existing.length === 0) {
-          await sendWelcomeEmail(user.email)
-          await service.from('emails').insert({
-            user_id: user.id,
-            email: user.email,
-            type: 'welcome',
-          })
-        }
-      }
-
-      return response
+    if (error) {
+      console.error('exchangeCodeForSession failed:', error.message, error.status)
+      return NextResponse.redirect(`${origin}/login?error=auth&reason=${encodeURIComponent(error.message)}`)
     }
+
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (user?.email) {
+      // Check if welcome email was already sent
+      const service = createServiceClient()
+      const { data: existing } = await service
+        .from('emails')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('type', 'welcome')
+        .limit(1)
+
+      if (!existing || existing.length === 0) {
+        await sendWelcomeEmail(user.email)
+        await service.from('emails').insert({
+          user_id: user.id,
+          email: user.email,
+          type: 'welcome',
+        })
+      }
+    }
+
+    return response
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth`)
+  return NextResponse.redirect(`${origin}/login?error=auth&reason=missing_code`)
 }
