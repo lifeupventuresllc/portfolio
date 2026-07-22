@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Ring from '@/components/Ring'
 import Confetti from '@/components/Confetti'
+import QuickFeedback from '@/components/QuickFeedback'
 import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { buildSteps, dayLabels, estimateWorkoutMinutes, type WorkoutStep } from '@/lib/workout-steps'
 import type { WorkoutProgram } from '@/lib/workout'
@@ -87,6 +88,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
         <p className="text-ink/60 text-sm mb-8">You showed up and you finished. That&apos;s the whole game. I logged it for your streak.</p>
         <button onClick={() => router.push('/plan')} className="luf-glow w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl">Back to my week</button>
         <p className="text-gold text-sm font-semibold mt-4">— Coach Asa</p>
+        <QuickFeedback category="workout" context={`${labels[dayIdx]} · day ${dayIdx + 1}`} />
       </div>
     )
   }

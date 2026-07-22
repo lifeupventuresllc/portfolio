@@ -32,11 +32,16 @@ export async function GET() {
   for (const e of enrollments || []) byId[e.id] = { name: e.name, email: e.email }
 
   const out = (rows || []).map((r) => {
-    const m = (r.measurements || {}) as { rating?: string; text?: string }
+    const m = (r.measurements || {}) as { rating?: string; text?: string; category?: string; severity?: string; context?: string; page?: string; device?: string }
     return {
       id: r.id,
       rating: m.rating === 'up' || m.rating === 'down' ? m.rating : null,
       text: m.text || '',
+      category: m.category || 'general',
+      severity: m.severity || '',
+      context: m.context || '',
+      page: m.page || '',
+      device: m.device || '',
       logged_on: r.logged_on,
       created_at: r.created_at,
       name: byId[r.enrollment_id]?.name || 'Unknown',

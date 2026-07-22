@@ -6,6 +6,7 @@ import { buildWeekFromSelections, PICK_GUIDE, type WeekPlan, type DayType } from
 import { costTier } from '@/lib/ingredients'
 import BudgetBar from '@/components/BudgetBar'
 import WeekPlanView from '@/components/WeekPlanView'
+import QuickFeedback from '@/components/QuickFeedback'
 
 type SlotKey = 'breakfasts' | 'lunches' | 'dinners' | 'snacks' | 'desserts'
 const SLOTS: { key: SlotKey; label: string; cat: MealCategory; hint: (g: { mains: string; snacks: string; desserts: string }) => string; optional?: boolean }[] = [
@@ -239,6 +240,7 @@ export default function MealBuilder({ initial }: {
         <div>
           <h2 className="text-2xl font-bold text-ink mb-1 mt-4">What to Eat This Week</h2>
           <p className="text-ink/60 text-sm mb-4">Portions are scaled to hit each day&apos;s target. {saved ? 'Saved to your plan ✓' : 'Tweak and rebuild, or save it.'}</p>
+          {saved && <QuickFeedback category="meals" context={`Week built · ${cookDays} cook day${cookDays > 1 ? 's' : ''}`} />}
           {budgetNum > 0 && plan.groceryCost > 0 && (
             <div className={`rounded-2xl p-4 mb-4 border ${plan.groceryCost <= budgetNum ? 'bg-green-500/10 border-green-500/40' : 'bg-red-500/10 border-red-500/40'}`}>
               <p className="text-ink text-sm font-semibold">

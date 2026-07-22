@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Navbar from './Navbar'
 import SiteFooter from './SiteFooter'
+import FeedbackNudge from './FeedbackNudge'
 
 // Renders the marketing chrome (nav + footer) on marketing pages only. The member
 // app (/plan/*) and the Founder OS cockpit (/admin/founder) are standalone, focused
@@ -13,7 +14,12 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
   const bare = pathname?.startsWith('/admin/founder') || pathname?.startsWith('/plan')
 
   if (bare) {
-    return <main className="flex-1">{children}</main>
+    return (
+      <main className="flex-1">
+        {children}
+        {pathname?.startsWith('/plan') && <FeedbackNudge />}
+      </main>
+    )
   }
 
   return (
