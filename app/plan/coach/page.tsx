@@ -21,7 +21,7 @@ export default async function CoachOperator() {
   const firstName = (enrollment.name || user.email?.split('@')[0] || 'there').split(' ')[0]
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-10">
+    <div className="min-h-screen bg-paper px-4 py-10">
       <OperatorChat firstName={firstName} />
     </div>
   )

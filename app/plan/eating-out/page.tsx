@@ -38,7 +38,7 @@ export default async function EatingOutNow() {
   const day = wc.days[epochDays % wc.days.length]
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-12">
+    <div className="min-h-screen bg-paper px-4 py-12">
       <div className="max-w-2xl mx-auto">
         <Link href="/plan/today" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Back to today</Link>
 
@@ -46,8 +46,8 @@ export default async function EatingOutNow() {
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase">Away from home right now</p>
           <span className="text-[9px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">✓ Decided For You</span>
         </div>
-        <h1 className="text-3xl font-bold text-white mb-2">Don&apos;t think about it — order this.</h1>
-        <p className="text-ivory/55 text-sm mb-8">No planning, no guessing. High protein keeps you full and stops the crash-and-crave cycle. Just order what&apos;s below.</p>
+        <h1 className="text-3xl font-bold text-ink mb-2">Don&apos;t think about it — order this.</h1>
+        <p className="text-ink/60 text-sm mb-8">No planning, no guessing. High protein keeps you full and stops the crash-and-crave cycle. Just order what&apos;s below.</p>
 
         <div className="bg-charcoal bg-gradient-to-br from-gold/10 to-charcoal border border-gold/30 rounded-2xl p-5 mb-6 flex flex-wrap gap-x-6 gap-y-1 justify-between">
           <div><p className="text-ivory/40 text-[10px] uppercase tracking-wider">Today&apos;s target</p><p className="text-gold font-bold">{day.total.toLocaleString()} cal</p></div>
@@ -67,7 +67,7 @@ export default async function EatingOutNow() {
           ))}
         </div>
 
-        <p className="text-ivory/35 text-xs mt-6 text-center">This is your Escape Plan — swapped in automatically for your weight range. No cooking, no tracking, just order and go.</p>
+        <p className="text-ink/45 text-xs mt-6 text-center">This is your Escape Plan — swapped in automatically for your weight range. No cooking, no tracking, just order and go.</p>
       </div>
     </div>
   )
