@@ -47,7 +47,7 @@ export default async function ClientsPage() {
   })
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-12">
+    <div className="min-h-screen bg-obsidian px-4 pt-24 pb-12">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-1">
           <Link href="/admin" className="text-ivory/40 text-xs hover:text-gold">← Admin</Link>

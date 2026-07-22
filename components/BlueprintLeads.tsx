@@ -95,7 +95,7 @@ export default function BlueprintLeads() {
   ]
 
   return (
-    <div className="min-h-screen bg-obsidian text-ivory px-4 sm:px-8 py-8">
+    <div className="min-h-screen bg-obsidian text-ivory px-4 sm:px-8 pt-24 pb-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
