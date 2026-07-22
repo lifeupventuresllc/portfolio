@@ -35,12 +35,12 @@ export default async function Community() {
   const linked = COMMUNITY_URL && COMMUNITY_URL !== '#'
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-12">
+    <div className="min-h-screen bg-paper px-4 py-12">
       <div className="max-w-xl mx-auto">
         <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Back to my plan</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">The Curve Collective</p>
-        <h1 className="text-3xl font-bold text-white mb-2">You&apos;re not doing this alone, {firstName} 💛</h1>
-        <p className="text-ivory/50 text-sm mb-6">Our private circle of women walking it out together. Share a win, ask a question, cheer each other on.</p>
+        <h1 className="text-3xl font-bold text-ink mb-2">You&apos;re not doing this alone, {firstName} 💛</h1>
+        <p className="text-ink/60 text-sm mb-6">Our private circle of women walking it out together. Share a win, ask a question, cheer each other on.</p>
 
         {linked && (
           <a href={COMMUNITY_URL} target="_blank" rel="noopener noreferrer" className="block text-center bg-charcoal border border-gold/30 rounded-2xl py-3 mb-5 text-gold font-semibold text-sm hover:bg-gold/5">
@@ -63,7 +63,7 @@ export default async function Community() {
           {(!posts || posts.length === 0) && (
             <div className="text-center py-10">
               <p className="text-3xl mb-2">👋🏽</p>
-              <p className="text-ivory/50 text-sm">Be the first to post — start the conversation, {firstName}.</p>
+              <p className="text-ink/60 text-sm">Be the first to post — start the conversation, {firstName}.</p>
             </div>
           )}
         </div>
