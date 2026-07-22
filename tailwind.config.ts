@@ -12,10 +12,12 @@ const config: Config = {
         background: "var(--background)",
         foreground: "var(--foreground)",
         obsidian: '#0A0A0F',
-        charcoal: '#1A1A22',
+        charcoal: '#0A0A0A',
         gold: '#C9A84C',
         ivory: '#D4C5A0',
         smoke: '#2A2A35',
+        paper: '#FFFFFF',
+        ink: '#0A0A0A',
       },
       animation: {
         'slide-down': 'slide-down 0.2s ease-out',

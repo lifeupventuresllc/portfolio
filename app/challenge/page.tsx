@@ -66,7 +66,7 @@ function ChallengeContent() {
   }
 
   return (
-    <div className="min-h-screen bg-obsidian">
+    <div className="min-h-screen bg-paper">
       {showSuccess && (
         <div className="fixed top-0 inset-x-0 z-50 bg-green-600 text-white text-center py-4 px-4">
           <p className="font-semibold">You&apos;re in! Check your email to create your account and complete your intake.</p>
@@ -85,9 +85,9 @@ function ChallengeContent() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(201,168,76,0.08),transparent_70%)]" />
         <div className="max-w-3xl mx-auto text-center relative">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">6-Week Challenge</p>
-          <h1 className="text-4xl sm:text-6xl font-bold text-white mb-4 tracking-tight">Snatched Without Starving</h1>
+          <h1 className="text-4xl sm:text-6xl font-bold text-ink mb-4 tracking-tight">Snatched Without Starving</h1>
           <p className="text-xl sm:text-2xl text-gold font-semibold mb-6">Lose or gain your first 10–15 lbs — eating the foods you love</p>
-          <p className="text-ivory/60 mb-10 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-ink/60 mb-10 max-w-2xl mx-auto leading-relaxed">
             Custom training, done-for-you weekly nutrition, and a real coach checking in on you every single week.
             No starving. No bland food. No doing it alone.
           </p>
@@ -104,7 +104,7 @@ function ChallengeContent() {
       <section className="py-20 px-4 border-t border-smoke">
         <div className="max-w-4xl mx-auto">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase text-center mb-3">Everything Included</p>
-          <h2 className="text-3xl font-bold text-center text-white mb-4">What&apos;s Inside</h2>
+          <h2 className="text-3xl font-bold text-center text-ink mb-4">What&apos;s Inside</h2>
           <div className="w-16 h-0.5 bg-gold/50 mx-auto mb-12" />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {INCLUDED.map((item, i) => (
@@ -126,9 +126,9 @@ function ChallengeContent() {
       <section className="py-20 px-4 border-t border-smoke">
         <div className="max-w-3xl mx-auto text-center">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">Built For You</p>
-          <h2 className="text-3xl font-bold text-white mb-4">Matched to your level</h2>
+          <h2 className="text-3xl font-bold text-ink mb-4">Matched to your level</h2>
           <div className="w-16 h-0.5 bg-gold/50 mx-auto mb-10" />
-          <p className="text-ivory/60 mb-8 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-ink/60 mb-8 max-w-2xl mx-auto leading-relaxed">
             Tell me your goal, your stats, your budget, and where you train — and I build your plan around it.
           </p>
           <div className="grid sm:grid-cols-3 gap-4">
@@ -163,8 +163,8 @@ function ChallengeContent() {
       <section id="pricing" className="py-20 px-4 border-t border-smoke">
         <div className="max-w-4xl mx-auto">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase text-center mb-3">Founding Cohort</p>
-          <h2 className="text-3xl font-bold text-center text-white mb-3">Choose your spot</h2>
-          <p className="text-ivory/50 text-sm text-center mb-2">Only 15 spots per cohort · Inner Circle limited to 5 women</p>
+          <h2 className="text-3xl font-bold text-center text-ink mb-3">Choose your spot</h2>
+          <p className="text-ink/50 text-sm text-center mb-2">Only 15 spots per cohort · Inner Circle limited to 5 women</p>
           <div className="w-16 h-0.5 bg-gold/50 mx-auto mb-10" />
 
           {/* Shared contact fields */}
@@ -174,14 +174,14 @@ function ChallengeContent() {
               placeholder="Your name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-5 py-4 bg-obsidian border border-smoke rounded-2xl text-white text-sm placeholder-ivory/30 focus:outline-none focus:border-gold transition-colors"
+              className="w-full px-5 py-4 bg-paper border border-smoke rounded-2xl text-ink text-sm placeholder-ink/30 focus:outline-none focus:border-gold transition-colors"
             />
             <input
               type="email"
               placeholder="Your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-5 py-4 bg-obsidian border border-smoke rounded-2xl text-white text-sm placeholder-ivory/30 focus:outline-none focus:border-gold transition-colors"
+              className="w-full px-5 py-4 bg-paper border border-smoke rounded-2xl text-ink text-sm placeholder-ink/30 focus:outline-none focus:border-gold transition-colors"
             />
           </div>
 
@@ -234,7 +234,7 @@ function ChallengeContent() {
               </button>
             </div>
           </div>
-          <p className="text-ivory/30 text-xs mt-6 text-center">Secure payment via Stripe. You&apos;ll create your account and complete your intake right after.</p>
+          <p className="text-ink/40 text-xs mt-6 text-center">Secure payment via Stripe. You&apos;ll create your account and complete your intake right after.</p>
         </div>
       </section>
 

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-obsidian">
+    <div className="min-h-screen bg-paper">
       <JsonLd data={localBusinessSchema} />
       <RevealScript />
 
@@ -15,11 +15,11 @@ export default function LandingPage() {
         <div className="luf-breathe absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_45%,rgba(201,168,76,0.10),transparent_70%)]" />
 
         <div className="relative z-10 flex flex-col items-center">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-ink tracking-tight mb-6">
             ASA <span className="text-gold">LUKE</span>
           </h1>
 
-          <p className="text-ivory text-xl sm:text-2xl max-w-xl mx-auto mb-20 leading-relaxed font-medium">
+          <p className="text-ink text-xl sm:text-2xl max-w-xl mx-auto mb-20 leading-relaxed font-medium">
             I edit your content. I mix your music. I build your body.
           </p>
 
@@ -62,7 +62,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="absolute bottom-8 text-ivory/20 text-xs tracking-[0.3em] uppercase animate-pulse">
+        <div className="absolute bottom-8 text-ink/25 text-xs tracking-[0.3em] uppercase animate-pulse">
           Scroll
         </div>
       </section>
@@ -72,10 +72,10 @@ export default function LandingPage() {
         <div className="luf-reveal max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div>
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Content Editing</p>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-white mb-8 leading-[1.1]">
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-8 leading-[1.1]">
               Your content,<br />professionally edited.
             </h2>
-            <p className="text-ivory/50 text-lg leading-relaxed mb-10">
+            <p className="text-ink/60 text-lg leading-relaxed mb-10">
               Short-form video editing for creators and brands. Hooks, captions,
               color grading, strategy — done for you. You film, I handle the rest.
             </p>
@@ -135,10 +135,10 @@ export default function LandingPage() {
           </div>
           <div className="order-1 md:order-2">
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Audio Engineering</p>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-white mb-8 leading-[1.1]">
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-8 leading-[1.1]">
               Your music,<br />professionally mixed.
             </h2>
-            <p className="text-ivory/50 text-lg leading-relaxed mb-10">
+            <p className="text-ink/60 text-lg leading-relaxed mb-10">
               Mixing and mastering for independent artists. Hip-Hop, R&B, Pop, Gospel —
               10+ years behind the board. Singles to full albums.
             </p>
@@ -162,10 +162,10 @@ export default function LandingPage() {
         <div className="luf-reveal max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div>
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">The 6-Week Challenge</p>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-white mb-8 leading-[1.1]">
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-8 leading-[1.1]">
               Get snatched.<br />Without starving.
             </h2>
-            <p className="text-ivory/50 text-lg leading-relaxed mb-8">
+            <p className="text-ink/60 text-lg leading-relaxed mb-8">
               Custom workouts, meals built around the foods you actually love, and me —
               your coach — checking in on you every single week. Not a PDF. Not some app
               that forgets your name. Real coaching that gets you toned and keeps your curves.
@@ -178,7 +178,7 @@ export default function LandingPage() {
               >
                 Join the Challenge
               </Link>
-              <Link href="/blueprint" className="text-ivory/60 text-sm font-semibold hover:text-gold transition-colors underline underline-offset-4">
+              <Link href="/blueprint" className="text-ink/70 text-sm font-semibold hover:text-gold transition-colors underline underline-offset-4">
                 Start free with your Calorie Blueprint →
               </Link>
             </div>
@@ -227,10 +227,10 @@ export default function LandingPage() {
           </div>
           <div className="order-1 md:order-2">
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Digital Cookbook</p>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-white mb-8 leading-[1.1]">
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-8 leading-[1.1]">
               The Menu.
             </h2>
-            <p className="text-ivory/50 text-lg leading-relaxed mb-10">
+            <p className="text-ink/60 text-lg leading-relaxed mb-10">
               25+ macro-friendly recipes — breakfast, lunch, dinner, snacks, and desserts —
               each with full macros and cost per serving. No guesswork, just food that fits your goals.
             </p>
@@ -249,18 +249,18 @@ export default function LandingPage() {
       <section className="py-24 px-6 border-t border-smoke/50 bg-charcoal/40">
         <div className="max-w-2xl mx-auto text-center">
           <p className="text-gold text-xs font-semibold tracking-[0.3em] uppercase mb-3">Listen</p>
-          <h2 className="text-2xl font-bold text-white mb-8">Find Me on These Platforms</h2>
+          <h2 className="text-2xl font-bold text-ink mb-8">Find Me on These Platforms</h2>
           <div className="flex flex-wrap justify-center gap-3">
-            <a href="https://open.spotify.com/search/Asa%20Luke" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full border border-smoke/50 text-ivory/60 text-sm hover:border-gold hover:text-gold transition-all duration-300">
+            <a href="https://open.spotify.com/search/Asa%20Luke" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full border border-smoke/50 text-ink/70 text-sm hover:border-gold hover:text-gold transition-all duration-300">
               Spotify
             </a>
-            <a href="https://music.apple.com/search?term=Asa+Luke" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full border border-smoke/50 text-ivory/60 text-sm hover:border-gold hover:text-gold transition-all duration-300">
+            <a href="https://music.apple.com/search?term=Asa+Luke" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full border border-smoke/50 text-ink/70 text-sm hover:border-gold hover:text-gold transition-all duration-300">
               Apple Music
             </a>
-            <a href="https://soundcloud.com/search?q=asa%20luke" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full border border-smoke/50 text-ivory/60 text-sm hover:border-gold hover:text-gold transition-all duration-300">
+            <a href="https://soundcloud.com/search?q=asa%20luke" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full border border-smoke/50 text-ink/70 text-sm hover:border-gold hover:text-gold transition-all duration-300">
               SoundCloud
             </a>
-            <a href="https://music.youtube.com/search?q=Asa+Luke" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full border border-smoke/50 text-ivory/60 text-sm hover:border-gold hover:text-gold transition-all duration-300">
+            <a href="https://music.youtube.com/search?q=Asa+Luke" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full border border-smoke/50 text-ink/70 text-sm hover:border-gold hover:text-gold transition-all duration-300">
               YouTube Music
             </a>
           </div>
@@ -270,8 +270,8 @@ export default function LandingPage() {
       {/* ── CONTACT ── */}
       <section className="py-24 px-6 border-t border-smoke/50">
         <div className="max-w-lg mx-auto text-center">
-          <h2 className="text-3xl font-bold text-white mb-3">Let&apos;s work.</h2>
-          <p className="text-ivory/40 text-sm mb-10">DM me or reach out below.</p>
+          <h2 className="text-3xl font-bold text-ink mb-3">Let&apos;s work.</h2>
+          <p className="text-ink/50 text-sm mb-10">DM me or reach out below.</p>
 
           <div className="flex flex-col gap-3 mb-10">
             <a href="https://instagram.com/1AsaLuke" target="_blank" rel="noopener noreferrer"
