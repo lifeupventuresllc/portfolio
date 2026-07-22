@@ -95,3 +95,23 @@ body {
 }
 .luf-confetti { animation-name: lufConfetti; animation-timing-function: cubic-bezier(.2,.6,.4,1); animation-fill-mode: both; }
 @media (prefers-reduced-motion: reduce) { .luf-confetti { display: none !important; } }
+
+/* Daily 10 engine — gears turning + data flowing through the pipeline, only while a stage is live. */
+@keyframes lufGearSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.luf-gear-on { display: inline-block; animation: lufGearSpin 3.2s linear infinite; }
+.luf-gear-off { display: inline-block; opacity: .35; }
+
+@keyframes lufFlowDot {
+  0%   { left: 0%;   opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+.luf-flow-track { position: relative; height: 2px; background: rgba(201,168,76,0.15); border-radius: 999px; overflow: visible; }
+.luf-flow-dot { position: absolute; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 999px; background: #C9A84C; box-shadow: 0 0 8px rgba(201,168,76,0.9); animation: lufFlowDot 2.2s linear infinite; }
+.luf-flow-track.off .luf-flow-dot { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .luf-gear-on { animation: none !important; }
+  .luf-flow-dot { animation: none !important; left: 50% !important; opacity: .6 !important; }
+}
