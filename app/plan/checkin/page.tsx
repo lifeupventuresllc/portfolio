@@ -68,23 +68,23 @@ export default async function CheckinPage() {
   ))).filter(Boolean)) as { url: string; date: string }[]
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-12">
+    <div className="min-h-screen bg-paper px-4 py-12">
       <div className="max-w-2xl mx-auto">
         <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Back to my plan</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Weekly Check-In</p>
-        <h1 className="text-3xl font-bold text-white mb-2">Let&apos;s see where you&apos;re at, {firstName}</h1>
-        <p className="text-ivory/60 text-sm mb-8">This is the part that changes everything. Check in with me every week — I read every one myself and adjust your plan around it. Not a PDF, not a bot. Me.</p>
+        <h1 className="text-3xl font-bold text-ink mb-2">Let&apos;s see where you&apos;re at, {firstName}</h1>
+        <p className="text-ink/60 text-sm mb-8">This is the part that changes everything. Check in with me every week — I read every one myself and adjust your plan around it. Not a PDF, not a bot. Me.</p>
 
         {points.length >= 2 && (
           <div className="mb-8">
-            <h2 className="text-white font-bold text-lg mb-3">Your progress</h2>
+            <h2 className="text-ink font-bold text-lg mb-3">Your progress</h2>
             <ProgressChart points={points} />
           </div>
         )}
 
         {anyLogged && (
           <div className="mb-8">
-            <h2 className="text-white font-bold text-lg mb-3">This week&apos;s eating</h2>
+            <h2 className="text-ink font-bold text-lg mb-3">This week&apos;s eating</h2>
             <div className="bg-charcoal border border-smoke rounded-2xl p-5 grid grid-cols-7 gap-2">
               {weekDays.map((d) => {
                 const w = foodByDay.get(d)
@@ -104,12 +104,12 @@ export default async function CheckinPage() {
                 )
               })}
             </div>
-            <p className="text-ivory/40 text-xs mt-2">Every meal you log shows up here — it&apos;s all being tracked, week over week.</p>
+            <p className="text-ink/50 text-xs mt-2">Every meal you log shows up here — it&apos;s all being tracked, week over week.</p>
           </div>
         )}
 
         <div className="mb-8">
-          <h2 className="text-white font-bold text-lg mb-3">Your progress photos</h2>
+          <h2 className="text-ink font-bold text-lg mb-3">Your progress photos</h2>
           {photos.length > 0 && (
             <div className="grid grid-cols-3 gap-2 mb-3">
               {photos.map((p, idx) => (
@@ -122,17 +122,17 @@ export default async function CheckinPage() {
             </div>
           )}
           <PhotoUpload />
-          <p className="text-ivory/40 text-xs mt-2">Private to you and me. Same pose, same light, once a week — the scale lies, these don&apos;t.</p>
+          <p className="text-ink/50 text-xs mt-2">Private to you and me. Same pose, same light, once a week — the scale lies, these don&apos;t.</p>
         </div>
 
         <div className="mb-10">
-          <h2 className="text-white font-bold text-lg mb-3">This week&apos;s check-in</h2>
+          <h2 className="text-ink font-bold text-lg mb-3">This week&apos;s check-in</h2>
           <CheckinForm firstName={firstName} />
         </div>
 
         {checkins && checkins.length > 0 && (
           <div>
-            <h2 className="text-white font-bold text-lg mb-3">Your check-in history</h2>
+            <h2 className="text-ink font-bold text-lg mb-3">Your check-in history</h2>
             <div className="space-y-3">
               {checkins.map((c) => (
                 <div key={c.id} className="bg-charcoal border border-smoke rounded-2xl p-5">
