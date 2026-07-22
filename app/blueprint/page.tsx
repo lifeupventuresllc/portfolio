@@ -89,7 +89,7 @@ export default function BlueprintPage() {
   }
 
   return (
-    <div className="min-h-screen bg-obsidian">
+    <div className="min-h-screen bg-paper">
       <RevealScript />
       <section className="relative pt-32 pb-10 px-4 overflow-hidden">
         <div className="luf-breathe absolute inset-0 bg-[radial-gradient(ellipse_65%_55%_at_50%_35%,rgba(201,168,76,0.16),transparent_70%)]" />
@@ -97,14 +97,14 @@ export default function BlueprintPage() {
           <span className="inline-block text-gold text-[11px] font-bold tracking-[0.3em] uppercase mb-5 border border-gold/40 rounded-full px-4 py-1.5 bg-gold/5">
             Free · 7-Page Personalized Blueprint
           </span>
-          <h1 className="text-white font-black uppercase leading-[0.92] tracking-tight text-balance text-5xl sm:text-6xl lg:text-7xl mb-5">
+          <h1 className="text-ink font-black uppercase leading-[0.92] tracking-tight text-balance text-5xl sm:text-6xl lg:text-7xl mb-5">
             Stop guessing.<br />Know <span className="text-gold">exactly</span> what to eat.
           </h1>
-          <p className="text-ivory/70 max-w-xl mx-auto leading-relaxed text-base sm:text-lg">
-            Your personal calorie + macro numbers for <span className="text-white font-semibold">gym days</span> and
-            <span className="text-white font-semibold"> rest days</span> — built in 60 seconds, downloaded instantly, and emailed to you.
+          <p className="text-ink/70 max-w-xl mx-auto leading-relaxed text-base sm:text-lg">
+            Your personal calorie + macro numbers for <span className="text-ink font-semibold">gym days</span> and
+            <span className="text-ink font-semibold"> rest days</span> — built in 60 seconds, downloaded instantly, and emailed to you.
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-7 text-xs text-ivory/50">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-7 text-xs text-ink/60">
             <span className="luf-float">⚡ Instant PDF</span>
             <span className="luf-float" style={{ animationDelay: '0.6s' }}>📩 Sent to your inbox</span>
             <span className="luf-float" style={{ animationDelay: '1.2s' }}>🎯 Built for your body</span>
@@ -264,7 +264,7 @@ export default function BlueprintPage() {
                 </a>
               </div>
             </div>
-            <p className="text-center text-ivory/40 text-xs mt-4">Want to {goalWord} for real? Let&apos;s do it together.</p>
+            <p className="text-center text-ink/50 text-xs mt-4">Want to {goalWord} for real? Let&apos;s do it together.</p>
           </div>
         </section>
       )}
