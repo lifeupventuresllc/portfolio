@@ -51,7 +51,7 @@ const FAQ = [
 
 export default function ProteinBudgetSystemPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-obsidian" />}>
+    <Suspense fallback={<div className="min-h-screen bg-paper" />}>
       <ProteinBudgetSystemContent />
     </Suspense>
   )
@@ -92,7 +92,7 @@ function ProteinBudgetSystemContent() {
   }
 
   return (
-    <div className="min-h-screen bg-obsidian">
+    <div className="min-h-screen bg-paper">
       {/* Success / Canceled banners */}
       {showSuccess && (
         <div className="fixed top-0 inset-x-0 z-50 bg-green-600 text-white text-center py-4 px-4">
@@ -114,13 +114,13 @@ function ProteinBudgetSystemContent() {
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">
             The Flagship Program
           </p>
-          <h1 className="text-4xl sm:text-6xl font-bold text-white mb-4 tracking-tight">
+          <h1 className="text-4xl sm:text-6xl font-bold text-ink mb-4 tracking-tight">
             Snatched Without Starving
           </h1>
           <p className="text-xl sm:text-2xl text-gold font-semibold mb-6">
             My 6-week coached challenge — custom training, done-for-you meals, and me checking in on you every week
           </p>
-          <p className="text-ivory/60 mb-10 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-ink/60 mb-10 max-w-2xl mx-auto leading-relaxed">
             Not a PDF and not an app that forgets your name. You get a custom workout, a weekly
             meal plan built around food you actually love, and a real coach — me — in your corner
             the whole way. This is the one I&apos;d put you in.
@@ -131,7 +131,7 @@ function ProteinBudgetSystemContent() {
           >
             See the Challenge →
           </a>
-          <p className="text-ivory/30 text-xs mt-6">Prefer to start smaller? The cookbook &amp; budget system are below.</p>
+          <p className="text-ink/40 text-xs mt-6">Prefer to start smaller? The cookbook &amp; budget system are below.</p>
         </div>
       </section>
 
@@ -142,13 +142,13 @@ function ProteinBudgetSystemContent() {
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">
             Digital Product
           </p>
-          <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
+          <h2 className="text-4xl sm:text-5xl font-bold text-ink mb-4 tracking-tight">
             The Protein Budget System
           </h2>
           <p className="text-xl sm:text-2xl text-gold font-semibold mb-6">
             Hit 120g+ protein daily on under $75/week
           </p>
-          <p className="text-ivory/60 mb-10 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-ink/60 mb-10 max-w-2xl mx-auto leading-relaxed">
             15 macro-friendly recipes, a complete weekly meal plan, budget grocery lists, and a
             2-hour prep day playbook. Everything you need — one download.
           </p>
@@ -169,7 +169,7 @@ function ProteinBudgetSystemContent() {
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">
             The Problem
           </p>
-          <p className="text-ivory/70 text-lg leading-relaxed">
+          <p className="text-ink/80 text-lg leading-relaxed">
             You know you need more protein. But groceries are expensive, meal prep feels
             overwhelming, and every app just tracks what you already ate instead of telling you what
             to eat.
@@ -183,7 +183,7 @@ function ProteinBudgetSystemContent() {
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase text-center mb-3">
             Everything Included
           </p>
-          <h2 className="text-3xl font-bold text-center text-white mb-4">
+          <h2 className="text-3xl font-bold text-center text-ink mb-4">
             What&apos;s Inside
           </h2>
           <div className="w-16 h-0.5 bg-gold/50 mx-auto mb-12" />
@@ -267,13 +267,13 @@ function ProteinBudgetSystemContent() {
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">
             Digital Product
           </p>
-          <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
+          <h2 className="text-4xl sm:text-5xl font-bold text-ink mb-4 tracking-tight">
             The Menu — Complete Cookbook
           </h2>
           <p className="text-xl sm:text-2xl text-gold font-semibold mb-6">
             25 macro-friendly recipes organized by Breakfast, Lunch, and Dinner
           </p>
-          <p className="text-ivory/60 mb-10 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-ink/60 mb-10 max-w-2xl mx-auto leading-relaxed">
             Each recipe includes ingredients, step-by-step directions, macro breakdown, and cost per
             serving. Plus 4 snack options and 10 high-protein desserts. Swipeable, mobile-friendly,
             and constantly updated.
@@ -295,7 +295,7 @@ function ProteinBudgetSystemContent() {
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase text-center mb-3">
             Everything Included
           </p>
-          <h2 className="text-3xl font-bold text-center text-white mb-4">
+          <h2 className="text-3xl font-bold text-center text-ink mb-4">
             What&apos;s Inside The Menu
           </h2>
           <div className="w-16 h-0.5 bg-gold/50 mx-auto mb-12" />
@@ -408,7 +408,7 @@ function ProteinBudgetSystemContent() {
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase text-center mb-3">
             Questions
           </p>
-          <h2 className="text-3xl font-bold text-center text-white mb-4">
+          <h2 className="text-3xl font-bold text-center text-ink mb-4">
             Frequently Asked
           </h2>
           <div className="w-16 h-0.5 bg-gold/50 mx-auto mb-10" />
@@ -450,10 +450,10 @@ function ProteinBudgetSystemContent() {
       {/* Final CTA */}
       <section className="py-20 px-4 border-t border-smoke">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
+          <h2 className="text-3xl font-bold text-ink mb-4">
             Stop Guessing. Start Eating.
           </h2>
-          <p className="text-ivory/60 mb-8">
+          <p className="text-ink/60 mb-8">
             One system. Every meal planned. Every dollar accounted for.
           </p>
           <button
