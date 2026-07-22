@@ -26,11 +26,11 @@ export default function MealBuilder() {
   const input = 'w-24 px-3 py-2 bg-obsidian border border-smoke rounded-xl text-white text-sm focus:outline-none focus:border-gold'
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-10">
+    <div className="min-h-screen bg-paper px-4 py-10">
       <div className="max-w-3xl mx-auto">
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-2">Meal Plan Builder</p>
-        <h1 className="text-3xl font-bold text-white mb-1">Spend Your Calories</h1>
-        <p className="text-ivory/50 text-sm mb-6">Think of your calories like money. Pick your meals and spend your daily budget — don&apos;t go over.</p>
+        <h1 className="text-3xl font-bold text-ink mb-1">Spend Your Calories</h1>
+        <p className="text-ink/60 text-sm mb-6">Think of your calories like money. Pick your meals and spend your daily budget — don&apos;t go over.</p>
 
         {/* Day toggle + budgets */}
         <div className="bg-charcoal border border-smoke rounded-2xl p-4 mb-4 flex flex-wrap items-center gap-4 justify-between">
@@ -69,7 +69,7 @@ export default function MealBuilder() {
         {/* Today's plate */}
         {plate.length > 0 && (
           <div className="mb-6">
-            <p className="text-ivory/50 text-xs uppercase tracking-wider mb-2">Today&apos;s plate ({plate.length})</p>
+            <p className="text-ink/60 text-xs uppercase tracking-wider mb-2">Today&apos;s plate ({plate.length})</p>
             <div className="space-y-2">
               {plate.map((m, i) => (
                 <div key={i} className="flex items-center justify-between bg-charcoal border border-smoke rounded-xl px-4 py-2">
@@ -107,7 +107,7 @@ export default function MealBuilder() {
             </button>
           ))}
         </div>
-        <p className="text-ivory/30 text-xs text-center mt-6">{RECIPES.length} recipes from The Menu + budget meals. Your weekly plan &amp; eating-out picks come next.</p>
+        <p className="text-ink/45 text-xs text-center mt-6">{RECIPES.length} recipes from The Menu + budget meals. Your weekly plan &amp; eating-out picks come next.</p>
       </div>
     </div>
   )
