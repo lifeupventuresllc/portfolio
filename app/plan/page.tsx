@@ -47,13 +47,13 @@ export default async function PlanDashboard() {
   const firstName = (enrollment?.name || user.email?.split('@')[0] || 'there').split(' ')[0]
 
   const shell = (children: React.ReactNode, menu: React.ReactNode = null) => (
-    <div className="min-h-screen bg-obsidian px-4 py-12">
+    <div className="min-h-screen bg-paper px-4 py-12">
       <TimezoneSync />
       <div className="max-w-3xl mx-auto">
         <div className="flex items-start justify-between mb-8">
           <div>
             <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Life-Up Fitness</p>
-            <h1 className="text-3xl font-bold text-white">Hey {firstName} 👋</h1>
+            <h1 className="text-3xl font-bold text-ink">Hey {firstName} 👋</h1>
             <StreakChip />
           </div>
           {menu}
@@ -150,8 +150,8 @@ export default async function PlanDashboard() {
           figure out what to eat when she's off her plan. */}
       <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-blue-500/[0.08] border border-blue-500/30 rounded-2xl px-5 py-3.5 hover:border-blue-400/60 transition-colors">
         <div>
-          <p className="text-white font-semibold text-sm">🍔 Away from home right now?</p>
-          <p className="text-ivory/50 text-xs mt-0.5">Tap for exactly what to order — no thinking, no searching.</p>
+          <p className="text-ink font-semibold text-sm">🍔 Away from home right now?</p>
+          <p className="text-ink/60 text-xs mt-0.5">Tap for exactly what to order — no thinking, no searching.</p>
         </div>
         <span className="text-blue-300 text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
       </Link>
