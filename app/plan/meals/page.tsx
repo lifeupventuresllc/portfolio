@@ -30,10 +30,10 @@ export default async function MealsPage() {
   // Needs intake to know her calorie targets
   if (!enrollment || !intake) {
     return (
-      <div className="min-h-screen bg-obsidian px-4 py-16">
+      <div className="min-h-screen bg-paper px-4 py-16">
         <div className="max-w-md mx-auto text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">Let&apos;s get your numbers first</h1>
-          <p className="text-ivory/50 text-sm mb-6">Complete your quick intake so we can portion your meals to your calories.</p>
+          <h1 className="text-2xl font-bold text-ink mb-2">Let&apos;s get your numbers first</h1>
+          <p className="text-ink/60 text-sm mb-6">Complete your quick intake so we can portion your meals to your calories.</p>
           <Link href="/plan/intake" className="inline-block bg-gold text-obsidian px-8 py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl">Do my intake</Link>
         </div>
       </div>
@@ -51,12 +51,12 @@ export default async function MealsPage() {
   const cookDays = ([1, 2, 3].includes(Number(intake.form_data?.cook_days_per_week)) ? Number(intake.form_data.cook_days_per_week) : 2) as 1 | 2 | 3
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-12">
+    <div className="min-h-screen bg-paper px-4 py-12">
       <div className="max-w-3xl mx-auto">
         <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Back to my plan</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Meal Builder</p>
-        <h1 className="text-3xl font-bold text-white mb-2">Build your week</h1>
-        <p className="text-ivory/50 text-sm mb-8">Pick meals you love — we portion each day to your calories and organize your cook schedule.</p>
+        <h1 className="text-3xl font-bold text-ink mb-2">Build your week</h1>
+        <p className="text-ink/60 text-sm mb-8">Pick meals you love — we portion each day to your calories and organize your cook schedule.</p>
         <MealBuilder initial={{
           name: enrollment.name || 'Your',
           workoutCal: bp.current.workout.eat,

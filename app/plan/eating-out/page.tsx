@@ -49,7 +49,7 @@ export default async function EatingOutNow() {
         <h1 className="text-3xl font-bold text-white mb-2">Don&apos;t think about it — order this.</h1>
         <p className="text-ivory/55 text-sm mb-8">No planning, no guessing. High protein keeps you full and stops the crash-and-crave cycle. Just order what&apos;s below.</p>
 
-        <div className="bg-gradient-to-br from-gold/10 to-charcoal border border-gold/30 rounded-2xl p-5 mb-6 flex flex-wrap gap-x-6 gap-y-1 justify-between">
+        <div className="bg-charcoal bg-gradient-to-br from-gold/10 to-charcoal border border-gold/30 rounded-2xl p-5 mb-6 flex flex-wrap gap-x-6 gap-y-1 justify-between">
           <div><p className="text-ivory/40 text-[10px] uppercase tracking-wider">Today&apos;s target</p><p className="text-gold font-bold">{day.total.toLocaleString()} cal</p></div>
           <div><p className="text-ivory/40 text-[10px] uppercase tracking-wider">Protein</p><p className="text-white font-bold">{wc.proteinTarget}g</p></div>
         </div>

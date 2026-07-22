@@ -94,7 +94,7 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
 
         {/* Recommended adjustment — recommend, don't control */}
         {pending && (
-          <div className="luf-reveal luf-in bg-gradient-to-br from-gold/15 to-charcoal border border-gold/40 rounded-2xl p-4">
+          <div className="luf-reveal luf-in bg-charcoal bg-gradient-to-br from-gold/15 to-charcoal border border-gold/40 rounded-2xl p-4">
             <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-2">Here’s what I recommend</p>
             {adjLines(pending).length ? (
               <ul className="space-y-1 mb-3">

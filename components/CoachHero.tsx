@@ -113,7 +113,7 @@ export default function CoachHero({ firstName }: { firstName: string }) {
   }
 
   return (
-    <div className="luf-glow luf-breathe relative overflow-hidden rounded-[2.25rem] border border-gold/40 bg-gradient-to-br from-gold/15 via-charcoal to-obsidian p-6">
+    <div className="luf-glow luf-breathe relative overflow-hidden rounded-[2.25rem] border border-gold/40 bg-charcoal bg-gradient-to-br from-gold/15 via-charcoal to-obsidian p-6">
       {/* identity — a person, not a tool */}
       <div className="flex items-center gap-2.5 mb-4">
         <span className="h-9 w-9 rounded-full bg-gold text-obsidian font-bold flex items-center justify-center text-lg shadow-lg shadow-gold/20">A</span>

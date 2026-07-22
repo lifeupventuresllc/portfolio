@@ -136,7 +136,7 @@ export default async function PlanDashboard() {
       <CoachHero firstName={firstName} />
 
       {/* Self-talk — compact banner */}
-      <div className="luf-breathe rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-500/10 via-charcoal to-obsidian px-5 py-3.5 text-center">
+      <div className="luf-breathe rounded-2xl border border-emerald-400/20 bg-charcoal bg-gradient-to-br from-emerald-500/10 via-charcoal to-obsidian px-5 py-3.5 text-center">
         <p className="text-emerald-300/70 text-[9px] uppercase tracking-[0.25em] font-semibold mb-1">Today’s self-talk</p>
         <p className="text-white text-[15px] sm:text-base leading-snug font-medium text-balance">“{affirmation}”</p>
       </div>
