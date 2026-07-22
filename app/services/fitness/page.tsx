@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import HeroVideoBG from '@/components/HeroVideoBG'
 
 const WHATS_INSIDE = [
   {
@@ -109,6 +110,7 @@ function ProteinBudgetSystemContent() {
 
       {/* ═══ PRIMARY OFFER — Snatched Without Starving (featured first) ═══ */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden border-b border-smoke">
+        <HeroVideoBG src="/videos/hero-fitness-3.mp4" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_30%,rgba(201,168,76,0.14),transparent_70%)]" />
         <div className="max-w-3xl mx-auto text-center relative">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">

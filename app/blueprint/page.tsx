@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import RevealScript from '@/components/RevealScript'
+import HeroVideoBG from '@/components/HeroVideoBG'
 
 const ACTIVITY = [
   { value: 'none', label: 'Not active — barely move / mostly resting' },
@@ -92,6 +93,7 @@ export default function BlueprintPage() {
     <div className="min-h-screen bg-paper">
       <RevealScript />
       <section className="relative pt-32 pb-10 px-4 overflow-hidden">
+        <HeroVideoBG src="/videos/hero-fitness-1.mp4" />
         <div className="luf-breathe absolute inset-0 bg-[radial-gradient(ellipse_65%_55%_at_50%_35%,rgba(201,168,76,0.16),transparent_70%)]" />
         <div className="max-w-3xl mx-auto text-center relative">
           <span className="inline-block text-gold text-[11px] font-bold tracking-[0.3em] uppercase mb-5 border border-gold/40 rounded-full px-4 py-1.5 bg-gold/5">

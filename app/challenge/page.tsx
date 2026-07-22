@@ -2,6 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import HeroVideoBG from '@/components/HeroVideoBG'
+import VideoTileRow from '@/components/VideoTileRow'
 
 const INCLUDED = [
   { title: 'Your Custom Sculpt Plan', desc: 'Workouts built for you — home or gym, matched to your level (beginner → advanced) and your goal.' },
@@ -82,6 +84,7 @@ function ChallengeContent() {
 
       {/* Hero */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">
+        <HeroVideoBG src="/videos/hero-fitness-4.mp4" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(201,168,76,0.08),transparent_70%)]" />
         <div className="max-w-3xl mx-auto text-center relative">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">6-Week Challenge</p>
@@ -131,6 +134,9 @@ function ChallengeContent() {
           <p className="text-ink/60 mb-8 max-w-2xl mx-auto leading-relaxed">
             Tell me your goal, your stats, your budget, and where you train — and I build your plan around it.
           </p>
+          <div className="mb-10">
+            <VideoTileRow />
+          </div>
           <div className="grid sm:grid-cols-3 gap-4">
             {['Beginner', 'Intermediate', 'Advanced'].map((lvl) => (
               <div key={lvl} className="bg-charcoal border border-smoke rounded-2xl p-6">

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import JsonLd, { localBusinessSchema } from '@/components/JsonLd'
 import RevealScript from '@/components/RevealScript'
+import HeroVideoBG from '@/components/HeroVideoBG'
 
 export const dynamic = 'force-dynamic'
 
@@ -158,8 +159,9 @@ export default function LandingPage() {
       </section>
 
       {/* ── FITNESS ── */}
-      <section id="fitness" className="py-24 sm:py-32 px-6 border-t border-smoke/50">
-        <div className="luf-reveal max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
+      <section id="fitness" className="relative py-24 sm:py-32 px-6 border-t border-smoke/50 overflow-hidden">
+        <HeroVideoBG src="/videos/hero-fitness-2.mp4" opacity={0.82} />
+        <div className="luf-reveal relative max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div>
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">The 6-Week Challenge</p>
             <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-8 leading-[1.1]">
