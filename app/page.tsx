@@ -24,10 +24,14 @@ export default function LandingPage() {
             <p className="text-gold text-lg sm:text-xl font-semibold mb-6">
               No time to figure it out. No willpower left when cravings hit.
             </p>
-            <p className="text-ink/60 text-lg leading-relaxed mb-8">
+            <p className="text-ink/60 text-lg leading-relaxed mb-6">
               Custom workouts, meals built around the foods you actually love, all the
-              decisions made for you — the full app, starting at $10/mo. Want me
-              personally checking in on you too? That&apos;s the only upgrade.
+              decisions made for you — the full app, starting at $10/mo.
+            </p>
+            <p className="text-sm mb-8">
+              <span className="inline-block bg-gold/10 border border-gold/30 text-gold font-semibold px-3 py-1.5 rounded-xl">
+                Want me personally checking in on you? 6-Week Challenge = weekly. Inner Circle = twice a week.
+              </span>
             </p>
             <div className="flex flex-wrap items-center gap-5">
               <Link

@@ -178,8 +178,8 @@ function ChallengeContent() {
             </span>
           </p>
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase text-center mb-3">Simple Pricing</p>
-          <h2 className="text-3xl font-bold text-center text-ink mb-3">The app does everything. Video calls are the only upgrade.</h2>
-          <p className="text-ink/50 text-sm text-center mb-2 max-w-xl mx-auto">Try App Access free for 14 days — custom workouts, done-for-you meals, everything. Challenge and Inner Circle add me personally checking in on you, starting day one.</p>
+          <h2 className="text-3xl font-bold text-center text-ink mb-3">The app does everything. Me checking in on you personally is the upgrade.</h2>
+          <p className="text-ink/50 text-sm text-center mb-2 max-w-xl mx-auto">Try App Access free for 14 days — custom workouts, done-for-you meals, everything. The 6-Week Challenge adds weekly check-ins with me, the Inner Circle adds twice-weekly check-ins — both starting day one.</p>
           <div className="w-16 h-0.5 bg-gold/50 mx-auto mb-10" />
 
           {/* Shared contact fields */}

@@ -66,7 +66,12 @@ export default async function WorkoutSession() {
     })
   }
 
-  const numDays = program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)
+  // Anchor rotation to her PERMANENT plan's day count, not the (possibly track-swapped)
+  // program being shown today — her position in the push-pull sequence shouldn't shift
+  // just because today's session is on a different track. generateHome/generateGym now
+  // always produce matching day counts for the same daysPerWeek, so this is belt-and-suspenders.
+  const permanentPlan = workoutPlan.plan as WorkoutProgram
+  const numDays = permanentPlan.track === 'home' ? (permanentPlan.home?.days.length || 1) : (permanentPlan.gymDays?.length || 1)
   const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
   const startDay = numDays > 0 ? completed % numDays : 0
 

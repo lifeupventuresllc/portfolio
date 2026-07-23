@@ -183,12 +183,24 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
   })
 }
 
+// Home split day count must always match the gym split's day count for the same
+// daysPerWeek input — a daily check-in track-swap (gym↔home) regenerates a fresh
+// program via generateWorkout, and the page picks "today's day" via
+// `completedWorkouts % numDays`. If home and gym split lengths ever diverged,
+// swapping track for a single day would shift her onto the wrong day in her
+// push-pull sequence. Same legs-2-to-3x/week philosophy as femaleSplit/maleSplit.
+function homeSplit(daysPerWeek: number, level: Level): string[] {
+  const n = clampDays(daysPerWeek)
+  if (level < 2) return Array(n).fill('Full Body')
+  if (n === 1) return ['Full Body']
+  const cycle = ['Leg Focus', 'Upper Body & Core 🚫 No Leg Strain']
+  return Array.from({ length: n }, (_, i) => cycle[i % 2]) // n=3 → Leg/Upper/Leg, matches the original default exactly
+}
+
 function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
   const level = inp.level
   const week = inp.weekNumber || 1
-  const split = level >= 2
-    ? ['Leg Focus', 'Upper Body & Core 🚫 No Leg Strain', 'Leg Focus']
-    : ['Full Body', 'Full Body', 'Full Body']
+  const split = homeSplit(inp.daysPerWeek || 3, level)
 
   const injuries = inp.injuries || []
   const avail = HOME_POOL.filter(e => e.level <= level && !isContraindicated(e.name, injuries))
