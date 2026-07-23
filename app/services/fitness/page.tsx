@@ -136,7 +136,7 @@ function ProteinBudgetSystemContent() {
               { t: 'Progress tracking', d: 'Badges, streaks, weekly photos — see it add up' },
               { t: 'The Curve Collective', d: "Community of women doing this alongside you" },
             ].map((f) => (
-              <div key={f.t} className="bg-charcoal border border-smoke rounded-2xl p-4">
+              <div key={f.t} className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-4">
                 <p className="text-white font-semibold text-sm">{f.t}</p>
                 <p className="text-ivory/50 text-xs mt-1">{f.d}</p>
               </div>
@@ -209,7 +209,7 @@ function ProteinBudgetSystemContent() {
             {WHATS_INSIDE.map((item, i) => (
               <div
                 key={i}
-                className="bg-charcoal border border-smoke rounded-2xl p-6 hover:border-gold/40 transition-colors"
+                className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:border-gold/40 transition-colors"
               >
                 <div className="flex items-center gap-3 mb-3">
                   <svg
@@ -328,7 +328,7 @@ function ProteinBudgetSystemContent() {
             ].map((item, i) => (
               <div
                 key={i}
-                className="bg-charcoal border border-smoke rounded-2xl p-6 hover:border-gold/40 transition-colors"
+                className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:border-gold/40 transition-colors"
               >
                 <div className="flex items-center gap-3 mb-3">
                   <svg
@@ -435,7 +435,7 @@ function ProteinBudgetSystemContent() {
               <button
                 key={i}
                 onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                className="w-full text-left bg-charcoal border border-smoke rounded-2xl p-5 hover:border-gold/40 transition-colors"
+                className="w-full text-left bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-5 hover:border-gold/40 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <h3 className="text-white font-semibold text-sm">{item.q}</h3>

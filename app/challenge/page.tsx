@@ -106,7 +106,7 @@ function ChallengeContent() {
               { t: 'Grocery list, budget-aware', d: 'Priced near you, with nearby stores mapped out' },
               { t: 'The Cookbook', d: '25+ recipes, full macros + cost per serving' },
             ].map((f) => (
-              <div key={f.t} className="bg-charcoal border border-smoke rounded-xl px-4 py-3">
+              <div key={f.t} className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3">
                 <p className="text-white font-semibold text-sm">{f.t}</p>
                 <p className="text-ivory/50 text-xs mt-0.5">{f.d}</p>
               </div>
@@ -132,7 +132,7 @@ function ChallengeContent() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {INCLUDED.map((item, i) => (
-              <div key={i} className="bg-charcoal border border-smoke rounded-2xl p-6 hover:border-gold/40 transition-colors">
+              <div key={i} className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:border-gold/40 transition-colors">
                 <div className="flex items-center gap-3 mb-3">
                   <svg className="w-5 h-5 text-gold flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <polyline points="20 6 9 17 4 12" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -160,7 +160,7 @@ function ChallengeContent() {
           </div>
           <div className="grid sm:grid-cols-3 gap-4">
             {['Beginner', 'Intermediate', 'Advanced'].map((lvl) => (
-              <div key={lvl} className="bg-charcoal border border-smoke rounded-2xl p-6">
+              <div key={lvl} className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-6">
                 <p className="text-gold font-bold mb-1">{lvl}</p>
                 <p className="text-ivory/50 text-sm">Home or gym · lose or gain</p>
               </div>
@@ -202,7 +202,7 @@ function ChallengeContent() {
 
           <div className="grid sm:grid-cols-3 gap-6">
             {/* App */}
-            <div className="bg-charcoal border border-smoke rounded-3xl p-8 flex flex-col">
+            <div className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-3xl p-8 flex flex-col">
               <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">App Access</p>
               <div className="mb-1"><span className="text-3xl font-bold text-emerald-400">Free</span><span className="text-ivory/40 text-sm"> for 14 days</span></div>
               <div className="mb-2"><span className="text-ivory/40 text-sm">then $10/mo</span></div>
@@ -243,7 +243,7 @@ function ChallengeContent() {
             </div>
 
             {/* Inner Circle */}
-            <div className="bg-charcoal border border-smoke rounded-3xl p-8 flex flex-col">
+            <div className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-3xl p-8 flex flex-col">
               <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">Inner Circle</p>
               <div className="mb-2"><span className="text-5xl font-bold text-white">$50</span><span className="text-ivory/40 text-sm">/mo</span></div>
               <p className="text-ivory/40 text-sm mb-6">Everything, plus me every week — my time is limited here</p>
@@ -293,7 +293,7 @@ function ChallengeContent() {
           <div className="w-16 h-0.5 bg-gold/50 mx-auto mb-10" />
           <div className="space-y-3">
             {FAQ.map((item, i) => (
-              <button key={i} onClick={() => setOpenFaq(openFaq === i ? null : i)} className="w-full text-left bg-charcoal border border-smoke rounded-2xl p-5 hover:border-gold/40 transition-colors">
+              <button key={i} onClick={() => setOpenFaq(openFaq === i ? null : i)} className="w-full text-left bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-5 hover:border-gold/40 transition-colors">
                 <div className="flex items-center justify-between">
                   <h3 className="text-white font-semibold text-sm">{item.q}</h3>
                   <svg className={`w-4 h-4 text-gold flex-shrink-0 ml-4 transition-transform duration-300 ${openFaq === i ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">

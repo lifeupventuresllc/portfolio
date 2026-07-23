@@ -139,10 +139,10 @@ export default async function PlanDashboard() {
 
       {/* The #2-problem solution, right behind #1 — she never has to figure out what to
           eat when she's off her plan and craving something. */}
-      <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-blue-500/[0.08] border border-blue-500/30 rounded-2xl px-5 py-3.5 hover:border-blue-400/60 transition-colors">
+      <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-gradient-to-br from-blue-500/25 to-charcoal bg-charcoal backdrop-blur-md border border-blue-400/40 rounded-2xl px-5 py-3.5 hover:border-blue-400/70 transition-colors">
         <div>
-          <p className="text-ink font-semibold text-sm">🍔 Away from home right now?</p>
-          <p className="text-ink/60 text-xs mt-0.5">Tap for exactly what to order — no thinking, no searching.</p>
+          <p className="text-white font-semibold text-sm">🍔 Away from home right now?</p>
+          <p className="text-ivory/60 text-xs mt-0.5">Tap for exactly what to order — no thinking, no searching.</p>
         </div>
         <span className="text-blue-300 text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
       </Link>
