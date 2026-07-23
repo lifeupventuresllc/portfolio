@@ -167,23 +167,6 @@ function ChallengeContent() {
         </div>
       </section>
 
-      {/* Guarantee */}
-      <section className="py-20 px-4 border-t border-smoke">
-        <div className="max-w-2xl mx-auto text-center bg-charcoal border-2 border-gold/30 rounded-3xl p-8 sm:p-10">
-          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">My Guarantee</p>
-          <p className="text-white text-lg sm:text-xl font-semibold leading-relaxed">
-            Show up and do the work — weekly check-ins, follow your plan, put in your
-            workouts. If you still don&apos;t see visible results — your first 5–8 lbs
-            down or gained and inches off your waist — I coach you
-            <span className="text-gold"> free until you do.*</span>
-          </p>
-          <p className="text-ivory/50 text-sm mt-4">
-            *You just hold up your end: check in every week, follow the plan, do the workouts.
-            I go all in for the women who go all in. That&apos;s on me.
-          </p>
-        </div>
-      </section>
-
       {/* Pricing */}
       <section id="pricing" className="py-20 px-4 border-t border-smoke">
         <div className="max-w-5xl mx-auto">
@@ -274,6 +257,23 @@ function ChallengeContent() {
             </div>
           </div>
           <p className="text-ink/40 text-xs mt-6 text-center">Secure payment via Stripe. You&apos;ll create your account and complete your intake right after. Challenge and Inner Circle include 6 weeks of coaching — after that you automatically move to App Access ($10/mo) unless you choose to keep the coaching going.</p>
+        </div>
+      </section>
+
+      {/* Guarantee — sits directly under the pricing/6-Week Challenge section */}
+      <section className="py-20 px-4 border-t border-smoke">
+        <div className="max-w-2xl mx-auto text-center bg-charcoal border-2 border-gold/30 rounded-3xl p-8 sm:p-10">
+          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">My Guarantee</p>
+          <p className="text-white text-lg sm:text-xl font-semibold leading-relaxed">
+            Show up and do the work — weekly check-ins, follow your plan, put in your
+            workouts. If you still don&apos;t see visible results — your first 5–8 lbs
+            down or gained and inches off your waist — I coach you
+            <span className="text-gold"> free until you do.*</span>
+          </p>
+          <p className="text-ivory/50 text-sm mt-4">
+            *You just hold up your end: check in every week, follow the plan, do the workouts.
+            I go all in for the women who go all in. That&apos;s on me.
+          </p>
         </div>
       </section>
 
