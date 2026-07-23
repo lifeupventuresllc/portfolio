@@ -87,7 +87,7 @@ function ChallengeContent() {
 
       {/* Hero */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">
-        <HeroVideoBG srcs={['/videos/hero-fitness-5.mp4', '/videos/hero-fitness-4.mp4', '/videos/hero-fitness-2.mp4', '/videos/hero-fitness-1.mp4', '/videos/hero-fitness-3.mp4']} />
+        <HeroVideoBG srcs={['/videos/hero-fitness-4.mp4', '/videos/hero-fitness-5.mp4', '/videos/hero-fitness-2.mp4', '/videos/hero-fitness-1.mp4', '/videos/hero-fitness-3.mp4']} />
         <div className="max-w-3xl mx-auto text-center relative bg-paper/70 backdrop-blur-md rounded-3xl p-8 sm:p-10 shadow-xl">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">Life-Up Fitness App</p>
           <h1 className="text-4xl sm:text-6xl font-bold text-ink mb-4 tracking-tight">Two things get in your way. This app removes both.</h1>
