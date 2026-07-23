@@ -109,27 +109,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── ALSO BY ASA LUKE — Content + Music, demoted to a compact secondary section ── */}
-      <section className="py-20 px-6 border-t border-smoke/50">
-        <div className="max-w-4xl mx-auto">
-          <p className="text-gold text-xs font-semibold tracking-[0.3em] uppercase mb-2 text-center">Also By Asa Luke</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-ink mb-10 text-center">Content editing &amp; music mixing, on the side.</h2>
-          <div className="grid sm:grid-cols-2 gap-5">
-            <Link href="/services/content-editing" className="group block bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-1">
-              <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-2">Content Editing</p>
-              <p className="text-white text-xl font-bold mb-2">Your content, professionally edited.</p>
-              <p className="text-ivory/50 text-sm mb-4">Short-form video editing for creators and brands. Starting at $247.</p>
-              <span className="text-gold text-sm font-semibold group-hover:translate-x-1 transition-transform inline-block">Learn more →</span>
-            </Link>
-            <Link href="/services/audio-engineering" className="group block bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-1">
-              <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-2">Audio Engineering</p>
-              <p className="text-white text-xl font-bold mb-2">Your music, professionally mixed.</p>
-              <p className="text-ivory/50 text-sm mb-4">Mixing and mastering for independent artists. Starting at $99.</p>
-              <span className="text-gold text-sm font-semibold group-hover:translate-x-1 transition-transform inline-block">Learn more →</span>
-            </Link>
-          </div>
-        </div>
-      </section>
 
       {/* ── LISTEN ── */}
       <section className="py-24 px-6 border-t border-smoke/50 bg-charcoal/40">
@@ -175,6 +154,14 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Small, out-of-the-way mention — this is a fitness site now ── */}
+      <p className="text-center text-ink/30 text-xs py-6 px-6">
+        Also mixing music on the side —{' '}
+        <Link href="/services/audio-engineering" className="underline hover:text-ink/50 transition-colors">
+          Audio Engineering
+        </Link>
+      </p>
 
       {/* ── FOOTER ── */}
     </div>

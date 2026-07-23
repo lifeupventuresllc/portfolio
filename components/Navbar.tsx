@@ -71,19 +71,6 @@ export default function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
-            {!isFitnessPage && (
-              <>
-                <Link href="/services/content-editing" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
-                  Content
-                </Link>
-                <Link href="/services/audio-engineering" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
-                  Music
-                </Link>
-                <Link href="/services/bundles" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
-                  Bundles
-                </Link>
-              </>
-            )}
             <Link href="/services/fitness" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
               Fitness
             </Link>
@@ -139,19 +126,6 @@ export default function Navbar() {
         {/* Mobile Menu */}
         {menuOpen && (
           <div className="md:hidden py-6 border-t border-smoke/30 space-y-5 animate-slide-down">
-            {!isFitnessPage && (
-              <>
-                <Link href="/services/content-editing" onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
-                  Content
-                </Link>
-                <Link href="/services/audio-engineering" onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
-                  Music
-                </Link>
-                <Link href="/services/bundles" onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
-                  Bundles
-                </Link>
-              </>
-            )}
             <Link href="/services/fitness" onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
               Fitness
             </Link>
