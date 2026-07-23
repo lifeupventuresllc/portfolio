@@ -14,6 +14,8 @@
 // explicit instruction, these get surfaced first within their level.
 // ============================================================
 
+import { isContraindicated, type Injury } from './workout-exercises'
+
 export type Level = 1 | 2 | 3
 
 export interface CompoundExercise {
@@ -67,7 +69,9 @@ export const COMPOUND_POOL: CompoundExercise[] = [
   { name: 'Full Body Combo (Squat + Overhead Press)', level: 3, equip: 'dumbbell', muscles: ['full body'], sources: 1, reps: '3x12', cue: 'Squat to full depth, drive up hard and press overhead — treat it as one continuous explosive rep.' },
 ]
 
-export function compoundExercisesForLevel(level: Level): CompoundExercise[] {
-  // Everything AT or below her level, cross-validated (higher `sources`) first within each level.
-  return COMPOUND_POOL.filter((e) => e.level <= level).sort((a, b) => b.sources - a.sources)
+export function compoundExercisesForLevel(level: Level, injuries: Injury[] = []): CompoundExercise[] {
+  // Everything AT or below her level, injury-safe, cross-validated (higher `sources`) first within each level.
+  return COMPOUND_POOL
+    .filter((e) => e.level <= level && !isContraindicated(e.name, injuries))
+    .sort((a, b) => b.sources - a.sources)
 }

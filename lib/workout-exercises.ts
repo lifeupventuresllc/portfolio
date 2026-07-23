@@ -192,13 +192,13 @@ export function walkingIntervals(level: Level) {
 // ---------- INJURY HANDLING (models Asa's real client modifications) ----------
 export type Injury = 'knee' | 'lower_back' | 'shoulder' | 'wrist' | 'elbow' | 'hip' | 'ankle'
 const INJURY_AVOID: Record<Injury, { names: string[]; note: string }> = {
-  knee: { names: ['Bulgarian', 'Walking Lunge', 'Curtsy', 'Reverse Lunge', 'Back Squat', 'Hack Squat', 'Step-Up', 'Jump', 'Skater', 'Burpee', 'Explosive', 'Pulsating Squat'], note: 'Knees: shallow range, no deep lunges or jumps — machine & glute-focused work instead.' },
-  lower_back: { names: ['Romanian Deadlift (Barbell)', 'Barbell Bent-Over Row', 'Barbell Back Squat'], note: 'Lower back: no heavy barbell hinges or bent rows — chest-supported & machine variations.' },
-  shoulder: { names: ['Barbell Overhead Press', 'Arnold Press', 'DB Upright Row'], note: 'Shoulder: no overhead pressing, keep raises at/below shoulder height — cables & machines.' },
-  wrist: { names: ['Push-Up', 'Barbell Bench Press', 'Close-Grip Bench Press', 'Plank'], note: 'Wrist: avoid weight-bearing on the hands — machine & cable pressing.' },
+  knee: { names: ['Bulgarian', 'Walking Lunge', 'Curtsy', 'Reverse Lunge', 'Back Squat', 'Hack Squat', 'Step-Up', 'Jump', 'Skater', 'Burpee', 'Explosive', 'Pulsating Squat', 'Thrusters', 'Dumbbell Snatch', 'Surrenders', 'Squat to Press', 'Squat Pulses'], note: 'Knees: shallow range, no deep lunges or jumps — machine & glute-focused work instead.' },
+  lower_back: { names: ['Romanian Deadlift (Barbell)', 'Barbell Bent-Over Row', 'Barbell Back Squat', 'RDL to Upright Row', 'Deadlift Row', 'Windmill', 'Dumbbell Swing', 'Weighted Decline Sit-Up', 'Slow Sit-Up', 'Cable Crunch', 'Plate-Held Reverse Crunch'], note: 'Lower back: no heavy barbell hinges, weighted sit-ups, or loaded spinal rotation — chest-supported, machine, and gentler core variations instead.' },
+  shoulder: { names: ['Barbell Overhead Press', 'Arnold Press', 'DB Upright Row', 'Windmill', 'Overhead Marches', 'Weighted Overhead March', 'Thrusters', 'Dumbbell Snatch', 'Push-Up T-Up', 'Squat to Press', 'Sumo Squat + Overhead Press', 'Full Body Combo'], note: 'Shoulder: no overhead pressing or loaded overhead holds, keep raises at/below shoulder height — cables & machines.' },
+  wrist: { names: ['Push-Up', 'Barbell Bench Press', 'Close-Grip Bench Press', 'Plank', 'Bird Dog', 'Deadbug Pullover'], note: 'Wrist: avoid weight-bearing on the hands — machine & cable pressing.' },
   elbow: { names: ['Skull Crusher', 'Barbell Curl', 'Close-Grip Bench Press'], note: 'Elbow: cables and lighter loads, no heavy lockout stress.' },
-  hip: { names: ['Bulgarian', 'Walking Lunge', 'Sumo Squat', 'Curtsy'], note: 'Hip: shallow range, no deep or wide-stance work.' },
-  ankle: { names: ['Standing Calf Raise', 'Explosive', 'Skater', 'Jump', 'Burpee', 'High Knees'], note: 'Ankle: no jumping/plyo, controlled work only.' },
+  hip: { names: ['Bulgarian', 'Walking Lunge', 'Sumo Squat', 'Curtsy', 'Surrenders'], note: 'Hip: shallow range, no deep or wide-stance work.' },
+  ankle: { names: ['Standing Calf Raise', 'Explosive', 'Skater', 'Jump', 'Burpee', 'High Knees', 'Thrusters', 'Dumbbell Snatch'], note: 'Ankle: no jumping/plyo, controlled work only.' },
 }
 export function isContraindicated(name: string, injuries: Injury[]): boolean {
   return injuries.some(inj => INJURY_AVOID[inj]?.names.some(n => name.includes(n)))

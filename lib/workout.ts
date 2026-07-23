@@ -145,9 +145,13 @@ function pickGym(movement: Movement, muscles: string[], level: Level, weekOffset
 // Priority pool (Asa's curated screenshot batch) is the PRIMARY source now — the
 // original generic pool is only a fallback for zone/level combos priority doesn't
 // cover. Postpartum-flagged entries take priority over priority over generic when
-// she's flagged postpartum in intake.
-function pickAb(zone: 'upper' | 'lower', level: Level, offset: number, postpartum = false): AbExercise {
-  const inZoneLevel = AB_POOL.filter(a => a.zone === zone && a.minLevel <= level)
+// she's flagged postpartum in intake. Injury filtering was missing here entirely
+// before (pre-existing gap, not introduced by the priority-pool work) — pickGym and
+// generateHome both already filtered by injuries, this closes the same gap for abs.
+function pickAb(zone: 'upper' | 'lower', level: Level, offset: number, postpartum = false, injuries: Injury[] = []): AbExercise {
+  const base = AB_POOL.filter(a => a.zone === zone && a.minLevel <= level)
+  const safe = base.filter(a => !isContraindicated(a.name, injuries))
+  const inZoneLevel = safe.length ? safe : base // never end up with nothing just because every option got excluded
   if (postpartum) {
     const pp = inZoneLevel.filter(a => a.postpartum)
     if (pp.length) return rotate(pp, offset)[0]
@@ -188,7 +192,7 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
         { name: 'Standing Calf Raise', reps: level === 1 ? '2 × 15–20' : '3 × 15–20', cue: 'Rise onto toes, squeeze at the top, lower slow for a full stretch.' },
         { name: 'Single-Arm Tibialis Raise (wall)', reps: '2 × 15 each', cue: 'Back to wall, lift toes toward shins, squeeze the shin, lower slow.' },
       ],
-      ab: { upper: pickAb('upper', level, off, inp.postpartum), lower: pickAb('lower', level, off + 2, inp.postpartum), scheme: AB_SCHEME[level] },
+      ab: { upper: pickAb('upper', level, off, inp.postpartum, injuries), lower: pickAb('lower', level, off + 2, inp.postpartum, injuries), scheme: AB_SCHEME[level] },
       cardio: cardioFinisher(level, inp.goal),
     } as GymDay
   })
@@ -220,12 +224,13 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
 
   const injuries = inp.injuries || []
   const avail = HOME_POOL.filter(e => e.level <= level && !isContraindicated(e.name, injuries))
+  const homeAbSafe = HOME_AB_PRIORITY.filter(a => !isContraindicated(a.name, injuries))
   const byType = (types: string[], off: number, count: number) => {
     let picked: { name: string; duration: string }[] = []
     if (types.includes('core')) {
       const corePool = inp.postpartum
-        ? HOME_AB_PRIORITY.filter(a => a.postpartum).concat(HOME_AB_PRIORITY.filter(a => !a.postpartum))
-        : HOME_AB_PRIORITY.filter(a => !a.postpartum)
+        ? homeAbSafe.filter(a => a.postpartum).concat(homeAbSafe.filter(a => !a.postpartum))
+        : homeAbSafe.filter(a => !a.postpartum)
       picked = rotate(corePool, off).slice(0, Math.min(2, count)).map(a => ({ name: a.name, duration: '30 sec' }))
     }
     // prefer moves at the client's exact level (progression), fall back to lower levels only if needed

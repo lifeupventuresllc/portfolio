@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { compoundExercisesForLevel } from '@/lib/compound-exercises'
-import type { Level } from '@/lib/workout-exercises'
+import type { Level, Injury } from '@/lib/workout-exercises'
 import { localDayNumber } from '@/lib/localdate'
 import CompoundDayClient from '@/components/CompoundDayClient'
 
@@ -25,10 +25,12 @@ export default async function CompoundDayPage() {
   }
   if (!enrollment) redirect('/plan')
 
-  const { data: intake } = await svc.from('challenge_intake').select('experience_level').eq('enrollment_id', enrollment.id).maybeSingle()
+  const { data: intake } = await svc.from('challenge_intake').select('experience_level, form_data').eq('enrollment_id', enrollment.id).maybeSingle()
   const level = (intake?.experience_level === 'advanced' ? 3 : intake?.experience_level === 'intermediate' ? 2 : 1) as Level
+  const injuries = (Array.isArray((intake?.form_data as { injuries?: Injury[] } | null)?.injuries)
+    ? (intake!.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
 
-  const pool = compoundExercisesForLevel(level)
+  const pool = compoundExercisesForLevel(level, injuries)
   // Rotate today's 6-move circuit by calendar day so it varies without repeating the same 6 every time.
   const offset = localDayNumber() % pool.length
   const rotated = pool.slice(offset).concat(pool.slice(0, offset))
