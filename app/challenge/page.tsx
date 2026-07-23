@@ -98,10 +98,12 @@ function ChallengeContent() {
           <div className="grid sm:grid-cols-2 gap-3 mb-10 text-left max-w-xl mx-auto">
             {[
               { t: 'Custom workouts', d: 'Home or gym, matched to your level' },
-              { t: 'Done-for-you meals', d: 'Built around food you actually love' },
+              { t: 'Auto-generated meals', d: 'One tap builds your week — tweak anything after' },
+              { t: 'Calorie & macro tracking', d: 'Log food in one tap, see where you stand today' },
               { t: 'Daily check-ins', d: '"How are you feeling" — I adjust your day' },
               { t: 'Talk to your coach', d: 'Voice memo me, I hear it, I respond' },
               { t: 'Away-from-home escape plan', d: 'Instant fast-food order, no decision needed' },
+              { t: 'Grocery list, budget-aware', d: 'Priced near you, with nearby stores mapped out' },
               { t: 'The Cookbook', d: '25+ recipes, full macros + cost per serving' },
             ].map((f) => (
               <div key={f.t} className="bg-charcoal border border-smoke rounded-xl px-4 py-3">

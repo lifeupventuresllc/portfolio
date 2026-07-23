@@ -52,8 +52,8 @@ export default function LandingPage() {
               <p className="text-ivory/40 text-sm">Home or gym, matched to your level</p>
             </div>
             <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-lg font-bold mb-1">Done-for-you meals</p>
-              <p className="text-ivory/40 text-sm">Built around food you actually love</p>
+              <p className="text-gold text-lg font-bold mb-1">Auto-generated meals</p>
+              <p className="text-ivory/40 text-sm">One tap builds your week — tweak anything after</p>
             </div>
             <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
               <p className="text-gold text-lg font-bold mb-1">Daily check-ins</p>

@@ -127,10 +127,12 @@ function ProteinBudgetSystemContent() {
           <div className="grid sm:grid-cols-2 gap-4 mb-10 text-left">
             {[
               { t: 'Custom workouts', d: 'Home or gym, matched to your level' },
-              { t: 'Done-for-you meals', d: 'Built around food you actually love' },
+              { t: 'Auto-generated meals', d: 'One tap builds your whole week — tweak anything after' },
+              { t: 'Calorie & macro tracking', d: 'Log food in one tap, see exactly where you stand today' },
               { t: 'Daily check-ins', d: '"How are you feeling" — I adjust your day for you' },
               { t: 'Talk to your coach', d: 'Voice memo me, I hear it, I respond' },
               { t: 'Away-from-home escape plan', d: 'Life happens — instant fast-food order, no decision needed' },
+              { t: 'Grocery list, budget-aware', d: 'Priced near you, with nearby stores mapped out' },
               { t: 'The Cookbook', d: '25+ recipes with full macros + cost per serving' },
               { t: 'Progress tracking', d: 'Badges, streaks, weekly photos — see it add up' },
               { t: 'The Curve Collective', d: "Community of women doing this alongside you" },
