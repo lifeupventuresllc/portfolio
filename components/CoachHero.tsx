@@ -34,12 +34,16 @@ export default function CoachHero({ firstName }: { firstName: string }) {
   const [recordingMemo, setRecordingMemo] = useState(false)
   const today = localTodayISO()
 
-  // Daily context quiz — shown once per day until she's answered (or already talked today)
+  // Daily context quiz — shown once per day until she's answered (or already talked today).
+  // Pre-selected with the most common answer for each so "Build my day" is tappable
+  // immediately — she can accept the defaults in ONE tap, or override any field first.
+  // Same 4 structured fields hit the backend either way — this only removes friction
+  // from the front end, the planForDailyContext richness behind it is unchanged.
   const [ctxDone, setCtxDone] = useState(true) // default true so it never flashes before the client check runs
-  const [feeling, setFeeling] = useState<string | null>(null)
-  const [time, setTime] = useState<string | null>(null)
-  const [where, setWhere] = useState<string | null>(null)
-  const [goal, setGoal] = useState<string | null>(null)
+  const [feeling, setFeeling] = useState<string | null>('okay')
+  const [time, setTime] = useState<string | null>('normal')
+  const [where, setWhere] = useState<string | null>('home')
+  const [goal, setGoal] = useState<string | null>('showup')
 
   useEffect(() => {
     try { setCtxDone(localStorage.getItem('luf_daily_context') === today) } catch { /* noop */ }
@@ -127,6 +131,7 @@ export default function CoachHero({ firstName }: { firstName: string }) {
       {!ctxDone && messages.length === 0 ? (
         <div className="mb-5 space-y-3.5">
           <p className="text-white text-lg leading-snug font-medium text-balance">How&apos;s today looking, {firstName}?</p>
+          <p className="text-ivory/40 text-xs -mt-2">I&apos;ve guessed a normal day below — tap anything that&apos;s different, or just build it.</p>
           {[
             { label: 'Feeling', opts: FEELING, val: feeling, set: setFeeling },
             { label: 'Time you have', opts: TIME, val: time, set: setTime },
