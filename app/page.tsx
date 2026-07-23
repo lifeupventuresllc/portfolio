@@ -51,7 +51,7 @@ export default function LandingPage() {
             </Link>
 
             <Link
-              href="/#fitness"
+              href="/services/fitness"
               className="group relative px-10 sm:px-20 py-8 sm:py-10 bg-charcoal/80 border-2 border-smoke/80 rounded-3xl overflow-hidden transition-all duration-500 hover:border-gold hover:scale-[1.08] hover:-translate-y-4 hover:shadow-[0_0_60px_rgba(201,168,76,0.4),0_30px_60px_rgba(201,168,76,0.25)]"
               style={{ transformStyle: 'preserve-3d' }}
             >
@@ -164,14 +164,17 @@ export default function LandingPage() {
         <HeroVideoBG srcs={['/videos/hero-fitness-2.mp4', '/videos/hero-fitness-1.mp4', '/videos/hero-fitness-3.mp4', '/videos/hero-fitness-4.mp4']} />
         <div className="luf-reveal relative max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div className="bg-paper/70 backdrop-blur-md rounded-3xl p-8 sm:p-10 shadow-xl">
-            <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Life-Up Fitness</p>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-8 leading-[1.1]">
-              Get snatched.<br />Without starving.
+            <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Life-Up Fitness App</p>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-6 leading-[1.1]">
+              Two things get in your way. This app removes both.
             </h2>
+            <p className="text-gold text-lg sm:text-xl font-semibold mb-6">
+              No time to figure it out. No willpower left when cravings hit.
+            </p>
             <p className="text-ink/60 text-lg leading-relaxed mb-8">
               Custom workouts, meals built around the foods you actually love, daily
               check-ins, all the decisions made for you — the full app, starting at
-              $10/mo. Want me personally on video too? That&apos;s the only upgrade.
+              $10/mo. Want me personally checking in on video too? That&apos;s the only upgrade.
             </p>
             <div className="flex flex-wrap items-center gap-5">
               <Link
@@ -179,7 +182,7 @@ export default function LandingPage() {
                 className="group relative inline-block bg-gold text-obsidian px-10 py-4 text-base font-bold tracking-wider uppercase rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
                 style={{ perspective: '600px', transformStyle: 'preserve-3d' }}
               >
-                See pricing — from $10/mo
+                See the app + pricing — from $10/mo
               </Link>
               <Link href="/blueprint" className="text-ink/70 text-sm font-semibold hover:text-gold transition-colors underline underline-offset-4">
                 Start free with your Calorie Blueprint →
@@ -192,20 +195,20 @@ export default function LandingPage() {
             </div>
             <div className="grid grid-cols-2 gap-4" style={{ perspective: '800px' }}>
             <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-3xl font-bold mb-2">$10/mo</p>
-              <p className="text-ivory/40 text-sm uppercase tracking-wider">Full App Access</p>
+              <p className="text-gold text-lg font-bold mb-1">Custom workouts</p>
+              <p className="text-ivory/40 text-sm">Home or gym, matched to your level</p>
             </div>
             <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-3xl font-bold mb-2">Custom</p>
-              <p className="text-ivory/40 text-sm uppercase tracking-wider">Workouts + Meals</p>
+              <p className="text-gold text-lg font-bold mb-1">Done-for-you meals</p>
+              <p className="text-ivory/40 text-sm">Built around food you actually love</p>
             </div>
             <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-3xl font-bold mb-2">Daily</p>
-              <p className="text-ivory/40 text-sm uppercase tracking-wider">Decision-Free Check-ins</p>
+              <p className="text-gold text-lg font-bold mb-1">Daily check-ins</p>
+              <p className="text-ivory/40 text-sm">&quot;How are you feeling&quot; — I adjust your day</p>
             </div>
             <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-3xl font-bold mb-2">Optional</p>
-              <p className="text-ivory/40 text-sm uppercase tracking-wider">Video Calls With Me</p>
+              <p className="text-gold text-lg font-bold mb-1">Talk to your coach</p>
+              <p className="text-ivory/40 text-sm">Voice memo me, I hear it, I respond</p>
             </div>
             </div>
           </div>

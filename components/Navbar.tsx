@@ -84,7 +84,7 @@ export default function Navbar() {
                 </Link>
               </>
             )}
-            <Link href={isFitnessPage ? '/services/fitness' : '/#fitness'} className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+            <Link href="/services/fitness" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
               Fitness
             </Link>
 
@@ -152,7 +152,7 @@ export default function Navbar() {
                 </Link>
               </>
             )}
-            <Link href={isFitnessPage ? '/services/fitness' : '/#fitness'} onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
+            <Link href="/services/fitness" onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
               Fitness
             </Link>
             {user ? (
