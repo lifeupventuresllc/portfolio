@@ -88,13 +88,28 @@ function ChallengeContent() {
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">
         <HeroVideoBG srcs={['/videos/hero-fitness-4.mp4', '/videos/hero-fitness-2.mp4', '/videos/hero-fitness-1.mp4', '/videos/hero-fitness-3.mp4']} />
         <div className="max-w-3xl mx-auto text-center relative bg-paper/70 backdrop-blur-md rounded-3xl p-8 sm:p-10 shadow-xl">
-          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">Life-Up Fitness</p>
-          <h1 className="text-4xl sm:text-6xl font-bold text-ink mb-4 tracking-tight">Snatched Without Starving</h1>
-          <p className="text-xl sm:text-2xl text-gold font-semibold mb-6">Lose or gain your first 10–15 lbs — eating the foods you love</p>
-          <p className="text-ink/60 mb-10 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">Life-Up Fitness App</p>
+          <h1 className="text-4xl sm:text-6xl font-bold text-ink mb-4 tracking-tight">Two things get in your way. This app removes both.</h1>
+          <p className="text-xl sm:text-2xl text-gold font-semibold mb-6">No time to figure it out. No willpower left when cravings hit.</p>
+          <p className="text-ink/60 mb-8 max-w-2xl mx-auto leading-relaxed">
             Custom training, done-for-you weekly nutrition, daily check-ins — the full app,
             starting at $10/mo. No starving. No bland food. No doing it alone.
           </p>
+          <div className="grid sm:grid-cols-2 gap-3 mb-10 text-left max-w-xl mx-auto">
+            {[
+              { t: 'Custom workouts', d: 'Home or gym, matched to your level' },
+              { t: 'Done-for-you meals', d: 'Built around food you actually love' },
+              { t: 'Daily check-ins', d: '"How are you feeling" — I adjust your day' },
+              { t: 'Talk to your coach', d: 'Voice memo me, I hear it, I respond' },
+              { t: 'Away-from-home escape plan', d: 'Instant fast-food order, no decision needed' },
+              { t: 'The Cookbook', d: '25+ recipes, full macros + cost per serving' },
+            ].map((f) => (
+              <div key={f.t} className="bg-charcoal border border-smoke rounded-xl px-4 py-3">
+                <p className="text-white font-semibold text-sm">{f.t}</p>
+                <p className="text-ivory/50 text-xs mt-0.5">{f.d}</p>
+              </div>
+            ))}
+          </div>
           <button
             onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
             className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] cursor-pointer"
