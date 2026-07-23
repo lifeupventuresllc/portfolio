@@ -163,7 +163,7 @@ export default function LandingPage() {
       <section id="fitness" className="relative py-24 sm:py-32 px-6 border-t border-smoke/50 overflow-hidden">
         <HeroVideoBG srcs={['/videos/hero-fitness-2.mp4', '/videos/hero-fitness-1.mp4', '/videos/hero-fitness-3.mp4', '/videos/hero-fitness-4.mp4']} />
         <div className="luf-reveal relative max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
-          <div className="bg-paper/95 rounded-3xl p-8 sm:p-10 shadow-xl">
+          <div className="bg-paper/70 backdrop-blur-md rounded-3xl p-8 sm:p-10 shadow-xl">
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Life-Up Fitness</p>
             <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-8 leading-[1.1]">
               Get snatched.<br />Without starving.
