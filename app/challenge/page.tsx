@@ -23,7 +23,7 @@ const FAQ = [
   { q: 'What if I want to gain weight, not lose it?', a: 'This is built for both. Your plan is set to your goal — lose or gain your first 10–15 lbs. Most programs only do fat loss; this does either.' },
   { q: "I'm a total beginner. Is this for me?", a: 'Yes. Your training is matched to your level — beginner, intermediate, or advanced — and you can train at home or in the gym.' },
   { q: 'Do I really talk to you, or is it automated?', a: "You talk to me. Every week I personally check in on your progress — it's real coaching, not a chatbot." },
-  { q: "What's the difference between App Access, the Challenge, and the Inner Circle?", a: "The app itself — custom workouts, meal plans, daily check-ins, everything — is the same at every tier, starting at $10/mo. The only thing that changes is video time with me: Challenge ($20/mo) gets you 1 video call a month, Inner Circle ($50/mo) gets you a video call every week plus direct access between calls." },
+  { q: "What's the difference between App Access, the Challenge, and the Inner Circle?", a: "The app itself — custom workouts, meal plans, everything — is the same at every tier, starting at $10/mo. What changes is my personal time: Challenge ($20/mo) gets you weekly check-ins personally reviewed by me plus 1 video call a month, Inner Circle ($50/mo) gets you twice-weekly check-ins plus a video call every week and direct access between calls." },
   { q: 'What happens after the 6 weeks?', a: "Challenge and Inner Circle are 6-week coaching cycles. After that, you automatically move down to App Access ($10/mo) — you keep the whole app, you just stop being billed for video time — unless you choose to keep the coaching going." },
 ]
 
@@ -93,7 +93,7 @@ function ChallengeContent() {
           <h1 className="text-4xl sm:text-6xl font-bold text-ink mb-4 tracking-tight">Two things get in your way. This app removes both.</h1>
           <p className="text-xl sm:text-2xl text-gold font-semibold mb-6">No time to figure it out. No willpower left when cravings hit.</p>
           <p className="text-ink/60 mb-8 max-w-2xl mx-auto leading-relaxed">
-            Custom training, done-for-you weekly nutrition, daily check-ins — the full app,
+            Custom training, done-for-you weekly nutrition, decisions made for you — the full app,
             starting at $10/mo. No starving. No bland food. No doing it alone.
           </p>
           <div className="grid sm:grid-cols-2 gap-3 mb-10 text-left max-w-xl mx-auto">
@@ -101,7 +101,6 @@ function ChallengeContent() {
               { t: 'Custom workouts', d: 'Home or gym, matched to your level' },
               { t: 'Auto-generated meals', d: 'One tap builds your week — tweak anything after' },
               { t: 'Calorie & macro tracking', d: 'Log food in one tap, see where you stand today' },
-              { t: 'Daily check-ins', d: '"How are you feeling" — I adjust your day' },
               { t: 'Talk to your coach', d: 'Voice memo me, I hear it, I respond' },
               { t: 'Away-from-home escape plan', d: 'Instant fast-food order, no decision needed' },
               { t: 'Grocery list, budget-aware', d: 'Priced near you, with nearby stores mapped out' },
@@ -180,7 +179,7 @@ function ChallengeContent() {
           </p>
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase text-center mb-3">Simple Pricing</p>
           <h2 className="text-3xl font-bold text-center text-ink mb-3">The app does everything. Video calls are the only upgrade.</h2>
-          <p className="text-ink/50 text-sm text-center mb-2 max-w-xl mx-auto">Try App Access free for 14 days — custom workouts, done-for-you meals, daily check-ins, everything. Challenge and Inner Circle add me personally on video, starting day one.</p>
+          <p className="text-ink/50 text-sm text-center mb-2 max-w-xl mx-auto">Try App Access free for 14 days — custom workouts, done-for-you meals, everything. Challenge and Inner Circle add me personally checking in on you, starting day one.</p>
           <div className="w-16 h-0.5 bg-gold/50 mx-auto mb-10" />
 
           {/* Shared contact fields */}
@@ -211,7 +210,6 @@ function ChallengeContent() {
               <ul className="text-ivory/60 text-sm space-y-2 mb-8 flex-1">
                 <li>• Custom workouts, home or gym</li>
                 <li>• The Eat-What-You-Love meal plan</li>
-                <li>• Daily check-ins, decisions made for you</li>
                 <li>• The Curve Collective community</li>
                 <li>• The Menu Cookbook + all bonuses</li>
               </ul>
@@ -252,6 +250,7 @@ function ChallengeContent() {
               <ul className="text-ivory/60 text-sm space-y-2 mb-8 flex-1">
                 <li>• Everything in the Challenge</li>
                 <li>• Weekly video calls with me</li>
+                <li>• Twice-weekly check-ins, personally reviewed</li>
                 <li>• Direct access between calls</li>
                 <li>• Fully custom, weekly-adjusted plans</li>
                 <li>• Faith + mindset coaching</li>

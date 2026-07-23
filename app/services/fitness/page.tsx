@@ -129,7 +129,6 @@ function ProteinBudgetSystemContent() {
               { t: 'Custom workouts', d: 'Home or gym, matched to your level' },
               { t: 'Auto-generated meals', d: 'One tap builds your whole week — tweak anything after' },
               { t: 'Calorie & macro tracking', d: 'Log food in one tap, see exactly where you stand today' },
-              { t: 'Daily check-ins', d: '"How are you feeling" — I adjust your day for you' },
               { t: 'Talk to your coach', d: 'Voice memo me, I hear it, I respond' },
               { t: 'Away-from-home escape plan', d: 'Life happens — instant fast-food order, no decision needed' },
               { t: 'Grocery list, budget-aware', d: 'Priced near you, with nearby stores mapped out' },

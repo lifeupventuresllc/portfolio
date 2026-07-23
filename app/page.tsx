@@ -25,9 +25,9 @@ export default function LandingPage() {
               No time to figure it out. No willpower left when cravings hit.
             </p>
             <p className="text-ink/60 text-lg leading-relaxed mb-8">
-              Custom workouts, meals built around the foods you actually love, daily
-              check-ins, all the decisions made for you — the full app, starting at
-              $10/mo. Want me personally checking in on video too? That&apos;s the only upgrade.
+              Custom workouts, meals built around the foods you actually love, all the
+              decisions made for you — the full app, starting at $10/mo. Want me
+              personally checking in on you too? That&apos;s the only upgrade.
             </p>
             <div className="flex flex-wrap items-center gap-5">
               <Link
@@ -56,8 +56,8 @@ export default function LandingPage() {
               <p className="text-ivory/40 text-sm">One tap builds your week — tweak anything after</p>
             </div>
             <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-lg font-bold mb-1">Daily check-ins</p>
-              <p className="text-ivory/40 text-sm">&quot;How are you feeling&quot; — I adjust your day</p>
+              <p className="text-gold text-lg font-bold mb-1">Calorie &amp; macro tracking</p>
+              <p className="text-ivory/40 text-sm">Log food in one tap, see where you stand today</p>
             </div>
             <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
               <p className="text-gold text-lg font-bold mb-1">Talk to your coach</p>
