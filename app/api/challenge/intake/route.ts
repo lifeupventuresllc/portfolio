@@ -69,14 +69,17 @@ export async function POST(request: NextRequest) {
     // Upsert intake (one per enrollment)
     const { data: existingIntake } = await svc
       .from('challenge_intake')
-      .select('id')
+      .select('id, experience_level')
       .eq('enrollment_id', enrollment.id)
       .maybeSingle()
 
     if (existingIntake) {
+      // Only reset level_started_at when the level ITSELF changed — an unrelated
+      // intake edit (food preferences, budget, etc.) shouldn't restart her clock.
+      const levelChanged = existingIntake.experience_level !== body.experience_level
       await svc
         .from('challenge_intake')
-        .update({ ...intakePayload, updated_at: new Date().toISOString() })
+        .update({ ...intakePayload, updated_at: new Date().toISOString(), ...(levelChanged ? { level_started_at: new Date().toISOString() } : {}) })
         .eq('id', existingIntake.id)
     } else {
       await svc.from('challenge_intake').insert(intakePayload)

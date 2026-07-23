@@ -6,6 +6,7 @@ import CaloriesTodayCard from '@/components/CaloriesTodayCard'
 import WorkoutStatusCard from '@/components/WorkoutStatusCard'
 import StreakChip from '@/components/StreakChip'
 import CoachHero from '@/components/CoachHero'
+import LevelUpNudge from '@/components/LevelUpNudge'
 import TimezoneSync from '@/components/TimezoneSync'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
@@ -172,6 +173,9 @@ export default async function PlanDashboard() {
         <CaloriesTodayCard budget={calBudget} dayType={todayDayType} compact />
         <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} compact />
       </div>
+
+      {/* Infrequent — only renders itself when she's actually eligible */}
+      <LevelUpNudge />
     </div>,
     <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
   )
