@@ -19,6 +19,16 @@ type Data = {
   daily_10_goal: { metric: string; target: number; actual: number }
 }
 
+type RefinementStage = { key: string; label: string; live: boolean; current: number; previous: number; change_pct: number | null }
+type RefinementHistoryEntry = { week_start: string; note: string; updated_at: string }
+type Refinement = {
+  stages: RefinementStage[]
+  leak: { stage: string; change_pct: number } | null
+  current_week_start: string
+  current_note: string
+  history: RefinementHistoryEntry[]
+}
+
 const REFRESH_MS = 60_000
 
 function StatusDot({ on }: { on: boolean }) {
@@ -53,6 +63,11 @@ export default function Daily10Dashboard() {
   const [err, setErr] = useState('')
   const [loading, setLoading] = useState(true)
 
+  const [refinement, setRefinement] = useState<Refinement | null>(null)
+  const [noteDraft, setNoteDraft] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/daily-10')
@@ -65,11 +80,43 @@ export default function Daily10Dashboard() {
     setLoading(false)
   }, [])
 
+  const loadRefinement = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/daily-10/refinement')
+      if (!res.ok) return
+      const r: Refinement = await res.json()
+      setRefinement(r)
+      setNoteDraft(r.current_note)
+    } catch {
+      // non-critical panel — fail silently, pipeline stages above still work
+    }
+  }, [])
+
   useEffect(() => {
     load()
+    loadRefinement()
     const id = setInterval(load, REFRESH_MS)
     return () => clearInterval(id)
-  }, [load])
+  }, [load, loadRefinement])
+
+  async function saveNote() {
+    if (!refinement) return
+    setSaving(true)
+    setSaved(false)
+    try {
+      const res = await fetch('/api/admin/daily-10/refinement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ week_start: refinement.current_week_start, note: noteDraft }),
+      })
+      if (res.ok) {
+        setSaved(true)
+        setRefinement({ ...refinement, current_note: noteDraft })
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const goalPct = data ? Math.min(100, Math.round((data.daily_10_goal.actual / data.daily_10_goal.target) * 100)) : 0
 
@@ -164,9 +211,78 @@ export default function Daily10Dashboard() {
               </div>
             </div>
 
-            <p className="text-[11px] text-ivory/30">
+            <p className="text-[11px] text-ivory/30 mb-6">
               Auto-refreshes every 60s · last updated {new Date(data.generated_at).toLocaleTimeString()}
             </p>
+
+            {/* Refinement — Step 6: weekly review & adjustment */}
+            {refinement && (
+              <div className="bg-charcoal rounded-xl border border-smoke p-5">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs uppercase tracking-wide text-ivory/50">🔁 Refinement — weekly review</span>
+                </div>
+                <p className="text-[11px] text-ivory/40 mb-4">This week vs. the 7 days before it, for every live stage.</p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                  {refinement.stages.map(s => (
+                    <div key={s.key} className={`rounded-lg border p-3 ${!s.live ? 'border-smoke/50 opacity-50' : 'border-smoke'}`}>
+                      <div className="text-[11px] text-ivory/50 mb-1">{s.label}</div>
+                      <div className="text-lg font-bold text-white">{s.current}</div>
+                      <div className="text-[11px]">
+                        {s.change_pct === null ? (
+                          <span className="text-ivory/40">new (was 0)</span>
+                        ) : (
+                          <span className={s.change_pct > 0 ? 'text-emerald-400' : s.change_pct < 0 ? 'text-red-400' : 'text-ivory/40'}>
+                            {s.change_pct > 0 ? '+' : ''}{s.change_pct}% vs last week
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {refinement.leak ? (
+                  <div className="mb-4 text-[12px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                    ⚠️ Likely leak this week: <strong>{refinement.leak.stage}</strong> is down {Math.abs(refinement.leak.change_pct)}% vs. last week.
+                  </div>
+                ) : (
+                  <div className="mb-4 text-[12px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
+                    ✅ No leak flagged — live stages are flat or growing week-over-week.
+                  </div>
+                )}
+
+                <label className="block text-[11px] text-ivory/50 mb-1">This week&rsquo;s adjustment (week of {refinement.current_week_start})</label>
+                <textarea
+                  value={noteDraft}
+                  onChange={e => { setNoteDraft(e.target.value); setSaved(false) }}
+                  placeholder="What did you notice this week? What are you changing next week?"
+                  className="w-full min-h-[80px] bg-obsidian border border-smoke rounded-lg p-3 text-sm text-ivory placeholder:text-ivory/30 focus:outline-none focus:border-gold/50"
+                />
+                <div className="flex items-center gap-3 mt-2">
+                  <button
+                    onClick={saveNote}
+                    disabled={saving}
+                    className="px-3 py-2 bg-gold/90 text-obsidian text-sm font-semibold rounded-lg hover:bg-gold disabled:opacity-50"
+                  >
+                    {saving ? 'Saving…' : 'Save adjustment'}
+                  </button>
+                  {saved && <span className="text-[11px] text-emerald-400">Saved</span>}
+                </div>
+
+                {refinement.history.length > 0 && (
+                  <details className="mt-4">
+                    <summary className="text-[11px] text-ivory/40 cursor-pointer hover:text-ivory/60">Past weeks ({refinement.history.length})</summary>
+                    <ul className="mt-2 space-y-2">
+                      {refinement.history.map(h => (
+                        <li key={h.week_start} className="text-[12px] text-ivory/60 border-l-2 border-smoke pl-3">
+                          <span className="text-ivory/40">Week of {h.week_start}:</span> {h.note || <em className="text-ivory/30">no note</em>}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

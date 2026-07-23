@@ -93,7 +93,7 @@ export default async function ClientProfile({ params }: { params: { id: string }
             <p className="text-ivory/50 text-sm">{e.email as string}</p>
           </div>
           <div className="flex gap-2">
-            <span className="text-[10px] bg-gold/15 text-gold px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold">{(e.tier as string) === 'inner_circle' ? 'Inner Circle' : 'Challenge'}</span>
+            <span className="text-[10px] bg-gold/15 text-gold px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold">{(e.tier as string) === 'inner_circle' ? 'Inner Circle' : (e.tier as string) === 'app' ? 'App Access' : 'Challenge'}</span>
             <span className="text-[10px] bg-obsidian border border-smoke text-ivory/60 px-2.5 py-1 rounded-full uppercase tracking-wider">{e.status as string}</span>
           </div>
         </div>

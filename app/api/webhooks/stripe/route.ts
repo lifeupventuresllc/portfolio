@@ -3,6 +3,7 @@ import { stripe } from '@/lib/stripe'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendPurchaseConfirmation, sendRefundConfirmation, sendChallengeWelcome } from '@/lib/email'
 import { dispatchWebhooks } from '@/lib/webhooks'
+import { FITNESS_PRICE_KEYS } from '@/lib/stripe-prices'
 import Stripe from 'stripe'
 
 export async function POST(request: NextRequest) {
@@ -34,6 +35,71 @@ export async function POST(request: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session
         const userId = session.metadata?.userId
         const productId = session.metadata?.productId
+
+        // ---- Fitness subscription tiers (app/challenge/inner_circle, $10/$20/$50 mo) ----
+        // Guest-friendly, keyed by email, same account-linking pattern as the legacy
+        // one-time challenge flow below — but idempotent on stripe_subscription_id
+        // since this is an ongoing subscription, not a single payment.
+        if (session.metadata?.type === 'fitness_subscription') {
+          const email = session.customer_email || session.customer_details?.email || ''
+          const tier = (['app', 'challenge', 'inner_circle'].includes(session.metadata.tier || '')
+            ? session.metadata.tier : 'app') as 'app' | 'challenge' | 'inner_circle'
+          const name = session.metadata.name || ''
+          const subscriptionId = session.subscription as string
+          const customerId = session.customer as string
+
+          const { data: existingEnrollment } = await supabase
+            .from('challenge_enrollments')
+            .select('id')
+            .eq('stripe_subscription_id', subscriptionId)
+            .maybeSingle()
+
+          if (existingEnrollment) {
+            console.log('Fitness subscription enrollment already recorded:', subscriptionId)
+            break
+          }
+
+          let linkedUserId: string | null = null
+          if (email) {
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('email', email)
+              .maybeSingle()
+            linkedUserId = prof?.id || null
+          }
+
+          const { error: enrollError } = await supabase
+            .from('challenge_enrollments')
+            .insert({
+              user_id: linkedUserId,
+              email,
+              name,
+              tier,
+              status: 'active',
+              amount: session.amount_total || 0,
+              stripe_session_id: session.id,
+              stripe_customer_id: customerId,
+              stripe_subscription_id: subscriptionId,
+              tier_started_at: new Date().toISOString(),
+              started_at: new Date().toISOString(),
+            })
+
+          if (enrollError) {
+            console.error('Failed to create fitness subscription enrollment:', enrollError)
+            break
+          }
+
+          if (email && linkedUserId) {
+            await supabase.from('emails').insert({ user_id: linkedUserId, email, type: 'purchase' })
+          }
+          if (email) {
+            await sendChallengeWelcome(email, name, tier)
+          }
+
+          await dispatchWebhooks('challenge.enrolled', { email, tier, amount: session.amount_total })
+          break
+        }
 
         // ---- Challenge enrollment (guest-friendly, keyed by email) ----
         if (session.metadata?.type === 'challenge') {
@@ -244,6 +310,53 @@ export async function POST(request: NextRequest) {
             await stripe().subscriptions.cancel(subId)
           }
         }
+        break
+      }
+
+      case 'customer.subscription.updated': {
+        // Keeps challenge_enrollments.tier in sync if a fitness subscription's price
+        // changes for any reason (manual upgrade, the tier-downgrade cron, etc).
+        const sub = event.data.object as Stripe.Subscription
+        if (sub.metadata?.type !== 'fitness_subscription') break
+        const priceId = sub.items.data[0]?.price?.id
+        if (!priceId) break
+
+        const [appPrice, challengePrice, innerPrice] = await Promise.all([
+          stripe().prices.list({ lookup_keys: [FITNESS_PRICE_KEYS.app], limit: 1 }),
+          stripe().prices.list({ lookup_keys: [FITNESS_PRICE_KEYS.challenge], limit: 1 }),
+          stripe().prices.list({ lookup_keys: [FITNESS_PRICE_KEYS.inner_circle], limit: 1 }),
+        ])
+        const tier = priceId === innerPrice.data[0]?.id ? 'inner_circle'
+          : priceId === challengePrice.data[0]?.id ? 'challenge'
+          : priceId === appPrice.data[0]?.id ? 'app'
+          : null
+        if (!tier) break
+
+        // Only reset tier_started_at when the tier actually changed — Stripe fires
+        // subscription.updated for lots of unrelated reasons (payment method changes,
+        // etc), and resetting the clock on every ping would defeat the 6-week
+        // auto-downgrade entirely.
+        const { data: current } = await supabase
+          .from('challenge_enrollments')
+          .select('tier')
+          .eq('stripe_subscription_id', sub.id)
+          .maybeSingle()
+        if (current && current.tier !== tier) {
+          await supabase
+            .from('challenge_enrollments')
+            .update({ tier, tier_started_at: new Date().toISOString() })
+            .eq('stripe_subscription_id', sub.id)
+        }
+        break
+      }
+
+      case 'customer.subscription.deleted': {
+        const sub = event.data.object as Stripe.Subscription
+        if (sub.metadata?.type !== 'fitness_subscription') break
+        await supabase
+          .from('challenge_enrollments')
+          .update({ status: 'cancelled' })
+          .eq('stripe_subscription_id', sub.id)
         break
       }
 

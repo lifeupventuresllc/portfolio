@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
+import { getOrCreatePrice, FITNESS_PRICE_KEYS, FITNESS_PRICE_AMOUNTS, FITNESS_PRICE_NICKNAMES, type FitnessTier } from '@/lib/stripe-prices'
+
+const FITNESS_SLUG_TIER: Record<string, FitnessTier> = {
+  'fitness-app': 'app',
+  'fitness-challenge': 'challenge',
+  'fitness-inner-circle': 'inner_circle',
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,6 +15,32 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     const { productId, email, packageSlug, name, cohortSlug } = await request.json()
+
+    // New recurring fitness subscription tiers ($10 app / $20 challenge / $50 inner
+    // circle) — everyone gets the full app, tiers only differ on video-call access.
+    // Uses real persisted Stripe Prices (not inline price_data like everything else
+    // below) so a later cron can swap a subscription's price on the 6-week downgrade.
+    if (packageSlug && FITNESS_SLUG_TIER[packageSlug]) {
+      const tier = FITNESS_SLUG_TIER[packageSlug]
+      const priceId = await getOrCreatePrice(FITNESS_PRICE_KEYS[tier], FITNESS_PRICE_AMOUNTS[tier], FITNESS_PRICE_NICKNAMES[tier])
+
+      const sessionParams: Record<string, unknown> = {
+        payment_method_types: ['card'],
+        line_items: [{ price: priceId, quantity: 1 }],
+        mode: 'subscription',
+        success_url: `${process.env.NEXT_PUBLIC_APP_URL}/signup?redirect=/plan/intake&success=true`,
+        cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/challenge?canceled=true`,
+        allow_promotion_codes: true,
+        metadata: { userId: user?.id || 'guest', packageSlug, source: 'service-page', type: 'fitness_subscription', tier, name: name || '' },
+        subscription_data: { metadata: { type: 'fitness_subscription', tier } },
+      }
+      if (email) sessionParams.customer_email = email
+      else if (user?.email) sessionParams.customer_email = user.email
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const session = await stripe().checkout.sessions.create(sessionParams as any)
+      return NextResponse.json({ url: session.url })
+    }
 
     // Direct checkout by slug (from service pages — no login required)
     if (packageSlug) {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import HeroVideoBG from '@/components/HeroVideoBG'
 import VideoTileRow from '@/components/VideoTileRow'
 
@@ -21,7 +22,8 @@ const FAQ = [
   { q: 'What if I want to gain weight, not lose it?', a: 'This is built for both. Your plan is set to your goal — lose or gain your first 10–15 lbs. Most programs only do fat loss; this does either.' },
   { q: "I'm a total beginner. Is this for me?", a: 'Yes. Your training is matched to your level — beginner, intermediate, or advanced — and you can train at home or in the gym.' },
   { q: 'Do I really talk to you, or is it automated?', a: "You talk to me. Every week I personally check in on your progress — it's real coaching, not a chatbot." },
-  { q: 'Whats the difference between the Challenge and the Inner Circle?', a: 'The Challenge ($150) has group check-ins and everything you need to transform. The Inner Circle ($300) adds weekly 1:1 video calls with me, direct access between calls, fully custom plans, and faith + mindset coaching — limited to 5 women.' },
+  { q: "What's the difference between App Access, the Challenge, and the Inner Circle?", a: "The app itself — custom workouts, meal plans, daily check-ins, everything — is the same at every tier, starting at $10/mo. The only thing that changes is video time with me: Challenge ($20/mo) gets you 1 video call a month, Inner Circle ($50/mo) gets you a video call every week plus direct access between calls." },
+  { q: 'What happens after the 6 weeks?', a: "Challenge and Inner Circle are 6-week coaching cycles. After that, you automatically move down to App Access ($10/mo) — you keep the whole app, you just stop being billed for video time — unless you choose to keep the coaching going." },
 ]
 
 export default function ChallengePage() {
@@ -84,21 +86,20 @@ function ChallengeContent() {
 
       {/* Hero */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">
-        <HeroVideoBG src="/videos/hero-fitness-4.mp4" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(201,168,76,0.08),transparent_70%)]" />
-        <div className="max-w-3xl mx-auto text-center relative">
-          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">6-Week Challenge</p>
+        <HeroVideoBG srcs={['/videos/hero-fitness-4.mp4', '/videos/hero-fitness-2.mp4', '/videos/hero-fitness-1.mp4', '/videos/hero-fitness-3.mp4']} />
+        <div className="max-w-3xl mx-auto text-center relative bg-paper/95 rounded-3xl p-8 sm:p-10 shadow-xl">
+          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">Life-Up Fitness</p>
           <h1 className="text-4xl sm:text-6xl font-bold text-ink mb-4 tracking-tight">Snatched Without Starving</h1>
           <p className="text-xl sm:text-2xl text-gold font-semibold mb-6">Lose or gain your first 10–15 lbs — eating the foods you love</p>
           <p className="text-ink/60 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Custom training, done-for-you weekly nutrition, and a real coach checking in on you every single week.
-            No starving. No bland food. No doing it alone.
+            Custom training, done-for-you weekly nutrition, daily check-ins — the full app,
+            starting at $10/mo. No starving. No bland food. No doing it alone.
           </p>
           <button
             onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
             className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] cursor-pointer"
           >
-            Join The Challenge — $150
+            See pricing — from $10/mo
           </button>
         </div>
       </section>
@@ -108,7 +109,10 @@ function ChallengeContent() {
         <div className="max-w-4xl mx-auto">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase text-center mb-3">Everything Included</p>
           <h2 className="text-3xl font-bold text-center text-ink mb-4">What&apos;s Inside</h2>
-          <div className="w-16 h-0.5 bg-gold/50 mx-auto mb-12" />
+          <div className="w-16 h-0.5 bg-gold/50 mx-auto mb-10" />
+          <div className="relative rounded-2xl overflow-hidden mb-12 aspect-[21/9] max-w-2xl mx-auto">
+            <Image src="/images/fitness-photo-2.jpg" alt="Pushing through the work, banded squats outdoors" fill className="object-cover object-[50%_25%]" sizes="(max-width: 768px) 100vw, 672px" />
+          </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {INCLUDED.map((item, i) => (
               <div key={i} className="bg-charcoal border border-smoke rounded-2xl p-6 hover:border-gold/40 transition-colors">
@@ -167,10 +171,10 @@ function ChallengeContent() {
 
       {/* Pricing */}
       <section id="pricing" className="py-20 px-4 border-t border-smoke">
-        <div className="max-w-4xl mx-auto">
-          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase text-center mb-3">Founding Cohort</p>
-          <h2 className="text-3xl font-bold text-center text-ink mb-3">Choose your spot</h2>
-          <p className="text-ink/50 text-sm text-center mb-2">Only 15 spots per cohort · Inner Circle limited to 5 women</p>
+        <div className="max-w-5xl mx-auto">
+          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase text-center mb-3">Simple Pricing</p>
+          <h2 className="text-3xl font-bold text-center text-ink mb-3">The app does everything. Video calls are the only upgrade.</h2>
+          <p className="text-ink/50 text-sm text-center mb-2 max-w-xl mx-auto">Every plan gets the full app — custom workouts, done-for-you meals, daily check-ins, everything. Cancel anytime.</p>
           <div className="w-16 h-0.5 bg-gold/50 mx-auto mb-10" />
 
           {/* Shared contact fields */}
@@ -191,56 +195,70 @@ function ChallengeContent() {
             />
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-6">
-            {/* Challenge */}
+          <div className="grid sm:grid-cols-3 gap-6">
+            {/* App */}
             <div className="bg-charcoal border border-smoke rounded-3xl p-8 flex flex-col">
-              <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">The Challenge</p>
-              <div className="mb-2"><span className="text-5xl font-bold text-white">$150</span></div>
-              <p className="text-ivory/40 text-sm mb-6">$2,000+ in value · one-time or 3× $50 · 6 weeks</p>
+              <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">App Access</p>
+              <div className="mb-2"><span className="text-5xl font-bold text-white">$10</span><span className="text-ivory/40 text-sm">/mo</span></div>
+              <p className="text-ivory/40 text-sm mb-6">Everything the app does</p>
               <ul className="text-ivory/60 text-sm space-y-2 mb-8 flex-1">
-                <li>• Everything listed above</li>
-                <li>• Weekly group check-ins with me</li>
+                <li>• Custom workouts, home or gym</li>
+                <li>• The Eat-What-You-Love meal plan</li>
+                <li>• Daily check-ins, decisions made for you</li>
                 <li>• The Curve Collective community</li>
+                <li>• The Menu Cookbook + all bonuses</li>
               </ul>
               <button
-                onClick={() => handleCheckout('snatched-challenge')}
+                onClick={() => handleCheckout('fitness-app')}
+                disabled={loadingSlug !== null || !email}
+                className="w-full bg-obsidian border border-gold/40 text-gold px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-colors hover:bg-gold/10 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {loadingSlug === 'fitness-app' ? 'Loading...' : 'Start for $10/mo'}
+              </button>
+            </div>
+
+            {/* Challenge */}
+            <div className="bg-charcoal border-2 border-gold rounded-3xl p-8 flex flex-col relative">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gold text-obsidian text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">Most Popular</span>
+              <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">6-Week Challenge</p>
+              <div className="mb-2"><span className="text-5xl font-bold text-white">$20</span><span className="text-ivory/40 text-sm">/mo</span></div>
+              <p className="text-ivory/40 text-sm mb-6">Everything in App Access, plus me on video</p>
+              <ul className="text-ivory/60 text-sm space-y-2 mb-8 flex-1">
+                <li>• Everything in App Access</li>
+                <li>• 1 video call a month with me</li>
+                <li>• Weekly check-ins, personally reviewed</li>
+              </ul>
+              <button
+                onClick={() => handleCheckout('fitness-challenge')}
                 disabled={loadingSlug !== null || !email}
                 className="w-full bg-gold text-obsidian px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {loadingSlug === 'snatched-challenge' ? 'Loading...' : 'Join The Challenge — $150'}
-              </button>
-              <button
-                onClick={() => handleCheckout('snatched-challenge-plan')}
-                disabled={loadingSlug !== null || !email}
-                className="w-full mt-3 bg-obsidian border border-gold/40 text-gold px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-2xl transition-colors hover:bg-gold/10 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {loadingSlug === 'snatched-challenge-plan' ? 'Loading...' : 'Or split it — 3 payments of $50'}
+                {loadingSlug === 'fitness-challenge' ? 'Loading...' : 'Join the Challenge — $20/mo'}
               </button>
             </div>
 
             {/* Inner Circle */}
-            <div className="bg-charcoal border-2 border-gold rounded-3xl p-8 flex flex-col relative">
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gold text-obsidian text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">Only 5 spots</span>
-              <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">The Inner Circle</p>
-              <div className="mb-2"><span className="text-5xl font-bold text-white">$300</span></div>
-              <p className="text-ivory/40 text-sm mb-6">Everything + personal coaching · 6 weeks</p>
+            <div className="bg-charcoal border border-smoke rounded-3xl p-8 flex flex-col">
+              <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">Inner Circle</p>
+              <div className="mb-2"><span className="text-5xl font-bold text-white">$50</span><span className="text-ivory/40 text-sm">/mo</span></div>
+              <p className="text-ivory/40 text-sm mb-6">Everything, plus me every week — my time is limited here</p>
               <ul className="text-ivory/60 text-sm space-y-2 mb-8 flex-1">
                 <li>• Everything in the Challenge</li>
-                <li>• Weekly 1:1 video calls with me</li>
+                <li>• Weekly video calls with me</li>
                 <li>• Direct access between calls</li>
                 <li>• Fully custom, weekly-adjusted plans</li>
                 <li>• Faith + mindset coaching</li>
               </ul>
               <button
-                onClick={() => handleCheckout('snatched-inner-circle')}
+                onClick={() => handleCheckout('fitness-inner-circle')}
                 disabled={loadingSlug !== null || !email}
-                className="w-full bg-gold text-obsidian px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full bg-obsidian border border-gold/40 text-gold px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-colors hover:bg-gold/10 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {loadingSlug === 'snatched-inner-circle' ? 'Loading...' : 'Join The Inner Circle'}
+                {loadingSlug === 'fitness-inner-circle' ? 'Loading...' : 'Join the Inner Circle — $50/mo'}
               </button>
             </div>
           </div>
-          <p className="text-ink/40 text-xs mt-6 text-center">Secure payment via Stripe. You&apos;ll create your account and complete your intake right after.</p>
+          <p className="text-ink/40 text-xs mt-6 text-center">Secure payment via Stripe. You&apos;ll create your account and complete your intake right after. Challenge and Inner Circle include 6 weeks of coaching — after that you automatically move to App Access ($10/mo) unless you choose to keep the coaching going.</p>
         </div>
       </section>
 

@@ -10,7 +10,7 @@ import PushToggle from '@/components/PushToggle'
 
 type Item = { href: string; label: string; icon: string; external?: boolean }
 
-export default function ClientMenu({ firstName, liveUrl, innerCircle }: { firstName: string; liveUrl?: string; innerCircle?: boolean }) {
+export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstName: string; liveUrl?: string; callAccess?: 'none' | 'monthly' | 'weekly' }) {
   const [open, setOpen] = useState(false)
 
   // Lock body scroll while the drawer is open
@@ -44,7 +44,11 @@ export default function ClientMenu({ firstName, liveUrl, innerCircle }: { firstN
         { href: '/plan/coach', label: 'Tell Coach Asa about your day', icon: '🧠' },
         liveUrl
           ? { href: liveUrl, label: 'Live video call with Coach Asa', icon: '📹', external: true }
-          : { href: innerCircle ? '/book' : '/plan/checkin', label: innerCircle ? 'Book my 1:1 call' : 'Live with Coach Asa', icon: '📹' },
+          : callAccess === 'weekly'
+          ? { href: '/book', label: 'Book your weekly call', icon: '📹' }
+          : callAccess === 'monthly'
+          ? { href: '/book', label: 'Book your monthly call', icon: '📹' }
+          : { href: '/plan/checkin', label: 'Live with Coach Asa', icon: '📹' },
         { href: '/plan/community', label: 'The Curve Collective', icon: '💛' },
       ],
     },

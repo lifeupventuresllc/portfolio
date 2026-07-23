@@ -108,30 +108,40 @@ function ProteinBudgetSystemContent() {
         </div>
       )}
 
-      {/* ═══ PRIMARY OFFER — Snatched Without Starving (featured first) ═══ */}
+      {/* ═══ THE APP — leads with what it solves, not the offer ═══ */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden border-b border-smoke">
-        <HeroVideoBG src="/videos/hero-fitness-3.mp4" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_30%,rgba(201,168,76,0.14),transparent_70%)]" />
-        <div className="max-w-3xl mx-auto text-center relative">
+        <HeroVideoBG srcs={['/videos/hero-fitness-3.mp4', '/videos/hero-fitness-4.mp4', '/videos/hero-fitness-2.mp4', '/videos/hero-fitness-1.mp4']} />
+        <div className="max-w-3xl mx-auto text-center relative bg-paper/95 rounded-3xl p-8 sm:p-10 shadow-xl">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">
-            The Flagship Program
+            Life-Up Fitness App
           </p>
           <h1 className="text-4xl sm:text-6xl font-bold text-ink mb-4 tracking-tight">
-            Snatched Without Starving
+            Two things get in the way of your body. This app removes both.
           </h1>
           <p className="text-xl sm:text-2xl text-gold font-semibold mb-6">
-            My 6-week coached challenge — custom training, done-for-you meals, and me checking in on you every week
+            No time to figure it out. No willpower left when cravings hit.
           </p>
-          <p className="text-ink/60 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Not a PDF and not an app that forgets your name. You get a custom workout, a weekly
-            meal plan built around food you actually love, and a real coach — me — in your corner
-            the whole way. This is the one I&apos;d put you in.
+          <p className="text-ink/60 mb-8 max-w-2xl mx-auto leading-relaxed">
+            Every workout, every meal, every decision — already made for you. You just show up.
           </p>
+          <div className="grid sm:grid-cols-2 gap-4 mb-10 text-left">
+            {[
+              { t: 'Custom workouts', d: 'Home or gym, matched to your level' },
+              { t: 'Done-for-you meals', d: 'Built around food you actually love' },
+              { t: 'Daily check-ins', d: '"How are you feeling" — I adjust your day for you' },
+              { t: 'Talk to your coach', d: 'Voice memo me, I hear it, I respond' },
+            ].map((f) => (
+              <div key={f.t} className="bg-charcoal border border-smoke rounded-2xl p-4">
+                <p className="text-white font-semibold text-sm">{f.t}</p>
+                <p className="text-ivory/50 text-xs mt-1">{f.d}</p>
+              </div>
+            ))}
+          </div>
           <a
             href="/challenge"
             className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] cursor-pointer"
           >
-            See the Challenge →
+            See the app + pricing — from $10/mo →
           </a>
           <p className="text-ink/40 text-xs mt-6">Prefer to start smaller? The cookbook &amp; budget system are below.</p>
         </div>

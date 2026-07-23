@@ -1,7 +1,7 @@
 // Life-Up Fitness service worker — makes the app installable, gives an offline
 // fallback, and receives push reminders. Network-FIRST (so new deploys are always
 // fresh), cache as backup. Never touches API or auth requests.
-const CACHE = 'luf-v3'
+const CACHE = 'luf-v4'
 
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()))
@@ -12,6 +12,13 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url)
   if (url.origin !== self.location.origin) return
   if (url.pathname.startsWith('/api') || url.pathname.startsWith('/auth')) return
+  // Video (and any other ranged-request media) must bypass this entirely — a video
+  // element streams via Range requests, which return 206 Partial Content, and the
+  // Cache API cannot store 206 responses (cache.put throws on them). That silently
+  // stalled every <video> on the site (hero backgrounds, tile rows) at readyState 0
+  // forever, since respondWith's fetch chain never resolved cleanly. Videos don't
+  // need offline caching anyway — let the browser stream them natively.
+  if (url.pathname.startsWith('/videos/') || req.headers.has('range')) return
 
   event.respondWith(
     fetch(req)
