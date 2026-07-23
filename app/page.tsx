@@ -12,162 +12,15 @@ export default function LandingPage() {
       <JsonLd data={localBusinessSchema} />
       <RevealScript />
 
-      {/* ── HERO ── */}
-      <section className="min-h-[100vh] flex flex-col items-center justify-center text-center px-6 pt-14 relative overflow-hidden">
-        <div className="luf-breathe absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_45%,rgba(201,168,76,0.10),transparent_70%)]" />
-
-        <div className="relative z-10 flex flex-col items-center">
-          <h1 className="text-2xl sm:text-3xl font-bold text-ink tracking-tight mb-6">
-            ASA <span className="text-gold">LUKE</span>
-          </h1>
-
-          <p className="text-ink text-xl sm:text-2xl max-w-xl mx-auto mb-20 leading-relaxed font-medium">
-            I edit your content. I mix your music. I build your body.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-8 justify-center" style={{ perspective: '1200px' }}>
-            <Link
-              href="/services/content-editing#pricing"
-              className="group relative px-10 sm:px-20 py-8 sm:py-10 bg-charcoal/80 border-2 border-smoke/80 rounded-3xl overflow-hidden transition-all duration-500 hover:border-gold hover:scale-[1.08] hover:-translate-y-4 hover:shadow-[0_0_60px_rgba(201,168,76,0.4),0_30px_60px_rgba(201,168,76,0.25)]"
-              style={{ transformStyle: 'preserve-3d' }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-gold to-gold/80 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(circle_at_center,rgba(201,168,76,0.4),transparent_70%)]" />
-              <span className="relative z-10 text-2xl font-bold tracking-[0.25em] uppercase text-ivory group-hover:text-obsidian transition-colors duration-300">
-                Content
-              </span>
-            </Link>
-
-            <Link
-              href="/services/audio-engineering#pricing"
-              className="group relative px-10 sm:px-20 py-8 sm:py-10 bg-charcoal/80 border-2 border-smoke/80 rounded-3xl overflow-hidden transition-all duration-500 hover:border-gold hover:scale-[1.08] hover:-translate-y-4 hover:shadow-[0_0_60px_rgba(201,168,76,0.4),0_30px_60px_rgba(201,168,76,0.25)]"
-              style={{ transformStyle: 'preserve-3d' }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-gold to-gold/80 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(circle_at_center,rgba(201,168,76,0.4),transparent_70%)]" />
-              <span className="relative z-10 text-2xl font-bold tracking-[0.25em] uppercase text-ivory group-hover:text-obsidian transition-colors duration-300">
-                Music
-              </span>
-            </Link>
-
-            <Link
-              href="/services/fitness"
-              className="group relative px-10 sm:px-20 py-8 sm:py-10 bg-charcoal/80 border-2 border-smoke/80 rounded-3xl overflow-hidden transition-all duration-500 hover:border-gold hover:scale-[1.08] hover:-translate-y-4 hover:shadow-[0_0_60px_rgba(201,168,76,0.4),0_30px_60px_rgba(201,168,76,0.25)]"
-              style={{ transformStyle: 'preserve-3d' }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-gold to-gold/80 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(circle_at_center,rgba(201,168,76,0.4),transparent_70%)]" />
-              <span className="relative z-10 text-2xl font-bold tracking-[0.25em] uppercase text-ivory group-hover:text-obsidian transition-colors duration-300">
-                Fitness
-              </span>
-            </Link>
-          </div>
-        </div>
-
-        <div className="absolute bottom-8 text-ink/25 text-xs tracking-[0.3em] uppercase animate-pulse">
-          Scroll
-        </div>
-      </section>
-
-      {/* ── CONTENT EDITING ── */}
-      <section className="py-24 sm:py-32 px-6 border-t border-smoke/50">
-        <div className="luf-reveal max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
-          <div>
-            <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Content Editing</p>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-8 leading-[1.1]">
-              Your content,<br />professionally edited.
-            </h2>
-            <p className="text-ink/60 text-lg leading-relaxed mb-10">
-              Short-form video editing for creators and brands. Hooks, captions,
-              color grading, strategy — done for you. You film, I handle the rest.
-            </p>
-            <Link
-              href="/services/content-editing#pricing"
-              className="group relative inline-block bg-gold text-obsidian px-10 py-4 text-base font-bold tracking-wider uppercase rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
-              style={{ perspective: '600px', transformStyle: 'preserve-3d' }}
-            >
-              View Packages
-            </Link>
-            <br />
-            <Link href="/services/content-editing" className="inline-block text-gold/60 text-sm tracking-wider uppercase mt-4 hover:text-gold transition-colors">
-              Learn more &rarr;
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 gap-4" style={{ perspective: '800px' }}>
-            <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-3xl font-bold mb-2">4-12+</p>
-              <p className="text-ivory/40 text-sm uppercase tracking-wider">Reels / Month</p>
-            </div>
-            <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-3xl font-bold mb-2">24-72hr</p>
-              <p className="text-ivory/40 text-sm uppercase tracking-wider">Turnaround</p>
-            </div>
-            <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-3xl font-bold mb-2">$247</p>
-              <p className="text-ivory/40 text-sm uppercase tracking-wider">Starting At</p>
-            </div>
-            <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-3xl font-bold mb-2">100%</p>
-              <p className="text-ivory/40 text-sm uppercase tracking-wider">Guarantee</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── AUDIO ENGINEERING ── */}
-      <section className="py-24 sm:py-32 px-6 border-t border-smoke/50 bg-charcoal/40">
-        <div className="luf-reveal max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
-          <div className="order-2 md:order-1 grid grid-cols-2 gap-4" style={{ perspective: '800px' }}>
-            <div className="bg-obsidian border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-3xl font-bold mb-2">10+</p>
-              <p className="text-ivory/40 text-sm uppercase tracking-wider">Years Experience</p>
-            </div>
-            <div className="bg-obsidian border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-3xl font-bold mb-2">48hr</p>
-              <p className="text-ivory/40 text-sm uppercase tracking-wider">Turnaround</p>
-            </div>
-            <div className="bg-obsidian border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-3xl font-bold mb-2">$99</p>
-              <p className="text-ivory/40 text-sm uppercase tracking-wider">Starting At</p>
-            </div>
-            <div className="bg-obsidian border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-3xl font-bold mb-2">WAV</p>
-              <p className="text-ivory/40 text-sm uppercase tracking-wider">24-Bit Delivery</p>
-            </div>
-          </div>
-          <div className="order-1 md:order-2">
-            <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Audio Engineering</p>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-8 leading-[1.1]">
-              Your music,<br />professionally mixed.
-            </h2>
-            <p className="text-ink/60 text-lg leading-relaxed mb-10">
-              Mixing and mastering for independent artists. Hip-Hop, R&B, Pop, Gospel —
-              10+ years behind the board. Singles to full albums.
-            </p>
-            <Link
-              href="/services/audio-engineering#pricing"
-              className="group relative inline-block bg-gold text-obsidian px-10 py-4 text-base font-bold tracking-wider uppercase rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
-              style={{ perspective: '600px', transformStyle: 'preserve-3d' }}
-            >
-              View Packages
-            </Link>
-            <br />
-            <Link href="/services/audio-engineering" className="inline-block text-gold/60 text-sm tracking-wider uppercase mt-4 hover:text-gold transition-colors">
-              Learn more &rarr;
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FITNESS ── */}
-      <section id="fitness" className="relative py-24 sm:py-32 px-6 border-t border-smoke/50 overflow-hidden">
+      {/* ── FITNESS — the lead. Everything else on this domain is secondary. ── */}
+      <section id="fitness" className="relative pt-32 pb-24 sm:pb-32 px-6 overflow-hidden">
         <HeroVideoBG srcs={['/videos/hero-fitness-2.mp4', '/videos/hero-fitness-1.mp4', '/videos/hero-fitness-3.mp4', '/videos/hero-fitness-4.mp4']} />
         <div className="luf-reveal relative max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div className="bg-paper/70 backdrop-blur-md rounded-3xl p-8 sm:p-10 shadow-xl">
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Life-Up Fitness App</p>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-6 leading-[1.1]">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-6 leading-[1.1]">
               Two things get in your way. This app removes both.
-            </h2>
+            </h1>
             <p className="text-gold text-lg sm:text-xl font-semibold mb-6">
               No time to figure it out. No willpower left when cravings hit.
             </p>
@@ -191,7 +44,7 @@ export default function LandingPage() {
           </div>
           <div>
             <div className="relative rounded-2xl overflow-hidden mb-4 aspect-[4/3]">
-              <Image src="/images/fitness-photo-1.jpg" alt="Client mid-challenge, staying strong" fill className="object-cover" sizes="(max-width: 768px) 100vw, 400px" />
+              <Image src="/images/fitness-photo-1.jpg" alt="Client mid-challenge, staying strong" fill className="object-cover" sizes="(max-width: 768px) 100vw, 400px" priority />
             </div>
             <div className="grid grid-cols-2 gap-4" style={{ perspective: '800px' }}>
             <div className="bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
@@ -215,7 +68,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── THE MENU (COOKBOOK) ── */}
+      {/* ── THE MENU (COOKBOOK) — fitness-adjacent, stays right after ── */}
       <section className="py-24 sm:py-32 px-6 border-t border-smoke/50 bg-charcoal/40">
         <div className="luf-reveal max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div className="order-2 md:order-1 grid grid-cols-2 gap-4" style={{ perspective: '800px' }}>
@@ -251,6 +104,28 @@ export default function LandingPage() {
               style={{ perspective: '600px', transformStyle: 'preserve-3d' }}
             >
               Get The Menu — $25.99
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── ALSO BY ASA LUKE — Content + Music, demoted to a compact secondary section ── */}
+      <section className="py-20 px-6 border-t border-smoke/50">
+        <div className="max-w-4xl mx-auto">
+          <p className="text-gold text-xs font-semibold tracking-[0.3em] uppercase mb-2 text-center">Also By Asa Luke</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-ink mb-10 text-center">Content editing &amp; music mixing, on the side.</h2>
+          <div className="grid sm:grid-cols-2 gap-5">
+            <Link href="/services/content-editing" className="group block bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-1">
+              <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-2">Content Editing</p>
+              <p className="text-white text-xl font-bold mb-2">Your content, professionally edited.</p>
+              <p className="text-ivory/50 text-sm mb-4">Short-form video editing for creators and brands. Starting at $247.</p>
+              <span className="text-gold text-sm font-semibold group-hover:translate-x-1 transition-transform inline-block">Learn more →</span>
+            </Link>
+            <Link href="/services/audio-engineering" className="group block bg-charcoal border border-smoke/50 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-1">
+              <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-2">Audio Engineering</p>
+              <p className="text-white text-xl font-bold mb-2">Your music, professionally mixed.</p>
+              <p className="text-ivory/50 text-sm mb-4">Mixing and mastering for independent artists. Starting at $99.</p>
+              <span className="text-gold text-sm font-semibold group-hover:translate-x-1 transition-transform inline-block">Learn more →</span>
             </Link>
           </div>
         </div>
