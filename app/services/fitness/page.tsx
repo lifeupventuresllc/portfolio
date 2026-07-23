@@ -147,7 +147,7 @@ function ProteinBudgetSystemContent() {
             href="/challenge"
             className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] cursor-pointer"
           >
-            See the app + pricing — from $10/mo →
+            Try free for 14 days — from $10/mo after →
           </a>
           <p className="text-ink/40 text-xs mt-6">Prefer to start smaller? The cookbook &amp; budget system are below.</p>
         </div>

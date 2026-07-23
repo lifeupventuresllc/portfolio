@@ -35,7 +35,7 @@ export default function LandingPage() {
                 className="group relative inline-block bg-gold text-obsidian px-10 py-4 text-base font-bold tracking-wider uppercase rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
                 style={{ perspective: '600px', transformStyle: 'preserve-3d' }}
               >
-                See the app + pricing — from $10/mo
+                Try free for 14 days — from $10/mo after
               </Link>
               <Link href="/blueprint" className="text-ink/70 text-sm font-semibold hover:text-gold transition-colors underline underline-offset-4">
                 Start free with your Calorie Blueprint →

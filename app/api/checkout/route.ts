@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
         cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/challenge?canceled=true`,
         allow_promotion_codes: true,
         metadata: { userId: user?.id || 'guest', packageSlug, source: 'service-page', type: 'fitness_subscription', tier, name: name || '' },
-        subscription_data: { metadata: { type: 'fitness_subscription', tier } },
+        subscription_data: { trial_period_days: 14, metadata: { type: 'fitness_subscription', tier } },
       }
       if (email) sessionParams.customer_email = email
       else if (user?.email) sessionParams.customer_email = user.email
