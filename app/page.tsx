@@ -52,19 +52,19 @@ export default function LandingPage() {
             </div>
             <div className="grid grid-cols-2 gap-4" style={{ perspective: '800px' }}>
             <div className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-lg font-bold mb-1">Custom workouts</p>
-              <p className="text-ivory/40 text-sm">Home or gym, matched to your level</p>
+              <p className="text-gold text-lg font-bold mb-1">Sculpt Sessions</p>
+              <p className="text-ivory/40 text-sm">Custom workouts, home or gym, matched to your level</p>
             </div>
             <div className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-lg font-bold mb-1">Auto-generated meals</p>
-              <p className="text-ivory/40 text-sm">One tap builds your week — tweak anything after</p>
+              <p className="text-gold text-lg font-bold mb-1">The Menu — Free Forever</p>
+              <p className="text-ivory/40 text-sm">25+ cookbook recipes, included at every tier</p>
             </div>
             <div className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-lg font-bold mb-1">Calorie &amp; macro tracking</p>
-              <p className="text-ivory/40 text-sm">Log food in one tap, see where you stand today</p>
+              <p className="text-gold text-lg font-bold mb-1">Fuel, Figured Out</p>
+              <p className="text-ivory/40 text-sm">Auto-generated meals — one tap builds your week</p>
             </div>
             <div className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-lg font-bold mb-1">Talk to your coach</p>
+              <p className="text-gold text-lg font-bold mb-1">Coach On Call</p>
               <p className="text-ivory/40 text-sm">Voice memo me, I hear it, I respond</p>
             </div>
             </div>

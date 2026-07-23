@@ -126,14 +126,14 @@ function ProteinBudgetSystemContent() {
           </p>
           <div className="grid sm:grid-cols-2 gap-4 mb-10 text-left">
             {[
-              { t: 'Custom workouts', d: 'Home or gym, matched to your level' },
-              { t: 'Auto-generated meals', d: 'One tap builds your whole week — tweak anything after' },
-              { t: 'Calorie & macro tracking', d: 'Log food in one tap, see exactly where you stand today' },
-              { t: 'Talk to your coach', d: 'Voice memo me, I hear it, I respond' },
-              { t: 'Away-from-home escape plan', d: 'Life happens — instant fast-food order, no decision needed' },
-              { t: 'Grocery list, budget-aware', d: 'Priced near you, with nearby stores mapped out' },
-              { t: 'The Cookbook', d: '25+ recipes with full macros + cost per serving' },
-              { t: 'Progress tracking', d: 'Badges, streaks, weekly photos — see it add up' },
+              { t: 'Sculpt Sessions', d: 'Custom workouts — home or gym, matched to your level' },
+              { t: 'The Menu — Free Forever', d: '25+ cookbook recipes with full macros + cost per serving, included at every tier' },
+              { t: 'Fuel, Figured Out', d: 'Auto-generated meals — one tap builds your whole week, tweak anything after' },
+              { t: 'Macros, Mapped Out', d: 'Calorie & macro tracking — log food in one tap, see exactly where you stand today' },
+              { t: 'Coach On Call', d: 'Talk to your coach — voice memo me, I hear it, I respond' },
+              { t: 'Fast-Food Fix', d: 'Away-from-home escape plan — instant order, no decision needed' },
+              { t: 'Budget, Bagged', d: 'Grocery list, budget-aware — priced near you, with nearby stores mapped out' },
+              { t: 'Progress, Proven', d: 'Badges, streaks, weekly photos — see it add up' },
               { t: 'The Curve Collective', d: "Community of women doing this alongside you" },
             ].map((f) => (
               <div key={f.t} className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-4">
