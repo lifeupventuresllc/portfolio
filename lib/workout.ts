@@ -208,6 +208,11 @@ function homeSplit(daysPerWeek: number, level: Level): string[] {
   return Array.from({ length: n }, (_, i) => cycle[i % 2]) // n=3 → Leg/Upper/Leg, matches the original default exactly
 }
 
+// Bodyweight-only priority/postpartum ab moves (no plates/kettlebells) — the home
+// track's equivalent of pickAb's priority pool. Weighted or KB-named entries need
+// equipment a home session doesn't assume, so those stay gym-only.
+const HOME_AB_PRIORITY = AB_POOL.filter(a => a.priority && !a.weighted && !a.name.startsWith('KB '))
+
 function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
   const level = inp.level
   const week = inp.weekNumber || 1
@@ -216,11 +221,19 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
   const injuries = inp.injuries || []
   const avail = HOME_POOL.filter(e => e.level <= level && !isContraindicated(e.name, injuries))
   const byType = (types: string[], off: number, count: number) => {
+    let picked: { name: string; duration: string }[] = []
+    if (types.includes('core')) {
+      const corePool = inp.postpartum
+        ? HOME_AB_PRIORITY.filter(a => a.postpartum).concat(HOME_AB_PRIORITY.filter(a => !a.postpartum))
+        : HOME_AB_PRIORITY.filter(a => !a.postpartum)
+      picked = rotate(corePool, off).slice(0, Math.min(2, count)).map(a => ({ name: a.name, duration: '30 sec' }))
+    }
     // prefer moves at the client's exact level (progression), fall back to lower levels only if needed
+    const remaining = count - picked.length
     const atLevel = avail.filter(e => types.includes(e.type) && e.type !== 'cardio' && e.level === level)
     const lower = avail.filter(e => types.includes(e.type) && e.type !== 'cardio' && e.level < level)
     const ordered = rotate(atLevel, off).concat(rotate(lower, off))
-    return ordered.slice(0, count).map(e => ({ name: e.name, duration: '30 sec' }))
+    return picked.concat(ordered.slice(0, remaining).map(e => ({ name: e.name, duration: '30 sec' })))
   }
   const finisher = (off: number) => {
     const atLevel = avail.filter(e => e.type === 'cardio' && e.level === level)

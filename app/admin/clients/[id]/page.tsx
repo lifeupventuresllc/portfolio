@@ -120,6 +120,7 @@ export default async function ClientProfile({ params }: { params: { id: string }
               {stat('Activity', (i.activity_level as string))}
               {stat('Budget', i.weekly_food_budget ? `$${i.weekly_food_budget}/wk` : '')}
               {stat('Injuries', (i.injuries_limitations as string) || 'none')}
+              {(i.form_data as { postpartum?: boolean } | null)?.postpartum && stat('Postpartum', '💛 Yes')}
             </div>
           ) : <p className="text-ivory/40 text-sm">No intake completed yet.</p>}
         </Section>
