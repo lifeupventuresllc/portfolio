@@ -110,7 +110,7 @@ function ProteinBudgetSystemContent() {
 
       {/* ═══ THE APP — leads with what it solves, not the offer ═══ */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden border-b border-smoke">
-        <HeroVideoBG srcs={['/videos/hero-fitness-3.mp4', '/videos/hero-fitness-4.mp4', '/videos/hero-fitness-2.mp4', '/videos/hero-fitness-1.mp4']} />
+        <HeroVideoBG srcs={['/videos/hero-fitness-5.mp4', '/videos/hero-fitness-3.mp4', '/videos/hero-fitness-4.mp4', '/videos/hero-fitness-2.mp4', '/videos/hero-fitness-1.mp4']} />
         <div className="max-w-3xl mx-auto text-center relative bg-paper/70 backdrop-blur-md rounded-3xl p-8 sm:p-10 shadow-xl">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">
             Life-Up Fitness App

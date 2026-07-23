@@ -24,6 +24,10 @@ export async function POST(request: NextRequest) {
       const tier = FITNESS_SLUG_TIER[packageSlug]
       const priceId = await getOrCreatePrice(FITNESS_PRICE_KEYS[tier], FITNESS_PRICE_AMOUNTS[tier], FITNESS_PRICE_NICKNAMES[tier])
 
+      // Free trial only on App Access — Challenge/Inner Circle are paid coaching from day one.
+      const subscriptionData: Record<string, unknown> = { metadata: { type: 'fitness_subscription', tier } }
+      if (tier === 'app') subscriptionData.trial_period_days = 14
+
       const sessionParams: Record<string, unknown> = {
         payment_method_types: ['card'],
         line_items: [{ price: priceId, quantity: 1 }],
@@ -32,7 +36,7 @@ export async function POST(request: NextRequest) {
         cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/challenge?canceled=true`,
         allow_promotion_codes: true,
         metadata: { userId: user?.id || 'guest', packageSlug, source: 'service-page', type: 'fitness_subscription', tier, name: name || '' },
-        subscription_data: { trial_period_days: 14, metadata: { type: 'fitness_subscription', tier } },
+        subscription_data: subscriptionData,
       }
       if (email) sessionParams.customer_email = email
       else if (user?.email) sessionParams.customer_email = user.email

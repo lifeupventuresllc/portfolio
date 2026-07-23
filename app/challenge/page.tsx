@@ -19,7 +19,7 @@ const INCLUDED = [
 ]
 
 const FAQ = [
-  { q: 'How does the free trial work?', a: "Every plan — App Access, Challenge, and Inner Circle — starts with 14 days free. Cancel anytime during those 14 days and you won't be charged anything. If you don't cancel, your card is billed automatically for the plan you picked once the trial ends." },
+  { q: 'How does the free trial work?', a: "App Access starts with 14 days free — cancel anytime during those 14 days and you won't be charged anything. If you don't cancel, your card is billed $10/mo automatically once the trial ends. Challenge and Inner Circle are paid coaching from day one, since that's my time on video." },
   { q: 'What if I want to gain weight, not lose it?', a: 'This is built for both. Your plan is set to your goal — lose or gain your first 10–15 lbs. Most programs only do fat loss; this does either.' },
   { q: "I'm a total beginner. Is this for me?", a: 'Yes. Your training is matched to your level — beginner, intermediate, or advanced — and you can train at home or in the gym.' },
   { q: 'Do I really talk to you, or is it automated?', a: "You talk to me. Every week I personally check in on your progress — it's real coaching, not a chatbot." },
@@ -87,7 +87,7 @@ function ChallengeContent() {
 
       {/* Hero */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">
-        <HeroVideoBG srcs={['/videos/hero-fitness-4.mp4', '/videos/hero-fitness-2.mp4', '/videos/hero-fitness-1.mp4', '/videos/hero-fitness-3.mp4']} />
+        <HeroVideoBG srcs={['/videos/hero-fitness-5.mp4', '/videos/hero-fitness-4.mp4', '/videos/hero-fitness-2.mp4', '/videos/hero-fitness-1.mp4', '/videos/hero-fitness-3.mp4']} />
         <div className="max-w-3xl mx-auto text-center relative bg-paper/70 backdrop-blur-md rounded-3xl p-8 sm:p-10 shadow-xl">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">Life-Up Fitness App</p>
           <h1 className="text-4xl sm:text-6xl font-bold text-ink mb-4 tracking-tight">Two things get in your way. This app removes both.</h1>
@@ -117,7 +117,7 @@ function ChallengeContent() {
             onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
             className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] cursor-pointer"
           >
-            Try free for 14 days
+            Try free for 14 days — from $10/mo after
           </button>
         </div>
       </section>
@@ -175,12 +175,12 @@ function ChallengeContent() {
         <div className="max-w-5xl mx-auto">
           <p className="text-center mb-4">
             <span className="inline-block text-gold text-[11px] font-bold tracking-[0.25em] uppercase border border-gold/40 rounded-full px-4 py-1.5 bg-gold/5">
-              14-Day Free Trial — Every Plan
+              14-Day Free Trial — App Access
             </span>
           </p>
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase text-center mb-3">Simple Pricing</p>
           <h2 className="text-3xl font-bold text-center text-ink mb-3">The app does everything. Video calls are the only upgrade.</h2>
-          <p className="text-ink/50 text-sm text-center mb-2 max-w-xl mx-auto">Try any plan free for 14 days. Custom workouts, done-for-you meals, daily check-ins, everything. Cancel anytime — you won&apos;t be charged until your trial ends.</p>
+          <p className="text-ink/50 text-sm text-center mb-2 max-w-xl mx-auto">Try App Access free for 14 days — custom workouts, done-for-you meals, daily check-ins, everything. Challenge and Inner Circle add me personally on video, starting day one.</p>
           <div className="w-16 h-0.5 bg-gold/50 mx-auto mb-10" />
 
           {/* Shared contact fields */}
@@ -228,8 +228,7 @@ function ChallengeContent() {
             <div className="bg-charcoal border-2 border-gold rounded-3xl p-8 flex flex-col relative">
               <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gold text-obsidian text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">Most Popular</span>
               <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">6-Week Challenge</p>
-              <div className="mb-1"><span className="text-3xl font-bold text-emerald-400">Free</span><span className="text-ivory/40 text-sm"> for 14 days</span></div>
-              <div className="mb-2"><span className="text-ivory/40 text-sm">then $20/mo</span></div>
+              <div className="mb-2"><span className="text-5xl font-bold text-white">$20</span><span className="text-ivory/40 text-sm">/mo</span></div>
               <p className="text-ivory/40 text-sm mb-6">Everything in App Access, plus me on video</p>
               <ul className="text-ivory/60 text-sm space-y-2 mb-8 flex-1">
                 <li>• Everything in App Access</li>
@@ -241,15 +240,14 @@ function ChallengeContent() {
                 disabled={loadingSlug !== null || !email}
                 className="w-full bg-gold text-obsidian px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {loadingSlug === 'fitness-challenge' ? 'Loading...' : 'Start your free 14 days'}
+                {loadingSlug === 'fitness-challenge' ? 'Loading...' : 'Join the Challenge — $20/mo'}
               </button>
             </div>
 
             {/* Inner Circle */}
             <div className="bg-charcoal border border-smoke rounded-3xl p-8 flex flex-col">
               <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">Inner Circle</p>
-              <div className="mb-1"><span className="text-3xl font-bold text-emerald-400">Free</span><span className="text-ivory/40 text-sm"> for 14 days</span></div>
-              <div className="mb-2"><span className="text-ivory/40 text-sm">then $50/mo</span></div>
+              <div className="mb-2"><span className="text-5xl font-bold text-white">$50</span><span className="text-ivory/40 text-sm">/mo</span></div>
               <p className="text-ivory/40 text-sm mb-6">Everything, plus me every week — my time is limited here</p>
               <ul className="text-ivory/60 text-sm space-y-2 mb-8 flex-1">
                 <li>• Everything in the Challenge</li>
@@ -263,11 +261,11 @@ function ChallengeContent() {
                 disabled={loadingSlug !== null || !email}
                 className="w-full bg-obsidian border border-gold/40 text-gold px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-colors hover:bg-gold/10 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {loadingSlug === 'fitness-inner-circle' ? 'Loading...' : 'Start your free 14 days'}
+                {loadingSlug === 'fitness-inner-circle' ? 'Loading...' : 'Join the Inner Circle — $50/mo'}
               </button>
             </div>
           </div>
-          <p className="text-ink/40 text-xs mt-6 text-center">14 days free on any plan, cancel anytime before your trial ends and you won&apos;t be charged. Secure payment via Stripe. You&apos;ll create your account and complete your intake right after. Challenge and Inner Circle include 6 weeks of coaching — after that you automatically move to App Access ($10/mo) unless you choose to keep the coaching going.</p>
+          <p className="text-ink/40 text-xs mt-6 text-center">App Access: 14 days free, cancel before your trial ends and you won&apos;t be charged. Secure payment via Stripe. You&apos;ll create your account and complete your intake right after. Challenge and Inner Circle include 6 weeks of coaching — after that you automatically move to App Access ($10/mo) unless you choose to keep the coaching going.</p>
         </div>
       </section>
 
