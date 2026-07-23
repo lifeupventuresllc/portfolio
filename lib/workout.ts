@@ -21,6 +21,7 @@ export interface WorkoutInputs {
   weekNumber?: number
   injuries?: Injury[]
   targets?: Muscle[]
+  postpartum?: boolean // surfaces postpartum-labeled ab work first, see pickAb
 }
 
 export interface Superset { title: string; push: GymExercise; pull: GymExercise; reps: string }
@@ -141,9 +142,19 @@ function pickGym(movement: Movement, muscles: string[], level: Level, weekOffset
   return exact.concat(fallback).slice(0, count)
 }
 
-function pickAb(zone: 'upper' | 'lower', level: Level, offset: number): AbExercise {
-  const c = AB_POOL.filter(a => a.zone === zone && a.minLevel <= level)
-  return rotate(c, offset)[0]
+// Priority pool (Asa's curated screenshot batch) is the PRIMARY source now — the
+// original generic pool is only a fallback for zone/level combos priority doesn't
+// cover. Postpartum-flagged entries take priority over priority over generic when
+// she's flagged postpartum in intake.
+function pickAb(zone: 'upper' | 'lower', level: Level, offset: number, postpartum = false): AbExercise {
+  const inZoneLevel = AB_POOL.filter(a => a.zone === zone && a.minLevel <= level)
+  if (postpartum) {
+    const pp = inZoneLevel.filter(a => a.postpartum)
+    if (pp.length) return rotate(pp, offset)[0]
+  }
+  const priority = inZoneLevel.filter(a => a.priority && !a.postpartum)
+  if (priority.length) return rotate(priority, offset)[0]
+  return rotate(inZoneLevel, offset)[0]
 }
 
 function generateGym(inp: WorkoutInputs): GymDay[] {
@@ -177,7 +188,7 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
         { name: 'Standing Calf Raise', reps: level === 1 ? '2 × 15–20' : '3 × 15–20', cue: 'Rise onto toes, squeeze at the top, lower slow for a full stretch.' },
         { name: 'Single-Arm Tibialis Raise (wall)', reps: '2 × 15 each', cue: 'Back to wall, lift toes toward shins, squeeze the shin, lower slow.' },
       ],
-      ab: { upper: pickAb('upper', level, off), lower: pickAb('lower', level, off + 2), scheme: AB_SCHEME[level] },
+      ab: { upper: pickAb('upper', level, off, inp.postpartum), lower: pickAb('lower', level, off + 2, inp.postpartum), scheme: AB_SCHEME[level] },
       cardio: cardioFinisher(level, inp.goal),
     } as GymDay
   })

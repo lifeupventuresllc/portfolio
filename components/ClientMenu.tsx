@@ -28,6 +28,7 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
         { href: '/plan/meals', label: 'My meals — what I’m cooking & how', icon: '🍽️' },
         { href: '/plan/library', label: 'The Cookbook', icon: '📖' },
         { href: '/plan/workout', label: 'Today’s workout', icon: '💪🏽' },
+        { href: '/plan/compound', label: 'Compound & HIIT Full-Body (optional)', icon: '🔥' },
         { href: '/plan/exercises', label: 'Workout Plans — every move', icon: '🏋️' },
       ],
     },

@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       weekNumber: Number(b.weekNumber) || 1,
       injuries: (Array.isArray(b.injuries) ? b.injuries : []) as Injury[],
       targets: (Array.isArray(b.targets) ? b.targets : []) as Muscle[],
+      postpartum: !!b.postpartum,
     })
     const bytes = await generateWorkoutPDF(prog)
     const pdfBase64 = Buffer.from(bytes).toString('base64')

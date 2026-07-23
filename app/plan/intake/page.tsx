@@ -20,6 +20,7 @@ export default function ConversationalIntake() {
     name: '', goal: '', age: '', sex: 'female', heightFt: '5', heightIn: '4', weight_lbs: '',
     target_lbs: '', activity_level: '', experience_level: '', training_location: '',
     days_per_week: '', cook_days_per_week: '', weekly_food_budget: '', food_preferences: '', dislikes_allergies: '',
+    postpartum: '',
   })
   const [injuries, setInjuries] = useState<string[]>([])
   const [phase, setPhase] = useState<'quiz' | 'building' | 'done'>('quiz')
@@ -38,7 +39,7 @@ export default function ConversationalIntake() {
   const firstName = f.name.trim().split(' ')[0] || 'you'
 
   const STEPS = [
-    'name', 'goal', 'body', 'target', 'activity', 'experience', 'location', 'days', 'cook', 'injuries', 'food',
+    'name', 'goal', 'body', 'target', 'activity', 'experience', 'location', 'days', 'cook', 'injuries', 'postpartum', 'food',
   ]
   const total = STEPS.length
   const pct = Math.round(((step + 1) / total) * 100)
@@ -59,7 +60,7 @@ export default function ConversationalIntake() {
           training_location: f.training_location || 'gym', days_per_week: Number(f.days_per_week) || 3,
           cook_days_per_week: Number(f.cook_days_per_week) || 2, weekly_food_budget: Number(f.weekly_food_budget) || null,
           food_preferences: f.food_preferences, dislikes_allergies: f.dislikes_allergies,
-          injuries, injuries_limitations: '',
+          injuries, injuries_limitations: '', postpartum: f.postpartum === 'yes',
         }),
       })
       const data = await res.json()
@@ -259,6 +260,15 @@ export default function ConversationalIntake() {
               ))}
             </div>
             <button onClick={next} className={primaryBtn}>{injuries.length ? 'Continue →' : 'None — continue →'}</button>
+          </>)}
+
+          {s === 'postpartum' && (<>
+            <Q>Are you currently postpartum?</Q>
+            <Hint>If you are, I&apos;ll prioritize gentler, postpartum-friendly core work in your plan.</Hint>
+            <div className="space-y-3">
+              <button onClick={() => pick('postpartum', 'yes')} className={opt(f.postpartum === 'yes')}>Yes</button>
+              <button onClick={() => pick('postpartum', 'no')} className={opt(f.postpartum === 'no')}>No</button>
+            </div>
           </>)}
 
           {s === 'food' && (<>

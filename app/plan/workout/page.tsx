@@ -60,9 +60,10 @@ export default async function WorkoutSession() {
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
     const injuries = (Array.isArray((intake.form_data as { injuries?: Injury[] } | null)?.injuries)
       ? (intake.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
+    const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
     program = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex, track: trackOverride, level, goal,
-      daysPerWeek: Number(intake.days_per_week) || 3, weekNumber: 1, injuries,
+      daysPerWeek: Number(intake.days_per_week) || 3, weekNumber: 1, injuries, postpartum,
     })
   }
 

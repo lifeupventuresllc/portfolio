@@ -20,6 +20,7 @@ export async function POST() {
   const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
   const injuries = (Array.isArray((intake.form_data as { injuries?: Injury[] })?.injuries)
     ? (intake.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
+  const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
 
   const program = generateWorkout({
     name: (enrollment.name as string) || 'Your',
@@ -27,6 +28,7 @@ export async function POST() {
     daysPerWeek: Number(intake.days_per_week) || 3,
     weekNumber: 1,
     injuries,
+    postpartum,
   })
 
   const payload = {

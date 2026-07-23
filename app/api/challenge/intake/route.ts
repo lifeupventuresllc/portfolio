@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
       form_data: {
         cook_days_per_week: Number(body.cook_days_per_week) || 2,
         injuries: (Array.isArray(body.injuries) ? body.injuries : []) as Injury[],
+        postpartum: !!body.postpartum,
       },
     }
 
@@ -135,6 +136,7 @@ export async function POST(request: NextRequest) {
       daysPerWeek: Number(body.days_per_week) || 3,
       weekNumber: 1,
       injuries: (Array.isArray(body.injuries) ? body.injuries : []) as Injury[],
+      postpartum: !!body.postpartum,
     })
 
     const workoutPayload = {

@@ -100,7 +100,11 @@ export const GYM_POOL: GymExercise[] = [
 ]
 
 // ---------- ABS ----------
-export interface AbExercise { name: string; zone: 'upper' | 'lower'; minLevel: Level; weighted?: boolean; cue: string }
+// `priority`: sourced from Asa's curated screenshot batch (2026-07-23) — these get
+// surfaced before the older generic pool within the same zone/level (see pickAb in
+// workout.ts). `postpartum`: explicitly labeled postpartum-friendly by the source
+// creator; surfaced first for members who flag postpartum status in their intake.
+export interface AbExercise { name: string; zone: 'upper' | 'lower'; minLevel: Level; weighted?: boolean; priority?: boolean; postpartum?: boolean; cue: string }
 export const AB_POOL: AbExercise[] = [
   { name: 'Crunch', zone: 'upper', minLevel: 1, cue: 'Curl shoulders up slowly, exhale at top, lower with control — don\'t pull the neck.' },
   { name: 'Bicycle Crunch', zone: 'upper', minLevel: 1, cue: 'Opposite elbow to opposite knee, full rotation, slow and deliberate.' },
@@ -116,6 +120,27 @@ export const AB_POOL: AbExercise[] = [
   { name: 'Leg In-Outs', zone: 'lower', minLevel: 1, cue: 'Knees in to chest then extend straight out, core engaged.' },
   { name: 'Hanging Knee Raise', zone: 'lower', minLevel: 3, cue: 'Hang from the bar, raise knees to chest, control down — no swinging.' },
   { name: 'Plate-Held Reverse Crunch', zone: 'lower', minLevel: 3, weighted: true, cue: 'Hold a light plate on the shins, curl hips up, control down.' },
+
+  // ---- Priority pool, from Asa's curated screenshot batch (2026-07-23) ----
+  { name: 'Bird Dog', zone: 'lower', minLevel: 1, priority: true, cue: 'On all fours, extend opposite arm and leg straight out, hold, return with control — keep the back flat.' },
+  { name: 'Glute Bridge Marches', zone: 'lower', minLevel: 1, priority: true, cue: 'Hold a glute bridge at the top, alternate marching knees up without dropping the hips.' },
+  { name: 'Lower Belly Knee Tuck', zone: 'lower', minLevel: 1, priority: true, cue: 'Lying on back, knees bent, curl the hips up drawing knees toward the chest, lower with control.' },
+  { name: 'Reclined Leg Raise (Beginner)', zone: 'lower', minLevel: 1, priority: true, cue: 'Recline on hands behind you, knees bent, raise and lower bent legs with control.' },
+  { name: 'Reclined Leg Raise (Advanced)', zone: 'lower', minLevel: 3, priority: true, cue: 'Recline on hands behind you, legs straight, raise and lower fully extended for a much harder hold.' },
+  { name: 'Weighted Toe Touch (Beginner)', zone: 'upper', minLevel: 1, priority: true, cue: 'Lying on back, knees bent, reach one weighted hand toward the opposite foot in a side crunch.' },
+  { name: 'Weighted Toe Touch (Advanced)', zone: 'upper', minLevel: 3, weighted: true, priority: true, cue: 'Lying flat, legs straight up, full V-up reaching a dumbbell straight overhead to the toes.' },
+  { name: 'Bench Pike Raise (Beginner)', zone: 'lower', minLevel: 1, priority: true, cue: 'Lying on the floor, raise straight legs to a controlled leg raise.' },
+  { name: 'Bench Pike Raise (Advanced)', zone: 'lower', minLevel: 3, priority: true, cue: 'Hips at the edge of a bench, raise straight legs into a full pike, lower with control — much harder leverage than the floor version.' },
+  { name: 'Glute Bridge Single-Leg Lift', zone: 'lower', minLevel: 2, priority: true, cue: 'Single-leg glute bridge, reach the free hand toward the raised foot at the top of each rep.' },
+  { name: 'KB Standing Marches', zone: 'lower', minLevel: 2, priority: true, cue: 'Standing tall holding kettlebells at shoulders, march knees up high, controlled, no leaning back.' },
+  { name: 'KB Half Around the World', zone: 'upper', minLevel: 2, priority: true, cue: 'Standing, circle a kettlebell halfway around your torso, switch direction each set — controlled, braced core.' },
+  { name: 'KB Around the Worlds', zone: 'upper', minLevel: 2, priority: true, cue: 'Standing, circle a kettlebell in a full loop around your torso, both directions — braced core throughout.' },
+  { name: 'KB Windmill', zone: 'upper', minLevel: 3, priority: true, cue: 'One kettlebell locked overhead, hinge sideways reaching the free hand to the floor, eyes on the bell — real shoulder + rotational stability required.' },
+  { name: 'KB Standing Leg Lifts', zone: 'lower', minLevel: 3, priority: true, cue: 'Balance standing on the base of two kettlebells, march/lift knees for stability + core control.' },
+
+  // ---- Postpartum-friendly, explicitly labeled by the source (2026-07-23 batch) ----
+  { name: 'Postpartum Glute Bridge Press', zone: 'lower', minLevel: 1, priority: true, postpartum: true, cue: 'Glute bridge holding a light ball or weight pressed overhead, one leg extended — gentle, deep-core-safe reactivation.' },
+  { name: 'Postpartum Plank Reach', zone: 'upper', minLevel: 2, priority: true, postpartum: true, cue: 'From a plank, shift back and extend one leg straight behind you in a gentle reach-back stretch — no crunch pressure on the midline.' },
 ]
 
 // ---------- WARM-UPS (by day focus) ----------
