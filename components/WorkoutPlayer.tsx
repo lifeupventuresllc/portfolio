@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import Ring from '@/components/Ring'
 import Confetti from '@/components/Confetti'
 import QuickFeedback from '@/components/QuickFeedback'
@@ -136,6 +137,10 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
               <p className="text-ink/50 text-xs uppercase tracking-wider">seconds</p>
             </div>
           </Ring>
+        ) : step.imageUrl ? (
+          <div className="w-[200px] h-[200px] rounded-full border-2 border-gold/20 overflow-hidden mb-2">
+            <Image src={step.imageUrl} alt={step.name} width={200} height={200} className="w-full h-full object-cover" />
+          </div>
         ) : (
           <div className="w-[200px] h-[200px] rounded-full border-2 border-gold/20 flex items-center justify-center mb-2"><span className="text-6xl">🏋🏽</span></div>
         )}

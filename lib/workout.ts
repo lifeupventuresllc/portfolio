@@ -32,7 +32,7 @@ export interface GymDay {
   ab: { upper: AbExercise; lower: AbExercise; scheme: string }
   cardio: ReturnType<typeof cardioFinisher>
 }
-export interface HomeDay { dayNum: number; title: string; exercises: { name: string; duration: string }[] }
+export interface HomeDay { dayNum: number; title: string; exercises: { name: string; duration: string; imageUrl?: string }[] }
 export interface WorkoutProgram {
   name: string; track: 'gym' | 'home'; level: Level; levelLabel: string; goal: string
   weekNumber: number; daysPerWeek: number
@@ -226,25 +226,25 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
   const avail = HOME_POOL.filter(e => e.level <= level && !isContraindicated(e.name, injuries))
   const homeAbSafe = HOME_AB_PRIORITY.filter(a => !isContraindicated(a.name, injuries))
   const byType = (types: string[], off: number, count: number) => {
-    let picked: { name: string; duration: string }[] = []
+    let picked: { name: string; duration: string; imageUrl?: string }[] = []
     if (types.includes('core')) {
       const corePool = inp.postpartum
         ? homeAbSafe.filter(a => a.postpartum).concat(homeAbSafe.filter(a => !a.postpartum))
         : homeAbSafe.filter(a => !a.postpartum)
-      picked = rotate(corePool, off).slice(0, Math.min(2, count)).map(a => ({ name: a.name, duration: '30 sec' }))
+      picked = rotate(corePool, off).slice(0, Math.min(2, count)).map(a => ({ name: a.name, duration: '30 sec', imageUrl: a.imageUrl }))
     }
     // prefer moves at the client's exact level (progression), fall back to lower levels only if needed
     const remaining = count - picked.length
     const atLevel = avail.filter(e => types.includes(e.type) && e.type !== 'cardio' && e.level === level)
     const lower = avail.filter(e => types.includes(e.type) && e.type !== 'cardio' && e.level < level)
     const ordered = rotate(atLevel, off).concat(rotate(lower, off))
-    return picked.concat(ordered.slice(0, remaining).map(e => ({ name: e.name, duration: '30 sec' })))
+    return picked.concat(ordered.slice(0, remaining).map(e => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl })))
   }
   const finisher = (off: number) => {
     const atLevel = avail.filter(e => e.type === 'cardio' && e.level === level)
     const cardio = atLevel.length ? atLevel : avail.filter(e => e.type === 'cardio')
     const pick = rotate(cardio, off)[0] || { name: 'March in Place' }
-    return { name: pick.name, duration: '60 sec' }
+    return { name: pick.name, duration: '60 sec', imageUrl: (pick as { imageUrl?: string }).imageUrl }
   }
 
   const days: HomeDay[] = split.map((focus, i) => {

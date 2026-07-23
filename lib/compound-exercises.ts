@@ -26,6 +26,7 @@ export interface CompoundExercise {
   sources: number // cross-source validation count, 1 = single source
   reps: string
   cue: string
+  imageUrl?: string // form-demo photo, shown in the compound-day list when set
 }
 
 export const COMPOUND_POOL: CompoundExercise[] = [

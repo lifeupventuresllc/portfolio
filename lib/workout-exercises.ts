@@ -19,6 +19,7 @@ export interface GymExercise {
   muscle: Muscle
   minLevel: Level
   cue: string
+  imageUrl?: string // form-demo photo/diagram, shown on the workout player when set — unset for all entries until Asa sources real images (see luf_zero_decision_pivot memory)
 }
 
 const F = (e: Equip) => e === 'barbell' || e === 'dumbbell' || e === 'bodyweight'
@@ -104,7 +105,7 @@ export const GYM_POOL: GymExercise[] = [
 // surfaced before the older generic pool within the same zone/level (see pickAb in
 // workout.ts). `postpartum`: explicitly labeled postpartum-friendly by the source
 // creator; surfaced first for members who flag postpartum status in their intake.
-export interface AbExercise { name: string; zone: 'upper' | 'lower'; minLevel: Level; weighted?: boolean; priority?: boolean; postpartum?: boolean; cue: string }
+export interface AbExercise { name: string; zone: 'upper' | 'lower'; minLevel: Level; weighted?: boolean; priority?: boolean; postpartum?: boolean; cue: string; imageUrl?: string }
 export const AB_POOL: AbExercise[] = [
   { name: 'Crunch', zone: 'upper', minLevel: 1, cue: 'Curl shoulders up slowly, exhale at top, lower with control — don\'t pull the neck.' },
   { name: 'Bicycle Crunch', zone: 'upper', minLevel: 1, cue: 'Opposite elbow to opposite knee, full rotation, slow and deliberate.' },
@@ -156,7 +157,7 @@ export function cardioFinisher(level: Level, goal: string) {
 }
 
 // ---------- HOME BODYWEIGHT POOL ----------
-export interface HomeExercise { name: string; level: Level; type: 'leg' | 'upper' | 'core' | 'cardio' }
+export interface HomeExercise { name: string; level: Level; type: 'leg' | 'upper' | 'core' | 'cardio'; imageUrl?: string }
 export const HOME_POOL: HomeExercise[] = [
   // beginner
   { name: 'Chair / Couch Squats', level: 1, type: 'leg' }, { name: 'Bodyweight Squats', level: 1, type: 'leg' },

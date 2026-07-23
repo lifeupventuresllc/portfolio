@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import type { CompoundExercise } from '@/lib/compound-exercises'
 
 export default function CompoundDayClient({ exercises }: { exercises: CompoundExercise[] }) {
@@ -44,7 +45,12 @@ export default function CompoundDayClient({ exercises }: { exercises: CompoundEx
           className={`w-full text-left rounded-2xl border px-5 py-4 transition-all ${done.has(i) ? 'bg-gold/10 border-gold/50' : 'bg-charcoal border-smoke'}`}
         >
           <div className="flex items-start justify-between gap-3">
-            <div>
+            {ex.imageUrl && (
+              <div className="shrink-0 h-14 w-14 rounded-xl overflow-hidden border border-smoke">
+                <Image src={ex.imageUrl} alt={ex.name} width={56} height={56} className="w-full h-full object-cover" />
+              </div>
+            )}
+            <div className="flex-1">
               <p className={`font-semibold text-sm ${done.has(i) ? 'text-gold' : 'text-white'}`}>{ex.name}</p>
               <p className="text-ivory/50 text-xs mt-1">{ex.cue}</p>
               <p className="text-ivory/40 text-xs mt-1.5 uppercase tracking-wider">{ex.reps} · {ex.equip}</p>

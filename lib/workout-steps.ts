@@ -8,6 +8,7 @@ export interface WorkoutStep {
   cue?: string
   seconds?: number   // present → a timed/countdown step
   rest?: boolean
+  imageUrl?: string  // form-demo photo/diagram — unset until Asa sources real images
 }
 
 const parseSecs = (s?: string): number | undefined => {
@@ -49,7 +50,7 @@ export function buildSteps(program: WorkoutProgram, dayIdx: number): WorkoutStep
     if (!day) return steps
     steps.push({ phase: 'Warm-up', name: 'Warm-up', detail: program.home.warmup.join(' · ') })
     day.exercises.forEach((e) => {
-      steps.push({ phase: day.title, name: e.name, detail: e.duration, seconds: parseSecs(e.duration) })
+      steps.push({ phase: day.title, name: e.name, detail: e.duration, seconds: parseSecs(e.duration), imageUrl: e.imageUrl })
     })
     steps.push({ phase: 'Cool-down', name: 'Cool-down', detail: program.home.cooldown.join(' · ') })
     return steps
@@ -59,17 +60,17 @@ export function buildSteps(program: WorkoutProgram, dayIdx: number): WorkoutStep
   if (!day) return steps
   steps.push({ phase: 'Warm-up', name: 'Warm-up', detail: day.warmup.join(' · ') })
   day.supersets.forEach((s, i) => {
-    steps.push({ phase: `Superset ${i + 1}`, name: s.push.name, detail: s.reps, cue: s.push.cue })
+    steps.push({ phase: `Superset ${i + 1}`, name: s.push.name, detail: s.reps, cue: s.push.cue, imageUrl: s.push.imageUrl })
     steps.push({ phase: 'Rest', name: 'Rest', seconds: 45, rest: true })
-    steps.push({ phase: `Superset ${i + 1}`, name: s.pull.name, detail: s.reps, cue: s.pull.cue })
+    steps.push({ phase: `Superset ${i + 1}`, name: s.pull.name, detail: s.reps, cue: s.pull.cue, imageUrl: s.pull.imageUrl })
     steps.push({ phase: 'Rest', name: 'Rest', seconds: 60, rest: true })
   })
   day.accessory.forEach((a) => {
     steps.push({ phase: 'Accessory', name: a.name, detail: a.reps, cue: a.cue })
     steps.push({ phase: 'Rest', name: 'Rest', seconds: 45, rest: true })
   })
-  steps.push({ phase: `Abs · ${day.ab.scheme}`, name: day.ab.upper.name, detail: day.ab.scheme, cue: day.ab.upper.cue })
-  steps.push({ phase: `Abs · ${day.ab.scheme}`, name: day.ab.lower.name, detail: day.ab.scheme, cue: day.ab.lower.cue })
+  steps.push({ phase: `Abs · ${day.ab.scheme}`, name: day.ab.upper.name, detail: day.ab.scheme, cue: day.ab.upper.cue, imageUrl: day.ab.upper.imageUrl })
+  steps.push({ phase: `Abs · ${day.ab.scheme}`, name: day.ab.lower.name, detail: day.ab.scheme, cue: day.ab.lower.cue, imageUrl: day.ab.lower.imageUrl })
   steps.push({ phase: 'Cardio finisher', name: day.cardio.title, detail: `${day.cardio.mins} · ${day.cardio.speed} · incline ${day.cardio.incline}`, cue: day.cardio.note })
   return steps
 }
