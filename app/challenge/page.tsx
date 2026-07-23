@@ -99,12 +99,12 @@ function ChallengeContent() {
           <div className="grid sm:grid-cols-2 gap-3 mb-10 text-left max-w-xl mx-auto">
             {[
               { t: 'Sculpt Sessions', d: 'Custom workouts — home or gym, matched to your level' },
-              { t: 'The Menu — Free Forever', d: '25+ cookbook recipes, full macros + cost per serving' },
               { t: 'Fuel, Figured Out', d: 'Auto-generated meals — one tap builds your week' },
-              { t: 'Macros, Mapped Out', d: 'Calorie & macro tracking — see where you stand today' },
-              { t: 'Coach On Call', d: 'Talk to your coach — voice memo me, I hear it, I respond' },
               { t: 'Fast-Food Fix', d: 'Away-from-home escape plan — instant order, no decision' },
+              { t: 'Coach On Call', d: 'Talk to your coach — voice memo me, I hear it, I respond' },
+              { t: 'Macros, Mapped Out', d: 'Calorie & macro tracking — see where you stand today' },
               { t: 'Budget, Bagged', d: 'Grocery list, budget-aware — nearby stores mapped out' },
+              { t: 'The Menu — Free Forever', d: '25+ cookbook recipes, full macros + cost per serving' },
             ].map((f) => (
               <div key={f.t} className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3">
                 <p className="text-white font-semibold text-sm">{f.t}</p>

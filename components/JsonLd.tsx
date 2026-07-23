@@ -13,7 +13,7 @@ export const organizationSchema = {
   name: "Asa Luke",
   url: "https://www.asaluke.io",
   description:
-    "Professional content editing, audio engineering, and fitness coaching by Asa Luke.",
+    "Life-Up Fitness — custom workouts, done-for-you meals, and daily coaching by Asa Luke.",
   sameAs: ["https://www.instagram.com/AsaLuke"],
   contactPoint: {
     "@type": "ContactPoint",
@@ -28,7 +28,7 @@ export const localBusinessSchema = {
   name: "Asa Luke",
   url: "https://www.asaluke.io",
   description:
-    "I edit your content. I mix your music. I build your body. Professional content editing, audio engineering, and fitness coaching.",
+    "Two things get in your way. This app removes both. Custom workouts, done-for-you meals, and daily coaching — Life-Up Fitness by Asa Luke.",
   address: {
     "@type": "PostalAddress",
     addressLocality: "Los Angeles",

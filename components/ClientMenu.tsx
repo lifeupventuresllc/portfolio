@@ -69,7 +69,7 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
       <button
         onClick={() => setOpen(true)}
         aria-label="Open menu"
-        className="h-10 w-10 rounded-xl bg-charcoal border border-smoke flex flex-col items-center justify-center gap-[5px] hover:border-gold/60 transition-colors"
+        className="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex flex-col items-center justify-center gap-[5px] hover:border-gold/60 transition-colors"
       >
         <span className="block h-0.5 w-5 bg-ivory/80 rounded-full" />
         <span className="block h-0.5 w-5 bg-ivory/80 rounded-full" />

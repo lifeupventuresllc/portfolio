@@ -56,12 +56,12 @@ export default function LandingPage() {
               <p className="text-ivory/40 text-sm">Custom workouts, home or gym, matched to your level</p>
             </div>
             <div className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
-              <p className="text-gold text-lg font-bold mb-1">The Menu — Free Forever</p>
-              <p className="text-ivory/40 text-sm">25+ cookbook recipes, included at every tier</p>
-            </div>
-            <div className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
               <p className="text-gold text-lg font-bold mb-1">Fuel, Figured Out</p>
               <p className="text-ivory/40 text-sm">Auto-generated meals — one tap builds your week</p>
+            </div>
+            <div className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
+              <p className="text-gold text-lg font-bold mb-1">Fast-Food Fix</p>
+              <p className="text-ivory/40 text-sm">Away-from-home escape plan — instant order, no decision</p>
             </div>
             <div className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
               <p className="text-gold text-lg font-bold mb-1">Coach On Call</p>
@@ -114,28 +114,6 @@ export default function LandingPage() {
       </section>
 
 
-      {/* ── LISTEN ── */}
-      <section className="py-24 px-6 border-t border-smoke/50 bg-charcoal/40">
-        <div className="max-w-2xl mx-auto text-center">
-          <p className="text-gold text-xs font-semibold tracking-[0.3em] uppercase mb-3">Listen</p>
-          <h2 className="text-2xl font-bold text-ink mb-8">Find Me on These Platforms</h2>
-          <div className="flex flex-wrap justify-center gap-3">
-            <a href="https://open.spotify.com/search/Asa%20Luke" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full border border-smoke/50 text-ink/70 text-sm hover:border-gold hover:text-gold transition-all duration-300">
-              Spotify
-            </a>
-            <a href="https://music.apple.com/search?term=Asa+Luke" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full border border-smoke/50 text-ink/70 text-sm hover:border-gold hover:text-gold transition-all duration-300">
-              Apple Music
-            </a>
-            <a href="https://soundcloud.com/search?q=asa%20luke" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full border border-smoke/50 text-ink/70 text-sm hover:border-gold hover:text-gold transition-all duration-300">
-              SoundCloud
-            </a>
-            <a href="https://music.youtube.com/search?q=Asa+Luke" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-full border border-smoke/50 text-ink/70 text-sm hover:border-gold hover:text-gold transition-all duration-300">
-              YouTube Music
-            </a>
-          </div>
-        </div>
-      </section>
-
       {/* ── CONTACT ── */}
       <section className="py-24 px-6 border-t border-smoke/50">
         <div className="max-w-lg mx-auto text-center">
@@ -160,11 +138,11 @@ export default function LandingPage() {
       </section>
 
       {/* ── Small, out-of-the-way mention — this is a fitness site now ── */}
-      <p className="text-center text-ink/30 text-xs py-6 px-6">
-        Also mixing music on the side —{' '}
-        <Link href="/services/audio-engineering" className="underline hover:text-ink/50 transition-colors">
-          Audio Engineering
-        </Link>
+      <p className="text-center text-ink/30 text-[11px] py-5 px-6 space-x-3">
+        <span>Also making music —</span>
+        <a href="https://open.spotify.com/search/Asa%20Luke" target="_blank" rel="noopener noreferrer" className="underline hover:text-ink/50 transition-colors">Spotify</a>
+        <a href="https://music.apple.com/search?term=Asa+Luke" target="_blank" rel="noopener noreferrer" className="underline hover:text-ink/50 transition-colors">Apple Music</a>
+        <Link href="/services/audio-engineering" className="underline hover:text-ink/50 transition-colors">Audio Engineering</Link>
       </p>
 
       {/* ── FOOTER ── */}

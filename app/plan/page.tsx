@@ -51,10 +51,10 @@ export default async function PlanDashboard() {
     <div className="min-h-screen bg-paper px-4 py-12">
       <TimezoneSync />
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex items-center justify-between mb-6 bg-charcoal/80 backdrop-blur-md border border-white/10 rounded-2xl px-5 py-4">
           <div>
             <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Life-Up Fitness</p>
-            <h1 className="text-3xl font-bold text-ink">Hey {firstName} 👋</h1>
+            <h1 className="text-2xl font-bold text-white">Hey {firstName} 👋</h1>
             <StreakChip />
           </div>
           {menu}

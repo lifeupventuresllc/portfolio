@@ -39,7 +39,7 @@ export default function CaloriesTodayCard({ budget, dayType, compact }: { budget
   if (compact) {
     return (
       <Link href="/plan/today" className="group flex flex-col items-center text-center bg-gradient-to-br from-charcoal to-obsidian border border-smoke rounded-[1.75rem] p-4 hover:border-gold/60 transition-all">
-        <p className="text-gold text-[9px] uppercase tracking-wider font-semibold mb-2.5">Calories 💵</p>
+        <p className="text-gold text-[9px] uppercase tracking-wider font-semibold mb-2.5">Your calories 💵</p>
         <Ring pct={over ? 100 : pct} size={84} stroke={8} color={ringColor}>
           <div className="text-center leading-none">
             <p className={`font-bold text-base ${over ? 'text-amber-400' : 'text-gold'}`}>{over ? '-' : ''}${over ? (spent! - budget) : left}</p>

@@ -19,14 +19,14 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.asaluke.io'),
   title: {
-    default: 'Asa Luke — Content Editing | Audio Engineering | Fitness',
+    default: 'Life-Up Fitness by Asa Luke',
     template: '%s | Asa Luke',
   },
-  description: 'I edit your content. I mix your music. I build your body. Professional content editing, audio engineering, and fitness coaching by Asa Luke.',
-  keywords: ['content editing', 'video editing', 'audio engineering', 'mixing', 'mastering', 'fitness coaching', 'reels editing', 'social media content', 'Asa Luke', 'Los Angeles'],
+  description: 'Custom workouts, done-for-you meals, and daily coaching — the app that decides for you. Life-Up Fitness by Asa Luke.',
+  keywords: ['fitness coaching', 'workout app', 'meal plan app', 'personal training', 'weight loss app', 'Life-Up Fitness', 'Asa Luke', 'Los Angeles'],
   openGraph: {
-    title: 'Asa Luke — Content Editing | Audio Engineering | Fitness',
-    description: 'I edit your content. I mix your music. I build your body.',
+    title: 'Life-Up Fitness by Asa Luke',
+    description: 'Custom workouts, done-for-you meals, and daily coaching — the app that decides for you.',
     url: 'https://www.asaluke.io',
     siteName: 'Asa Luke',
     type: 'website',
@@ -34,8 +34,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Asa Luke — Content Editing | Audio Engineering | Fitness',
-    description: 'I edit your content. I mix your music. I build your body.',
+    title: 'Life-Up Fitness by Asa Luke',
+    description: 'Custom workouts, done-for-you meals, and daily coaching — the app that decides for you.',
   },
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, title: 'Life-Up Fitness', statusBarStyle: 'black-translucent' },
