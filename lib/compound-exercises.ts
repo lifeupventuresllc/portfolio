@@ -15,6 +15,7 @@
 // ============================================================
 
 import { isContraindicated, type Injury } from './workout-exercises'
+import { FORM_IMAGES } from './exercise-images'
 
 export type Level = 1 | 2 | 3
 
@@ -29,7 +30,7 @@ export interface CompoundExercise {
   imageUrl?: string // form-demo photo, shown in the compound-day list when set
 }
 
-export const COMPOUND_POOL: CompoundExercise[] = [
+const COMPOUND_POOL_BASE: CompoundExercise[] = [
   // ---- Beginner ----
   { name: 'Squat Pulses', level: 1, equip: 'bodyweight', muscles: ['quads', 'glutes'], sources: 1, reps: '3x15', cue: 'Hold a mini-squat, small controlled pulses, chest tall.' },
   { name: 'Reverse Lunge + Bicep Curl', level: 1, equip: 'dumbbell', muscles: ['quads', 'biceps'], sources: 1, reps: '3x12', cue: 'Step back into a lunge while curling the dumbbells — both moves finish together.' },
@@ -69,6 +70,7 @@ export const COMPOUND_POOL: CompoundExercise[] = [
   { name: 'Sumo Squat + Overhead Press', level: 3, equip: 'dumbbell', muscles: ['glutes', 'quads', 'shoulders'], sources: 1, reps: '3x12', cue: 'Wide sumo squat, drive up explosively into a full overhead press.' },
   { name: 'Full Body Combo (Squat + Overhead Press)', level: 3, equip: 'dumbbell', muscles: ['full body'], sources: 1, reps: '3x12', cue: 'Squat to full depth, drive up hard and press overhead — treat it as one continuous explosive rep.' },
 ]
+export const COMPOUND_POOL: CompoundExercise[] = COMPOUND_POOL_BASE.map((e) => (FORM_IMAGES[e.name] ? { ...e, imageUrl: FORM_IMAGES[e.name] } : e))
 
 export function compoundExercisesForLevel(level: Level, injuries: Injury[] = []): CompoundExercise[] {
   // Everything AT or below her level, injury-safe, cross-validated (higher `sources`) first within each level.

@@ -3,6 +3,7 @@
 // Gym (push/pull), abs, home bodyweight, cardio. Tagged by
 // min-level, movement, muscle, equipment. Free weights ★ first.
 // ============================================================
+import { FORM_IMAGES } from './exercise-images'
 
 export type Level = 1 | 2 | 3 // 1 beginner, 2 intermediate, 3 advanced
 export type Movement = 'push' | 'pull'
@@ -98,7 +99,7 @@ export const GYM_POOL: GymExercise[] = [
   ex('Skull Crusher', 'dumbbell', 'push', 'triceps', 2, 'Lower the weight to your forehead bending only at the elbows, press back to lockout.'),
   ex('Close-Grip Bench Press', 'barbell', 'push', 'triceps', 2, 'Hands shoulder-width, elbows tucked, press to lockout driving the triceps.'),
   ex('Cable Tricep Pushdown', 'cable', 'push', 'triceps', 1, 'Elbows pinned, push down to full lockout, squeeze at the bottom, control the return.'),
-]
+].map((e) => (FORM_IMAGES[e.name] ? { ...e, imageUrl: FORM_IMAGES[e.name] } : e))
 
 // ---------- ABS ----------
 // `priority`: sourced from Asa's curated screenshot batch (2026-07-23) — these get
@@ -106,7 +107,7 @@ export const GYM_POOL: GymExercise[] = [
 // workout.ts). `postpartum`: explicitly labeled postpartum-friendly by the source
 // creator; surfaced first for members who flag postpartum status in their intake.
 export interface AbExercise { name: string; zone: 'upper' | 'lower'; minLevel: Level; weighted?: boolean; priority?: boolean; postpartum?: boolean; cue: string; imageUrl?: string }
-export const AB_POOL: AbExercise[] = [
+const AB_POOL_BASE: AbExercise[] = [
   { name: 'Crunch', zone: 'upper', minLevel: 1, cue: 'Curl shoulders up slowly, exhale at top, lower with control — don\'t pull the neck.' },
   { name: 'Bicycle Crunch', zone: 'upper', minLevel: 1, cue: 'Opposite elbow to opposite knee, full rotation, slow and deliberate.' },
   { name: 'Slow Sit-Up', zone: 'upper', minLevel: 1, cue: 'Controlled full sit-up, slow on the way down.' },
@@ -143,6 +144,7 @@ export const AB_POOL: AbExercise[] = [
   { name: 'Postpartum Glute Bridge Press', zone: 'lower', minLevel: 1, priority: true, postpartum: true, cue: 'Glute bridge holding a light ball or weight pressed overhead, one leg extended — gentle, deep-core-safe reactivation.' },
   { name: 'Postpartum Plank Reach', zone: 'upper', minLevel: 2, priority: true, postpartum: true, cue: 'From a plank, shift back and extend one leg straight behind you in a gentle reach-back stretch — no crunch pressure on the midline.' },
 ]
+export const AB_POOL: AbExercise[] = AB_POOL_BASE.map((e) => (FORM_IMAGES[e.name] ? { ...e, imageUrl: FORM_IMAGES[e.name] } : e))
 
 // ---------- WARM-UPS (by day focus) ----------
 export const WARMUPS: Record<string, string[]> = {
