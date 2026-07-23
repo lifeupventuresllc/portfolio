@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -9,12 +9,19 @@ type Profile = {
   role: string
 }
 
+const FITNESS_PATHS = ['/challenge', '/blueprint', '/services/fitness', '/meal-plan', '/guides/fitness']
+
 export default function Navbar() {
   const router = useRouter()
+  const pathname = usePathname()
   const supabase = createClient()
   const [user, setUser] = useState<{ email?: string } | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+
+  // On fitness-only marketing pages, don't distract with the other businesses'
+  // nav links — she's here for the app, not Content/Music/Bundles.
+  const isFitnessPage = FITNESS_PATHS.some((p) => pathname?.startsWith(p))
 
   useEffect(() => {
     async function getUser() {
@@ -64,16 +71,20 @@ export default function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
-            <Link href="/services/content-editing" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
-              Content
-            </Link>
-            <Link href="/services/audio-engineering" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
-              Music
-            </Link>
-            <Link href="/services/bundles" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
-              Bundles
-            </Link>
-            <Link href="/#fitness" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+            {!isFitnessPage && (
+              <>
+                <Link href="/services/content-editing" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+                  Content
+                </Link>
+                <Link href="/services/audio-engineering" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+                  Music
+                </Link>
+                <Link href="/services/bundles" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+                  Bundles
+                </Link>
+              </>
+            )}
+            <Link href={isFitnessPage ? '/services/fitness' : '/#fitness'} className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
               Fitness
             </Link>
 
@@ -82,7 +93,7 @@ export default function Navbar() {
                 My Plan
               </Link>
             )}
-            {user && (
+            {user && !isFitnessPage && (
               <Link href="/content" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
                 My Projects
               </Link>
@@ -128,16 +139,20 @@ export default function Navbar() {
         {/* Mobile Menu */}
         {menuOpen && (
           <div className="md:hidden py-6 border-t border-smoke/30 space-y-5 animate-slide-down">
-            <Link href="/services/content-editing" onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
-              Content
-            </Link>
-            <Link href="/services/audio-engineering" onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
-              Music
-            </Link>
-            <Link href="/services/bundles" onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
-              Bundles
-            </Link>
-            <Link href="/#fitness" onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
+            {!isFitnessPage && (
+              <>
+                <Link href="/services/content-editing" onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
+                  Content
+                </Link>
+                <Link href="/services/audio-engineering" onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
+                  Music
+                </Link>
+                <Link href="/services/bundles" onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
+                  Bundles
+                </Link>
+              </>
+            )}
+            <Link href={isFitnessPage ? '/services/fitness' : '/#fitness'} onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
               Fitness
             </Link>
             {user ? (
@@ -145,9 +160,11 @@ export default function Navbar() {
                 <Link href="/plan" onClick={() => setMenuOpen(false)} className="block text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
                   My Plan
                 </Link>
-                <Link href="/content" onClick={() => setMenuOpen(false)} className="block text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
-                  My Projects
-                </Link>
+                {!isFitnessPage && (
+                  <Link href="/content" onClick={() => setMenuOpen(false)} className="block text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
+                    My Projects
+                  </Link>
+                )}
                 <button onClick={() => { handleSignOut(); setMenuOpen(false); }} className="block text-xs text-ivory/30 tracking-[0.15em] uppercase hover:text-gold transition-colors">
                   Sign Out
                 </button>

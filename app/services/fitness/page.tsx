@@ -130,6 +130,10 @@ function ProteinBudgetSystemContent() {
               { t: 'Done-for-you meals', d: 'Built around food you actually love' },
               { t: 'Daily check-ins', d: '"How are you feeling" — I adjust your day for you' },
               { t: 'Talk to your coach', d: 'Voice memo me, I hear it, I respond' },
+              { t: 'Away-from-home escape plan', d: 'Life happens — instant fast-food order, no decision needed' },
+              { t: 'The Cookbook', d: '25+ recipes with full macros + cost per serving' },
+              { t: 'Progress tracking', d: 'Badges, streaks, weekly photos — see it add up' },
+              { t: 'The Curve Collective', d: "Community of women doing this alongside you" },
             ].map((f) => (
               <div key={f.t} className="bg-charcoal border border-smoke rounded-2xl p-4">
                 <p className="text-white font-semibold text-sm">{f.t}</p>

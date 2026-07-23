@@ -153,6 +153,20 @@ export default async function PlanDashboard() {
         <p className="text-white text-[15px] sm:text-base leading-snug font-medium text-balance">“{affirmation}”</p>
       </div>
 
+      {/* Premium upsell — only for App Access members not already coached. Highlighted,
+          not first — she's already been shown Coach Asa + the eating-out escape hatch,
+          this is the "go deeper" door, not the front door. */}
+      {enrollment.tier === 'app' && (
+        <Link href="/challenge" className="group block rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/15 to-charcoal bg-charcoal px-5 py-4 hover:border-gold/60 transition-colors">
+          <p className="text-gold text-[9px] uppercase tracking-[0.25em] font-semibold mb-1">The 6-Week Challenge</p>
+          <p className="text-white font-semibold text-sm mb-1">Want me personally checking in on you every week?</p>
+          <p className="text-ivory/60 text-xs">
+            You&apos;ve got the app solving the time/decisions and the cravings/willpower for you already —
+            add me on video and I&apos;ll make sure it sticks. See the full breakdown →
+          </p>
+        </Link>
+      )}
+
       {/* Supporting, side by side — calories (left) · workout (right) */}
       <div className="grid grid-cols-2 gap-3.5">
         <CaloriesTodayCard budget={calBudget} dayType={todayDayType} compact />
