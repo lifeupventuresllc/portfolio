@@ -32,12 +32,22 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
 
   const sections: { title: string; items: Item[] }[] = [
     {
-      title: 'Today & Plan',
+      title: 'Today',
       items: [
         { href: '/plan/today', label: 'Today', icon: '☀️' },
         { href: '/plan/eating-out', label: 'Away from home right now?', icon: '🍔' },
+      ],
+    },
+    {
+      title: 'Nutrition',
+      items: [
         { href: '/plan/meals', label: 'My meals — what I’m cooking & how', icon: '🍽️' },
         { href: '/plan/library', label: 'The Cookbook', icon: '📖' },
+      ],
+    },
+    {
+      title: 'Training',
+      items: [
         { href: '/plan/workout', label: 'Today’s workout', icon: '💪🏽' },
         { href: '/plan/compound', label: 'Compound & HIIT Full-Body (optional)', icon: '🔥' },
         { href: '/plan/exercises', label: 'Workout Plans — every move', icon: '🏋️' },

@@ -1,10 +1,16 @@
-// Renders a built WeekPlan ("What to Eat This Week"). Presentational — server or client.
-import type { WeekPlan, Slot } from '@/lib/meal-plan'
+'use client'
+// Renders a built WeekPlan ("What to Eat This Week"). Only ever mounted inside
+// MealBuilder (a client component), so the tap-to-see-directions interactivity
+// below is always safe to run client-side.
+import { useState } from 'react'
+import type { WeekPlan, Slot, PlannedMeal } from '@/lib/meal-plan'
 import Ring from '@/components/Ring'
+import { RECIPE_INSTRUCTIONS } from '@/lib/recipe-instructions'
 
 const SLOT_LABEL: Record<Slot, string> = { BF: 'Breakfast', LN: 'Lunch', SN: 'Snack', DN: 'Dinner', DS: 'Dessert' }
 
 export default function WeekPlanView({ plan }: { plan: WeekPlan }) {
+  const [selected, setSelected] = useState<PlannedMeal | null>(null)
   return (
     <div className="space-y-4">
       {/* Summary */}
@@ -45,7 +51,7 @@ export default function WeekPlanView({ plan }: { plan: WeekPlan }) {
           </div>
           <div className="space-y-2">
             {d.meals.map((m, j) => (
-              <div key={j} className="bg-obsidian border border-smoke rounded-xl px-4 py-2.5">
+              <button key={j} onClick={() => setSelected(m)} className="w-full text-left bg-obsidian border border-smoke rounded-xl px-4 py-2.5 hover:border-gold/40 transition-colors">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-ivory/40 text-[10px] uppercase tracking-wider">{SLOT_LABEL[m.slot]}{(m.slot === 'BF' || m.slot === 'LN' || m.slot === 'DN') && m.portion !== 'Regular' ? ` · ${m.portion} portion` : ''}</p>
@@ -59,7 +65,7 @@ export default function WeekPlanView({ plan }: { plan: WeekPlan }) {
                 {m.ingredients.length > 0 && (
                   <p className="text-ivory/45 text-xs mt-1.5 leading-relaxed">{m.ingredients.map((g) => g.amount).join(' · ')}</p>
                 )}
-              </div>
+              </button>
             ))}
           </div>
           <div className="flex justify-between mt-3 pt-3 border-t border-smoke text-xs">
@@ -95,6 +101,50 @@ export default function WeekPlanView({ plan }: { plan: WeekPlan }) {
           <p className="text-ivory/30 text-[11px] mt-4">Snacks & any budget-friendly picks aren&apos;t itemized here yet. Already have pantry staples? Subtract ~$50–65.</p>
         </div>
       )}
+
+      {selected && (() => {
+        const steps = RECIPE_INSTRUCTIONS[selected.name] || []
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelected(null)} />
+            <div className="relative bg-obsidian border-t sm:border border-smoke rounded-t-3xl sm:rounded-3xl w-full sm:max-w-md max-h-[85vh] overflow-y-auto p-6">
+              <button onClick={() => setSelected(null)} aria-label="Close" className="absolute right-4 top-4 text-ivory/50 hover:text-white text-2xl leading-none">×</button>
+              <p className="text-gold text-[10px] uppercase tracking-[0.2em] font-semibold mb-1">{SLOT_LABEL[selected.slot]}</p>
+              <h3 className="text-white text-xl font-bold mb-2 pr-8">{selected.name}</h3>
+              <div className="flex gap-3 text-xs text-ivory/60 mb-5">
+                <span className="text-gold font-semibold">{selected.cal} cal</span><span>{selected.protein}g P</span>
+                {selected.carbs > 0 && <span>{selected.carbs}g C</span>}{selected.fat > 0 && <span>{selected.fat}g F</span>}
+              </div>
+
+              {selected.ingredients.length > 0 && (
+                <div className="mb-5">
+                  <p className="text-gold/80 text-[10px] uppercase tracking-wider font-semibold mb-2">Ingredients — this portion</p>
+                  <ul className="space-y-1">
+                    {selected.ingredients.map((i, idx) => <li key={idx} className="text-ivory/80 text-sm">• {i.amount} {i.item}</li>)}
+                  </ul>
+                </div>
+              )}
+
+              {steps.length > 0 ? (
+                <div>
+                  <p className="text-gold/80 text-[10px] uppercase tracking-wider font-semibold mb-2">Directions</p>
+                  <ol className="space-y-2">
+                    {steps.map((s, idx) => (
+                      <li key={idx} className="text-ivory/80 text-sm flex gap-2.5">
+                        <span className="text-gold font-bold shrink-0">{idx + 1}.</span>{s}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ) : selected.ingredients.length === 0 ? (
+                <p className="text-ivory/40 text-sm">No prep needed — grab and go.</p>
+              ) : (
+                <p className="text-ivory/40 text-sm">Combine ingredients as listed — no further steps needed.</p>
+              )}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
