@@ -89,7 +89,7 @@ export default function LibraryBrowser() {
                 <div className="mb-5">
                   <p className="text-gold/80 text-[10px] uppercase tracking-wider font-semibold mb-2">Ingredients</p>
                   <ul className="space-y-1">
-                    {ings.map((i, idx) => <li key={idx} className="text-ivory/80 text-sm">• {i.amount} {i.item}</li>)}
+                    {ings.map((i, idx) => <li key={idx} className="text-ivory/80 text-sm">• {i.amount}</li>)}
                   </ul>
                 </div>
               )}

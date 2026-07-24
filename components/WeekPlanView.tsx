@@ -120,7 +120,7 @@ export default function WeekPlanView({ plan }: { plan: WeekPlan }) {
                 <div className="mb-5">
                   <p className="text-gold/80 text-[10px] uppercase tracking-wider font-semibold mb-2">Ingredients — this portion</p>
                   <ul className="space-y-1">
-                    {selected.ingredients.map((i, idx) => <li key={idx} className="text-ivory/80 text-sm">• {i.amount} {i.item}</li>)}
+                    {selected.ingredients.map((i, idx) => <li key={idx} className="text-ivory/80 text-sm">• {i.amount}</li>)}
                   </ul>
                 </div>
               )}

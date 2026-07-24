@@ -38,7 +38,7 @@ export default function CaloriesTodayCard({ budget, dayType, compact }: { budget
   // Compact (stacked) variant — used side-by-side with the workout card on the home screen.
   if (compact) {
     return (
-      <Link href="/plan/today" className="group flex flex-col items-center text-center bg-gradient-to-br from-charcoal/85 to-obsidian/85 backdrop-blur-md border border-smoke rounded-[1.75rem] p-4 hover:border-gold/60 transition-all">
+      <Link href="/plan/today" className="group flex flex-col items-center text-center bg-gradient-to-br from-gold/10 to-obsidian/90 backdrop-blur-md border border-gold/25 rounded-[1.75rem] p-4 shadow-[0_0_26px_-6px_rgba(201,168,76,0.5)] hover:border-gold/60 hover:shadow-[0_0_32px_-4px_rgba(201,168,76,0.65)] transition-all">
         <p className="text-gold text-[9px] uppercase tracking-wider font-semibold mb-2.5">Your calories 💵</p>
         <Ring pct={over ? 100 : pct} size={84} stroke={8} color={ringColor}>
           <div className="text-center leading-none">

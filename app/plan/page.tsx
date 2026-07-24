@@ -140,7 +140,7 @@ export default async function PlanDashboard() {
 
       {/* The #2-problem solution, right behind #1 — she never has to figure out what to
           eat when she's off her plan and craving something. */}
-      <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-gradient-to-br from-blue-500/25 to-charcoal bg-charcoal backdrop-blur-md border border-blue-400/40 rounded-2xl px-5 py-3.5 hover:border-blue-400/70 transition-colors">
+      <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-gradient-to-br from-blue-500/25 to-charcoal bg-charcoal backdrop-blur-md border border-blue-400/40 rounded-2xl px-5 py-3.5 shadow-[0_0_30px_-10px_rgba(59,130,246,0.5)] hover:border-blue-400/70 hover:shadow-[0_0_36px_-8px_rgba(59,130,246,0.65)] transition-all">
         <div>
           <p className="text-white font-semibold text-sm">🍔 Away from home right now?</p>
           <p className="text-ivory/60 text-xs mt-0.5">Tap for exactly what to order — no thinking, no searching.</p>
@@ -149,7 +149,7 @@ export default async function PlanDashboard() {
       </Link>
 
       {/* Self-talk — compact banner */}
-      <div className="luf-breathe rounded-2xl border border-emerald-400/20 bg-charcoal/90 backdrop-blur-md bg-gradient-to-br from-emerald-500/10 via-charcoal to-obsidian px-5 py-3.5 text-center">
+      <div className="luf-breathe rounded-2xl border border-emerald-400/25 bg-charcoal/90 backdrop-blur-md bg-gradient-to-br from-emerald-500/10 via-charcoal to-obsidian px-5 py-3.5 text-center shadow-[0_0_28px_-10px_rgba(52,211,153,0.45)]">
         <p className="text-emerald-300/70 text-[9px] uppercase tracking-[0.25em] font-semibold mb-1">Today’s self-talk</p>
         <p className="text-white text-[15px] sm:text-base leading-snug font-medium text-balance">“{affirmation}”</p>
       </div>
@@ -158,7 +158,7 @@ export default async function PlanDashboard() {
           not first — she's already been shown Coach Asa + the eating-out escape hatch,
           this is the "go deeper" door, not the front door. */}
       {enrollment.tier === 'app' && (
-        <Link href="/challenge" className="group block rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/15 to-charcoal bg-charcoal/90 backdrop-blur-md px-5 py-4 hover:border-gold/60 transition-colors">
+        <Link href="/challenge" className="group block rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/15 to-charcoal bg-charcoal/90 backdrop-blur-md px-5 py-4 shadow-[0_0_30px_-10px_rgba(201,168,76,0.4)] hover:border-gold/60 hover:shadow-[0_0_36px_-8px_rgba(201,168,76,0.55)] transition-all">
           <p className="text-gold text-[9px] uppercase tracking-[0.25em] font-semibold mb-1">The 6-Week Challenge</p>
           <p className="text-white font-semibold text-sm mb-1">Want me personally checking in on you every week?</p>
           <p className="text-ivory/60 text-xs">
