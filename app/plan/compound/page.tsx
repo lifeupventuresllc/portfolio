@@ -37,12 +37,12 @@ export default async function CompoundDayPage() {
   const today = rotated.slice(0, 6)
 
   return (
-    <div className="min-h-screen bg-paper px-4 py-12">
+    <div className="min-h-screen bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto">
-        <Link href="/plan" className="text-ink/50 text-sm mb-6 inline-block hover:text-gold transition-colors">← Back to my plan</Link>
+        <Link href="/plan" className="text-ivory/50 text-sm mb-6 inline-block hover:text-gold transition-colors">← Back to my plan</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Optional</p>
-        <h1 className="text-3xl font-bold text-ink mb-2">Compound &amp; HIIT Full-Body</h1>
-        <p className="text-ink/60 text-sm mb-8">Do this instead of today&apos;s regular session, or anytime you want a full-body burn. Completing it counts as today&apos;s workout either way.</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Compound &amp; HIIT Full-Body</h1>
+        <p className="text-ivory/60 text-sm mb-8">Do this instead of today&apos;s regular session, or anytime you want a full-body burn. Completing it counts as today&apos;s workout either way.</p>
         <CompoundDayClient exercises={today} />
       </div>
     </div>

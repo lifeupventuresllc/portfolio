@@ -85,11 +85,11 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
       <div className="max-w-lg mx-auto text-center q-in-fwd py-10">
         <Confetti fire={done} />
         <p className="text-6xl mb-4">🔥</p>
-        <h1 className="text-3xl font-bold text-ink mb-2">That&apos;s done, {firstName}.</h1>
-        <p className="text-ink/60 text-sm mb-8">You showed up and you finished. That&apos;s the whole game. I logged it for your streak.</p>
+        <h1 className="text-3xl font-bold text-white mb-2">That&apos;s done, {firstName}.</h1>
+        <p className="text-ivory/60 text-sm mb-8">You showed up and you finished. That&apos;s the whole game. I logged it for your streak.</p>
         <button onClick={() => router.push('/plan')} className="luf-glow w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl">Back to my week</button>
         <p className="text-gold text-sm font-semibold mt-4">— Coach Asa</p>
-        <QuickFeedback category="workout" context={`${labels[dayIdx]} · day ${dayIdx + 1}`} />
+        <QuickFeedback category="workout" context={`${labels[dayIdx]} · day ${dayIdx + 1}`} dark />
       </div>
     )
   }
@@ -102,12 +102,12 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
     <div className="max-w-lg mx-auto flex flex-col min-h-[86vh]">
       {/* Header: today's session + day switcher + back to week */}
       <div className="flex items-center justify-between gap-3 mb-3">
-        <button onClick={() => router.push('/plan')} className="text-ink/50 hover:text-gold text-xs font-semibold">← My week</button>
+        <button onClick={() => router.push('/plan')} className="text-ivory/50 hover:text-gold text-xs font-semibold">← My week</button>
         <button onClick={() => setSwitching((s) => !s)} className="text-center">
           <p className="text-gold text-[10px] font-semibold tracking-[0.2em] uppercase">Today&apos;s session · about {estimateWorkoutMinutes(steps)} min</p>
-          <p className="text-ink text-sm font-bold leading-tight">{labels[dayIdx]} <span className="text-ink/40">▾</span></p>
+          <p className="text-white text-sm font-bold leading-tight">{labels[dayIdx]} <span className="text-ivory/40">▾</span></p>
         </button>
-        <span className="text-ink/50 text-xs tabular-nums w-10 text-right">{i + 1}/{steps.length}</span>
+        <span className="text-ivory/50 text-xs tabular-nums w-10 text-right">{i + 1}/{steps.length}</span>
       </div>
 
       {/* progress bar */}
@@ -131,10 +131,10 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
         <p className={`text-xs font-semibold tracking-[0.2em] uppercase mb-5 ${step.rest ? 'text-green-400' : 'text-gold'}`}>{step.phase}</p>
 
         {isTimed ? (
-          <Ring pct={pct} size={200} stroke={10} color={step.rest ? '#46c46f' : '#f5a623'} track="rgba(0,0,0,0.08)" animateOnMount={false}>
+          <Ring pct={pct} size={200} stroke={10} color={step.rest ? '#46c46f' : '#f5a623'} track="rgba(255,255,255,0.08)" animateOnMount={false}>
             <div>
-              <p className="text-5xl font-bold text-ink tabular-nums">{left}</p>
-              <p className="text-ink/50 text-xs uppercase tracking-wider">seconds</p>
+              <p className="text-5xl font-bold text-white tabular-nums">{left}</p>
+              <p className="text-ivory/50 text-xs uppercase tracking-wider">seconds</p>
             </div>
           </Ring>
         ) : step.imageUrl ? (
@@ -145,9 +145,9 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
           <div className="w-[200px] h-[200px] rounded-full border-2 border-gold/20 flex items-center justify-center mb-2"><span className="text-6xl">🏋🏽</span></div>
         )}
 
-        <h1 className="text-3xl font-bold text-ink mt-7 mb-1 leading-tight text-balance">{step.name}</h1>
+        <h1 className="text-3xl font-bold text-white mt-7 mb-1 leading-tight text-balance">{step.name}</h1>
         {step.detail && <p className="text-gold font-semibold mb-3">{step.detail}</p>}
-        {step.cue && <p className="text-ink/60 text-sm max-w-sm leading-relaxed">{step.cue}</p>}
+        {step.cue && <p className="text-ivory/60 text-sm max-w-sm leading-relaxed">{step.cue}</p>}
       </div>
 
       {/* controls */}
@@ -161,7 +161,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
           )}
           <button onClick={() => advanceRef.current()} className="px-5 py-4 rounded-2xl bg-charcoal border border-smoke text-ivory/60 active:scale-95 transition-transform">→</button>
         </div>
-        {isTimed && <button onClick={() => advanceRef.current()} className="w-full text-center text-ink/50 text-xs mt-3 hover:text-gold">Skip →</button>}
+        {isTimed && <button onClick={() => advanceRef.current()} className="w-full text-center text-ivory/50 text-xs mt-3 hover:text-gold">Skip →</button>}
       </div>
     </div>
   )

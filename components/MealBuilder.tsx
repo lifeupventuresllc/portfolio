@@ -127,21 +127,21 @@ export default function MealBuilder({ initial }: {
 
       <div className="flex items-center gap-3">
         <div className="h-px bg-smoke flex-1" />
-        <span className="text-ink/50 text-xs uppercase tracking-wider">or build it yourself</span>
+        <span className="text-ivory/40 text-xs uppercase tracking-wider">or build it yourself</span>
         <div className="h-px bg-smoke flex-1" />
       </div>
 
       {/* Cook days */}
       <div>
-        <p className="text-ink text-sm font-bold mb-2"><span className="text-gold">1.</span> How many days will you cook this week?</p>
+        <p className="text-white text-sm font-bold mb-2"><span className="text-gold">1.</span> How many days will you cook this week?</p>
         <div className="flex gap-2">
           {[1, 2, 3].map((n) => (
             <button key={n} onClick={() => { setCookDays(n as 1 | 2 | 3); setSaved(false) }} className={chip(cookDays === n)}>{n} cook {n === 1 ? 'day' : 'days'}</button>
           ))}
         </div>
-        <div className="mt-3 bg-gold/10 border border-gold/30 rounded-xl px-4 py-3">
+        <div className="mt-3 bg-charcoal bg-gradient-to-br from-gold/15 to-charcoal border border-gold/30 rounded-xl px-4 py-3">
           <p className="text-gold text-xs font-bold uppercase tracking-wider mb-1">📋 What to pick for {cookDays} cook {cookDays === 1 ? 'day' : 'days'}</p>
-          <p className="text-ink text-sm leading-relaxed">
+          <p className="text-ivory/80 text-sm leading-relaxed">
             <span className="font-bold text-gold">{guide.mains}</span> breakfasts, lunches &amp; dinners ·
             <span className="font-bold text-gold"> {guide.snacks}</span> snacks ·
             <span className="font-bold text-gold"> {guide.desserts}</span> desserts
@@ -151,7 +151,7 @@ export default function MealBuilder({ initial }: {
 
       {/* Grocery budget — seamless: prefilled, auto-hides pricey meals */}
       <div>
-        <p className="text-ink/60 text-xs uppercase tracking-wider mb-2">Weekly grocery budget (optional)</p>
+        <p className="text-ivory/60 text-xs uppercase tracking-wider mb-2">Weekly grocery budget (optional)</p>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center bg-obsidian border border-smoke rounded-xl px-3 py-2">
             <span className="text-ivory/50 text-sm mr-1">$</span>
@@ -161,7 +161,7 @@ export default function MealBuilder({ initial }: {
           <button onClick={() => setFitBudget((v) => !v)} className={chip(fitBudget)}>
             {fitBudget ? '✓ ' : ''}Fit my budget
           </button>
-          <span className="text-ink/50 text-xs">Hides pricier <span className="text-red-400">$$$</span> meals so you only see what fits.</span>
+          <span className="text-ivory/45 text-xs">Hides pricier <span className="text-red-400">$$$</span> meals so you only see what fits.</span>
         </div>
       </div>
 
@@ -178,9 +178,9 @@ export default function MealBuilder({ initial }: {
       </div>
 
       {/* Eating out — Escape Plan fast-food days (highlighted) */}
-      <div className="bg-blue-500/[0.06] border border-blue-500/30 rounded-2xl p-4">
-        <p className="text-ink text-sm font-bold mb-1">🍔 Eating out any days? <span className="text-ink/50 font-normal text-xs">(optional)</span></p>
-        <p className="text-ink/60 text-xs mb-3">Tap a day — it uses your fast-food Escape Plan (exact orders + macros) instead of cooking. No prep, no groceries.</p>
+      <div className="bg-charcoal bg-gradient-to-br from-blue-500/15 to-charcoal border border-blue-500/30 rounded-2xl p-4">
+        <p className="text-white text-sm font-bold mb-1">🍔 Eating out any days? <span className="text-ivory/45 font-normal text-xs">(optional)</span></p>
+        <p className="text-ivory/60 text-xs mb-3">Tap a day — it uses your fast-food Escape Plan (exact orders + macros) instead of cooking. No prep, no groceries.</p>
         <div className="grid grid-cols-6 gap-2">
           {DAYS.map((d, i) => (
             <button key={d} onClick={() => toggleEatOut(i)} className={`py-2 rounded-xl text-xs font-semibold transition-colors ${eatOut[i] ? 'bg-blue-500/20 text-blue-300 border border-blue-500/50' : 'bg-obsidian border border-smoke text-ivory/50 hover:border-blue-500/40'}`}>
@@ -192,7 +192,7 @@ export default function MealBuilder({ initial }: {
 
       {/* Meal picker */}
       <div>
-        <p className="text-ink text-sm font-bold mb-2"><span className="text-gold">3.</span> Pick your meals <span className="text-ink/50 font-normal text-xs">— breakfasts, lunches, dinners, snacks &amp; desserts</span></p>
+        <p className="text-white text-sm font-bold mb-2"><span className="text-gold">3.</span> Pick your meals <span className="text-ivory/45 font-normal text-xs">— breakfasts, lunches, dinners, snacks &amp; desserts</span></p>
         <div className="flex gap-2 mb-3 flex-wrap">
           {SLOTS.map((s) => (
             <button key={s.key} onClick={() => setTab(s.key)} className={chip(tab === s.key)}>
@@ -213,12 +213,12 @@ export default function MealBuilder({ initial }: {
             const tier = costTier(r.name, r.budget)
             if (fitBudget && tier === '$$$' && !on) return null  // seamless: hide pricey unless already picked
             return (
-              <button key={r.name} onClick={() => toggle(tab, r)} className={`text-left rounded-2xl p-4 border transition-colors ${flash === r.name ? 'luf-pop' : ''} ${on ? 'bg-gold/10 border-gold' : 'bg-charcoal border-smoke hover:border-gold/50'}`}>
+              <button key={r.name} onClick={() => toggle(tab, r)} className={`text-left rounded-2xl p-4 border transition-colors ${flash === r.name ? 'luf-pop' : ''} ${on ? 'bg-charcoal bg-gradient-to-br from-gold/15 to-charcoal border-gold' : 'bg-charcoal border-smoke hover:border-gold/50'}`}>
                 <div className="flex justify-between items-start gap-2 mb-1">
-                  <span className={`font-semibold text-sm leading-tight ${on ? 'text-ink' : 'text-white'}`}>{r.name}</span>
+                  <span className={`font-semibold text-sm leading-tight ${on ? 'text-gold' : 'text-white'}`}>{r.name}</span>
                   {r.budget && <span className="text-[9px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full whitespace-nowrap">Budget</span>}
                 </div>
-                <div className={`flex gap-3 text-xs items-center ${on ? 'text-ink/60' : 'text-ivory/50'}`}>
+                <div className={`flex gap-3 text-xs items-center ${on ? 'text-ivory/70' : 'text-ivory/50'}`}>
                   <span className="text-gold font-semibold">{r.cal} cal</span><span>{r.protein}g P</span>
                   {tier && <span className={`font-bold ${tierColor(tier)}`}>{tier}</span>}
                 </div>
@@ -238,17 +238,17 @@ export default function MealBuilder({ initial }: {
 
       {plan && (
         <div>
-          <h2 className="text-2xl font-bold text-ink mb-1 mt-4">What to Eat This Week</h2>
-          <p className="text-ink/60 text-sm mb-4">Portions are scaled to hit each day&apos;s target. {saved ? 'Saved to your plan ✓' : 'Tweak and rebuild, or save it.'}</p>
-          {saved && <QuickFeedback category="meals" context={`Week built · ${cookDays} cook day${cookDays > 1 ? 's' : ''}`} />}
+          <h2 className="text-2xl font-bold text-white mb-1 mt-4">What to Eat This Week</h2>
+          <p className="text-ivory/60 text-sm mb-4">Portions are scaled to hit each day&apos;s target. {saved ? 'Saved to your plan ✓' : 'Tweak and rebuild, or save it.'}</p>
+          {saved && <QuickFeedback category="meals" context={`Week built · ${cookDays} cook day${cookDays > 1 ? 's' : ''}`} dark />}
           {budgetNum > 0 && plan.groceryCost > 0 && (
-            <div className={`rounded-2xl p-4 mb-4 border ${plan.groceryCost <= budgetNum ? 'bg-green-500/10 border-green-500/40' : 'bg-red-500/10 border-red-500/40'}`}>
-              <p className="text-ink text-sm font-semibold">
+            <div className={`rounded-2xl p-4 mb-4 border bg-charcoal bg-gradient-to-br to-charcoal ${plan.groceryCost <= budgetNum ? 'from-green-500/15 border-green-500/40' : 'from-red-500/15 border-red-500/40'}`}>
+              <p className="text-white text-sm font-semibold">
                 {plan.groceryCost <= budgetNum
                   ? `✓ ~$${plan.groceryCost} — you're $${budgetNum - plan.groceryCost} under your $${budgetNum} budget.`
                   : `Heads up: ~$${plan.groceryCost} is $${plan.groceryCost - budgetNum} over your $${budgetNum} budget.`}
               </p>
-              {plan.groceryCost > budgetNum && <p className="text-ink/60 text-xs mt-1">Swap a <span className="text-red-400">$$$</span> meal for a <span className="text-green-400">Budget</span> pick, or keep &ldquo;Fit my budget&rdquo; on.</p>}
+              {plan.groceryCost > budgetNum && <p className="text-ivory/60 text-xs mt-1">Swap a <span className="text-red-400">$$$</span> meal for a <span className="text-green-400">Budget</span> pick, or keep &ldquo;Fit my budget&rdquo; on.</p>}
               <BudgetBar cost={plan.groceryCost} budget={budgetNum} />
             </div>
           )}

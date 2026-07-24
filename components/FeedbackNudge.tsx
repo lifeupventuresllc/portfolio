@@ -40,7 +40,7 @@ export default function FeedbackNudge() {
         <button onClick={() => setOpen(true)}
           className="flex items-center gap-2 bg-charcoal border border-gold/40 text-gold text-xs font-semibold pl-4 pr-3 py-3 rounded-full shadow-lg active:scale-95 transition-transform">
           Got 10 sec? How&apos;s the app going?
-          <span onClick={(e) => { e.stopPropagation(); dismiss() }} className="text-ink/40 hover:text-ink/70 ml-1" aria-label="Dismiss">✕</span>
+          <span onClick={(e) => { e.stopPropagation(); dismiss() }} className="text-ivory/40 hover:text-ivory/70 ml-1" aria-label="Dismiss">✕</span>
         </button>
       ) : (
         <div className="bg-charcoal border border-smoke rounded-2xl p-4 shadow-lg">

@@ -74,12 +74,12 @@ export default async function Achievements() {
   const challengePct = Math.round((challengeDay / CHALLENGE_DAYS) * 100)
 
   return (
-    <div className="min-h-screen bg-paper px-4 py-12">
+    <div className="min-h-screen bg-obsidian px-4 py-12">
       <div className="max-w-3xl mx-auto">
         <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Back to my plan</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Your Challenge</p>
-        <h1 className="text-3xl font-bold text-ink mb-2">Look how far you&apos;ve come, {firstName} 🏅</h1>
-        <p className="text-ink/60 text-sm mb-7">Every badge here is something you actually did — I&apos;m keeping track of your work, {firstName}. Keep stacking them.</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Look how far you&apos;ve come, {firstName} 🏅</h1>
+        <p className="text-ivory/60 text-sm mb-7">Every badge here is something you actually did — I&apos;m keeping track of your work, {firstName}. Keep stacking them.</p>
 
         {/* Challenge progress + earned count */}
         <div className="bg-charcoal border border-gold/30 rounded-2xl p-5 mb-6">
@@ -98,7 +98,7 @@ export default async function Achievements() {
         {/* Next up */}
         {upcoming.length > 0 && (
           <section className="mb-7">
-            <h2 className="text-ink font-bold text-lg mb-3">Next up 🎯</h2>
+            <h2 className="text-white font-bold text-lg mb-3">Next up 🎯</h2>
             <div className="grid sm:grid-cols-3 gap-3">
               {upcoming.map((b) => {
                 const pct = Math.round((b.current / b.goal) * 100)
@@ -120,7 +120,7 @@ export default async function Achievements() {
         )}
 
         {/* All badges */}
-        <h2 className="text-ink font-bold text-lg mb-3">Your badges</h2>
+        <h2 className="text-white font-bold text-lg mb-3">Your badges</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {badges.map((b) => (
             <div key={b.id}

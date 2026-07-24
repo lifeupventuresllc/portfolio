@@ -59,19 +59,19 @@ export default async function TodayView() {
   }
 
   return (
-    <div className="min-h-screen bg-paper px-4 py-12">
+    <div className="min-h-screen bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto">
         <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← My full plan</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">{weekdayLabel}</p>
-        <h1 className="text-3xl font-bold text-ink mb-6">Today, {firstName}</h1>
+        <h1 className="text-3xl font-bold text-white mb-6">Today, {firstName}</h1>
 
         <div className="space-y-6">
           {/* The zero-decision escape hatch — for the moment she's out, off-plan, and
               would otherwise have to decide (or skip eating entirely). */}
-          <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-blue-500/[0.08] border border-blue-500/30 rounded-2xl px-5 py-4 hover:border-blue-400/60 transition-colors">
+          <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-charcoal bg-gradient-to-br from-blue-500/15 to-charcoal border border-blue-500/30 rounded-2xl px-5 py-4 hover:border-blue-400/60 transition-colors">
             <div>
-              <p className="text-ink font-semibold text-sm">🍔 Away from home right now?</p>
-              <p className="text-ink/60 text-xs mt-0.5">Tap for exactly what to order — no thinking, no searching.</p>
+              <p className="text-white font-semibold text-sm">🍔 Away from home right now?</p>
+              <p className="text-ivory/60 text-xs mt-0.5">Tap for exactly what to order — no thinking, no searching.</p>
             </div>
             <span className="text-blue-300 text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
           </Link>
@@ -82,7 +82,7 @@ export default async function TodayView() {
 
           {/* Today's planned meals */}
           <section>
-            <h2 className="text-ink font-bold text-lg mb-3">What&apos;s on your plan today</h2>
+            <h2 className="text-white font-bold text-lg mb-3">What&apos;s on your plan today</h2>
             {todayMeals ? (
               <div className="bg-charcoal border border-smoke rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-3">
@@ -115,7 +115,7 @@ export default async function TodayView() {
 
           {/* Today's workout */}
           <section>
-            <h2 className="text-ink font-bold text-lg mb-3">Today&apos;s training</h2>
+            <h2 className="text-white font-bold text-lg mb-3">Today&apos;s training</h2>
             {todayWorkout ? (
               <div className="bg-charcoal border border-gold/30 rounded-2xl p-5 flex items-center justify-between gap-4">
                 <div>
@@ -125,7 +125,7 @@ export default async function TodayView() {
                 <Link href="/plan/workout" className="luf-pulse shrink-0 inline-flex items-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform">▶ Start</Link>
               </div>
             ) : (
-              <p className="text-ink/60 text-sm">Your workout is being prepared. Refresh in a moment.</p>
+              <p className="text-ivory/60 text-sm">Your workout is being prepared. Refresh in a moment.</p>
             )}
           </section>
         </div>

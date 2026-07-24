@@ -19,9 +19,9 @@ export default function BudgetBar({ cost, budget }: { cost: number; budget: numb
   return (
     <div className="mt-3">
       <div className="flex justify-between items-baseline mb-1.5">
-        <span className="text-ink/60 text-[11px] uppercase tracking-wider">Your week</span>
+        <span className="text-ivory/60 text-[11px] uppercase tracking-wider">Your week</span>
         <span className={`text-xs font-bold ${under ? 'text-green-400' : 'text-red-400'}`}>
-          ~${cost}<span className="text-ink/50 font-normal"> / ${budget}</span>
+          ~${cost}<span className="text-ivory/45 font-normal"> / ${budget}</span>
         </span>
       </div>
       <div className="h-2.5 rounded-full bg-obsidian border border-smoke overflow-hidden">

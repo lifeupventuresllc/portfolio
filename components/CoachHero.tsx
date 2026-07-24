@@ -44,6 +44,10 @@ export default function CoachHero({ firstName }: { firstName: string }) {
   const [time, setTime] = useState<string | null>('normal')
   const [where, setWhere] = useState<string | null>('home')
   const [goal, setGoal] = useState<string | null>('showup')
+  // Collapsed by default: one tap accepts today's guessed defaults — same 4 fields
+  // still reach the backend either way, she just doesn't have to look at 14 buttons
+  // to get there. "Adjust" reveals the full picker only when something's actually different.
+  const [ctxExpanded, setCtxExpanded] = useState(false)
 
   useEffect(() => {
     try { setCtxDone(localStorage.getItem('luf_daily_context') === today) } catch { /* noop */ }
@@ -129,31 +133,50 @@ export default function CoachHero({ firstName }: { firstName: string }) {
 
       {/* proactive daily check-in — asked FIRST, every morning, before anything else */}
       {!ctxDone && messages.length === 0 ? (
-        <div className="mb-5 space-y-3.5">
+        <div className="mb-5 space-y-3">
           <p className="text-ink text-lg leading-snug font-medium text-balance">How&apos;s today looking, {firstName}?</p>
-          <p className="text-ink/40 text-xs -mt-2">I&apos;ve guessed a normal day below — tap anything that&apos;s different, or just build it.</p>
-          {[
-            { label: 'Feeling', opts: FEELING, val: feeling, set: setFeeling },
-            { label: 'Time you have', opts: TIME, val: time, set: setTime },
-            { label: 'Where you are', opts: WHERE, val: where, set: setWhere },
-            { label: "Today's goal", opts: GOAL, val: goal, set: setGoal },
-          ].map((row) => (
-            <div key={row.label}>
-              <p className="text-gold/80 text-[10px] uppercase tracking-wider font-semibold mb-1.5">{row.label}</p>
-              <div className="flex gap-2 flex-wrap">
-                {row.opts.map((o) => (
-                  <button key={o.v} type="button" onClick={() => row.set(o.v)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${row.val === o.v ? 'bg-gold text-obsidian scale-[1.03]' : 'bg-charcoal/90 border border-smoke text-ivory/70 hover:border-gold/50'}`}>
-                    {o.l}
-                  </button>
+
+          {!ctxExpanded ? (
+            <>
+              <p className="text-ink/40 text-xs -mt-1">I&apos;ve guessed a normal day — build it, or tell me what&apos;s different.</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {[FEELING.find((o) => o.v === feeling), TIME.find((o) => o.v === time), WHERE.find((o) => o.v === where), GOAL.find((o) => o.v === goal)].map((o) => o && (
+                  <span key={o.v} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-charcoal/90 border border-smoke text-ivory/70">{o.l}</span>
                 ))}
               </div>
-            </div>
-          ))}
-          <button onClick={submitContext} disabled={!feeling || !time || !where || !goal || sending}
-            className="w-full bg-gold text-obsidian px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-2xl disabled:opacity-40 active:scale-95 transition-transform">
-            {sending ? 'Building your day…' : 'Build my day →'}
-          </button>
+              <button onClick={submitContext} disabled={sending}
+                className="w-full bg-gold text-obsidian px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-2xl disabled:opacity-40 active:scale-95 transition-transform">
+                {sending ? 'Building your day…' : 'Build my day →'}
+              </button>
+              <button onClick={() => setCtxExpanded(true)} className="w-full text-center text-ink/40 text-xs hover:text-gold transition-colors">Something different today? Adjust →</button>
+            </>
+          ) : (
+            <>
+              <p className="text-ink/40 text-xs -mt-1">Tap anything that&apos;s different, then build it.</p>
+              {[
+                { label: 'Feeling', opts: FEELING, val: feeling, set: setFeeling },
+                { label: 'Time you have', opts: TIME, val: time, set: setTime },
+                { label: 'Where you are', opts: WHERE, val: where, set: setWhere },
+                { label: "Today's goal", opts: GOAL, val: goal, set: setGoal },
+              ].map((row) => (
+                <div key={row.label}>
+                  <p className="text-gold/80 text-[10px] uppercase tracking-wider font-semibold mb-1.5">{row.label}</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {row.opts.map((o) => (
+                      <button key={o.v} type="button" onClick={() => row.set(o.v)}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${row.val === o.v ? 'bg-gold text-obsidian scale-[1.03]' : 'bg-charcoal/90 border border-smoke text-ivory/70 hover:border-gold/50'}`}>
+                        {o.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <button onClick={submitContext} disabled={!feeling || !time || !where || !goal || sending}
+                className="w-full bg-gold text-obsidian px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-2xl disabled:opacity-40 active:scale-95 transition-transform">
+                {sending ? 'Building your day…' : 'Build my day →'}
+              </button>
+            </>
+          )}
         </div>
       ) : messages.length === 0 ? (
         <p className="text-ink text-lg leading-snug font-medium text-balance mb-5">{greeting}</p>

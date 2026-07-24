@@ -19,7 +19,7 @@ export default function WeekPlanView({ plan }: { plan: WeekPlan }) {
         <span className="text-[10px] bg-obsidian border border-smoke text-ivory/60 px-2.5 py-1 rounded-full uppercase tracking-wider">~{plan.avgCal.toLocaleString()} cal/day avg</span>
         <span className="text-[10px] bg-obsidian border border-smoke text-ivory/60 px-2.5 py-1 rounded-full uppercase tracking-wider">~{plan.avgProtein}g protein/day</span>
       </div>
-      <p className="text-ink/50 text-xs">Protein-forward on purpose — it keeps you full longer and cuts the sugar/carb cravings that derail a good day.</p>
+      <p className="text-ivory/45 text-xs">Protein-forward on purpose — it keeps you full longer and cuts the sugar/carb cravings that derail a good day.</p>
 
       {/* Cook schedule */}
       <div className="bg-charcoal border border-gold/30 rounded-2xl p-5">

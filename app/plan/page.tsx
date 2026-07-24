@@ -48,7 +48,7 @@ export default async function PlanDashboard() {
   const firstName = (enrollment?.name || user.email?.split('@')[0] || 'there').split(' ')[0]
 
   const shell = (children: React.ReactNode, menu: React.ReactNode = null) => (
-    <div className="min-h-screen bg-paper px-4 py-12">
+    <div className="min-h-screen bg-obsidian px-4 py-12">
       <TimezoneSync />
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-6 bg-obsidian/95 backdrop-blur-md border border-white/10 rounded-2xl px-5 py-4">
