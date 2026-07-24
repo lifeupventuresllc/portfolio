@@ -78,7 +78,7 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
   return (
     <div className="max-w-2xl mx-auto pb-6">
       <div className="flex items-center justify-between mb-4">
-        <Link href="/plan" className="text-ink/50 text-xs hover:text-gold">← My plan</Link>
+        <Link href="/plan" className="inline-flex items-center gap-1 bg-charcoal border border-gold/40 text-gold text-xs font-semibold px-3 py-1.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all">← My plan</Link>
         <p className="text-gold text-[10px] uppercase tracking-[0.2em] font-semibold">Coach Asa · your operator</p>
       </div>
 

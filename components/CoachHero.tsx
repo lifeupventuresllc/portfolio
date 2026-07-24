@@ -117,21 +117,21 @@ export default function CoachHero({ firstName }: { firstName: string }) {
   }
 
   return (
-    <div className="luf-glow luf-breathe relative overflow-hidden rounded-[2.25rem] border border-gold/40 bg-charcoal bg-gradient-to-br from-gold/15 via-charcoal to-obsidian p-6">
+    <div className="luf-breathe relative overflow-hidden rounded-[2.25rem] border border-gold/30 bg-paper/80 backdrop-blur-md shadow-xl p-6">
       {/* identity — a person, not a tool */}
       <div className="flex items-center gap-2.5 mb-4">
         <span className="h-9 w-9 rounded-full bg-gold text-obsidian font-bold flex items-center justify-center text-lg shadow-lg shadow-gold/20">A</span>
         <div className="leading-tight">
-          <p className="text-white text-sm font-semibold">Coach Asa</p>
-          <p className="text-gold/70 text-[10px] uppercase tracking-[0.18em] font-semibold">I&apos;m right here with you</p>
+          <p className="text-ink text-sm font-semibold">Coach Asa</p>
+          <p className="text-gold/80 text-[10px] uppercase tracking-[0.18em] font-semibold">I&apos;m right here with you</p>
         </div>
       </div>
 
       {/* proactive daily check-in — asked FIRST, every morning, before anything else */}
       {!ctxDone && messages.length === 0 ? (
         <div className="mb-5 space-y-3.5">
-          <p className="text-white text-lg leading-snug font-medium text-balance">How&apos;s today looking, {firstName}?</p>
-          <p className="text-ivory/40 text-xs -mt-2">I&apos;ve guessed a normal day below — tap anything that&apos;s different, or just build it.</p>
+          <p className="text-ink text-lg leading-snug font-medium text-balance">How&apos;s today looking, {firstName}?</p>
+          <p className="text-ink/40 text-xs -mt-2">I&apos;ve guessed a normal day below — tap anything that&apos;s different, or just build it.</p>
           {[
             { label: 'Feeling', opts: FEELING, val: feeling, set: setFeeling },
             { label: 'Time you have', opts: TIME, val: time, set: setTime },
@@ -139,11 +139,11 @@ export default function CoachHero({ firstName }: { firstName: string }) {
             { label: "Today's goal", opts: GOAL, val: goal, set: setGoal },
           ].map((row) => (
             <div key={row.label}>
-              <p className="text-gold/70 text-[10px] uppercase tracking-wider font-semibold mb-1.5">{row.label}</p>
+              <p className="text-gold/80 text-[10px] uppercase tracking-wider font-semibold mb-1.5">{row.label}</p>
               <div className="flex gap-2 flex-wrap">
                 {row.opts.map((o) => (
                   <button key={o.v} type="button" onClick={() => row.set(o.v)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${row.val === o.v ? 'bg-gold text-obsidian scale-[1.03]' : 'bg-obsidian/60 border border-smoke text-ivory/70 hover:border-gold/50'}`}>
+                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${row.val === o.v ? 'bg-gold text-obsidian scale-[1.03]' : 'bg-charcoal/90 border border-smoke text-ivory/70 hover:border-gold/50'}`}>
                     {o.l}
                   </button>
                 ))}
@@ -156,12 +156,12 @@ export default function CoachHero({ firstName }: { firstName: string }) {
           </button>
         </div>
       ) : messages.length === 0 ? (
-        <p className="text-white text-lg leading-snug font-medium text-balance mb-5">{greeting}</p>
+        <p className="text-ink text-lg leading-snug font-medium text-balance mb-5">{greeting}</p>
       ) : (
         <div className="space-y-2 mb-4 max-h-64 overflow-y-auto pr-1">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[86%] rounded-2xl px-3.5 py-2 text-sm leading-snug ${m.role === 'user' ? 'bg-gold text-obsidian font-medium rounded-br-sm' : 'bg-obsidian/70 border border-smoke text-ivory/90 rounded-bl-sm'}`}>{m.content}</div>
+              <div className={`max-w-[86%] rounded-2xl px-3.5 py-2 text-sm leading-snug ${m.role === 'user' ? 'bg-gold text-obsidian font-medium rounded-br-sm' : 'bg-charcoal/90 border border-smoke text-ivory/90 rounded-bl-sm'}`}>{m.content}</div>
             </div>
           ))}
         </div>
@@ -169,7 +169,7 @@ export default function CoachHero({ firstName }: { firstName: string }) {
 
       {/* an adjustment she can accept — right here */}
       {pending && (
-        <div className="luf-reveal luf-in bg-obsidian/70 border border-gold/40 rounded-2xl p-3.5 mb-4">
+        <div className="luf-reveal luf-in bg-charcoal/90 border border-gold/40 rounded-2xl p-3.5 mb-4">
           <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1.5">Here&apos;s what I recommend</p>
           {adjLines(pending).length ? (
             <ul className="mb-2.5 space-y-0.5">{adjLines(pending).map((l, i) => <li key={i} className="text-white text-sm">• {l}</li>)}</ul>
@@ -192,7 +192,7 @@ export default function CoachHero({ firstName }: { firstName: string }) {
           value={input} onChange={(e) => setInput(e.target.value)} disabled={sending}
           placeholder="Talk to me about your day…"
           autoComplete="off" autoCorrect="on" enterKeyHint="send" inputMode="text"
-          className="flex-1 bg-obsidian/60 border border-smoke rounded-2xl px-4 py-3 text-base text-white placeholder:text-ivory/35 focus:border-gold/60 focus:outline-none"
+          className="flex-1 bg-charcoal/5 border border-smoke/30 rounded-2xl px-4 py-3 text-base text-ink placeholder:text-ink/35 focus:border-gold/60 focus:outline-none"
         />
         <VoiceButton idleLabel="Talk to Coach Asa" onInterim={setInput} onResult={(t) => { setInput(t); send(t) }} />
         <VoiceButton
@@ -202,7 +202,7 @@ export default function CoachHero({ firstName }: { firstName: string }) {
         />
         <button type="submit" disabled={sending || !input.trim()} className="h-12 w-12 shrink-0 rounded-full bg-gold text-obsidian font-bold text-lg flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform">{sending ? '…' : '➤'}</button>
       </form>
-      <p className="text-ivory/30 text-[10px] mt-1.5">🎤 quick chat · 🎙️ record a longer memo — thoughts, questions, or your daily check-in</p>
+      <p className="text-ink/30 text-[10px] mt-1.5">🎤 quick chat · 🎙️ record a longer memo — thoughts, questions, or your daily check-in</p>
 
       <Celebration trigger={perfectDay} message={winAffirmation('allDone')} dedupeKey={`perfectday-${today}`} />
     </div>

@@ -36,7 +36,7 @@ export default function WorkoutStatusCard({ title, muscles, doneTodayServer, adj
   // Compact (stacked) variant — used side-by-side with the calories card on the home screen.
   if (compact) {
     return (
-      <Link href="/plan/workout" className="luf-glow group flex flex-col items-center text-center bg-charcoal bg-gradient-to-br from-gold/20 to-charcoal border border-gold/40 rounded-[1.75rem] p-4 hover:border-gold/70 transition-all">
+      <Link href="/plan/workout" className="luf-glow group flex flex-col items-center text-center bg-charcoal/90 bg-gradient-to-br from-gold/20 to-charcoal/90 backdrop-blur-md border border-gold/40 rounded-[1.75rem] p-4 hover:border-gold/70 transition-all">
         <p className="text-gold text-[9px] uppercase tracking-wider font-semibold mb-2.5">{doneToday ? 'Complete 🎉' : inProgress ? `In progress · ${pct}%` : 'Your workout'}</p>
         <Ring pct={pct} size={84} stroke={8} color={ringColor}>
           <span className="text-2xl">{doneToday ? '✅' : inProgress ? '⏱️' : '💪🏽'}</span>

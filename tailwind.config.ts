@@ -8,6 +8,13 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      minHeight: {
+        // 100vh doesn't shrink when the mobile keyboard opens — the layout stays
+        // sized for the full screen while the keyboard covers part of it, which
+        // reads as a jarring "hard jump" the moment you start typing. 100dvh
+        // (dynamic viewport height) tracks the real visible area instead.
+        screen: '100dvh',
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",

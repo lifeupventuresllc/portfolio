@@ -46,8 +46,8 @@ body {
 .luf-reveal.luf-in { animation: lufReveal .7s ease both; }
 
 @keyframes lufBreathe {
-  0%,100% { opacity: .5; transform: scale(1); }
-  50% { opacity: .85; transform: scale(1.08); }
+  0%,100% { opacity: .85; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
 }
 .luf-breathe { animation: lufBreathe 7s ease-in-out infinite; }
 

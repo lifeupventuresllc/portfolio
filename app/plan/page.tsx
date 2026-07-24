@@ -51,7 +51,7 @@ export default async function PlanDashboard() {
     <div className="min-h-screen bg-paper px-4 py-12">
       <TimezoneSync />
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-6 bg-charcoal/80 backdrop-blur-md border border-white/10 rounded-2xl px-5 py-4">
+        <div className="flex items-center justify-between mb-6 bg-obsidian/95 backdrop-blur-md border border-white/10 rounded-2xl px-5 py-4">
           <div>
             <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Life-Up Fitness</p>
             <h1 className="text-2xl font-bold text-white">Hey {firstName} 👋</h1>
@@ -149,7 +149,7 @@ export default async function PlanDashboard() {
       </Link>
 
       {/* Self-talk — compact banner */}
-      <div className="luf-breathe rounded-2xl border border-emerald-400/20 bg-charcoal bg-gradient-to-br from-emerald-500/10 via-charcoal to-obsidian px-5 py-3.5 text-center">
+      <div className="luf-breathe rounded-2xl border border-emerald-400/20 bg-charcoal/90 backdrop-blur-md bg-gradient-to-br from-emerald-500/10 via-charcoal to-obsidian px-5 py-3.5 text-center">
         <p className="text-emerald-300/70 text-[9px] uppercase tracking-[0.25em] font-semibold mb-1">Today’s self-talk</p>
         <p className="text-white text-[15px] sm:text-base leading-snug font-medium text-balance">“{affirmation}”</p>
       </div>
@@ -158,7 +158,7 @@ export default async function PlanDashboard() {
           not first — she's already been shown Coach Asa + the eating-out escape hatch,
           this is the "go deeper" door, not the front door. */}
       {enrollment.tier === 'app' && (
-        <Link href="/challenge" className="group block rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/15 to-charcoal bg-charcoal px-5 py-4 hover:border-gold/60 transition-colors">
+        <Link href="/challenge" className="group block rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/15 to-charcoal bg-charcoal/90 backdrop-blur-md px-5 py-4 hover:border-gold/60 transition-colors">
           <p className="text-gold text-[9px] uppercase tracking-[0.25em] font-semibold mb-1">The 6-Week Challenge</p>
           <p className="text-white font-semibold text-sm mb-1">Want me personally checking in on you every week?</p>
           <p className="text-ivory/60 text-xs">
