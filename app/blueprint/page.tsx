@@ -254,14 +254,30 @@ export default function BlueprintPage() {
             <div className="relative overflow-hidden bg-gradient-to-br from-[#1a1608] to-charcoal border border-gold/30 rounded-3xl p-8 mt-6 text-center">
               <div className="luf-breathe absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_0%,rgba(201,168,76,0.12),transparent_70%)]" />
               <div className="relative">
+                <span className="inline-block text-gold text-[10px] font-bold tracking-[0.25em] uppercase mb-4 border border-gold/40 rounded-full px-3 py-1 bg-gold/5">
+                  Free For 14 Days
+                </span>
                 <h3 className="text-white text-2xl font-black uppercase tracking-tight mb-2 text-balance">Knowing your numbers is step one.</h3>
-                <p className="text-ivory/60 text-sm mb-6 leading-relaxed">
-                  Actually hitting them — with the meals built for you, workouts, and me checking in every week —
-                  is where the change happens. That&apos;s my Snatched Without Starving challenge.
+                <p className="text-ivory/60 text-sm mb-5 leading-relaxed">
+                  Actually hitting them is where the change happens. The Life-Up Fitness app does the rest —
+                  custom workouts, meals built around these exact numbers, daily check-ins, all the decisions made for you.
                 </p>
+                <div className="grid grid-cols-2 gap-2.5 mb-6 text-left">
+                  {[
+                    { t: 'Auto-generated meals', d: 'Built to your numbers above' },
+                    { t: 'Custom workouts', d: 'Home or gym, your level' },
+                    { t: 'Calorie tracking', d: 'One tap, done for you' },
+                    { t: 'Coach on call', d: 'Voice memo me anytime' },
+                  ].map((f) => (
+                    <div key={f.t} className="bg-obsidian/60 border border-smoke rounded-xl px-3 py-2.5">
+                      <p className="text-white font-semibold text-xs">{f.t}</p>
+                      <p className="text-ivory/40 text-[10px] mt-0.5">{f.d}</p>
+                    </div>
+                  ))}
+                </div>
                 <a href="/challenge"
                   className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-wider luf-glow transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_22px_55px_rgba(201,168,76,0.5)] active:scale-[0.98]">
-                  Click Here to Join the Challenge →
+                  Start free for 14 days →
                 </a>
               </div>
             </div>

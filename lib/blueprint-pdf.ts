@@ -219,8 +219,8 @@ function coverPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
 
   // ---- The offer (clickable) ----
   card(p, startX, 70, totalW, 46, C.goldFill, C.gold, 1.5)
-  textC(p, 'Need personal training?', W / 2, 96, 11, f.bold, C.white)
-  textC(p, 'Click here to join the 6-Week Challenge  »', W / 2, 80, 9.5, f.bold, C.gold)
+  textC(p, 'Free for 14 days — the app does the rest', W / 2, 96, 11, f.bold, C.white)
+  textC(p, 'Click here to start free  »', W / 2, 80, 9.5, f.bold, C.gold)
   linkRect(doc, p, startX, 70, totalW, 46, CHALLENGE_URL)
 
   textC(p, `© ${new Date().getFullYear()} Life Up Fitness  •  Coach Asa  •  asaluke.io`, W / 2, 34, 7, f.reg, C.gray)
@@ -528,8 +528,8 @@ function nextStepPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
 
   // ---- Top offer bar (seamless, clickable) ----
   card(p, 36, H - 190, W - 72, 36, C.goldFill, C.gold, 1.6)
-  textL(p, 'Need personal training?', 52, H - 174, 10.5, f.bold, C.white)
-  textR(p, 'Click here to join the 6-Week Challenge  »', W - 52, H - 174, 10.5, f.bold, C.gold)
+  textL(p, 'Free for 14 days — the app does the rest', 52, H - 174, 10.5, f.bold, C.white)
+  textR(p, 'Click here to start free  »', W - 52, H - 174, 10.5, f.bold, C.gold)
   linkRect(doc, p, 36, H - 190, W - 72, 36, CHALLENGE_URL)
 
   const mw = (W - 72 - 42) / 4
@@ -549,15 +549,15 @@ function nextStepPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
     textC(p, line, x + mw / 2, ly, 7, f.reg, C.grayLight)
   })
 
-  // ---- Big bottom offer (bolder + clickable) — the six-week program ----
+  // ---- Big bottom offer (bolder + clickable) — the app, free for 14 days ----
   const cy = H - 470 // card bottom
   card(p, 36, cy, W - 72, 132, C.goldFill, C.orange, 2)
-  textC(p, 'Need personal training?', W / 2, cy + 106, 16, f.bold, C.gold)
-  textC(p, 'Your numbers are step one — inside the 6-Week Challenge I build them into', W / 2, cy + 84, 9.5, f.reg, C.grayLight)
-  textC(p, 'done-for-you meals + workouts, and I check in with you every single week.', W / 2, cy + 68, 9.5, f.reg, C.grayLight)
+  textC(p, 'Your numbers are step one.', W / 2, cy + 106, 16, f.bold, C.gold)
+  textC(p, 'The Life-Up Fitness app turns them into done-for-you meals + custom workouts,', W / 2, cy + 84, 9.5, f.reg, C.grayLight)
+  textC(p, 'with daily check-ins — free for your first 14 days, then $10/mo.', W / 2, cy + 68, 9.5, f.reg, C.grayLight)
   const bW = 260, bX = W / 2 - bW / 2, bY = cy + 16, bH = 36
   card(p, bX, bY, bW, bH, C.gold)
-  textC(p, 'Click Here to Join the Challenge  »', W / 2, bY + 12, 11, f.bold, C.bg)
+  textC(p, 'Start Free for 14 Days  »', W / 2, bY + 12, 11, f.bold, C.bg)
   linkRect(doc, p, bX, bY, bW, bH, CHALLENGE_URL)
   linkRect(doc, p, 36, cy, W - 72, 132, CHALLENGE_URL)
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import CountUp from '@/components/CountUp'
 
@@ -26,6 +26,32 @@ export default function ConversationalIntake() {
   const [phase, setPhase] = useState<'quiz' | 'building' | 'done'>('quiz')
   const [targets, setTargets] = useState<Targets | null>(null)
   const [error, setError] = useState('')
+  const [carriedFromBlueprint, setCarriedFromBlueprint] = useState(false)
+
+  // Seamless blueprint→app conversion — if she already did the free Calorie Blueprint,
+  // pull her answers forward instead of making her retype her name/age/height/weight/goal.
+  useEffect(() => {
+    fetch('/api/plan/blueprint-lookup').then((r) => r.json()).then((d) => {
+      if (!d?.found || !d.blueprint) return
+      const b = d.blueprint
+      const ACTIVITY_MAP: Record<string, string> = { none: 'sedentary', sedentary: 'sedentary', light: 'light', moderate: 'moderate', active: 'active', very_active: 'active' }
+      setF((s) => ({
+        ...s,
+        name: b.name || s.name,
+        age: b.age ? String(b.age) : s.age,
+        sex: b.sex || s.sex,
+        heightFt: b.height_in ? String(Math.floor(b.height_in / 12)) : s.heightFt,
+        heightIn: b.height_in ? String(b.height_in % 12) : s.heightIn,
+        weight_lbs: b.weight_lbs ? String(b.weight_lbs) : s.weight_lbs,
+        target_lbs: b.goal_weight_lbs ? String(b.goal_weight_lbs) : s.target_lbs,
+        goal: b.goal || s.goal,
+        activity_level: ACTIVITY_MAP[b.activity] || s.activity_level,
+        days_per_week: b.workout_days ? String(b.workout_days) : s.days_per_week,
+      }))
+      setCarriedFromBlueprint(true)
+    }).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const set = (k: string, v: string) => setF((s) => ({ ...s, [k]: v }))
   const go = (n: number) => { setDir(n > step ? 'fwd' : 'back'); setError(''); setStep(n) }
@@ -144,6 +170,9 @@ export default function ConversationalIntake() {
       </div>
 
       <div className="max-w-lg w-full mx-auto flex-1">
+        {carriedFromBlueprint && step === 0 && (
+          <p className="text-emerald-600 text-xs font-semibold mb-4 flex items-center gap-1.5">🎉 Pulled in your info from your Calorie Blueprint — just confirm as you go.</p>
+        )}
         <Screen>
           {s === 'name' && (<>
             <Q>First — what should I call you?</Q>
