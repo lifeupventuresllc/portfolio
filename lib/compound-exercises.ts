@@ -28,6 +28,7 @@ export interface CompoundExercise {
   reps: string
   cue: string
   imageUrl?: string // form-demo photo, shown in the compound-day list when set
+  earlyAccess?: boolean // Inner Circle exclusive — visible to everyone else once Asa lifts the flag
 }
 
 const COMPOUND_POOL_BASE: CompoundExercise[] = [
@@ -72,9 +73,14 @@ const COMPOUND_POOL_BASE: CompoundExercise[] = [
 ]
 export const COMPOUND_POOL: CompoundExercise[] = COMPOUND_POOL_BASE.map((e) => (FORM_IMAGES[e.name] ? { ...e, imageUrl: FORM_IMAGES[e.name] } : e))
 
-export function compoundExercisesForLevel(level: Level, injuries: Injury[] = []): CompoundExercise[] {
+// isInnerCircle defaults false (safe/conservative) — early-access moves stay hidden
+// unless the caller explicitly knows she's Inner Circle. The auto-integrated cardio
+// finisher (lib/workout.ts) doesn't thread tier through the workout-generation
+// pipeline today, so it always gets the public pool; only the standalone
+// /plan/compound page (which already has her tier in scope) passes true.
+export function compoundExercisesForLevel(level: Level, injuries: Injury[] = [], isInnerCircle = false): CompoundExercise[] {
   // Everything AT or below her level, injury-safe, cross-validated (higher `sources`) first within each level.
   return COMPOUND_POOL
-    .filter((e) => e.level <= level && !isContraindicated(e.name, injuries))
+    .filter((e) => e.level <= level && !isContraindicated(e.name, injuries) && (isInnerCircle || !e.earlyAccess))
     .sort((a, b) => b.sources - a.sources)
 }

@@ -1,6 +1,21 @@
 import { Resend } from 'resend'
+import fs from 'fs'
+import path from 'path'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+
+// Static PDF downloads shipped in public/downloads/ — read at send-time so they
+// can ride along as email attachments. Literal paths (not built from a dynamic
+// variable) so Vercel's build-time file tracing bundles them into the function.
+function readDownloadPDF(filename: 'craving-swap-guide.pdf' | 'lifestyle-workout-guide.pdf') {
+  try {
+    const full = path.join(process.cwd(), 'public', 'downloads', filename)
+    return fs.readFileSync(full).toString('base64')
+  } catch (e) {
+    console.error(`Failed to read ${filename}:`, e)
+    return null
+  }
+}
 
 // Canonical site URL for every email link. Hard fallback so links can NEVER
 // render as "undefined/..." (a 404) if the env var is missing on the server.
@@ -123,10 +138,24 @@ export async function sendBlueprintEmail(
   name: string,
   targets: { calories: number; protein_g: number; carbs_g: number; fats_g: number },
   goal: string,
-  pdf?: { base64: string; filename: string }
+  pdf?: { base64: string; filename: string },
+  bundle?: ('craving-swap' | 'lifestyle-workout')[]
 ) {
   const firstName = (name || '').split(' ')[0] || 'there'
   const goalWord = goal === 'gain' ? 'gain' : goal === 'maintain' ? 'maintain' : 'lose'
+
+  const attachments: { filename: string; content: string }[] = []
+  if (pdf) attachments.push({ filename: pdf.filename, content: pdf.base64 })
+  const bundledNames: string[] = []
+  if (bundle?.includes('craving-swap')) {
+    const b64 = readDownloadPDF('craving-swap-guide.pdf')
+    if (b64) { attachments.push({ filename: 'Craving-Swap-Guide.pdf', content: b64 }); bundledNames.push('your Craving Swap Guide') }
+  }
+  if (bundle?.includes('lifestyle-workout')) {
+    const b64 = readDownloadPDF('lifestyle-workout-guide.pdf')
+    if (b64) { attachments.push({ filename: 'Lifestyle-Fit-Workout-Guide.pdf', content: b64 }); bundledNames.push('your Lifestyle-Fit Workout Guide') }
+  }
+  const bundleLine = bundledNames.length ? ` I've also attached ${bundledNames.join(' and ')} — everything you need in one place.` : ''
 
   const { error } = await resend.emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
@@ -134,8 +163,8 @@ export async function sendBlueprintEmail(
     replyTo: REPLY_TO,
     subject: `${firstName}, here's your Calorie Blueprint`,
     headers: UNSUB_HEADERS,
-    attachments: pdf ? [{ filename: pdf.filename, content: pdf.base64 }] : undefined,
-    text: `Hey ${firstName}!\n\nHere's your personalized Nutrition Blueprint to ${goalWord} weight:\n\nDaily Calories: ${targets.calories}\nProtein: ${targets.protein_g}g\nCarbs: ${targets.carbs_g}g\nFats: ${targets.fats_g}g\n\nHitting these every day is how you ${goalWord} the right way — without starving.\n\nWant me to build the actual meals, workouts, and check in on you every week so you actually hit it? That's my Snatched Without Starving challenge:\n${APP_URL}/challenge\n\n— Coach Asa\nasaluke.io`,
+    attachments: attachments.length ? attachments : undefined,
+    text: `Hey ${firstName}!\n\nHere's your personalized Nutrition Blueprint to ${goalWord} weight:\n\nDaily Calories: ${targets.calories}\nProtein: ${targets.protein_g}g\nCarbs: ${targets.carbs_g}g\nFats: ${targets.fats_g}g\n\nHitting these every day is how you ${goalWord} the right way — without starving.${bundleLine}\n\nWant me to build the actual meals, workouts, and check in on you every week so you actually hit it? That's my Snatched Without Starving challenge:\n${APP_URL}/challenge\n\n— Coach Asa\nasaluke.io`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #C9A84C;">Your Nutrition Blueprint 📊</h1>
@@ -146,7 +175,7 @@ export async function sendBlueprintEmail(
           <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color:#6b7280;">Carbs</td><td style="padding:10px 0; border-bottom:1px solid #e5e7eb; text-align:right; font-weight:bold;">${targets.carbs_g}g</td></tr>
           <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color:#6b7280;">Fats</td><td style="padding:10px 0; border-bottom:1px solid #e5e7eb; text-align:right; font-weight:bold;">${targets.fats_g}g</td></tr>
         </table>
-        <p style="color:#374151;">Knowing your numbers is step one. Actually hitting them — with the meals, workouts, and someone in your corner every week — is where the real change happens.</p>
+        <p style="color:#374151;">Knowing your numbers is step one. Actually hitting them — with the meals, workouts, and someone in your corner every week — is where the real change happens.${bundleLine}</p>
         <p style="margin: 24px 0;">
           <a href="${APP_URL}/challenge" style="display:inline-block; background:#C9A84C; color:#0A0A0F; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold;">Get Snatched Without Starving →</a>
         </p>
@@ -564,4 +593,81 @@ export async function sendRefundConfirmation(email: string, productName: string,
   if (error) {
     console.error('Failed to send refund confirmation email:', error)
   }
+}
+
+// ============ FIND YOUR FIX — the blocker-diagnosis quiz ============
+
+export async function sendFindYourFixEmail(
+  email: string, name: string, blocker: 'nutrition' | 'movement' | 'both', diagnosticSentence: string
+) {
+  const firstName = (name || '').split(' ')[0] || 'there'
+  const attachments: { filename: string; content: string }[] = []
+  let bodyBlurb: string
+  let cta: { label: string; href: string }
+
+  if (blocker === 'movement') {
+    const b64 = readDownloadPDF('lifestyle-workout-guide.pdf')
+    if (b64) attachments.push({ filename: 'Lifestyle-Fit-Workout-Guide.pdf', content: b64 })
+    bodyBlurb = 'Your Lifestyle-Fit Workout Guide is attached — matched to schedules like yours, no gym guesswork required.'
+    cta = { label: 'See the full app →', href: `${APP_URL}/challenge` }
+  } else {
+    // nutrition or both — her one remaining step is the Calorie Blueprint, which bundles
+    // the Craving Swap Guide (and Lifestyle Workout Guide too, for 'both') automatically
+    // the moment she finishes it. Nothing to attach here yet — that email fires from
+    // sendBlueprintEmail's bundle path instead.
+    bodyBlurb = "Next: get your exact calorie numbers — I'll send your Craving Swap Guide (and Workout Guide, if that's part of your fix) the moment you do."
+    const bundle = blocker === 'both' ? 'craving-swap,lifestyle-workout' : 'craving-swap'
+    cta = { label: 'Get my numbers →', href: `${APP_URL}/blueprint?fromQuiz=1&bundle=${bundle}` }
+  }
+
+  const { error } = await resend.emails.send({
+    from: `Asa Luke <${FROM_EMAIL}>`,
+    to: email,
+    replyTo: REPLY_TO,
+    subject: `${firstName}, here's what's actually stalling you`,
+    headers: UNSUB_HEADERS,
+    attachments: attachments.length ? attachments : undefined,
+    text: `Hey ${firstName}!\n\n${diagnosticSentence}\n\n${bodyBlurb}\n\n${cta.label} ${cta.href}\n\n— Coach Asa\nasaluke.io`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #C9A84C;">You now know what's stalling you 🎯</h1>
+        <p style="color:#374151; line-height:1.7;">${diagnosticSentence}</p>
+        <p style="color:#374151; line-height:1.7;">${bodyBlurb}</p>
+        <p style="margin: 24px 0;">
+          <a href="${cta.href}" style="display:inline-block; background:#C9A84C; color:#0A0A0F; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold;">${cta.label}</a>
+        </p>
+        <p style="color:#9ca3af; font-size:12px; margin-top:40px;">— Coach Asa · asaluke.io</p>
+        ${FOOTER}
+      </div>
+    `,
+  })
+
+  if (error) console.error('Failed to send Find Your Fix email:', error)
+}
+
+export async function sendCoachFixNotification(info: {
+  name: string; email: string; phone?: string; blocker: string; goal: string; weight_lbs: number
+}) {
+  const coachEmail = process.env.COACH_EMAIL || REPLY_TO
+  const { error } = await resend.emails.send({
+    from: `Life Up Fitness <${FROM_EMAIL}>`,
+    to: coachEmail,
+    replyTo: REPLY_TO,
+    subject: `New Find Your Fix Lead — ${info.name || info.email}`,
+    text: `New quiz completion. Follow up within 24 hours.\n\nName: ${info.name}\nEmail: ${info.email}\nPhone: ${info.phone || '—'}\nDiagnosis: ${info.blocker}\nGoal: ${info.goal}\nWeight: ${info.weight_lbs} lbs`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #C9A84C;">New Find Your Fix Lead 🎯</h2>
+        <p style="color:#374151;">Follow up within 24 hours.</p>
+        <table style="width:100%; border-collapse:collapse; margin:12px 0;">
+          <tr><td style="padding:6px 0; color:#6b7280;">Name</td><td style="padding:6px 0; text-align:right; font-weight:bold;">${info.name || '—'}</td></tr>
+          <tr><td style="padding:6px 0; color:#6b7280;">Email</td><td style="padding:6px 0; text-align:right;">${info.email}</td></tr>
+          <tr><td style="padding:6px 0; color:#6b7280;">Phone</td><td style="padding:6px 0; text-align:right;">${info.phone || '—'}</td></tr>
+          <tr><td style="padding:6px 0; color:#6b7280;">Diagnosis</td><td style="padding:6px 0; text-align:right; color:#C9A84C; font-weight:bold;">${info.blocker}</td></tr>
+          <tr><td style="padding:6px 0; color:#6b7280;">Goal / Weight</td><td style="padding:6px 0; text-align:right;">${info.goal} · ${info.weight_lbs} lbs</td></tr>
+        </table>
+      </div>
+    `,
+  })
+  if (error) console.error('Failed to send coach fix notification:', error)
 }

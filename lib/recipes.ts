@@ -15,6 +15,14 @@ export interface Recipe {
   fat: number
   budget?: boolean
   servings?: string
+  earlyAccess?: boolean // Inner Circle exclusive — visible to everyone else once Asa lifts the flag
+}
+
+// Inner Circle pays for early access to new recipes before public release. No recipe
+// is flagged earlyAccess today — this only takes effect once Asa marks a future
+// addition, so nothing currently visible to App/Challenge members changes.
+export function visibleRecipes(recipes: Recipe[], isInnerCircle: boolean): Recipe[] {
+  return isInnerCircle ? recipes : recipes.filter((r) => !r.earlyAccess)
 }
 
 const r = (name: string, category: MealCategory, cal: number, protein: number, carbs: number, fat: number, extra: Partial<Recipe> = {}): Recipe =>

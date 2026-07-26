@@ -482,7 +482,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
             href="/admin/blueprint-leads"
             className="px-4 py-2 bg-charcoal border border-gold/50 text-gold rounded-lg text-sm font-semibold hover:bg-gold/10 whitespace-nowrap"
           >
-            📋 Blueprint Leads
+            📋 Fitness Leads
           </a>
           <a
             href="/admin/feedback"

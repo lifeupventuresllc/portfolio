@@ -20,7 +20,7 @@ export default function ConversationalIntake() {
     name: '', goal: '', age: '', sex: 'female', heightFt: '5', heightIn: '4', weight_lbs: '',
     target_lbs: '', activity_level: '', experience_level: '', training_location: '',
     days_per_week: '', cook_days_per_week: '', weekly_food_budget: '', food_preferences: '', dislikes_allergies: '',
-    postpartum: '',
+    postpartum: '', training_style: '', other_info: '',
   })
   const [injuries, setInjuries] = useState<string[]>([])
   const [phase, setPhase] = useState<'quiz' | 'building' | 'done'>('quiz')
@@ -65,7 +65,7 @@ export default function ConversationalIntake() {
   const firstName = f.name.trim().split(' ')[0] || 'you'
 
   const STEPS = [
-    'name', 'goal', 'body', 'target', 'activity', 'experience', 'location', 'days', 'cook', 'injuries', 'postpartum', 'food',
+    'name', 'goal', 'body', 'target', 'activity', 'experience', 'training_style', 'location', 'days', 'cook', 'injuries', 'other', 'postpartum', 'food',
   ]
   const total = STEPS.length
   const pct = Math.round(((step + 1) / total) * 100)
@@ -87,6 +87,7 @@ export default function ConversationalIntake() {
           cook_days_per_week: Number(f.cook_days_per_week) || 2, weekly_food_budget: Number(f.weekly_food_budget) || null,
           food_preferences: f.food_preferences, dislikes_allergies: f.dislikes_allergies,
           injuries, injuries_limitations: '', postpartum: f.postpartum === 'yes',
+          training_style: f.training_style || 'none', other_info: f.other_info,
         }),
       })
       const data = await res.json()
@@ -248,6 +249,23 @@ export default function ConversationalIntake() {
             </div>
           </>)}
 
+          {s === 'training_style' && (<>
+            <Q>What&apos;s your training style?</Q>
+            <Hint>This shapes how I build your finisher — no wrong answer.</Hint>
+            <div className="space-y-3">
+              {[
+                { v: 'compound', l: '🔗 Full body / compound movements', d: 'Moves that work multiple muscles each rep' },
+                { v: 'split', l: '🎯 Split / one muscle group at a time', d: 'Focused, isolated work per day' },
+                { v: 'cardio', l: '🏃🏽 Cardio-first', d: 'Heart rate up, calorie burn' },
+                { v: 'none', l: '🤷🏽 No strong preference', d: "I'll trust your programming" },
+              ].map((o) => (
+                <button key={o.v} onClick={() => pick('training_style', o.v)} className={opt(f.training_style === o.v)}>
+                  <span className="block">{o.l}</span><span className={`block text-xs font-normal mt-0.5 ${f.training_style === o.v ? 'text-gold/70' : 'text-ivory/40'}`}>{o.d}</span>
+                </button>
+              ))}
+            </div>
+          </>)}
+
           {s === 'location' && (<>
             <Q>Where will you train?</Q>
             <Hint>I&apos;ll build your workouts to fit your setup.</Hint>
@@ -289,6 +307,17 @@ export default function ConversationalIntake() {
               ))}
             </div>
             <button onClick={next} className={primaryBtn}>{injuries.length ? 'Continue →' : 'None — continue →'}</button>
+          </>)}
+
+          {s === 'other' && (<>
+            <Q>Anything else I should know?</Q>
+            <Hint>Totally optional — schedule quirks, past experience, whatever&apos;s on your mind.</Hint>
+            <textarea
+              value={f.other_info} onChange={(e) => set('other_info', e.target.value)}
+              placeholder="e.g. I travel for work every other week, I've done this before and it didn't stick because..."
+              rows={4} className={`${input} resize-none mb-6`}
+            />
+            <button onClick={next} className={primaryBtn}>{f.other_info.trim() ? 'Continue →' : 'Nothing — continue →'}</button>
           </>)}
 
           {s === 'postpartum' && (<>

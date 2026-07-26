@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { RECIPES, byCategory, type MealCategory } from '@/lib/recipes'
+import { RECIPES, byCategory, visibleRecipes, type MealCategory } from '@/lib/recipes'
 import { costTier, portionIngredients, hasIngredients } from '@/lib/ingredients'
 import { RECIPE_INSTRUCTIONS } from '@/lib/recipe-instructions'
 
@@ -17,7 +17,7 @@ const MEAL_TABS: { label: string; cat: MealCategory }[] = [
   { label: 'Desserts', cat: 'dessert' },
 ]
 
-export default function LibraryBrowser() {
+export default function LibraryBrowser({ isInnerCircle = false }: { isInnerCircle?: boolean }) {
   const [tabLabel, setTabLabel] = useState('Breakfast')
   const [q, setQ] = useState('')
   const [budgetOnly, setBudgetOnly] = useState(false)
@@ -25,9 +25,9 @@ export default function LibraryBrowser() {
 
   const cat = MEAL_TABS.find((t) => t.label === tabLabel)?.cat || 'breakfast'
   const budgetCount = useMemo(() => RECIPES.filter((r) => r.budget).length, [])
-  const recipes = useMemo(() => byCategory(cat)
+  const recipes = useMemo(() => visibleRecipes(byCategory(cat), isInnerCircle)
     .filter((r) => r.name.toLowerCase().includes(q.toLowerCase()))
-    .filter((r) => !budgetOnly || r.budget), [cat, q, budgetOnly])
+    .filter((r) => !budgetOnly || r.budget), [cat, q, budgetOnly, isInnerCircle])
 
   const pill = (active: boolean) => `px-4 py-2 rounded-xl text-xs font-semibold transition-colors ${active ? 'bg-gold text-obsidian' : 'bg-charcoal border border-smoke text-ivory/60'}`
   const tierColor = (t: string) => t === '$' ? 'text-green-400' : t === '$$' ? 'text-gold' : 'text-red-400'
@@ -55,6 +55,7 @@ export default function LibraryBrowser() {
             <button key={r.name} onClick={() => setSelected(r.name)} className="text-left bg-charcoal border border-smoke rounded-2xl p-4 hover:border-gold/40 transition-colors">
               <div className="flex justify-between items-start gap-2 mb-1">
                 <span className="text-white font-semibold text-sm leading-tight">{r.name}</span>
+                {r.earlyAccess && <span className="text-[9px] bg-gold/20 text-gold px-2 py-0.5 rounded-full whitespace-nowrap">🔓 Early Access</span>}
                 {r.budget && <span className="text-[9px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full whitespace-nowrap">Budget</span>}
               </div>
               <div className="flex gap-3 text-xs text-ivory/50 items-center">

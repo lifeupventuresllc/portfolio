@@ -12,8 +12,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       name, email, phone, age, sex, height_in, weight_lbs, goal_weight_lbs,
-      goal, activity, workout_days_per_week, workout_length, cardio,
+      goal, activity, workout_days_per_week, workout_length, cardio, bundle,
     } = body
+    // Seamless handoff from Find Your Fix — she gets the Craving Swap and/or
+    // Lifestyle-Fit Workout Guide bundled into this same email, no second stop.
+    const bundleList = (Array.isArray(bundle) ? bundle : []).filter(
+      (b): b is 'craving-swap' | 'lifestyle-workout' => b === 'craving-swap' || b === 'lifestyle-workout'
+    )
 
     if (!email || !age || !height_in || !weight_lbs || !goal || !activity) {
       return NextResponse.json({ error: 'Please fill out all fields.' }, { status: 400 })
@@ -57,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     // Send it (attachment) — non-blocking failure
     try {
-      await sendBlueprintEmail(email, name || '', summary, goal, { base64: pdfBase64, filename })
+      await sendBlueprintEmail(email, name || '', summary, goal, { base64: pdfBase64, filename }, bundleList)
     } catch (e) {
       console.error('Blueprint email failed:', e)
     }
@@ -120,6 +125,7 @@ export async function POST(request: NextRequest) {
           steady_workout: bp.current.workout.eat, steady_rest: bp.current.rest.eat,
           faster_workout: bp.aggressive.workout.eat, faster_rest: bp.aggressive.rest.eat,
           est_weekly_change_lbs: bp.current.estWeeklyChangeLbs,
+          bundle: bundleList.length ? bundleList : null,
         },
       })
     } catch (e) {

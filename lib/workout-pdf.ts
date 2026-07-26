@@ -125,9 +125,15 @@ function gymDayPage(doc: PDFDocument, f: Fonts, prog: WorkoutProgram, d: GymDay,
   tL(p, `${d.accessory[0].name} ${d.accessory[0].reps}  ·  ${d.accessory[1].name} ${d.accessory[1].reps}`, 48, y - 27, 8, f.reg, C.grayL)
   y -= ch + 8
   // cardio
-  const carh = 40; cardBox(p, 36, y - carh, W - 72, carh, C.card, C.blue, 1.4)
+  const carh = d.cardio.mode === 'compound' ? 54 : 40
+  cardBox(p, 36, y - carh, W - 72, carh, C.card, C.blue, 1.4)
   tL(p, `CARDIO FINISHER — ${d.cardio.title}`, 48, y - 15, 9, f.bold, C.blue)
-  tL(p, `${d.cardio.mins}  ·  ${d.cardio.speed}  ·  incline ${d.cardio.incline}`, 48, y - 30, 8.5, f.reg, C.grayL)
+  if (d.cardio.mode === 'compound' && d.cardio.moves) {
+    tL(p, d.cardio.moves.map((m) => `${m.name} (${m.reps})`).join('  ·  '), 48, y - 30, 8, f.reg, C.grayL)
+    tL(p, 'Built in for your compound training style', 48, y - 43, 7.5, f.reg, C.gray)
+  } else {
+    tL(p, `${d.cardio.mins}  ·  ${d.cardio.speed}  ·  incline ${d.cardio.incline}`, 48, y - 30, 8.5, f.reg, C.grayL)
+  }
 }
 
 function homeDayPage(doc: PDFDocument, f: Fonts, prog: WorkoutProgram, d: HomeDay, idx: number) {

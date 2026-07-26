@@ -10,6 +10,14 @@ import {
   isContraindicated, injuryNotes,
   type GymExercise, type AbExercise, type Level, type Movement, type Injury, type Muscle,
 } from './workout-exercises'
+import { compoundExercisesForLevel } from './compound-exercises'
+
+// Her stated preference from intake (see the "workout style" question). 'compound'
+// is the only value that changes behavior today: it makes the cardio/HIIT finisher
+// built into her regular gym day COMPOUND-MOVEMENT based by default instead of a
+// plain treadmill walk. The standalone /plan/compound page stays opt-in for everyone
+// regardless of this flag — this only changes what's built-in automatically.
+export type TrainingStyle = 'compound' | 'split' | 'cardio' | 'none'
 
 export interface WorkoutInputs {
   name?: string
@@ -22,15 +30,28 @@ export interface WorkoutInputs {
   injuries?: Injury[]
   targets?: Muscle[]
   postpartum?: boolean // surfaces postpartum-labeled ab work first, see pickAb
+  trainingStyle?: TrainingStyle
 }
 
 export interface Superset { title: string; push: GymExercise; pull: GymExercise; reps: string }
+export interface CardioFinisher {
+  title: string
+  note: string
+  mode: 'walk' | 'compound'
+  // 'walk' mode
+  speed?: string
+  incline?: string
+  mins?: string
+  // 'compound' mode — built-in full-body compound circuit, drawn from the same
+  // pool as the optional /plan/compound page
+  moves?: { name: string; reps: string; cue: string; imageUrl?: string }[]
+}
 export interface GymDay {
   dayNum: number; title: string; muscles: string[]; warmup: string[]
   supersets: Superset[]
   accessory: { name: string; reps: string; cue: string }[]
   ab: { upper: AbExercise; lower: AbExercise; scheme: string }
-  cardio: ReturnType<typeof cardioFinisher>
+  cardio: CardioFinisher
 }
 export interface HomeDay { dayNum: number; title: string; exercises: { name: string; duration: string; imageUrl?: string }[] }
 export interface WorkoutProgram {
@@ -161,6 +182,25 @@ function pickAb(zone: 'upper' | 'lower', level: Level, offset: number, postpartu
   return rotate(inZoneLevel, offset)[0]
 }
 
+// Builds the day's cardio/HIIT finisher. Default (everyone else) stays the plain
+// incline-treadmill walk, unchanged. When she's told us her training style leans
+// full-body/compound (intake), the finisher automatically becomes a short compound
+// circuit instead — no opt-in tap required, per Asa's ask that this be built-in by
+// default for her, while the dedicated /plan/compound page remains optional for all.
+function buildCardioFinisher(level: Level, goal: string, trainingStyle: TrainingStyle | undefined, injuries: Injury[], offset: number): CardioFinisher {
+  if (trainingStyle === 'compound') {
+    const pool = compoundExercisesForLevel(level, injuries)
+    const moves = rotate(pool, offset).slice(0, 3).map((m) => ({ name: m.name, reps: m.reps, cue: m.cue, imageUrl: m.imageUrl }))
+    return {
+      title: 'Compound Finisher',
+      mode: 'compound',
+      note: 'Full-body compound moves to close out your session — built in because that’s your training style.',
+      moves,
+    }
+  }
+  return { ...cardioFinisher(level, goal), mode: 'walk' }
+}
+
 function generateGym(inp: WorkoutInputs): GymDay[] {
   const level = inp.level
   const week = inp.weekNumber || 1
@@ -193,7 +233,7 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
         { name: 'Single-Arm Tibialis Raise (wall)', reps: '2 × 15 each', cue: 'Back to wall, lift toes toward shins, squeeze the shin, lower slow.' },
       ],
       ab: { upper: pickAb('upper', level, off, inp.postpartum, injuries), lower: pickAb('lower', level, off + 2, inp.postpartum, injuries), scheme: AB_SCHEME[level] },
-      cardio: cardioFinisher(level, inp.goal),
+      cardio: buildCardioFinisher(level, inp.goal, inp.trainingStyle, injuries, off),
     } as GymDay
   })
 }

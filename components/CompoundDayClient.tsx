@@ -51,7 +51,10 @@ export default function CompoundDayClient({ exercises }: { exercises: CompoundEx
               </div>
             )}
             <div className="flex-1">
-              <p className={`font-semibold text-sm ${done.has(i) ? 'text-gold' : 'text-white'}`}>{ex.name}</p>
+              <p className={`font-semibold text-sm ${done.has(i) ? 'text-gold' : 'text-white'}`}>
+                {ex.name}
+                {ex.earlyAccess && <span className="ml-2 text-[9px] bg-gold/20 text-gold px-2 py-0.5 rounded-full whitespace-nowrap align-middle">🔓 Early Access</span>}
+              </p>
               <p className="text-ivory/50 text-xs mt-1">{ex.cue}</p>
               <p className="text-ivory/40 text-xs mt-1.5 uppercase tracking-wider">{ex.reps} · {ex.equip}</p>
             </div>

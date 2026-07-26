@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { calcNutritionTargets } from '@/lib/nutrition'
-import { generateWorkout } from '@/lib/workout'
+import { generateWorkout, type TrainingStyle } from '@/lib/workout'
 import type { Level, Injury } from '@/lib/workout-exercises'
 
 export async function POST(request: NextRequest) {
@@ -64,6 +64,8 @@ export async function POST(request: NextRequest) {
         cook_days_per_week: Number(body.cook_days_per_week) || 2,
         injuries: (Array.isArray(body.injuries) ? body.injuries : []) as Injury[],
         postpartum: !!body.postpartum,
+        training_style: body.training_style || 'none',
+        other_info: body.other_info || '',
       },
     }
 
@@ -137,6 +139,7 @@ export async function POST(request: NextRequest) {
       weekNumber: 1,
       injuries: (Array.isArray(body.injuries) ? body.injuries : []) as Injury[],
       postpartum: !!body.postpartum,
+      trainingStyle: (body.training_style || 'none') as TrainingStyle,
     })
 
     const workoutPayload = {

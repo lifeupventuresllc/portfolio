@@ -6,7 +6,7 @@ import CoachResponse from '@/components/CoachResponse'
 export const dynamic = 'force-dynamic'
 const shortDate = (s: string) => new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
-type Enroll = { name: string | null; email: string | null }
+type Enroll = { name: string | null; email: string | null; tier: string | null }
 
 export default async function AdminCheckins() {
   const supabase = createClient()
@@ -18,10 +18,15 @@ export default async function AdminCheckins() {
   const svc = createServiceClient()
   const { data: checkins } = await svc
     .from('challenge_checkins')
-    .select('*, challenge_enrollments(name, email)')
+    .select('*, challenge_enrollments(name, email, tier)')
     .order('submitted_at', { ascending: false })
 
-  const list = checkins || []
+  const rawList = checkins || []
+  // Inner Circle pays for priority same-day replies — her pending check-in shouldn't
+  // sit behind everyone else's just because it came in earlier. Real sort, not cosmetic.
+  const isPriority = (c: (typeof rawList)[number]) =>
+    c.status !== 'reviewed' && (c.challenge_enrollments as Enroll)?.tier === 'inner_circle'
+  const list = [...rawList].sort((a, b) => Number(isPriority(b)) - Number(isPriority(a)))
   const pending = list.filter((c) => c.status !== 'reviewed')
 
   return (
@@ -46,9 +51,12 @@ export default async function AdminCheckins() {
                     <p className="text-white font-semibold text-sm">{e.name || e.email || 'Client'} · Week {c.week_number}</p>
                     <p className="text-ivory/40 text-xs">{c.submitted_at ? shortDate(c.submitted_at) : ''}{c.weight_lbs ? ` · ${c.weight_lbs} lbs` : ''}</p>
                   </div>
-                  <span className={`text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold ${reviewed ? 'bg-green-500/15 text-green-400' : 'bg-gold/15 text-gold'}`}>
-                    {reviewed ? 'Replied' : 'Needs reply'}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {isPriority(c) && <span className="text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold bg-gold/20 text-gold">⚡ Priority</span>}
+                    <span className={`text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold ${reviewed ? 'bg-green-500/15 text-green-400' : 'bg-gold/15 text-gold'}`}>
+                      {reviewed ? 'Replied' : 'Needs reply'}
+                    </span>
+                  </div>
                 </div>
                 {(m.waist || m.hips || m.thighs || m.arms) && (
                   <p className="text-ivory/50 text-xs mb-2">

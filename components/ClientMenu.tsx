@@ -67,10 +67,12 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
         liveUrl
           ? { href: liveUrl, label: 'Live video call with Coach Asa', icon: '📹', external: true }
           : callAccess === 'weekly'
-          ? { href: '/book', label: 'Book your weekly call', icon: '📹' }
+          ? { href: '/book', label: 'Book your weekly reset call', icon: '📹' }
           : callAccess === 'monthly'
           ? { href: '/book', label: 'Book your monthly call', icon: '📹' }
           : { href: '/plan/checkin', label: 'Live with Coach Asa', icon: '📹' },
+        // Inner Circle exclusive — one-tap plan reset, no re-intake
+        ...(callAccess === 'weekly' ? [{ href: '/plan/life-reset', label: 'Life happened? Reset my plan', icon: '🔄' }] : []),
         { href: '/plan/community', label: 'The Curve Collective', icon: '💛' },
       ],
     },

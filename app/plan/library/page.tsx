@@ -17,7 +17,7 @@ export default async function Library() {
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Cookbook</p>
         <h1 className="text-3xl font-bold text-white mb-2">Explore everything</h1>
         <p className="text-ivory/60 text-sm mb-8">Every recipe on The Menu — browse, search, and get inspired.</p>
-        <LibraryBrowser />
+        <LibraryBrowser isInnerCircle={enrollment.tier === 'inner_circle'} />
       </div>
     </div>
   )

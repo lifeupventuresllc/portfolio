@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateWorkout } from '@/lib/workout'
+import { generateWorkout, type TrainingStyle } from '@/lib/workout'
 import { generateWorkoutPDF } from '@/lib/workout-pdf'
 import type { Injury, Muscle, Level } from '@/lib/workout-exercises'
 
@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
       injuries: (Array.isArray(b.injuries) ? b.injuries : []) as Injury[],
       targets: (Array.isArray(b.targets) ? b.targets : []) as Muscle[],
       postpartum: !!b.postpartum,
+      trainingStyle: (b.trainingStyle || 'none') as TrainingStyle,
     })
     const bytes = await generateWorkoutPDF(prog)
     const pdfBase64 = Buffer.from(bytes).toString('base64')

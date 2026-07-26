@@ -30,23 +30,34 @@ export async function GET() {
   if (!(await verifyAdmin())) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const svc = createServiceClient()
 
-  const [leadsRes, eventsRes] = await Promise.all([
-    svc.from('funnel_leads').select('*').eq('source', 'blueprint').order('created_at', { ascending: false }).limit(1000),
+  // Both funnels write into the SAME funnel_leads row per email (Find Your Fix
+  // creates it, a later Blueprint completion just updates it, or vice versa) —
+  // one merged list, not two separate dashboards.
+  const [leadsRes, blueprintEventsRes, quizEventsRes] = await Promise.all([
+    svc.from('funnel_leads').select('*').in('source', ['blueprint', 'find-your-fix']).order('created_at', { ascending: false }).limit(1000),
     svc.from('events').select('metadata, created_at').eq('event_type', 'blueprint_lead').order('created_at', { ascending: false }).limit(2000),
+    svc.from('events').select('metadata, created_at').eq('event_type', 'blocker_quiz_completed').order('created_at', { ascending: false }).limit(2000),
   ])
 
   if (leadsRes.error) return NextResponse.json({ error: leadsRes.error.message }, { status: 500 })
 
-  // latest full-stats event per email
+  // latest full-stats event per email, for each event type
   const statsByEmail: Record<string, Record<string, unknown>> = {}
-  for (const ev of eventsRes.data || []) {
+  for (const ev of blueprintEventsRes.data || []) {
     const m = (ev.metadata || {}) as Record<string, unknown>
     const email = String(m.email || '').toLowerCase()
     if (email && !statsByEmail[email]) statsByEmail[email] = m
   }
+  const blockerByEmail: Record<string, string> = {}
+  for (const ev of quizEventsRes.data || []) {
+    const m = (ev.metadata || {}) as Record<string, unknown>
+    const email = String(m.email || '').toLowerCase()
+    if (email && !blockerByEmail[email]) blockerByEmail[email] = String(m.blocker || '')
+  }
 
   const rows = (leadsRes.data || []).map((l) => {
-    const stats = statsByEmail[String(l.email || '').toLowerCase()] || parseNotes(l.notes)
+    const email = String(l.email || '').toLowerCase()
+    const stats = statsByEmail[email] || parseNotes(l.notes)
     return {
       id: l.id,
       name: l.name,
@@ -57,6 +68,8 @@ export async function GET() {
       created_at: l.created_at,
       last_email_at: l.last_email_at || null,
       notes: l.notes || null,
+      source: l.source || 'blueprint',
+      blocker: blockerByEmail[email] || null,
       stats,
     }
   })

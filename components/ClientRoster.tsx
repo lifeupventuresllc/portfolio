@@ -30,6 +30,9 @@ export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
   const [filter, setFilter] = useState<'all' | 'attention' | 'active' | 'beta'>('all')
 
   const needsAttention = (r: RosterRow) => r.pending > 0 || !r.intakeDone || r.hasNegativeFeedback
+  // Inner Circle pays for priority same-day replies — a pending check-in from her
+  // shouldn't sit buried behind everyone else's. Real sort, not just a badge.
+  const isPriority = (r: RosterRow) => r.tier === 'inner_circle' && r.pending > 0
   const counts = useMemo(() => ({
     all: rows.length,
     attention: rows.filter(needsAttention).length,
@@ -37,13 +40,16 @@ export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
     beta: rows.filter((r) => r.isBeta).length,
   }), [rows])
 
-  const shown = useMemo(() => rows.filter((r) => {
-    if (filter === 'attention' && !needsAttention(r)) return false
-    if (filter === 'active' && r.status !== 'active') return false
-    if (filter === 'beta' && !r.isBeta) return false
-    const hay = `${r.name || ''} ${r.email || ''}`.toLowerCase()
-    return hay.includes(q.toLowerCase())
-  }), [rows, q, filter])
+  const shown = useMemo(() => rows
+    .filter((r) => {
+      if (filter === 'attention' && !needsAttention(r)) return false
+      if (filter === 'active' && r.status !== 'active') return false
+      if (filter === 'beta' && !r.isBeta) return false
+      const hay = `${r.name || ''} ${r.email || ''}`.toLowerCase()
+      return hay.includes(q.toLowerCase())
+    })
+    .sort((a, b) => Number(isPriority(b)) - Number(isPriority(a))),
+  [rows, q, filter])
 
   const chip = (f: typeof filter, label: string, n: number) => (
     <button onClick={() => setFilter(f)}
@@ -77,6 +83,7 @@ export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
                 <p className="text-ivory/40 text-xs truncate">{r.email} · {ago(r.lastCheckin)}</p>
               </div>
               <div className="flex items-center gap-2 flex-none">
+                {isPriority(r) && <span className="text-[10px] bg-gold/20 text-gold px-2 py-1 rounded-full font-semibold whitespace-nowrap">⚡ reply today</span>}
                 {r.hasNegativeFeedback && <span className="text-[10px] bg-red-500/15 text-red-400 px-2 py-1 rounded-full font-semibold whitespace-nowrap">👎 feedback</span>}
                 {r.pending > 0 && <span className="text-[10px] bg-red-500/15 text-red-400 px-2 py-1 rounded-full font-semibold whitespace-nowrap">{r.pending} to reply</span>}
                 {!r.intakeDone && <span className="text-[10px] bg-amber-500/15 text-amber-400 px-2 py-1 rounded-full font-semibold whitespace-nowrap">no intake</span>}

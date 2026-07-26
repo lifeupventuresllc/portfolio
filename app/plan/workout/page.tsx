@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import WorkoutPlayer from '@/components/WorkoutPlayer'
-import { generateWorkout, type WorkoutProgram } from '@/lib/workout'
+import { generateWorkout, type WorkoutProgram, type TrainingStyle } from '@/lib/workout'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { localDateISO } from '@/lib/localdate'
@@ -61,9 +61,10 @@ export default async function WorkoutSession() {
     const injuries = (Array.isArray((intake.form_data as { injuries?: Injury[] } | null)?.injuries)
       ? (intake.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
+    const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle
     program = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex, track: trackOverride, level, goal,
-      daysPerWeek: Number(intake.days_per_week) || 3, weekNumber: 1, injuries, postpartum,
+      daysPerWeek: Number(intake.days_per_week) || 3, weekNumber: 1, injuries, postpartum, trainingStyle,
     })
   }
 

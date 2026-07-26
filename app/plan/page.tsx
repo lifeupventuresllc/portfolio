@@ -6,6 +6,7 @@ import CaloriesTodayCard from '@/components/CaloriesTodayCard'
 import WorkoutStatusCard from '@/components/WorkoutStatusCard'
 import StreakChip from '@/components/StreakChip'
 import CoachHero from '@/components/CoachHero'
+import MondayMemo from '@/components/MondayMemo'
 import LevelUpNudge from '@/components/LevelUpNudge'
 import TimezoneSync from '@/components/TimezoneSync'
 import { LIVE_CALL } from '@/lib/live-call'
@@ -137,6 +138,10 @@ export default async function PlanDashboard() {
 
       {/* Coach Asa — the living centerpiece; she talks right here */}
       <CoachHero firstName={firstName} />
+
+      {/* Challenge + Inner Circle exclusive — invisible unless it's actually her
+          Monday AND Asa has recorded real audio for the slot her week earned */}
+      {(enrollment.tier === 'challenge' || enrollment.tier === 'inner_circle') && <MondayMemo />}
 
       {/* The #2-problem solution, right behind #1 — she never has to figure out what to
           eat when she's off her plan and craving something. */}

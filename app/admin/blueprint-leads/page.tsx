@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import BlueprintLeads from '@/components/BlueprintLeads'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Blueprint Leads - Asa Luke' }
+export const metadata = { title: 'Fitness Leads - Asa Luke' }
 
 // Calorie Blueprint lead-gen dashboard — every lead's contact info + full stats.
 export default async function BlueprintLeadsPage() {

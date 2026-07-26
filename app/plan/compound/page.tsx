@@ -18,9 +18,9 @@ export default async function CompoundDayPage() {
   if (!user) redirect('/login?redirect=/plan/compound')
 
   const svc = createServiceClient()
-  let { data: enrollment } = await svc.from('challenge_enrollments').select('id').eq('user_id', user.id).order('created_at', { ascending: false }).maybeSingle()
+  let { data: enrollment } = await svc.from('challenge_enrollments').select('id, tier').eq('user_id', user.id).order('created_at', { ascending: false }).maybeSingle()
   if (!enrollment && user.email) {
-    const { data: byEmail } = await svc.from('challenge_enrollments').select('id').eq('email', user.email).order('created_at', { ascending: false }).maybeSingle()
+    const { data: byEmail } = await svc.from('challenge_enrollments').select('id, tier').eq('email', user.email).order('created_at', { ascending: false }).maybeSingle()
     enrollment = byEmail || null
   }
   if (!enrollment) redirect('/plan')
@@ -29,8 +29,10 @@ export default async function CompoundDayPage() {
   const level = (intake?.experience_level === 'advanced' ? 3 : intake?.experience_level === 'intermediate' ? 2 : 1) as Level
   const injuries = (Array.isArray((intake?.form_data as { injuries?: Injury[] } | null)?.injuries)
     ? (intake!.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
+  const isCompoundStyle = (intake?.form_data as { training_style?: string } | null)?.training_style === 'compound'
+  const isInnerCircle = enrollment.tier === 'inner_circle'
 
-  const pool = compoundExercisesForLevel(level, injuries)
+  const pool = compoundExercisesForLevel(level, injuries, isInnerCircle)
   // Rotate today's 6-move circuit by calendar day so it varies without repeating the same 6 every time.
   const offset = localDayNumber() % pool.length
   const rotated = pool.slice(offset).concat(pool.slice(0, offset))
@@ -42,7 +44,11 @@ export default async function CompoundDayPage() {
         <Link href="/plan" className="text-ivory/50 text-sm mb-6 inline-block hover:text-gold transition-colors">← Back to my plan</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Optional</p>
         <h1 className="text-3xl font-bold text-white mb-2">Compound &amp; HIIT Full-Body</h1>
-        <p className="text-ivory/60 text-sm mb-8">Do this instead of today&apos;s regular session, or anytime you want a full-body burn. Completing it counts as today&apos;s workout either way.</p>
+        <p className="text-ivory/60 text-sm mb-8">
+          {isCompoundStyle
+            ? "You're already getting compound moves built into your regular session's finisher — this is for whenever you want a full standalone full-body burn instead."
+            : "Do this instead of today's regular session, or anytime you want a full-body burn."} Completing it counts as today&apos;s workout either way.
+        </p>
         <CompoundDayClient exercises={today} />
       </div>
     </div>

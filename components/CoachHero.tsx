@@ -48,10 +48,22 @@ export default function CoachHero({ firstName }: { firstName: string }) {
   // still reach the backend either way, she just doesn't have to look at 14 buttons
   // to get there. "Adjust" reveals the full picker only when something's actually different.
   const [ctxExpanded, setCtxExpanded] = useState(false)
+  // Most prominent option of all: skip the check-in entirely, no API call, no chance
+  // of even a default-driven adjustment (e.g. a track swap) touching today's plan.
+  // Hidden behind this until she actively says she wants to look at/adjust today.
+  const [showCheckin, setShowCheckin] = useState(false)
 
   useEffect(() => {
     try { setCtxDone(localStorage.getItem('luf_daily_context') === today) } catch { /* noop */ }
   }, [today])
+
+  // The most prominent bypass of all — no adjustment, no API call, today's plan
+  // stays exactly as already scheduled. Marks the check-in done for the day same
+  // as answering it, so it won't nag her again until tomorrow.
+  function stickWithWorkout() {
+    try { localStorage.setItem('luf_daily_context', today) } catch { /* noop */ }
+    setCtxDone(true)
+  }
 
   async function submitContext() {
     if (!feeling || !time || !where || !goal) return
@@ -100,6 +112,14 @@ export default function CoachHero({ firstName }: { firstName: string }) {
     setSending(false)
   }
 
+  // Explicit, always-available "keep everything as-is" — she shouldn't have to type
+  // to tell me nothing needs to change. Clears any pending recommendation and confirms
+  // instantly, no API round-trip needed since there's nothing to accept/reject.
+  function stickWithPlan() {
+    setPending(null)
+    setMessages((m) => [...m, { role: 'user', content: "I'll stick with my current plan." }, { role: 'operator', content: `Sounds good, ${firstName} — sticking with what's already working. No changes. 💪` }])
+  }
+
   async function decide(status: 'approved' | 'modified' | 'rejected') {
     const adj = pending; setPending(null)
     try {
@@ -121,7 +141,7 @@ export default function CoachHero({ firstName }: { firstName: string }) {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[2.25rem] border border-gold/40 bg-white shadow-[0_0_60px_-8px_rgba(201,168,76,0.35)] p-6">
+    <div className="relative overflow-hidden rounded-[2.25rem] border border-gold/40 bg-white shadow-[0_0_45px_-4px_rgba(255,255,255,0.55),0_0_120px_18px_rgba(201,168,76,0.4)] p-6">
       {/* identity — a person, not a tool */}
       <div className="flex items-center gap-2.5 mb-4">
         <span className="h-9 w-9 rounded-full bg-gold text-obsidian font-bold flex items-center justify-center text-lg shadow-lg shadow-gold/20">A</span>
@@ -131,12 +151,22 @@ export default function CoachHero({ firstName }: { firstName: string }) {
         </div>
       </div>
 
-      {/* proactive daily check-in — asked FIRST, every morning, before anything else */}
+      {/* proactive daily check-in — asked FIRST, every morning, before anything else.
+          "Stick with today's workout" is the most prominent thing here on purpose —
+          she's never forced to answer the check-in just to keep her existing plan. */}
       {!ctxDone && messages.length === 0 ? (
         <div className="mb-5 space-y-3">
           <p className="text-ink text-lg leading-snug font-medium text-balance">How&apos;s today looking, {firstName}?</p>
 
-          {!ctxExpanded ? (
+          {!showCheckin ? (
+            <>
+              <button onClick={stickWithWorkout}
+                className="w-full bg-gold text-obsidian px-6 py-3.5 font-bold text-xs uppercase tracking-wider rounded-2xl active:scale-95 transition-transform">
+                ✅ Stick with today&apos;s workout
+              </button>
+              <button onClick={() => setShowCheckin(true)} className="w-full text-center text-ink/50 text-xs hover:text-gold transition-colors">How&apos;s your day going? Tell me →</button>
+            </>
+          ) : !ctxExpanded ? (
             <>
               <p className="text-ink/40 text-xs -mt-1">I&apos;ve guessed a normal day — build it, or tell me what&apos;s different.</p>
               <div className="flex gap-1.5 flex-wrap">
@@ -207,6 +237,13 @@ export default function CoachHero({ firstName }: { firstName: string }) {
 
       {recordingMemo && (
         <p className="luf-flame text-red-400 text-[10px] uppercase tracking-wider font-bold mb-1.5">● Recording your memo — tap 🎙️ again when you&apos;re done</p>
+      )}
+
+      {!pending && (
+        <button onClick={stickWithPlan} disabled={sending}
+          className="w-full text-center bg-charcoal/5 border border-smoke/30 text-ink/50 hover:text-gold hover:border-gold/40 px-4 py-2 rounded-xl text-xs font-semibold mb-2 transition-colors disabled:opacity-40">
+          ✅ Stick with my current plan
+        </button>
       )}
 
       {/* talk right here — no page jump */}

@@ -13,7 +13,11 @@ type Stats = {
 type Row = {
   id: string; name: string; email: string; phone: string | null; status: string
   lead_score: number; created_at: string; last_email_at: string | null; notes: string | null; stats: Stats
+  source: string; blocker: string | null
 }
+
+const SOURCE_LABEL: Record<string, string> = { blueprint: 'Blueprint', 'find-your-fix': 'Find Your Fix' }
+const BLOCKER_LABEL: Record<string, string> = { nutrition: 'Nutrition', movement: 'Movement', both: 'Both' }
 
 const STATUSES = ['new', 'contacted', 'qualified', 'converted', 'lost']
 const ACT: Record<string, string> = { none: 'Not active', sedentary: 'Sedentary', light: 'Lightly active', moderate: 'Moderately active', active: 'Active', very_active: 'Very active' }
@@ -31,6 +35,7 @@ export default function BlueprintLeads() {
   const [q, setQ] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [goalFilter, setGoalFilter] = useState('all')
+  const [sourceFilter, setSourceFilter] = useState('all')
   const [open, setOpen] = useState<string | null>(null)
 
   async function load() {
@@ -54,10 +59,11 @@ export default function BlueprintLeads() {
     return rows.filter((r) => {
       if (statusFilter !== 'all' && r.status !== statusFilter) return false
       if (goalFilter !== 'all' && r.stats.goal !== goalFilter) return false
+      if (sourceFilter !== 'all' && r.source !== sourceFilter) return false
       if (!t) return true
       return [r.name, r.email, r.phone].some((v) => (v || '').toLowerCase().includes(t))
     })
-  }, [rows, q, statusFilter, goalFilter])
+  }, [rows, q, statusFilter, goalFilter, sourceFilter])
 
   const stats = useMemo(() => {
     const weekAgo = Date.now() - 7 * 864e5
@@ -68,15 +74,16 @@ export default function BlueprintLeads() {
       converted: rows.filter((r) => r.status === 'converted').length,
       lose: rows.filter((r) => r.stats.goal === 'lose').length,
       gain: rows.filter((r) => r.stats.goal === 'gain').length,
+      fromQuiz: rows.filter((r) => r.source === 'find-your-fix').length,
     }
   }, [rows])
 
   function exportCSV() {
-    const head = ['Name', 'Email', 'Phone', 'Status', 'Date', 'Goal', 'Goal Weight', 'Age', 'Sex', 'Height(in)', 'Weight', 'Activity', 'Workout Days', 'Session', 'BMR', 'Rest Maint', 'Workout Maint', 'Steady Workout', 'Steady Rest', 'Faster Workout', 'Faster Rest', 'Protein g', 'Carbs g', 'Fats g', 'Est lb/wk']
+    const head = ['Name', 'Email', 'Phone', 'Status', 'Date', 'Source', 'Blocker', 'Goal', 'Goal Weight', 'Age', 'Sex', 'Height(in)', 'Weight', 'Activity', 'Workout Days', 'Session', 'BMR', 'Rest Maint', 'Workout Maint', 'Steady Workout', 'Steady Rest', 'Faster Workout', 'Faster Rest', 'Protein g', 'Carbs g', 'Fats g', 'Est lb/wk']
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
     const lines = filtered.map((r) => {
       const s = r.stats
-      return [r.name, r.email, r.phone, r.status, date(r.created_at), s.goal, s.goal_weight_lbs, s.age, s.sex, s.height_in, s.weight_lbs, s.activity, s.workout_days, s.workout_length, s.bmr, s.rest_maintenance, s.workout_maintenance, s.steady_workout, s.steady_rest, s.faster_workout, s.faster_rest, s.protein_g, s.carbs_g, s.fats_g, s.est_weekly_change_lbs].map(esc).join(',')
+      return [r.name, r.email, r.phone, r.status, date(r.created_at), SOURCE_LABEL[r.source] || r.source, r.blocker ? BLOCKER_LABEL[r.blocker] || r.blocker : '', s.goal, s.goal_weight_lbs, s.age, s.sex, s.height_in, s.weight_lbs, s.activity, s.workout_days, s.workout_length, s.bmr, s.rest_maintenance, s.workout_maintenance, s.steady_workout, s.steady_rest, s.faster_workout, s.faster_rest, s.protein_g, s.carbs_g, s.fats_g, s.est_weekly_change_lbs].map(esc).join(',')
     })
     const csv = [head.map(esc).join(','), ...lines].join('\n')
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
@@ -92,6 +99,7 @@ export default function BlueprintLeads() {
     { label: 'Converted', value: stats.converted, c: 'text-purple-400' },
     { label: 'Goal: Lose', value: stats.lose, c: 'text-pink-400' },
     { label: 'Goal: Gain', value: stats.gain, c: 'text-orange-400' },
+    { label: 'From Find Your Fix', value: stats.fromQuiz, c: 'text-cyan-400' },
   ]
 
   return (
@@ -101,8 +109,8 @@ export default function BlueprintLeads() {
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
             <a href="/admin" className="text-ivory/40 text-xs hover:text-gold">← Back to Admin</a>
-            <h1 className="text-2xl font-bold text-white mt-1">Calorie Blueprint Leads</h1>
-            <p className="text-ivory/50 text-sm">Every lead from the free blueprint — contact info + full stats.</p>
+            <h1 className="text-2xl font-bold text-white mt-1">Fitness Leads</h1>
+            <p className="text-ivory/50 text-sm">Every lead from the free Calorie Blueprint and Find Your Fix quiz — contact info + full stats, one list.</p>
           </div>
           <div className="flex gap-2">
             <button onClick={load} className="px-3 py-2 bg-charcoal border border-smoke rounded-lg text-sm hover:border-gold/50">↻ Refresh</button>
@@ -134,6 +142,11 @@ export default function BlueprintLeads() {
             <option value="gain">Gain</option>
             <option value="maintain">Maintain</option>
           </select>
+          <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} className="px-3 py-2 bg-charcoal border border-smoke rounded-lg text-sm">
+            <option value="all">All sources</option>
+            <option value="blueprint">Blueprint</option>
+            <option value="find-your-fix">Find Your Fix</option>
+          </select>
           <span className="text-sm text-ivory/50 self-center">{filtered.length} of {rows.length}</span>
         </div>
 
@@ -141,13 +154,13 @@ export default function BlueprintLeads() {
         {loading ? (
           <div className="text-ivory/50 text-sm py-10 text-center">Loading leads…</div>
         ) : filtered.length === 0 ? (
-          <div className="text-ivory/50 text-sm py-10 text-center bg-charcoal border border-smoke rounded-xl">No leads yet — share asaluke.io/blueprint to start capturing.</div>
+          <div className="text-ivory/50 text-sm py-10 text-center bg-charcoal border border-smoke rounded-xl">No leads yet — share asaluke.io/blueprint or asaluke.io/find-your-fix to start capturing.</div>
         ) : (
           <div className="bg-charcoal border border-smoke rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-ivory/40 text-xs uppercase border-b border-smoke">
-                  <th className="p-3">Name</th><th className="p-3">Contact</th><th className="p-3">Goal</th>
+                  <th className="p-3">Name</th><th className="p-3">Contact</th><th className="p-3">Source</th><th className="p-3">Goal</th>
                   <th className="p-3">Body</th><th className="p-3">Training</th><th className="p-3">Steady (W/R)</th>
                   <th className="p-3">Protein</th><th className="p-3">Status</th><th className="p-3">Date</th><th className="p-3"></th>
                 </tr>
@@ -163,6 +176,10 @@ export default function BlueprintLeads() {
                         <td className="p-3 whitespace-nowrap">
                           <a href={`mailto:${r.email}`} className="text-gold hover:underline block">{r.email}</a>
                           {r.phone && <a href={`tel:${r.phone}`} className="text-ivory/50 text-xs hover:underline">{r.phone}</a>}
+                        </td>
+                        <td className="p-3 whitespace-nowrap">
+                          <span className={r.source === 'find-your-fix' ? 'text-cyan-400 text-xs font-semibold' : 'text-ivory/60 text-xs'}>{SOURCE_LABEL[r.source] || r.source}</span>
+                          {r.blocker && <span className="text-ivory/40 text-[11px] block">{BLOCKER_LABEL[r.blocker] || r.blocker}</span>}
                         </td>
                         <td className="p-3 whitespace-nowrap">
                           <span className="capitalize">{s.goal || '—'}</span>
@@ -187,8 +204,9 @@ export default function BlueprintLeads() {
                       </tr>
                       {isOpen && (
                         <tr className="bg-obsidian/60 border-b border-smoke/40">
-                          <td colSpan={10} className="p-4">
+                          <td colSpan={11} className="p-4">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2 text-xs">
+                              {r.blocker && <Detail k="Blocker diagnosis" v={BLOCKER_LABEL[r.blocker] || r.blocker} />}
                               <Detail k="Height" v={height(s.height_in)} />
                               <Detail k="Weight → Goal" v={`${fmt(s.weight_lbs)} → ${s.goal_weight_lbs ? s.goal_weight_lbs + ' lb' : '—'}`} />
                               <Detail k="Session length" v={LEN[s.workout_length || ''] || '—'} />
@@ -212,7 +230,7 @@ export default function BlueprintLeads() {
             </table>
           </div>
         )}
-        <p className="text-ivory/30 text-xs mt-4">Contact records are stored in funnel_leads; full stats in the blueprint_lead event log. Older leads (before full capture) show what was saved in their summary.</p>
+        <p className="text-ivory/30 text-xs mt-4">Contact records are stored in funnel_leads; full stats in the blueprint_lead/blocker_quiz_completed event logs. Older leads (before full capture) show what was saved in their summary.</p>
       </div>
     </div>
   )

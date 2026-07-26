@@ -1,8 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import RevealScript from '@/components/RevealScript'
 import HeroVideoBG from '@/components/HeroVideoBG'
+
+const BUNDLE_INFO: Record<string, { filename: string; label: string; download: string }> = {
+  'craving-swap': { filename: 'craving-swap-guide.pdf', label: 'Craving Swap Guide', download: '/downloads/craving-swap-guide.pdf' },
+  'lifestyle-workout': { filename: 'lifestyle-workout-guide.pdf', label: 'Lifestyle-Fit Workout Guide', download: '/downloads/lifestyle-workout-guide.pdf' },
+}
 
 const ACTIVITY = [
   { value: 'none', label: 'Not active — barely move / mostly resting' },
@@ -38,6 +44,21 @@ function downloadPDF(base64: string, filename: string) {
 }
 
 export default function BlueprintPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-paper" />}>
+      <BlueprintContent />
+    </Suspense>
+  )
+}
+
+function BlueprintContent() {
+  const searchParams = useSearchParams()
+  // Seamless handoff from Find Your Fix: pre-fill what she already told the quiz
+  // so she isn't retyping, and remember which extra guide(s) to bundle in the
+  // instant she finishes here — no second destination for her to visit.
+  const bundleParam = searchParams.get('bundle')
+  const bundle = bundleParam ? bundleParam.split(',').filter((b) => b in BUNDLE_INFO) : []
+
   const [form, setForm] = useState({
     goal: 'lose', name: '', email: '', phone: '', age: '', sex: 'female',
     feet: '', inches: '', weight_lbs: '', goal_weight_lbs: '',
@@ -46,6 +67,15 @@ export default function BlueprintPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState<{ preview: Preview; base64: string; filename: string } | null>(null)
+
+  useEffect(() => {
+    const w = searchParams.get('weight')
+    const g = searchParams.get('goal')
+    if (w || g) {
+      setForm((f) => ({ ...f, ...(w ? { weight_lbs: w } : {}), ...(g === 'lose' || g === 'gain' ? { goal: g } : {}) }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }))
   const input = 'w-full px-4 py-3 bg-obsidian border border-smoke rounded-2xl text-white text-sm placeholder-ivory/30 focus:outline-none focus:border-gold hover:border-gold/40 transition-colors'
@@ -74,11 +104,17 @@ export default function BlueprintPage() {
           goal: form.goal, activity: form.activity,
           workout_days_per_week: form.workout_days_per_week, workout_length: form.workout_length,
           cardio: form.cardio === 'yes',
+          bundle,
         }),
       })
       const data = await res.json()
       if (data.success) {
         downloadPDF(data.pdfBase64, data.filename)
+        // Chrome (and most browsers) silently blocks additional automatic downloads
+        // fired in the same gesture after the first one — verified via live testing,
+        // not just a guess. So the bundled guide(s) get a real one-tap button in the
+        // confirmation screen instead of a silent auto-trigger, backed up by the
+        // email (which DOES carry all attachments reliably, since it's one request).
         setDone({ preview: data.preview, base64: data.pdfBase64, filename: data.filename })
       } else {
         setError(data.error || 'Something went wrong. Please try again.')
@@ -232,8 +268,24 @@ export default function BlueprintPage() {
             </a>
             <div className="bg-charcoal border-2 border-gold/40 rounded-3xl p-8 text-center">
               <p className="text-green-400 text-sm font-semibold mb-1">✓ Your blueprint downloaded</p>
-              <p className="text-ivory/50 text-xs mb-1">📩 I also emailed a copy to {form.email}</p>
+              <p className="text-ivory/50 text-xs mb-1">📩 I also emailed everything to {form.email}</p>
               <p className="text-ivory/40 text-xs mb-6">Don&apos;t see it in a couple minutes? Check your <span className="text-ivory/60">spam / promotions</span> folder (and add asaluke.io to your contacts).</p>
+              {bundle.length > 0 && (
+                <div className="flex flex-col gap-2 mb-6">
+                  <p className="text-gold text-[10px] uppercase tracking-wider font-semibold">From Find Your Fix — grab these too</p>
+                  {bundle.map((b) => {
+                    const info = BUNDLE_INFO[b]
+                    if (!info) return null
+                    return (
+                      <a key={b} href={info.download} download={info.filename}
+                        className="flex items-center justify-between gap-2 bg-obsidian border border-gold/30 rounded-xl px-4 py-3 text-left hover:border-gold/60 transition-colors">
+                        <span className="text-white text-sm font-semibold">{info.label}</span>
+                        <span className="text-gold text-xs font-bold whitespace-nowrap">⬇ Download</span>
+                      </a>
+                    )
+                  })}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="bg-obsidian border border-gold/30 rounded-2xl py-4 transition-transform duration-300 hover:-translate-y-1 hover:border-gold/60">
                   <p className="luf-pop text-3xl font-black text-gold">{done.preview.workoutEat.toLocaleString()}</p>

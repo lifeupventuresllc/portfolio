@@ -23,7 +23,7 @@ const FAQ = [
   { q: 'What if I want to gain weight, not lose it?', a: 'This is built for both. Your plan is set to your goal — lose or gain your first 10–15 lbs. Most programs only do fat loss; this does either.' },
   { q: "I'm a total beginner. Is this for me?", a: 'Yes. Your training is matched to your level — beginner, intermediate, or advanced — and you can train at home or in the gym.' },
   { q: 'Do I really talk to you, or is it automated?', a: "You talk to me. Every week I personally check in on your progress — it's real coaching, not a chatbot." },
-  { q: "What's the difference between App Access, the Challenge, and the Inner Circle?", a: "The app itself — custom workouts, meal plans, everything — is the same at every tier, starting at $10/mo. What changes is my personal time: Challenge ($20/mo) gets you weekly check-ins personally reviewed by me plus 1 video call a month, Inner Circle ($50/mo) gets you twice-weekly check-ins plus a video call every week and direct access between calls." },
+  { q: "What's the difference between App Access, the Challenge, and the Inner Circle?", a: "The app itself — custom workouts, meal plans, everything — is the same at every tier, starting at $10/mo. What changes is my personal time: Challenge ($20/mo) gets you weekly check-ins personally reviewed by me plus 1 video call a month. Inner Circle ($50/mo) gets you twice-weekly check-ins, a weekly reset call, priority same-day replies, a one-tap 'life happened' plan reset, and early access to new recipes & workouts." },
   { q: 'What happens after the 6 weeks?', a: "Challenge and Inner Circle are 6-week coaching cycles. After that, you automatically move down to App Access ($10/mo) — you keep the whole app, you just stop being billed for video time — unless you choose to keep the coaching going." },
 ]
 
@@ -232,6 +232,7 @@ function ChallengeContent() {
                 <li>• Everything in App Access</li>
                 <li>• 1 video call a month with me</li>
                 <li>• Weekly check-ins, personally reviewed</li>
+                <li>• Monday voice memo from me on your week</li>
               </ul>
               <button
                 onClick={() => handleCheckout('fitness-challenge')}
@@ -249,9 +250,12 @@ function ChallengeContent() {
               <p className="text-ivory/40 text-sm mb-6">Everything, plus me every week — my time is limited here</p>
               <ul className="text-ivory/60 text-sm space-y-2 mb-8 flex-1">
                 <li>• Everything in the Challenge</li>
-                <li>• Weekly video calls with me</li>
+                <li>• Weekly reset call — we troubleshoot your week together</li>
                 <li>• Twice-weekly check-ins, personally reviewed</li>
+                <li>• Priority same-day replies</li>
                 <li>• Direct access between calls</li>
+                <li>• One-tap &ldquo;life happened&rdquo; reset — I personally rebuild your plan, no re-intake</li>
+                <li>• Early access to new recipes &amp; workouts</li>
                 <li>• Fully custom, weekly-adjusted plans</li>
                 <li>• Faith + mindset coaching</li>
               </ul>

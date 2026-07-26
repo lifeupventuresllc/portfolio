@@ -1,26 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { localDateISO, addDaysISO } from '@/lib/localdate'
+import { streakFrom } from '@/lib/streak'
 
 // Daily accountability check-in ("did you show up today?") + streak. Stored as a
 // challenge_progress row per day (note '__daily__'). All day-boundaries use the user's
 // LOCAL day (localDateISO) so a "day" is their real 24h, not UTC's.
-
-// Streak-insurance: life happens, so one missed day anywhere in the streak doesn't zero
-// it out — the count just skips over that single gap. A second gap ends the streak.
-// Fully automatic (no decision for her to make) — matches "recovery, not punishment."
-function streakFrom(dates: Set<string>, todayISO: string): number {
-  let streak = 0
-  let cur = todayISO
-  if (!dates.has(cur)) cur = addDaysISO(cur, -1) // grace: streak holds through yesterday
-  let graceUsed = false
-  for (;;) {
-    if (dates.has(cur)) { streak++; cur = addDaysISO(cur, -1); continue }
-    if (!graceUsed) { graceUsed = true; cur = addDaysISO(cur, -1); continue }
-    break
-  }
-  return streak
-}
 
 // The current Mon–Sun week as 7 dots for the momentum strip.
 function weekFrom(dates: Set<string>, todayISO: string): { date: string; showed: boolean; isToday: boolean; isFuture: boolean }[] {
