@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Blocker, Confidence, MovementDays, ScheduleType } from '@/lib/blocker-quiz'
 import { SCHEDULE_LABEL } from '@/lib/blocker-quiz'
+import EmojiConfetti from '@/components/EmojiConfetti'
 
 type Result = { blocker: Blocker; diagnosticSentence: string; priorityFirst?: Blocker }
 
@@ -44,6 +45,11 @@ export default function FindYourFix() {
   const [phase, setPhase] = useState<'quiz' | 'building' | 'done'>('quiz')
   const [result, setResult] = useState<Result | null>(null)
   const [error, setError] = useState('')
+  const [celebrate, setCelebrate] = useState(false)
+
+  useEffect(() => {
+    if (phase === 'done') setCelebrate(true)
+  }, [phase])
 
   const set = (k: string, v: string) => setF((s) => ({ ...s, [k]: v }))
   const go = (n: number) => { setDir(n > step ? 'fwd' : 'back'); setError(''); setStep(n) }
@@ -92,7 +98,6 @@ export default function FindYourFix() {
   const opt = (active: boolean) => `w-full text-left px-5 py-4 rounded-2xl border font-semibold transition-all duration-200 ${active ? 'bg-charcoal bg-gradient-to-br from-gold/20 to-charcoal border-gold scale-[1.01] text-gold' : 'bg-charcoal border-smoke hover:border-gold/50 hover:bg-charcoal/70 text-white'}`
   const input = 'w-full px-4 py-3.5 bg-obsidian border border-smoke rounded-xl text-white focus:outline-none focus:border-gold transition-colors'
   const primaryBtn = 'w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-[1.02] disabled:opacity-40'
-  const secondaryBtn = 'w-full bg-charcoal border border-gold/40 text-gold px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-300 hover:bg-gold/10'
 
   if (phase === 'building') {
     return (
@@ -112,55 +117,69 @@ export default function FindYourFix() {
   }
 
   if (phase === 'done' && result) {
+    const bigDownloadBtn = 'w-full bg-gold text-obsidian px-8 py-6 font-black text-lg uppercase tracking-wide rounded-3xl transition-all duration-300 hover:scale-[1.03] shadow-[0_0_50px_-10px_rgba(201,168,76,0.5)]'
     return (
       <div className="min-h-screen bg-obsidian px-4 py-16">
+        <EmojiConfetti fire={celebrate} onDone={() => setCelebrate(false)} />
         <div className="max-w-lg mx-auto text-center q-in-fwd">
-          <p className="luf-pop text-4xl mb-3">🎉</p>
-          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">
+          <p className="luf-pop text-6xl mb-4">🎉</p>
+          <p className="text-gold text-sm font-bold tracking-[0.25em] uppercase mb-4">
             {firstName ? `Nice work, ${firstName}` : 'Nice work'} — your fix is found
           </p>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+          <h1 className="text-5xl sm:text-6xl font-black text-white mb-5 leading-[1.05]">
             {result.blocker === 'nutrition' && "It's nutrition."}
             {result.blocker === 'movement' && "It's movement."}
             {result.blocker === 'both' && "It's both — and that's okay."}
           </h1>
-          <p className="text-ivory/50 text-sm mb-6">
+          <p className="text-ivory/60 text-base mb-7">
             Most women never figure this part out — you just did, in under a minute. That&apos;s the hard part done.
           </p>
-          <div className="bg-charcoal border border-gold/30 rounded-2xl p-6 mb-6 text-left">
-            <p className="text-ivory/80 text-sm leading-relaxed">{result.diagnosticSentence}</p>
+          <div className="bg-charcoal border border-gold/30 rounded-2xl p-7 mb-7 text-left">
+            <p className="text-ivory/90 text-base leading-relaxed">{result.diagnosticSentence}</p>
           </div>
 
           {result.blocker === 'movement' && (
             <>
-              <p className="text-ivory/60 text-sm mb-5">Matched for {SCHEDULE_LABEL[f.schedule as ScheduleType] || 'your schedule'} — no gym guesswork. It&apos;s yours right now, no more waiting.</p>
+              <p className="text-gold text-2xl font-black mb-1">🎁 Yours, Free.</p>
+              <p className="text-ivory/60 text-base mb-5">Matched for {SCHEDULE_LABEL[f.schedule as ScheduleType] || 'your schedule'} — no gym guesswork.</p>
               <a href="/downloads/lifestyle-workout-guide.pdf" download
-                className={`${primaryBtn} inline-block text-center`}>⬇ Download My Lifestyle-Fit Workout Guide</a>
+                className={`${bigDownloadBtn} inline-block text-center`}>⬇ Download My Lifestyle-Fit Workout Guide</a>
             </>
           )}
 
           {result.blocker === 'nutrition' && (
             <>
-              <p className="text-ivory/60 text-sm mb-5">Your Craving Swap Guide is waiting — you&apos;ll get it the moment you get your numbers.</p>
-              <button onClick={() => goToBlueprint(['craving-swap'])} className={primaryBtn}>Get My Exact Numbers →</button>
+              <p className="text-gold text-2xl font-black mb-1">🎁 Yours, Free.</p>
+              <p className="text-ivory/60 text-base mb-5">Your cravings guide, matched to what&apos;s actually been stalling you:</p>
+              <a href="/downloads/craving-swap-guide.pdf" download
+                className={`${bigDownloadBtn} inline-block text-center`}>⬇ Download My Craving Swap Guide</a>
+              <div className="pt-4">
+                <button onClick={() => goToBlueprint([])} className={bigDownloadBtn}>🚨 Breaking: Your Body&apos;s Blueprint →</button>
+                <p className="text-gold text-base font-bold mt-3">👉 Click here to get your free calorie tracker — built just for you. Don&apos;t skip this part, it&apos;s what finally tells you exactly what to eat, every day.</p>
+              </div>
             </>
           )}
 
           {result.blocker === 'both' && (
-            <div className="space-y-3 mb-2">
-              <p className="text-ivory/60 text-sm mb-2">No waiting on this one — matched for {SCHEDULE_LABEL[f.schedule as ScheduleType] || 'your schedule'}, yours right now:</p>
+            <div className="space-y-4 mb-2">
+              <p className="text-gold text-2xl font-black mb-1">🎁 Both, Yours, Free.</p>
+              <p className="text-ivory/60 text-base mb-2">Matched for {SCHEDULE_LABEL[f.schedule as ScheduleType] || 'your schedule'}:</p>
               <a href="/downloads/lifestyle-workout-guide.pdf" download
-                className={`${primaryBtn} inline-block text-center`}>⬇ Download My Lifestyle-Fit Workout Guide</a>
-              <p className="text-ivory/40 text-xs pt-2">Then, whenever you&apos;re ready — your exact calorie numbers + Craving Swap Guide:</p>
-              <button onClick={() => goToBlueprint(['craving-swap'])} className={secondaryBtn}>Get My Exact Numbers →</button>
+                className={`${bigDownloadBtn} inline-block text-center`}>⬇ Download My Lifestyle-Fit Workout Guide</a>
+              <a href="/downloads/craving-swap-guide.pdf" download
+                className={`${bigDownloadBtn} inline-block text-center`}>⬇ Download My Craving Swap Guide</a>
+              <div className="pt-4">
+                <button onClick={() => goToBlueprint([])} className={bigDownloadBtn}>🚨 Breaking: Your Body&apos;s Blueprint →</button>
+                <p className="text-gold text-base font-bold mt-3">👉 Click here to get your free calorie tracker — built just for you. Don&apos;t skip this part, it&apos;s what finally tells you exactly what to eat, every day.</p>
+              </div>
             </div>
           )}
 
-          <div className="relative overflow-hidden bg-gradient-to-br from-[#1a1608] to-charcoal border border-gold/30 rounded-3xl p-8 mt-8 text-center">
-            <span className="inline-block text-gold text-[10px] font-bold tracking-[0.25em] uppercase mb-4 border border-gold/40 rounded-full px-3 py-1 bg-gold/5">Free For 14 Days</span>
-            <h3 className="text-white text-2xl font-black uppercase tracking-tight mb-2 text-balance">You now know your fix.</h3>
-            <p className="text-ivory/60 text-sm mb-5 leading-relaxed">The Life-Up Fitness app builds your whole plan around it — meals, workouts, daily check-ins, all the decisions made for you.</p>
-            <a href="/challenge" className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:-translate-y-1">
+          <div className="relative overflow-hidden bg-gradient-to-br from-[#1a1608] to-charcoal border border-gold/20 rounded-2xl p-5 mt-8 text-center">
+            <span className="inline-block text-gold text-[9px] font-bold tracking-[0.2em] uppercase mb-2 border border-gold/40 rounded-full px-2.5 py-0.5 bg-gold/5">Free For 14 Days</span>
+            <h3 className="text-white text-base font-bold mb-1 text-balance">You now know your fix.</h3>
+            <p className="text-ivory/50 text-xs mb-3 leading-relaxed">The Life-Up Fitness app builds your whole plan around it — meals, workouts, daily check-ins, all decided for you.</p>
+            <a href="/challenge" className="inline-block bg-gold text-obsidian px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300 hover:scale-105">
               Start free for 14 days →
             </a>
           </div>
