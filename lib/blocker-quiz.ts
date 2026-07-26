@@ -11,7 +11,6 @@ export type Blocker = 'nutrition' | 'movement' | 'both'
 
 export type Confidence = 'confident' | 'unsure' | 'confusing'
 export type MovementDays = 'low' | 'mid' | 'high' // 0-2 / 3-4 / 5+
-export type Equipment = 'home' | 'commercial' | 'none'
 export type ScheduleType = 'single_mom' | 'desk_job' | 'shift_work' | 'nurse_teacher' | 'other'
 
 export interface QuizAnswers {
@@ -19,7 +18,6 @@ export interface QuizAnswers {
   weightLbs: number
   confidence: Confidence
   movementDays: MovementDays
-  equipment: Equipment
   schedule: ScheduleType
   plateau: boolean // changed eating, scale hasn't moved
   crashDietHistory: boolean

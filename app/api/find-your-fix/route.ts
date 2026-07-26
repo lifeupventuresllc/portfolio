@@ -11,14 +11,14 @@ import { sendFindYourFixEmail, sendCoachFixNotification } from '@/lib/email'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, email, phone, goal, weightLbs, confidence, movementDays, equipment, schedule, plateau, crashDietHistory } = body
+    const { name, email, phone, goal, weightLbs, confidence, movementDays, schedule, plateau, crashDietHistory } = body
 
     if (!email || !goal || !weightLbs || !confidence || !movementDays || !schedule) {
       return NextResponse.json({ error: 'Please answer every question so I can diagnose your blocker.' }, { status: 400 })
     }
 
     const answers: QuizAnswers = {
-      goal, weightLbs: Number(weightLbs), confidence, movementDays, equipment: equipment || 'none',
+      goal, weightLbs: Number(weightLbs), confidence, movementDays,
       schedule, plateau: !!plateau, crashDietHistory: !!crashDietHistory,
     }
     const diagnosis = diagnose(answers)
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         source: 'find-your-fix',
         metadata: {
           name: name || '', email, phone: phone || '',
-          goal, weight_lbs: answers.weightLbs, confidence, movementDays, equipment: answers.equipment,
+          goal, weight_lbs: answers.weightLbs, confidence, movementDays,
           schedule, plateau: answers.plateau, crashDietHistory: answers.crashDietHistory,
           blocker: diagnosis.blocker, priorityFirst: diagnosis.priorityFirst || null,
         },

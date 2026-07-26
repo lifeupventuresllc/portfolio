@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import RevealScript from '@/components/RevealScript'
 import HeroVideoBG from '@/components/HeroVideoBG'
 
@@ -9,6 +8,12 @@ const BUNDLE_INFO: Record<string, { filename: string; label: string; download: s
   'craving-swap': { filename: 'craving-swap-guide.pdf', label: 'Craving Swap Guide', download: '/downloads/craving-swap-guide.pdf' },
   'lifestyle-workout': { filename: 'lifestyle-workout-guide.pdf', label: 'Lifestyle-Fit Workout Guide', download: '/downloads/lifestyle-workout-guide.pdf' },
 }
+
+// Handoff from Find Your Fix — read from sessionStorage (same key it writes to),
+// never a URL param, since name/email/phone are personal data. Cleared after
+// reading so a later, unrelated visit to /blueprint never reuses stale data.
+const HANDOFF_KEY = 'luf_quiz_handoff'
+type QuizHandoff = { name?: string; email?: string; phone?: string; weightLbs?: string; goal?: string; bundle?: string[] }
 
 const ACTIVITY = [
   { value: 'none', label: 'Not active — barely move / mostly resting' },
@@ -44,20 +49,11 @@ function downloadPDF(base64: string, filename: string) {
 }
 
 export default function BlueprintPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-paper" />}>
-      <BlueprintContent />
-    </Suspense>
-  )
-}
-
-function BlueprintContent() {
-  const searchParams = useSearchParams()
   // Seamless handoff from Find Your Fix: pre-fill what she already told the quiz
-  // so she isn't retyping, and remember which extra guide(s) to bundle in the
-  // instant she finishes here — no second destination for her to visit.
-  const bundleParam = searchParams.get('bundle')
-  const bundle = bundleParam ? bundleParam.split(',').filter((b) => b in BUNDLE_INFO) : []
+  // so she isn't retyping ANY of it (name/email/phone/weight/goal), and remember
+  // which extra guide(s) to bundle in the instant she finishes here — no second
+  // destination for her to visit.
+  const [bundle, setBundle] = useState<string[]>([])
 
   const [form, setForm] = useState({
     goal: 'lose', name: '', email: '', phone: '', age: '', sex: 'female',
@@ -69,12 +65,21 @@ function BlueprintContent() {
   const [done, setDone] = useState<{ preview: Preview; base64: string; filename: string } | null>(null)
 
   useEffect(() => {
-    const w = searchParams.get('weight')
-    const g = searchParams.get('goal')
-    if (w || g) {
-      setForm((f) => ({ ...f, ...(w ? { weight_lbs: w } : {}), ...(g === 'lose' || g === 'gain' ? { goal: g } : {}) }))
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    try {
+      const raw = sessionStorage.getItem(HANDOFF_KEY)
+      if (!raw) return
+      sessionStorage.removeItem(HANDOFF_KEY) // one-time use — never reused on a later, unrelated visit
+      const h = JSON.parse(raw) as QuizHandoff
+      setForm((f) => ({
+        ...f,
+        ...(h.name ? { name: h.name } : {}),
+        ...(h.email ? { email: h.email } : {}),
+        ...(h.phone ? { phone: h.phone } : {}),
+        ...(h.weightLbs ? { weight_lbs: h.weightLbs } : {}),
+        ...(h.goal === 'lose' || h.goal === 'gain' ? { goal: h.goal } : {}),
+      }))
+      if (Array.isArray(h.bundle)) setBundle(h.bundle.filter((b) => b in BUNDLE_INFO))
+    } catch { /* noop — worst case she just fills out the form normally */ }
   }, [])
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }))
