@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import HeroVideoBG from '@/components/HeroVideoBG'
+import GuaranteeSection from '@/components/GuaranteeSection'
 
 const WHATS_INSIDE = [
   {
@@ -151,6 +152,8 @@ function ProteinBudgetSystemContent() {
           <p className="text-ink/40 text-xs mt-6">Prefer to start smaller? The cookbook &amp; budget system are below.</p>
         </div>
       </section>
+
+      <GuaranteeSection />
 
       {/* Hero */}
       <section className="relative pt-20 pb-20 px-4 overflow-hidden">
@@ -483,6 +486,8 @@ function ProteinBudgetSystemContent() {
           </button>
         </div>
       </section>
+
+      <GuaranteeSection />
 
     </div>
   )

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import HeroVideoBG from '@/components/HeroVideoBG'
 import VideoTileRow from '@/components/VideoTileRow'
+import GuaranteeSection from '@/components/GuaranteeSection'
 
 const INCLUDED = [
   { title: 'Your Custom Sculpt Plan', desc: 'Workouts built for you — home or gym, matched to your level (beginner → advanced) and your goal.' },
@@ -120,6 +121,8 @@ function ChallengeContent() {
           </button>
         </div>
       </section>
+
+      <GuaranteeSection />
 
       {/* Whats Inside */}
       <section className="py-20 px-4 border-t border-smoke">
@@ -273,21 +276,7 @@ function ChallengeContent() {
       </section>
 
       {/* Guarantee — sits directly under the pricing/6-Week Challenge section */}
-      <section className="py-20 px-4 border-t border-smoke">
-        <div className="max-w-2xl mx-auto text-center bg-charcoal border-2 border-gold/30 rounded-3xl p-8 sm:p-10">
-          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">My Guarantee</p>
-          <p className="text-white text-lg sm:text-xl font-semibold leading-relaxed">
-            Show up and do the work — weekly check-ins, follow your plan, put in your
-            workouts. If you still don&apos;t see visible results — your first 5–8 lbs
-            down or gained and inches off your waist — I coach you
-            <span className="text-gold"> free until you do.*</span>
-          </p>
-          <p className="text-ivory/50 text-sm mt-4">
-            *You just hold up your end: check in every week, follow the plan, do the workouts.
-            I go all in for the women who go all in. That&apos;s on me.
-          </p>
-        </div>
-      </section>
+      <GuaranteeSection />
 
       {/* FAQ */}
       <section className="py-20 px-4 border-t border-smoke">
