@@ -17,13 +17,11 @@ const IDENTITY = 'I am a founder, artist, and father who builds systems that ser
 const PRIMARY_GOAL = 'Build the Asa Luke ecosystem: a media brand + app that reaches 100M daily, funded by a fitness/wellness engine I own.'
 const COMPOUNDING_METRIC = 'Owned audience — email list + app users. Grow it every single day.'
 
+// Founder-level daily disciplines only — tactical/business action items
+// (priorities, content, outreach) now live in Core Four (/admin/core-four).
 const CHECKLIST: { key: string; label: string }[] = [
   { key: 'faith', label: 'Faith time + vision review' },
-  { key: 'priority1', label: 'Top priority #1 completed' },
   { key: 'deepwork', label: 'Deep-work block on the big rock' },
-  { key: 'content', label: 'Published 1 piece of content' },
-  { key: 'served', label: 'Served 1+ person directly' },
-  { key: 'outreach', label: 'Outreach quota hit' },
   { key: 'health', label: 'Trained + ate + sleep on track' },
   { key: 'family', label: 'Present time with family' },
   { key: 'journal', label: 'Journaled + set tomorrow’s first action' },
@@ -61,11 +59,9 @@ const LADDER = [
   { n: '100,000,000', when: '~Year 20', how: 'THE MISSION — owned media + app + platform at global scale.' },
 ]
 
-type Priority = { text: string; done: boolean }
 type Metrics = { content: number; served: number; outreach: number; deepWork: number }
 type Journal = { peopleServed: string; win: string; lesson: string; gratitude: string; tomorrow: string }
 type DayEntry = {
-  priorities: Priority[]
   serviceGoal: number
   checklist: Record<string, boolean>
   metrics: Metrics
@@ -75,11 +71,6 @@ type State = { days: Record<string, DayEntry> }
 
 function newDay(): DayEntry {
   return {
-    priorities: [
-      { text: '', done: false },
-      { text: '', done: false },
-      { text: '', done: false },
-    ],
     serviceGoal: 3,
     checklist: {},
     metrics: { content: 0, served: 0, outreach: 0, deepWork: 0 },
@@ -118,7 +109,7 @@ function daysBetween(a: string, b: string): number {
 // A day "counts" for the streak when the daily minimum is met.
 function dayCounts(e?: DayEntry): boolean {
   if (!e) return false
-  return !!(e.checklist.content && e.checklist.served && e.checklist.journal)
+  return !!e.checklist.journal
 }
 
 function computeStreak(days: Record<string, DayEntry>): number {
@@ -204,14 +195,6 @@ export default function FounderOS() {
     })
   }, [key])
 
-  const setPriority = (i: number, text: string) => {
-    const priorities = day.priorities.map((p, idx) => (idx === i ? { ...p, text } : p))
-    patchDay({ priorities })
-  }
-  const togglePriority = (i: number) => {
-    const priorities = day.priorities.map((p, idx) => (idx === i ? { ...p, done: !p.done } : p))
-    patchDay({ priorities })
-  }
   const toggleCheck = (k: string) => patchDay({ checklist: { ...day.checklist, [k]: !day.checklist[k] } })
   const bumpMetric = (k: keyof Metrics, delta: number) =>
     patchDay({ metrics: { ...day.metrics, [k]: Math.max(0, day.metrics[k] + delta) } })
@@ -330,10 +313,8 @@ export default function FounderOS() {
                 <Field label="Primary Goal">{PRIMARY_GOAL}</Field>
                 <div className="grid sm:grid-cols-2 gap-4 pt-1">
                   <div>
-                    <p className="text-[10px] text-gold uppercase tracking-wider mb-1">Today’s #1 Action</p>
-                    <p className="text-white text-sm font-medium min-h-[1.25rem]">
-                      {day.priorities[0]?.text || <span className="text-ivory/30">set it below ↓</span>}
-                    </p>
+                    <p className="text-[10px] text-gold uppercase tracking-wider mb-1">Today’s #1 Priority</p>
+                    <a href="/admin/core-four" className="text-gold text-sm font-medium hover:underline">Set in Core Four →</a>
                   </div>
                   <div>
                     <p className="text-[10px] text-gold uppercase tracking-wider mb-1">Today’s Service Goal</p>
@@ -345,32 +326,6 @@ export default function FounderOS() {
                   </div>
                 </div>
                 <Field label="The One Metric That Compounds">{COMPOUNDING_METRIC}</Field>
-              </div>
-            </div>
-
-            {/* TOP 3 PRIORITIES */}
-            <div className="bg-charcoal rounded-xl border border-smoke p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Today’s Top 3 Priorities</h2>
-              <div className="space-y-2">
-                {day.priorities.map((p, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <button
-                      onClick={() => togglePriority(i)}
-                      className={`shrink-0 w-5 h-5 rounded border flex items-center justify-center text-xs ${
-                        p.done ? 'bg-gold border-gold text-obsidian' : 'border-ivory/30 text-transparent'
-                      }`}
-                    >✓</button>
-                    <span className="text-ivory/40 text-sm w-4">{i + 1}</span>
-                    <input
-                      value={p.text}
-                      onChange={(e) => setPriority(i, e.target.value)}
-                      placeholder={i === 0 ? 'The needle-mover (do this first)…' : 'Priority…'}
-                      className={`flex-1 bg-transparent text-sm outline-none border-b border-transparent focus:border-smoke py-1 ${
-                        p.done ? 'text-ivory/40 line-through' : 'text-white'
-                      }`}
-                    />
-                  </div>
-                ))}
               </div>
             </div>
 
@@ -499,7 +454,6 @@ export default function FounderOS() {
                     const e = state.days[selectedDay]
                     const m = e.metrics || { content: 0, served: 0, outreach: 0, deepWork: 0 }
                     const j = e.journal || { peopleServed: '', win: '', lesson: '', gratitude: '', tomorrow: '' }
-                    const prios = (e.priorities || []).filter((p) => p.text)
                     const metricRows: [string, keyof Metrics][] = [['Content', 'content'], ['Served', 'served'], ['Outreach', 'outreach'], ['Deep hrs', 'deepWork']]
                     return (
                       <div className="space-y-5">
@@ -511,17 +465,6 @@ export default function FounderOS() {
                             </div>
                           ))}
                         </div>
-                        {prios.length > 0 && (
-                          <div>
-                            <p className="text-[10px] text-gold uppercase tracking-wider mb-2">Priorities</p>
-                            {prios.map((p, i) => (
-                              <div key={i} className="flex items-center gap-2 text-sm">
-                                <span className={p.done ? 'text-gold' : 'text-ivory/30'}>{p.done ? '✓' : '○'}</span>
-                                <span className={p.done ? 'text-ivory/50 line-through' : 'text-white'}>{p.text}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
                         <div>
                           <p className="text-[10px] text-gold uppercase tracking-wider mb-2">Non-negotiables</p>
                           <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1">
