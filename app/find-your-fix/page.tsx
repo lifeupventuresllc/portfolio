@@ -293,9 +293,10 @@ export default function FindYourFix() {
           {s === 'stats' && (<>
             <Q>Just a couple quick facts</Q>
             <Hint>This shapes your exact plan.</Hint>
-            <input autoFocus type="number" value={f.weightLbs} onChange={(e) => set('weightLbs', e.target.value)} placeholder="Current weight (lbs)" className={`${input} mb-5`} />
+            {/* Schedule (tap, no keyboard) comes before weight (needs the keyboard) so the
+                on-screen keyboard doesn't pop up over these options the instant the page loads. */}
             <p className="text-ivory/70 text-xs font-bold uppercase tracking-wider mb-3">What&apos;s your daily life like?</p>
-            <div className="space-y-2 mb-6">
+            <div className="space-y-2 mb-5">
               {[
                 { v: 'single_mom', l: '👩🏽‍👧 Single mom, always on' },
                 { v: 'desk_job', l: '💻 Desk job' },
@@ -306,6 +307,7 @@ export default function FindYourFix() {
                 <button key={o.v} onClick={() => set('schedule', o.v)} className={opt(f.schedule === o.v)}>{o.l}</button>
               ))}
             </div>
+            <input type="number" inputMode="numeric" value={f.weightLbs} onChange={(e) => set('weightLbs', e.target.value)} placeholder="Current weight (lbs)" className={`${input} mb-6`} />
             <button onClick={next} disabled={!f.weightLbs || !f.schedule} className={primaryBtn}>Continue →</button>
           </>)}
 
