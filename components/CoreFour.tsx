@@ -221,6 +221,31 @@ const WEEK_PLAN = [
 const DAILY_STANDING = 'Core Four check-in • Send 50 DMs • Daily audition submission'
 
 type Tab = 'today' | 'pillars' | 'calendar' | 'week' | 'overview'
+const TAB_LABELS: Record<Tab, string> = { today: 'Today', pillars: 'Pillars', calendar: 'Calendar', week: 'Week', overview: 'Weekly Overview' }
+
+function addDays(key: string, n: number): string {
+  const [y, m, d] = key.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  date.setDate(date.getDate() + n)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+function mondayOf(key: string): string {
+  const [y, m, d] = key.split('-').map(Number)
+  const dow = new Date(y, m - 1, d).getDay()
+  return addDays(key, -((dow + 6) % 7))
+}
+function weekDates(anchorKey: string): string[] {
+  const mon = mondayOf(anchorKey)
+  return Array.from({ length: 7 }, (_, i) => addDays(mon, i))
+}
+function shortDayLabel(key: string): string {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short' })
+}
+function shortDate(key: string): string {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
 
 export default function CoreFour() {
   const [state, setState] = useState<State>({ days: {} })
@@ -363,11 +388,11 @@ export default function CoreFour() {
             <button
               key={t}
               onClick={() => { setTab(t); if (t !== 'pillars') setSelectedPillar(null) }}
-              className={`px-3 py-2 text-sm capitalize border-b-2 whitespace-nowrap transition-colors ${
+              className={`px-3 py-2 text-sm border-b-2 whitespace-nowrap transition-colors ${
                 tab === t ? 'border-gold text-white' : 'border-transparent text-ivory/50 hover:text-ivory/80'
               }`}
             >
-              {t}
+              {TAB_LABELS[t]}
             </button>
           ))}
         </div>
@@ -647,7 +672,7 @@ export default function CoreFour() {
           </div>
         )}
 
-        {tab === 'overview' && <OverviewTab day={day} dateLabel={niceDate(key)} />}
+        {tab === 'overview' && <WeeklyOverviewTab state={state} anchorKey={key} />}
 
         {/* DAY DETAIL MODAL — opened from Calendar (month or year view) */}
         {selectedDay && state.days[selectedDay] && (
@@ -731,65 +756,181 @@ function PillarTile({ sec, day, onClick }: { sec: SectionMeta; day: DayEntry; on
   )
 }
 
-// Clean, read-only summary meant to be screen-shared or screenshotted for the team.
-function OverviewTab({ day, dateLabel }: { day: DayEntry; dateLabel: string }) {
+// Fortune-500-style Weekly Business Review — read-only, meant to be
+// screen-shared or screenshotted and sent to the team. Aggregates the
+// Mon–Sun week containing `anchorKey` across every logged day.
+function WeeklyOverviewTab({ state, anchorKey }: { state: State; anchorKey: string }) {
+  const wk = weekDates(anchorKey)
+  const rangeLabel = `${shortDate(wk[0])} – ${shortDate(wk[6])}`
+
+  const pillarRollups = ALL_SECTIONS.map((s) => {
+    const entries = wk.map((d) => ({ d, status: getStatus(state.days[d], s.key), notes: getNotesFor(state.days[d], s.key) }))
+    let overall: Status = ''
+    if (entries.some((e) => e.status === 'needs-attention')) overall = 'needs-attention'
+    else if (entries.some((e) => e.status === 'on-track')) overall = 'on-track'
+    else if (entries.some((e) => e.status)) overall = 'not-active'
+    return { sec: s, entries, overall, notesList: entries.filter((e) => e.notes) }
+  })
+
+  const marketing = wk.reduce(
+    (acc, d) => {
+      const m = state.days[d]?.marketing
+      if (!m) return acc
+      return { dmsSent: acc.dmsSent + (m.dmsSent || 0), replies: acc.replies + (m.replies || 0), linkClicks: acc.linkClicks + (m.linkClicks || 0) }
+    },
+    { dmsSent: 0, replies: 0, linkClicks: 0 }
+  )
+  const replyRate = marketing.dmsSent > 0 ? Math.round((marketing.replies / marketing.dmsSent) * 100) : 0
+  const clickRate = marketing.replies > 0 ? Math.round((marketing.linkClicks / marketing.replies) * 100) : 0
+
+  let revenueSum = 0, revenueHasData = false, cashOnHand = ''
+  const financialNotes: { day: string; text: string }[] = []
+  wk.forEach((d) => {
+    const f = state.days[d]?.financials
+    if (!f) return
+    if (f.revenue) {
+      const n = Number(f.revenue.replace(/[^0-9.-]/g, ''))
+      if (!isNaN(n)) { revenueSum += n; revenueHasData = true }
+    }
+    if (f.cashOnHand) cashOnHand = f.cashOnHand
+    if (f.notes) financialNotes.push({ day: shortDayLabel(d), text: f.notes })
+  })
+
+  const topPriorities = wk.filter((d) => state.days[d]?.topPriority).map((d) => ({ day: shortDayLabel(d), text: state.days[d]!.topPriority }))
+
+  let itemsTotal = 0, itemsDone = 0
+  const openItems: { day: string; text: string }[] = []
+  wk.forEach((d) => {
+    const items = state.days[d]?.actionItems || []
+    items.forEach((it) => {
+      itemsTotal++
+      if (it.done) itemsDone++
+      else openItems.push({ day: shortDayLabel(d), text: it.text })
+    })
+  })
+
   return (
     <div className="space-y-5">
       <div className="bg-charcoal rounded-xl border border-smoke p-6">
-        <p className="text-gold text-xs uppercase tracking-wider mb-1">Life-Up Ventures — Daily Overview</p>
-        <h2 className="text-white text-xl font-bold mb-1">{dateLabel}</h2>
-        {day.topPriority && <p className="text-ivory/70 text-sm">Top priority: <span className="text-white font-semibold">{day.topPriority}</span></p>}
+        <p className="text-gold text-xs uppercase tracking-wider mb-1">Life-Up Ventures — Weekly Business Review</p>
+        <h2 className="text-white text-xl font-bold mb-1">Week of {rangeLabel}</h2>
+        <p className="text-ivory/40 text-xs">Prepared for department review · {itemsDone}/{itemsTotal} action items closed this week</p>
       </div>
 
-      <div className="bg-charcoal rounded-xl border border-smoke p-6 space-y-4">
-        {ALL_SECTIONS.map((s) => {
-          const st = getStatus(day, s.key)
-          const notes = getNotesFor(day, s.key)
-          return (
-            <div key={s.key} className="flex gap-3 pb-4 border-b border-smoke last:border-0 last:pb-0">
-              <span className="w-9 h-9 shrink-0 rounded-full bg-obsidian border border-gold/40 flex items-center justify-center text-gold">
-                <s.Icon className="w-4.5 h-4.5" />
+      {/* EXECUTIVE SUMMARY — RAG status per pillar at a glance */}
+      <div className="bg-charcoal rounded-xl border border-smoke p-6">
+        <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wider">Executive Summary</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {pillarRollups.map(({ sec, overall }) => (
+            <div key={sec.key} className="bg-obsidian rounded-lg border border-smoke p-3 flex items-center gap-2.5">
+              <span className="w-8 h-8 shrink-0 rounded-full bg-charcoal border border-gold/40 flex items-center justify-center text-gold">
+                <sec.Icon className="w-4 h-4" />
               </span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-white text-sm font-semibold">{s.title.replace(/^\d\.\s*/, '')}</span>
-                  {st ? (
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${STATUS_META[st as Exclude<Status, ''>].text} bg-obsidian`}>{STATUS_META[st as Exclude<Status, ''>].label}</span>
-                  ) : (
-                    <span className="text-[10px] text-ivory/30">Not set</span>
-                  )}
-                </div>
-                <p className="text-ivory/60 text-xs mt-1">{notes || 'No notes logged.'}</p>
+              <div className="min-w-0">
+                <p className="text-white text-xs font-semibold truncate">{sec.title.replace(/^\d\.\s*/, '')}</p>
+                {overall ? (
+                  <span className={`text-[10px] font-semibold ${STATUS_META[overall as Exclude<Status, ''>].text}`}>{STATUS_META[overall as Exclude<Status, ''>].label}</span>
+                ) : (
+                  <span className="text-[10px] text-ivory/30">Not reported</span>
+                )}
               </div>
             </div>
-          )
-        })}
-      </div>
-
-      <div className="bg-charcoal rounded-xl border border-smoke p-6">
-        <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wider">Marketing Numbers</h3>
-        <div className="grid grid-cols-3 gap-3">
-          <MiniStat label="DMs Sent" value={day.marketing.dmsSent} />
-          <MiniStat label="Replies" value={day.marketing.replies} />
-          <MiniStat label="Link Clicks" value={day.marketing.linkClicks} />
+          ))}
         </div>
       </div>
 
-      {day.actionItems.length > 0 && (
+      {/* PER-DEPARTMENT DETAIL — day-by-day strip + notes rollup */}
+      <div className="bg-charcoal rounded-xl border border-smoke p-6 space-y-5">
+        <h3 className="text-sm font-semibold text-white uppercase tracking-wider">Department Detail</h3>
+        {pillarRollups.map(({ sec, entries, notesList }) => (
+          <div key={sec.key} className="pb-5 border-b border-smoke last:border-0 last:pb-0">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-7 h-7 shrink-0 rounded-full bg-obsidian border border-gold/30 flex items-center justify-center text-gold">
+                <sec.Icon className="w-3.5 h-3.5" />
+              </span>
+              <span className="text-white text-sm font-semibold">{sec.title.replace(/^\d\.\s*/, '')}</span>
+            </div>
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {entries.map((e) => (
+                <div key={e.d} className="text-center">
+                  <div className="text-[9px] text-ivory/30 uppercase mb-1">{shortDayLabel(e.d)[0]}</div>
+                  <div className={`w-full h-1.5 rounded-full ${e.status ? SUMMARY_DOT[e.status === 'needs-attention' ? 'flagged' : e.status === 'on-track' ? 'ontrack' : 'logged'] : 'bg-ivory/10'}`} />
+                </div>
+              ))}
+            </div>
+            {notesList.length > 0 ? (
+              <div className="space-y-1">
+                {notesList.map((n) => (
+                  <p key={n.d} className="text-ivory/60 text-xs"><span className="text-gold">{shortDayLabel(n.d)}:</span> {n.notes}</p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-ivory/30 text-xs">No notes logged this week.</p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* WEEKLY KPIs */}
+      <div className="bg-charcoal rounded-xl border border-smoke p-6">
+        <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wider">Marketing — Weekly Totals</h3>
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+          <MiniStat label="DMs Sent" value={marketing.dmsSent} />
+          <MiniStat label="Replies" value={marketing.replies} />
+          <MiniStat label="Link Clicks" value={marketing.linkClicks} />
+          <MiniStat label="Reply Rate %" value={replyRate} />
+          <MiniStat label="Click Rate %" value={clickRate} />
+        </div>
+      </div>
+
+      <div className="bg-charcoal rounded-xl border border-smoke p-6">
+        <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wider">Financials — Weekly</h3>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="bg-obsidian rounded-lg border border-smoke p-3">
+            <div className="text-lg font-bold text-white">{revenueHasData ? `$${revenueSum.toLocaleString()}` : '—'}</div>
+            <div className="text-[9px] text-ivory/50 uppercase tracking-wide">Revenue this week</div>
+          </div>
+          <div className="bg-obsidian rounded-lg border border-smoke p-3">
+            <div className="text-lg font-bold text-white">{cashOnHand || '—'}</div>
+            <div className="text-[9px] text-ivory/50 uppercase tracking-wide">Latest cash on hand</div>
+          </div>
+        </div>
+        {financialNotes.length > 0 && (
+          <div className="space-y-1">
+            {financialNotes.map((n, i) => (
+              <p key={i} className="text-ivory/60 text-xs"><span className="text-gold">{n.day}:</span> {n.text}</p>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {topPriorities.length > 0 && (
         <div className="bg-charcoal rounded-xl border border-smoke p-6">
-          <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wider">Action Items</h3>
+          <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wider">Top Priorities Logged</h3>
           <div className="space-y-1.5">
-            {day.actionItems.map((it, i) => (
+            {topPriorities.map((p, i) => (
+              <p key={i} className="text-sm"><span className="text-gold font-semibold">{p.day}:</span> <span className="text-ivory/80">{p.text}</span></p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {openItems.length > 0 && (
+        <div className="bg-charcoal rounded-xl border border-smoke p-6">
+          <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wider">Open Action Items Carrying Forward</h3>
+          <div className="space-y-1.5">
+            {openItems.map((it, i) => (
               <div key={i} className="flex items-center gap-2 text-sm">
-                <span className={it.done ? 'text-gold' : 'text-ivory/30'}>{it.done ? '✓' : '○'}</span>
-                <span className={it.done ? 'text-ivory/50 line-through' : 'text-ivory/80'}>{it.text}</span>
+                <span className="text-ivory/30">○</span>
+                <span className="text-ivory/80">{it.text}</span>
+                <span className="text-ivory/30 text-xs">({it.day})</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <p className="text-ivory/30 text-[11px] text-center">Screenshot or share your screen on this tab to send the team a clean daily overview.</p>
+      <p className="text-ivory/30 text-[11px] text-center">Screenshot or share your screen on this tab to send the team a clean weekly review — no editing controls, read-only.</p>
     </div>
   )
 }
