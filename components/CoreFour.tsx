@@ -333,7 +333,7 @@ export default function CoreFour() {
 
         <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Core Four</p>
+            <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">🏛️ Core Four</p>
             <h1 className="text-2xl sm:text-3xl font-bold text-white">Daily Ops Review</h1>
           </div>
           {flaggedCount > 0 && (
@@ -385,34 +385,9 @@ export default function CoreFour() {
               />
             </div>
 
-            {/* STANDING QUESTIONS — quick reference every morning */}
+            {/* ACTION ITEMS — what's required, right under today's priority */}
             <div className="bg-charcoal rounded-xl border border-smoke p-6">
-              <h2 className="text-sm font-semibold text-white mb-3 uppercase tracking-wider">Standing Questions — ask every morning</h2>
-              <div className="space-y-2.5">
-                {ALL_SECTIONS.map((s) => (
-                  <div key={s.key} className="flex items-start gap-2.5">
-                    <span className="shrink-0 w-6 h-6 rounded-full bg-obsidian border border-gold/30 flex items-center justify-center text-gold mt-0.5">
-                      <s.Icon className="w-3.5 h-3.5" />
-                    </span>
-                    <p className="text-ivory/60 text-xs leading-relaxed pt-0.5">{s.question}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* PILLAR SNAPSHOT — click into any category */}
-            <div>
-              <h2 className="text-sm font-semibold text-white mb-3 uppercase tracking-wider">The Pillars — tap to open</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {ALL_SECTIONS.map((s) => (
-                  <PillarTile key={s.key} sec={s} day={day} onClick={() => openPillar(s.key)} />
-                ))}
-              </div>
-            </div>
-
-            {/* ACTION ITEMS */}
-            <div className="bg-charcoal rounded-xl border border-smoke p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Action Items</h2>
+              <h2 className="text-lg font-semibold text-white mb-4">Action Items — What&rsquo;s Required</h2>
               <div className="space-y-2 mb-3">
                 {day.actionItems.map((it, i) => (
                   <div key={i} className="flex items-center gap-3 group">
@@ -437,6 +412,34 @@ export default function CoreFour() {
                   className="flex-1 bg-obsidian border border-smoke rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-gold/50"
                 />
                 <button onClick={addActionItem} className="px-3 py-2 rounded-lg bg-gold text-obsidian text-sm font-semibold hover:bg-gold/90">Add</button>
+              </div>
+            </div>
+
+            {/* STANDING QUESTIONS — directed at each department/pillar, ask every morning */}
+            <div className="bg-charcoal rounded-xl border border-smoke p-6">
+              <h2 className="text-sm font-semibold text-white mb-3 uppercase tracking-wider">Standing Questions — by department</h2>
+              <div className="space-y-3.5">
+                {ALL_SECTIONS.map((s) => (
+                  <div key={s.key} className="flex items-start gap-2.5">
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-obsidian border border-gold/30 flex items-center justify-center text-gold mt-0.5">
+                      <s.Icon className="w-3.5 h-3.5" />
+                    </span>
+                    <div>
+                      <p className="text-gold text-[10px] font-semibold uppercase tracking-wider">{s.title.replace(/^\d\.\s*/, '')}</p>
+                      <p className="text-ivory/60 text-xs leading-relaxed">{s.question}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* PILLAR SNAPSHOT — click into any category */}
+            <div>
+              <h2 className="text-sm font-semibold text-white mb-3 uppercase tracking-wider">The Pillars — tap to open</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {ALL_SECTIONS.map((s) => (
+                  <PillarTile key={s.key} sec={s} day={day} onClick={() => openPillar(s.key)} />
+                ))}
               </div>
             </div>
           </div>

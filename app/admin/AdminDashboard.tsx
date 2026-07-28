@@ -494,7 +494,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
             href="/admin/core-four"
             className="px-4 py-2 bg-charcoal border border-gold/50 text-gold rounded-lg text-sm font-semibold hover:bg-gold/10 whitespace-nowrap"
           >
-            🧭 Core Four
+            🏛️ Core Four
           </a>
           <a
             href="/admin/founder"
