@@ -1,18 +1,25 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Blocker, Confidence, MovementDays, ScheduleType } from '@/lib/blocker-quiz'
-import { SCHEDULE_LABEL } from '@/lib/blocker-quiz'
+import type { Blocker, Confidence, Diagnosis, MovementDays, ScheduleType } from '@/lib/blocker-quiz'
+import { SCHEDULE_LABEL, diagnose } from '@/lib/blocker-quiz'
+import { trackQuizEvent } from '@/lib/quiz-track'
 import EmojiConfetti from '@/components/EmojiConfetti'
 
 type Result = { blocker: Blocker; diagnosticSentence: string; priorityFirst?: Blocker }
 
-// Reordered per Asa's own testing feedback: lead with the relatable/human
-// questions (lifestyle, yo-yo dieting) before the more clinical ones — and
-// "equipment" got cut entirely since it never fed the diagnosis or any
-// copy, it was pure click friction with no payoff.
-const STEPS = ['goal', 'weight', 'schedule', 'crashdiet', 'confidence', 'movement', 'plateau', 'contact']
+// Cut from 8 screens to 4 + a contact screen, per DM-funnel drop-off analysis:
+// the "60 second" promise in outreach copy didn't match an 8-tap quiz.
+// - 'goal' and 'movement' stay standalone (single, fast taps, each a real signal).
+// - 'weight' + 'schedule' merged into 'stats' — schedule never feeds diagnose(),
+//   it's only cosmetic copy on the result, so it doesn't need its own screen.
+// - 'confidence' + 'crashdiet' + 'plateau' merged into 'eating' — all three feed
+//   the nutrition-blocker signal together, so answering them as one cluster
+//   ("your relationship with food") reads more natural than 3 separate taps.
+// - 'equipment' stayed cut (never fed the diagnosis, pure friction).
+// - 'contact' is no longer a quiz step at all — see the 'teaser' phase below.
+const STEPS = ['goal', 'stats', 'eating', 'movement']
 
 // Module-level, NOT defined inside the component — a component defined inside a
 // render function gets a new identity every render, which makes React unmount +
@@ -42,7 +49,13 @@ export default function FindYourFix() {
     crashDietHistory: '' as 'yes' | 'no' | '',
     name: '', email: '', phone: '',
   })
-  const [phase, setPhase] = useState<'quiz' | 'building' | 'done'>('quiz')
+  // 'teaser' = instant directional result shown right after the last question,
+  // computed client-side from diagnose() (pure fn, no backend needed) — BEFORE
+  // any contact info is asked for. 'contact' = the actual email/phone ask,
+  // framed as unlocking the full plan. Backend delivery (submit(), below) is
+  // unchanged — only its position in the flow moved.
+  const [phase, setPhase] = useState<'quiz' | 'teaser' | 'contact' | 'building' | 'done'>('quiz')
+  const [teaserDiagnosis, setTeaserDiagnosis] = useState<Diagnosis | null>(null)
   const [result, setResult] = useState<Result | null>(null)
   const [error, setError] = useState('')
   const [celebrate, setCelebrate] = useState(false)
@@ -51,18 +64,45 @@ export default function FindYourFix() {
     if (phase === 'done') setCelebrate(true)
   }, [phase])
 
+  const startedRef = useRef(false)
+  useEffect(() => {
+    if (startedRef.current) return
+    startedRef.current = true
+    trackQuizEvent('quiz_started')
+  }, [])
+
+  useEffect(() => {
+    if (phase === 'quiz') trackQuizEvent('step_reached', { step, stepName: STEPS[step] })
+    if (phase === 'teaser') trackQuizEvent('teaser_shown')
+  }, [phase, step])
+
   const set = (k: string, v: string) => setF((s) => ({ ...s, [k]: v }))
   const go = (n: number) => { setDir(n > step ? 'fwd' : 'back'); setError(''); setStep(n) }
-  const next = () => go(step + 1)
+  const next = () => {
+    if (step + 1 >= STEPS.length) {
+      const d = diagnose({
+        goal: f.goal, weightLbs: Number(f.weightLbs), confidence: f.confidence as Confidence,
+        movementDays: f.movementDays as MovementDays, schedule: f.schedule as ScheduleType,
+        plateau: f.plateau === 'yes', crashDietHistory: f.crashDietHistory === 'yes',
+      })
+      setTeaserDiagnosis(d)
+      setPhase('teaser')
+      return
+    }
+    go(step + 1)
+  }
   const back = () => go(Math.max(0, step - 1))
   const pick = (k: string, v: string) => { set(k, v); setTimeout(next, 160) }
 
   const total = STEPS.length
   const pct = Math.round(((step + 1) / total) * 100)
   const firstName = f.name.trim().split(' ')[0]
+  const blockerWord = teaserDiagnosis?.blocker === 'nutrition' ? 'nutrition'
+    : teaserDiagnosis?.blocker === 'movement' ? 'movement' : 'nutrition + movement'
 
   async function submit() {
-    if (!f.email || !f.weightLbs) { setError("I just need your weight and email to find your fix."); return }
+    if (!f.email || !f.weightLbs) { setError("I just need your email to send your fix."); return }
+    trackQuizEvent('contact_submitted', { metadata: { email: f.email, hasPhone: !!f.phone } })
     setPhase('building')
     setError('')
     try {
@@ -77,9 +117,11 @@ export default function FindYourFix() {
       const data = await res.json()
       const wait = 1400
       await new Promise((r) => setTimeout(r, wait))
-      if (data.success) { setResult(data); setPhase('done') }
-      else { setError(data.error || 'Something went wrong.'); setPhase('quiz') }
-    } catch { setError('Something went wrong. Try again.'); setPhase('quiz') }
+      if (data.success) {
+        trackQuizEvent('quiz_completed', { metadata: { email: f.email, blocker: data.blocker } })
+        setResult(data); setPhase('done')
+      } else { setError(data.error || 'Something went wrong.'); setPhase('contact') }
+    } catch { setError('Something went wrong. Try again.'); setPhase('contact') }
   }
 
   // She already told us her name/email/phone/weight/goal here — the Blueprint
@@ -111,6 +153,41 @@ export default function FindYourFix() {
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">One moment</p>
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Finding your fix…</h1>
           <p className="text-ivory/60 text-sm">Figuring out exactly what&apos;s been stalling you.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (phase === 'teaser' && teaserDiagnosis) {
+    return (
+      <div className="min-h-screen bg-obsidian flex items-center justify-center px-4 py-16">
+        <div className="max-w-lg w-full mx-auto text-center q-in-fwd">
+          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">Your Fix, Found</p>
+          <h1 className="text-4xl sm:text-5xl font-black text-white mb-5 leading-[1.05]">
+            {teaserDiagnosis.blocker === 'nutrition' && "It's likely nutrition."}
+            {teaserDiagnosis.blocker === 'movement' && "It's likely movement."}
+            {teaserDiagnosis.blocker === 'both' && "It's likely both."}
+          </h1>
+          <div className="bg-charcoal border border-gold/30 rounded-2xl p-7 mb-8 text-left">
+            <p className="text-ivory/90 text-base leading-relaxed">{teaserDiagnosis.diagnosticSentence}</p>
+          </div>
+          <button onClick={() => setPhase('contact')} className={primaryBtn}>Unlock My Full Plan + Free Guide →</button>
+        </div>
+      </div>
+    )
+  }
+
+  if (phase === 'contact') {
+    return (
+      <div className="min-h-screen bg-obsidian px-4 py-16 flex flex-col justify-center">
+        <div className="max-w-lg w-full mx-auto q-in-fwd">
+          <Q>Last thing — where should I send it?</Q>
+          <Hint>Enter your email + number so I can send your full {blockerWord} plan, plus your free guide.</Hint>
+          <input autoFocus value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={`${input} mb-3`} />
+          <input type="email" value={f.email} onChange={(e) => set('email', e.target.value)} placeholder="Your email" className={`${input} mb-3`} />
+          <input type="tel" value={f.phone} onChange={(e) => set('phone', e.target.value)} placeholder="Phone (optional)" className={`${input} mb-6`} />
+          {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+          <button onClick={submit} disabled={!f.email} className={primaryBtn}>🎯 Unlock My Full Plan</button>
         </div>
       </div>
     )
@@ -213,18 +290,12 @@ export default function FindYourFix() {
             </div>
           </>)}
 
-          {s === 'weight' && (<>
-            <Q>What&apos;s your current weight?</Q>
-            <Hint>Just a ballpark — this stays private.</Hint>
-            <input autoFocus type="number" value={f.weightLbs} onChange={(e) => set('weightLbs', e.target.value)} placeholder="150" className={`${input} mb-6`}
-              onKeyDown={(e) => e.key === 'Enter' && f.weightLbs && next()} />
-            <button onClick={next} disabled={!f.weightLbs} className={primaryBtn}>Continue →</button>
-          </>)}
-
-          {s === 'schedule' && (<>
-            <Q>What&apos;s your daily life like?</Q>
-            <Hint>Pick whichever fits closest — this is the fun part.</Hint>
-            <div className="space-y-3">
+          {s === 'stats' && (<>
+            <Q>Just a couple quick facts</Q>
+            <Hint>This shapes your exact plan.</Hint>
+            <input autoFocus type="number" value={f.weightLbs} onChange={(e) => set('weightLbs', e.target.value)} placeholder="Current weight (lbs)" className={`${input} mb-5`} />
+            <p className="text-ivory/70 text-xs font-bold uppercase tracking-wider mb-3">What&apos;s your daily life like?</p>
+            <div className="space-y-2 mb-6">
               {[
                 { v: 'single_mom', l: '👩🏽‍👧 Single mom, always on' },
                 { v: 'desk_job', l: '💻 Desk job' },
@@ -232,28 +303,36 @@ export default function FindYourFix() {
                 { v: 'nurse_teacher', l: '🩺 Nursing or teaching schedule' },
                 { v: 'other', l: '📅 Something else' },
               ].map((o) => (
-                <button key={o.v} onClick={() => pick('schedule', o.v)} className={opt(f.schedule === o.v)}>{o.l}</button>
+                <button key={o.v} onClick={() => set('schedule', o.v)} className={opt(f.schedule === o.v)}>{o.l}</button>
               ))}
             </div>
+            <button onClick={next} disabled={!f.weightLbs || !f.schedule} className={primaryBtn}>Continue →</button>
           </>)}
 
-          {s === 'crashdiet' && (<>
-            <Q>Real talk — you ever crash-dieted or yo-yo dieted before?</Q>
-            <Hint>Be honest. Almost everyone has — this just changes what your body actually needs right now.</Hint>
-            <div className="space-y-3">
-              <button onClick={() => pick('crashDietHistory', 'yes')} className={opt(f.crashDietHistory === 'yes')}>Yes, more than once</button>
-              <button onClick={() => pick('crashDietHistory', 'no')} className={opt(f.crashDietHistory === 'no')}>No, not really</button>
-            </div>
-          </>)}
+          {s === 'eating' && (<>
+            <Q>Your relationship with food</Q>
+            <Hint>Be honest — there&apos;s no wrong answer, it just shapes your plan.</Hint>
 
-          {s === 'confidence' && (<>
-            <Q>Do you feel confident in what and how much to eat?</Q>
-            <Hint>Be honest — there&apos;s no wrong answer here.</Hint>
-            <div className="space-y-3">
+            <p className="text-ivory/70 text-xs font-bold uppercase tracking-wider mb-2">Confident in what &amp; how much to eat?</p>
+            <div className="space-y-2 mb-5">
               {[{ v: 'confident', l: '✅ Yes, I have that handled' }, { v: 'unsure', l: '🤔 Somewhat, but I\'m not sure' }, { v: 'confusing', l: '😩 No, it\'s genuinely confusing' }].map((o) => (
-                <button key={o.v} onClick={() => pick('confidence', o.v)} className={opt(f.confidence === o.v)}>{o.l}</button>
+                <button key={o.v} onClick={() => set('confidence', o.v)} className={opt(f.confidence === o.v)}>{o.l}</button>
               ))}
             </div>
+
+            <p className="text-ivory/70 text-xs font-bold uppercase tracking-wider mb-2">Ever crash- or yo-yo dieted?</p>
+            <div className="flex gap-2 mb-5">
+              <button onClick={() => set('crashDietHistory', 'yes')} className={`${opt(f.crashDietHistory === 'yes')} flex-1 text-center`}>Yes</button>
+              <button onClick={() => set('crashDietHistory', 'no')} className={`${opt(f.crashDietHistory === 'no')} flex-1 text-center`}>No</button>
+            </div>
+
+            <p className="text-ivory/70 text-xs font-bold uppercase tracking-wider mb-2">Changed your eating but the scale hasn&apos;t moved?</p>
+            <div className="flex gap-2 mb-6">
+              <button onClick={() => set('plateau', 'yes')} className={`${opt(f.plateau === 'yes')} flex-1 text-center`}>Yes</button>
+              <button onClick={() => set('plateau', 'no')} className={`${opt(f.plateau === 'no')} flex-1 text-center`}>No</button>
+            </div>
+
+            <button onClick={next} disabled={!f.confidence || !f.crashDietHistory || !f.plateau} className={primaryBtn}>Continue →</button>
           </>)}
 
           {s === 'movement' && (<>
@@ -264,25 +343,6 @@ export default function FindYourFix() {
                 <button key={o.v} onClick={() => pick('movementDays', o.v)} className={opt(f.movementDays === o.v)}>{o.l}</button>
               ))}
             </div>
-          </>)}
-
-          {s === 'plateau' && (<>
-            <Q>Have you changed your eating but not seen the scale move?</Q>
-            <Hint>A real plateau, not just a rough week.</Hint>
-            <div className="space-y-3">
-              <button onClick={() => pick('plateau', 'yes')} className={opt(f.plateau === 'yes')}>Yes</button>
-              <button onClick={() => pick('plateau', 'no')} className={opt(f.plateau === 'no')}>No</button>
-            </div>
-          </>)}
-
-          {s === 'contact' && (<>
-            <Q>Last thing — where should I send your fix?</Q>
-            <Hint>Your result + matched guide land here too.</Hint>
-            <input value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={`${input} mb-3`} />
-            <input type="email" value={f.email} onChange={(e) => set('email', e.target.value)} placeholder="Your email" className={`${input} mb-3`} />
-            <input type="tel" value={f.phone} onChange={(e) => set('phone', e.target.value)} placeholder="Phone (optional)" className={`${input} mb-6`} />
-            {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
-            <button onClick={submit} className={primaryBtn}>🎯 Find My Fix</button>
           </>)}
         </div>
       </div>
