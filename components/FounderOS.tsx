@@ -198,6 +198,8 @@ export default function FounderOS() {
   const toggleCheck = (k: string) => patchDay({ checklist: { ...day.checklist, [k]: !day.checklist[k] } })
   const bumpMetric = (k: keyof Metrics, delta: number) =>
     patchDay({ metrics: { ...day.metrics, [k]: Math.max(0, day.metrics[k] + delta) } })
+  const setMetric = (k: keyof Metrics, v: number) =>
+    patchDay({ metrics: { ...day.metrics, [k]: Math.max(0, v) } })
   const setJournal = (k: keyof Journal, v: string) => patchDay({ journal: { ...day.journal, [k]: v } })
 
   const streak = computeStreak(state.days)
@@ -320,7 +322,14 @@ export default function FounderOS() {
                     <p className="text-[10px] text-gold uppercase tracking-wider mb-1">Today’s Service Goal</p>
                     <div className="flex items-center gap-2">
                       <button onClick={() => patchDay({ serviceGoal: Math.max(0, day.serviceGoal - 1) })} className="w-6 h-6 rounded bg-smoke text-ivory hover:bg-smoke/70">−</button>
-                      <span className="text-white text-sm">Help <span className="text-gold font-bold">{day.serviceGoal}</span> people</span>
+                      <span className="text-white text-sm">Help</span>
+                      <input
+                        type="number"
+                        value={day.serviceGoal}
+                        onChange={(e) => patchDay({ serviceGoal: Math.max(0, Number(e.target.value) || 0) })}
+                        className="w-12 bg-obsidian border border-smoke rounded px-1 py-0.5 text-gold font-bold text-sm text-center outline-none focus:border-gold/50"
+                      />
+                      <span className="text-white text-sm">people</span>
                       <button onClick={() => patchDay({ serviceGoal: day.serviceGoal + 1 })} className="w-6 h-6 rounded bg-smoke text-ivory hover:bg-smoke/70">+</button>
                     </div>
                   </div>
@@ -354,10 +363,10 @@ export default function FounderOS() {
             <div className="bg-charcoal rounded-xl border border-smoke p-6">
               <h2 className="text-lg font-semibold text-white mb-4">Today’s Leading Metrics</h2>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <Stepper label="Content" value={day.metrics.content} onBump={(d) => bumpMetric('content', d)} />
-                <Stepper label="People served" value={day.metrics.served} onBump={(d) => bumpMetric('served', d)} />
-                <Stepper label="Outreach" value={day.metrics.outreach} onBump={(d) => bumpMetric('outreach', d)} />
-                <Stepper label="Deep-work hrs" value={day.metrics.deepWork} onBump={(d) => bumpMetric('deepWork', d)} />
+                <Stepper label="Content" value={day.metrics.content} onBump={(d) => bumpMetric('content', d)} onSet={(v) => setMetric('content', v)} />
+                <Stepper label="People served" value={day.metrics.served} onBump={(d) => bumpMetric('served', d)} onSet={(v) => setMetric('served', v)} />
+                <Stepper label="Outreach" value={day.metrics.outreach} onBump={(d) => bumpMetric('outreach', d)} onSet={(v) => setMetric('outreach', v)} />
+                <Stepper label="Deep-work hrs" value={day.metrics.deepWork} onBump={(d) => bumpMetric('deepWork', d)} onSet={(v) => setMetric('deepWork', v)} />
               </div>
             </div>
           </div>
@@ -650,10 +659,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function Stepper({ label, value, onBump }: { label: string; value: number; onBump: (d: number) => void }) {
+function Stepper({ label, value, onBump, onSet }: { label: string; value: number; onBump: (d: number) => void; onSet: (v: number) => void }) {
   return (
     <div className="bg-obsidian rounded-lg border border-smoke p-3 text-center">
-      <div className="text-2xl font-bold text-white mb-1">{value}</div>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onSet(Math.max(0, Number(e.target.value) || 0))}
+        className="w-full bg-transparent text-2xl font-bold text-white mb-1 text-center outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+      />
       <div className="text-[10px] text-ivory/50 uppercase tracking-wider mb-2">{label}</div>
       <div className="flex items-center justify-center gap-2">
         <button onClick={() => onBump(-1)} className="w-6 h-6 rounded bg-smoke text-ivory hover:bg-smoke/70">−</button>
