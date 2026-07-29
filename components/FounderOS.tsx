@@ -262,7 +262,7 @@ export default function FounderOS() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Founder OS</p>
+            <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">🌍 Founder OS</p>
             <h1 className="text-2xl sm:text-3xl font-bold text-white">Serve 100M Daily</h1>
           </div>
           <div className="text-right">

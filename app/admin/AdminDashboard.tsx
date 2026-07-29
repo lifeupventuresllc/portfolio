@@ -500,7 +500,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
             href="/admin/founder"
             className="px-4 py-2 bg-gold text-obsidian rounded-lg text-sm font-semibold hover:bg-gold/90 whitespace-nowrap"
           >
-            ★ Founder OS
+            🌍 Founder OS
           </a>
         </div>
       </div>
