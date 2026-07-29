@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { StatusStackedBarChart, SimpleBarChart } from './CoreFourCharts'
 
 /* ────────────────────────────────────────────────────────────────
    CORE FOUR — Asa's daily ops / team-meeting review.
@@ -104,13 +105,14 @@ const FINANCIALS_META: SectionMeta = {
 }
 const ALL_SECTIONS: SectionMeta[] = [...PILLARS, FINANCIALS_META]
 
-type PillarEntry = { status: Status; notes: string }
+type NoteEntry = { time: string; text: string }
+type PillarEntry = { status: Status; notes: string; log?: NoteEntry[] }
 type ActionItem = { text: string; done: boolean }
 type DayEntry = {
   topPriority: string
   pillars: Record<string, PillarEntry>
   marketing: { dmsSent: number; replies: number; linkClicks: number }
-  financials: { status: Status; revenue: string; cashOnHand: string; notes: string }
+  financials: { status: Status; revenue: string; cashOnHand: string; notes: string; log?: NoteEntry[] }
   actionItems: ActionItem[]
 }
 type State = { days: Record<string, DayEntry> }
@@ -118,9 +120,9 @@ type State = { days: Record<string, DayEntry> }
 function emptyDay(): DayEntry {
   return {
     topPriority: '',
-    pillars: Object.fromEntries(PILLARS.map((p) => [p.key, { status: '', notes: '' }])),
+    pillars: Object.fromEntries(PILLARS.map((p) => [p.key, { status: '', notes: '', log: [] }])),
     marketing: { dmsSent: 0, replies: 0, linkClicks: 0 },
-    financials: { status: '', revenue: '', cashOnHand: '', notes: '' },
+    financials: { status: '', revenue: '', cashOnHand: '', notes: '', log: [] },
     actionItems: [],
   }
 }
@@ -166,6 +168,14 @@ function getNotesFor(e: DayEntry | undefined, key: string): string {
   if (!e) return ''
   if (key === 'financials') return e.financials?.notes || ''
   return e.pillars?.[key]?.notes || ''
+}
+function getLog(e: DayEntry | undefined, key: string): NoteEntry[] {
+  if (!e) return []
+  if (key === 'financials') return e.financials?.log || []
+  return e.pillars?.[key]?.log || []
+}
+function nowTime(): string {
+  return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
 function todayKey(): string {
@@ -220,8 +230,60 @@ const WEEK_PLAN = [
 ]
 const DAILY_STANDING = 'Core Four check-in • Send 50 DMs • Daily audition submission'
 
-type Tab = 'today' | 'pillars' | 'calendar' | 'week' | 'overview'
-const TAB_LABELS: Record<Tab, string> = { today: 'Today', pillars: 'Pillars', calendar: 'Calendar', week: 'Week', overview: 'Weekly Overview' }
+type Tab = 'today' | 'pillars' | 'calendar' | 'metrics' | 'week' | 'overview'
+const TAB_LABELS: Record<Tab, string> = { today: 'Today', pillars: 'Pillars', calendar: 'Calendar', metrics: 'Metrics', week: 'Week', overview: 'Weekly Overview' }
+
+// ── Metrics aggregation — rolls every logged day up into day/month/year buckets ──
+type Bucket = { label: string; dates: string[] }
+function aggregateDates(state: State, dates: string[]) {
+  let onTrack = 0, needsAttention = 0, notActive = 0
+  let dmsSent = 0, replies = 0, linkClicks = 0
+  let revenue = 0
+  let itemsTotal = 0, itemsDone = 0
+  dates.forEach((d) => {
+    const e = state.days[d]
+    if (!e) return
+    ALL_SECTIONS.forEach((s) => {
+      const st = getStatus(e, s.key)
+      if (st === 'on-track') onTrack++
+      else if (st === 'needs-attention') needsAttention++
+      else if (st === 'not-active') notActive++
+    })
+    dmsSent += e.marketing?.dmsSent || 0
+    replies += e.marketing?.replies || 0
+    linkClicks += e.marketing?.linkClicks || 0
+    if (e.financials?.revenue) {
+      const n = Number(e.financials.revenue.replace(/[^0-9.-]/g, ''))
+      if (!isNaN(n)) revenue += n
+    }
+    ;(e.actionItems || []).forEach((it) => { itemsTotal++; if (it.done) itemsDone++ })
+  })
+  return { onTrack, needsAttention, notActive, dmsSent, replies, linkClicks, revenue, itemsTotal, itemsDone, actionPct: itemsTotal > 0 ? Math.round((itemsDone / itemsTotal) * 100) : 0 }
+}
+function dayBuckets(anchorKey: string, count: number): Bucket[] {
+  const out: Bucket[] = []
+  for (let i = count - 1; i >= 0; i--) {
+    const d = addDays(anchorKey, -i)
+    out.push({ label: shortDate(d), dates: [d] })
+  }
+  return out
+}
+function monthBuckets(state: State, anchorKey: string, count: number): Bucket[] {
+  const [ay, am] = anchorKey.split('-').map(Number)
+  const out: Bucket[] = []
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(ay, am - 1 - i, 1)
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const dates = Object.keys(state.days).filter((k) => k.startsWith(ym))
+    out.push({ label: `${MONTH_NAMES[d.getMonth()].slice(0, 3)} '${String(d.getFullYear()).slice(2)}`, dates })
+  }
+  return out
+}
+function yearBuckets(state: State): Bucket[] {
+  const years = new Set<number>(Object.keys(state.days).map((k) => Number(k.slice(0, 4))))
+  years.add(new Date().getFullYear())
+  return Array.from(years).sort((a, b) => a - b).map((y) => ({ label: String(y), dates: Object.keys(state.days).filter((k) => k.startsWith(String(y))) }))
+}
 
 function addDays(key: string, n: number): string {
   const [y, m, d] = key.split('-').map(Number)
@@ -254,7 +316,9 @@ export default function CoreFour() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [selectedPillar, setSelectedPillar] = useState<string | null>(null)
   const [newItem, setNewItem] = useState('')
+  const [newLogText, setNewLogText] = useState('')
   const [calView, setCalView] = useState<'month' | 'year'>('month')
+  const [metricView, setMetricView] = useState<'day' | 'month' | 'year'>('day')
   const now = new Date()
   const [calYear, setCalYear] = useState(now.getFullYear())
   const [calMonth, setCalMonth] = useState(now.getMonth())
@@ -330,6 +394,25 @@ export default function CoreFour() {
   const setFinancials = (patch: Partial<DayEntry['financials']>) =>
     patchDay({ financials: { ...day.financials, ...patch } })
 
+  // Appendable notes log — separate from the single status "notes" field,
+  // so jotting a note during the day never overwrites an earlier one.
+  const appendLog = (sectionKey: string, text: string) => {
+    if (!text.trim()) return
+    const entry: NoteEntry = { time: nowTime(), text: text.trim() }
+    if (sectionKey === 'financials') {
+      setFinancials({ log: [...(day.financials.log || []), entry] })
+    } else {
+      setPillar(sectionKey, { log: [...(day.pillars[sectionKey]?.log || []), entry] })
+    }
+  }
+  const removeLogEntry = (sectionKey: string, idx: number) => {
+    if (sectionKey === 'financials') {
+      setFinancials({ log: (day.financials.log || []).filter((_, i) => i !== idx) })
+    } else {
+      setPillar(sectionKey, { log: (day.pillars[sectionKey]?.log || []).filter((_, i) => i !== idx) })
+    }
+  }
+
   const addActionItem = () => {
     if (!newItem.trim()) return
     patchDay({ actionItems: [...day.actionItems, { text: newItem.trim(), done: false }] })
@@ -384,7 +467,7 @@ export default function CoreFour() {
         </div>
 
         <div className="flex gap-2 mb-6 border-b border-smoke overflow-x-auto">
-          {(['today', 'pillars', 'calendar', 'week', 'overview'] as Tab[]).map((t) => (
+          {(['today', 'pillars', 'calendar', 'metrics', 'week', 'overview'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => { setTab(t); if (t !== 'pillars') setSelectedPillar(null) }}
@@ -522,7 +605,7 @@ export default function CoreFour() {
                       <option value="not-active">Not Yet Active</option>
                     </select>
 
-                    <label className="text-[10px] text-gold uppercase tracking-wider mb-1 block">Notes</label>
+                    <label className="text-[10px] text-gold uppercase tracking-wider mb-1 block">Summary Notes <span className="text-ivory/30 normal-case">(the one-line takeaway — shown on tiles, weekly review)</span></label>
                     <textarea
                       value={notes}
                       onChange={(e) => (sec.key === 'financials' ? setFinancials({ notes: e.target.value }) : setPillar(sec.key, { notes: e.target.value }))}
@@ -543,6 +626,37 @@ export default function CoreFour() {
                         <TextField label="Cash on hand" value={day.financials.cashOnHand} onChange={(v) => setFinancials({ cashOnHand: v })} placeholder="$0" />
                       </div>
                     )}
+                  </div>
+
+                  {/* NOTES LOG — appendable, timestamped, never overwritten */}
+                  <div className="bg-charcoal rounded-xl border border-smoke p-6">
+                    <h3 className="text-sm font-semibold text-white mb-1">Notes Log — Today</h3>
+                    <p className="text-ivory/40 text-xs mb-4">Jot as many notes as you want throughout the day — each one sticks, nothing gets overwritten.</p>
+                    <div className="space-y-2 mb-3">
+                      {getLog(day, sec.key).map((n, i) => (
+                        <div key={i} className="flex items-start gap-2 group bg-obsidian rounded-lg border border-smoke px-3 py-2">
+                          <span className="text-gold text-[10px] font-semibold shrink-0 pt-0.5">{n.time}</span>
+                          <span className="flex-1 text-ivory/80 text-sm">{n.text}</span>
+                          <button onClick={() => removeLogEntry(sec.key, i)} className="text-ivory/20 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0">✕</button>
+                        </div>
+                      ))}
+                      {getLog(day, sec.key).length === 0 && <p className="text-ivory/30 text-sm">No log entries yet today.</p>}
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        value={newLogText}
+                        onChange={(e) => setNewLogText(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { appendLog(sec.key, newLogText); setNewLogText('') } }}
+                        placeholder="Add a timestamped note…"
+                        className="flex-1 bg-obsidian border border-smoke rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-gold/50"
+                      />
+                      <button
+                        onClick={() => { appendLog(sec.key, newLogText); setNewLogText('') }}
+                        className="px-3 py-2 rounded-lg bg-gold text-obsidian text-sm font-semibold hover:bg-gold/90"
+                      >
+                        Add
+                      </button>
+                    </div>
                   </div>
 
                   <div className="bg-charcoal rounded-xl border border-smoke p-6">
@@ -653,6 +767,56 @@ export default function CoreFour() {
             )}
           </div>
         )}
+
+        {tab === 'metrics' && (() => {
+          const buckets =
+            metricView === 'day' ? dayBuckets(key, 30) :
+            metricView === 'month' ? monthBuckets(state, key, 12) :
+            yearBuckets(state)
+          const rolled = buckets.map((b) => ({ label: b.label, ...aggregateDates(state, b.dates) }))
+          return (
+            <div className="space-y-5">
+              <div className="flex items-center gap-2">
+                {(['day', 'month', 'year'] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setMetricView(v)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${
+                      metricView === v ? 'bg-gold text-obsidian' : 'bg-charcoal border border-smoke text-ivory/60 hover:text-white'
+                    }`}
+                  >
+                    {v === 'day' ? 'Last 30 Days' : v === 'month' ? 'Last 12 Months' : 'By Year'}
+                  </button>
+                ))}
+              </div>
+
+              <StatusStackedBarChart
+                title="Pillar Health"
+                buckets={rolled.map((r) => ({ label: r.label, onTrack: r.onTrack, needsAttention: r.needsAttention, notActive: r.notActive }))}
+              />
+
+              <div className="grid sm:grid-cols-3 gap-4">
+                <SimpleBarChart title="DMs Sent" buckets={rolled.map((r) => ({ label: r.label, value: r.dmsSent }))} />
+                <SimpleBarChart title="Replies" buckets={rolled.map((r) => ({ label: r.label, value: r.replies }))} />
+                <SimpleBarChart title="Link Clicks" buckets={rolled.map((r) => ({ label: r.label, value: r.linkClicks }))} />
+              </div>
+
+              <SimpleBarChart
+                title="Revenue"
+                sub="Summed from Financials → Revenue field, parsed as a number per entry."
+                buckets={rolled.map((r) => ({ label: r.label, value: r.revenue }))}
+                format={(v) => `$${v.toLocaleString()}`}
+              />
+
+              <SimpleBarChart
+                title="Action Item Completion Rate"
+                sub="% of that period's action items marked done."
+                buckets={rolled.map((r) => ({ label: r.label, value: r.actionPct }))}
+                format={(v) => `${v}%`}
+              />
+            </div>
+          )
+        })()}
 
         {tab === 'week' && (
           <div className="space-y-5">
