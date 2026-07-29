@@ -464,9 +464,9 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
 
   return (
     <div className="max-w-7xl mx-auto pt-24 pb-8 px-4">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {!isAdmin && (
             <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-medium">
               Support View (Read Only)
