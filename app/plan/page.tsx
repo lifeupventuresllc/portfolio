@@ -6,6 +6,7 @@ import CaloriesTodayCard from '@/components/CaloriesTodayCard'
 import WorkoutStatusCard from '@/components/WorkoutStatusCard'
 import StreakChip from '@/components/StreakChip'
 import CoachHero from '@/components/CoachHero'
+import FeedbackCard from '@/components/FeedbackCard'
 import MondayMemo from '@/components/MondayMemo'
 import LevelUpNudge from '@/components/LevelUpNudge'
 import TimezoneSync from '@/components/TimezoneSync'
@@ -181,6 +182,9 @@ export default async function PlanDashboard() {
 
       {/* Infrequent — only renders itself when she's actually eligible */}
       <LevelUpNudge />
+
+      {/* Persistent feedback surface — always here, not just a popup */}
+      <FeedbackCard />
     </div>,
     <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
   )

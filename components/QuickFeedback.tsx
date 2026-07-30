@@ -6,9 +6,10 @@ import { deviceLabel, markFeedbackSent, FEEDBACK_SEVERITIES, type FeedbackCatego
 
 // Tiny inline feedback moment dropped at the exact point she just finished something
 // (a workout, a saved meal week, a check-in) — not a page she has to remember to visit.
-// 👍 sends instantly with zero extra taps. 👎 only THEN asks one more question (how bad)
-// plus an optional note, so we get precise, fixable signal without adding friction to
-// the common case.
+// Layered by design (Asa's explicit call): a quick 👍/👎 tap first, then one optional
+// follow-up question either way — "how bad + what happened" on 👎, "what would make
+// this even better" on 👍 — so a happy tap can still surface a real suggestion, and
+// skipping the follow-up is always one tap away (never required).
 // `dark`: set true when this renders inside a bg-charcoal/bg-obsidian card (e.g. a
 // completion banner) rather than directly on the white page — flips idle-state text
 // from ink (dark-on-white) to ivory (light-on-dark) so it stays readable either way.
@@ -16,7 +17,7 @@ export default function QuickFeedback({ category, context, dark = false, onSent 
   category: FeedbackCategory; context?: string; dark?: boolean; onSent?: () => void
 }) {
   const pathname = usePathname()
-  const [phase, setPhase] = useState<'idle' | 'down' | 'sent'>('idle')
+  const [phase, setPhase] = useState<'idle' | 'up' | 'down' | 'sent'>('idle')
   const [severity, setSeverity] = useState<FeedbackSeverity | null>(null)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
@@ -64,10 +65,29 @@ export default function QuickFeedback({ category, context, dark = false, onSent 
     )
   }
 
+  // 👍 still gets an instant, low-pressure thanks — but layers in one optional
+  // question so a happy tap can still surface a real suggestion, not just a rating.
+  if (phase === 'up') {
+    return (
+      <div className="mt-3 bg-obsidian/90 border border-smoke rounded-2xl p-4 text-left">
+        <p className="text-ivory/70 text-sm font-semibold mb-2">🙏🏽 Glad it&apos;s working. Anything that would make this even better for you?</p>
+        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2}
+          placeholder="Optional — totally fine to skip"
+          className="w-full px-3 py-2 bg-obsidian border border-smoke rounded-xl text-white text-sm focus:outline-none focus:border-gold transition-colors resize-none mb-3" />
+        <div className="flex gap-3 items-center">
+          <button onClick={() => send('up', undefined, text || undefined)} disabled={sending}
+            className="bg-gold text-obsidian px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider disabled:opacity-40">
+            {sending ? 'Sending…' : text ? 'Send' : 'Skip'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex items-center justify-center gap-3 mt-3">
       <span className={`${dark ? 'text-ivory/50' : 'text-ink/40'} text-xs`}>How was this?</span>
-      <button onClick={() => send('up')} disabled={sending} className="text-xl active:scale-90 transition-transform disabled:opacity-40" aria-label="Working well">👍</button>
+      <button onClick={() => setPhase('up')} disabled={sending} className="text-xl active:scale-90 transition-transform disabled:opacity-40" aria-label="Working well">👍</button>
       <button onClick={() => setPhase('down')} disabled={sending} className="text-xl active:scale-90 transition-transform disabled:opacity-40" aria-label="Something's off">👎</button>
     </div>
   )
