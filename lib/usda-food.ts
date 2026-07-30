@@ -56,10 +56,22 @@ function toResult(f: Record<string, unknown>): FoodResult {
 // endpoint's contract so the frontend/route didn't need to change shape).
 export async function usdaSearchWithMacros(query: string, limit = 6): Promise<FoodResult[]> {
   if (!usdaConfigured() || !query.trim()) return []
-  const url = `${USDA_BASE}/foods/search?api_key=${process.env.USDA_API_KEY}&query=${encodeURIComponent(query.trim())}&pageSize=${limit}&dataType=Foundation,SR%20Legacy,Branded`
+  // Fetch a wider candidate pool than we display — for common queries like "chicken
+  // breast" USDA's relevance ranking is dominated by exact-name Branded matches, so
+  // the generic Foundation/SR Legacy entry often doesn't make it into the first few
+  // results at all. Casting wider lets us actually find one to surface, rather than
+  // just reordering whatever happened to fit in a small page.
+  const fetchSize = Math.max(limit * 3, 20)
+  const url = `${USDA_BASE}/foods/search?api_key=${process.env.USDA_API_KEY}&query=${encodeURIComponent(query.trim())}&pageSize=${fetchSize}&dataType=Foundation,SR%20Legacy,Branded`
   const res = await fetch(url, { cache: 'no-store' })
   if (!res.ok) return []
   const data = await res.json().catch(() => null)
   const foods = Array.isArray(data?.foods) ? data.foods : []
-  return foods.slice(0, limit).map((f: Record<string, unknown>) => toResult(f))
+  const mapped = foods.map((f: Record<string, unknown>) => toResult(f))
+  // Generic (no brand) results first, each group keeping its own original relevance
+  // order — she shouldn't have to guess which branded result is "closest" when her
+  // exact brand isn't listed; a generic USDA reference food is the safe default.
+  const generic = mapped.filter((f: FoodResult) => !f.brand)
+  const branded = mapped.filter((f: FoodResult) => f.brand)
+  return [...generic, ...branded].slice(0, limit)
 }

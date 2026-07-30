@@ -37,14 +37,16 @@ export default function FeedbackNudge() {
   return (
     <div className="fixed bottom-5 right-4 z-40 max-w-[280px]">
       {!open ? (
-        <button onClick={() => setOpen(true)}
-          className="flex items-center gap-2 bg-charcoal border border-gold/40 text-gold text-xs font-semibold pl-4 pr-3 py-3 rounded-full shadow-lg active:scale-95 transition-transform">
-          Got 10 sec? How&apos;s the app going?
-          <span onClick={(e) => { e.stopPropagation(); dismiss() }} className="text-ivory/40 hover:text-ivory/70 ml-1" aria-label="Dismiss">✕</span>
-        </button>
+        <div className="flex items-center gap-1 bg-charcoal border border-gold/40 text-gold text-xs font-semibold pl-4 pr-2 py-2 rounded-full shadow-lg">
+          <button onClick={() => setOpen(true)} className="active:scale-95 transition-transform">
+            Got 10 sec? How&apos;s the app going?
+          </button>
+          <button onClick={dismiss} aria-label="Dismiss" className="text-ivory/40 hover:text-ivory/70 shrink-0 w-7 h-7 flex items-center justify-center text-base">✕</button>
+        </div>
       ) : (
-        <div className="bg-charcoal border border-smoke rounded-2xl p-4 shadow-lg">
-          <p className="text-white text-sm font-semibold mb-1">Quick pulse-check</p>
+        <div className="bg-charcoal border border-smoke rounded-2xl p-4 shadow-lg relative">
+          <button onClick={dismiss} aria-label="Close" className="absolute top-2 right-2 text-ivory/40 hover:text-ivory/70 w-8 h-8 flex items-center justify-center text-lg">✕</button>
+          <p className="text-white text-sm font-semibold mb-1 pr-6">Quick pulse-check</p>
           <QuickFeedback category="general" context="Floating nudge" dark onSent={() => setTimeout(dismiss, 1500)} />
         </div>
       )}

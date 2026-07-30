@@ -55,11 +55,22 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
   const [searched, setSearched] = useState(false)
   const [notConfigured, setNotConfigured] = useState(false)
   const [manual, setManual] = useState(false)
+  // Quantity picker — USDA results are always per-100g; let her say how much she
+  // actually had (oz or grams) instead of always logging a flat 100g serving.
+  const [picking, setPicking] = useState<SearchFood | null>(null)
+  const [qty, setQty] = useState('100')
+  const [unit, setUnit] = useState<'g' | 'oz'>('g')
+  const grams = unit === 'oz' ? (Number(qty) || 0) * 28.3495 : (Number(qty) || 0)
+  const scale = grams > 0 ? grams / 100 : 0
+  const scaled = picking ? {
+    calories: Math.round(picking.calories * scale), protein_g: Math.round(picking.protein_g * scale),
+    carbs_g: Math.round(picking.carbs_g * scale), fats_g: Math.round(picking.fats_g * scale),
+  } : null
 
   async function runSearch(query: string) {
     const text = query.trim()
     if (!text) return
-    setSearching(true); setSearched(true); setResults([])
+    setPicking(null); setSearching(true); setSearched(true); setResults([])
     try {
       const r = await fetch('/api/plan/food-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: text }) })
       const d = await r.json()
@@ -79,11 +90,23 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
     } finally { setSearching(false) }
   }
 
-  async function logSearchFood(f: SearchFood) {
+  async function confirmLogFood() {
+    if (!picking || !scaled) return
+    const label = unit === 'oz' ? `${qty}oz` : `${qty}g`
     await post({
-      name: f.brand ? `${f.name} (${f.brand})` : f.name, meal: searchMeal, servings: f.servings,
-      serving_label: f.serving_label, calories: f.calories, protein_g: f.protein_g, carbs_g: f.carbs_g, fats_g: f.fats_g,
-      source: f.source,
+      name: picking.brand ? `${picking.name} (${picking.brand})` : picking.name, meal: searchMeal, servings: 1,
+      serving_label: label, calories: scaled.calories, protein_g: scaled.protein_g, carbs_g: scaled.carbs_g, fats_g: scaled.fats_g,
+      source: picking.source,
+    })
+    setPicking(null)
+  }
+
+  // AI estimates already represent the described amount (not per-100g) — log as-is,
+  // no quantity scaling. Only real USDA lookups (always per-100g) get the picker.
+  async function logEstimatedFood(f: SearchFood) {
+    await post({
+      name: f.name, meal: searchMeal, servings: f.servings, serving_label: f.serving_label,
+      calories: f.calories, protein_g: f.protein_g, carbs_g: f.carbs_g, fats_g: f.fats_g, source: f.source,
     })
   }
 
@@ -173,9 +196,11 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
           <p className="text-ivory/35 text-[10px]">Hit your protein and cravings get quieter — that&apos;s the goal, not just the number.</p>
         </div>
       </div>
-      <p className={`text-xs text-center mb-4 ${calOver ? 'text-amber-400 font-semibold' : 'text-ivory/50'}`}>
-        {loading ? 'Loading your day…' : calOver ? `$${Math.abs(remaining)} over budget — no guilt, fresh budget tomorrow.` : `Spent $${t.calories} · $${remaining} left${t.calories === 0 ? ' — log your first meal below 👇' : ''}`}
-      </p>
+      <div className={`luf-glow mb-4 rounded-2xl border px-4 py-3 text-center ${calOver ? 'border-amber-400/40 bg-amber-400/10' : 'border-gold/40 bg-gold/10'}`}>
+        <p className={`text-base font-bold ${calOver ? 'text-amber-400' : 'text-gold'}`}>
+          {loading ? 'Loading your day…' : calOver ? `$${Math.abs(remaining)} over budget — no guilt, fresh budget tomorrow.` : `Spent $${t.calories} · $${remaining} left${t.calories === 0 ? ' — log your first meal below 👇' : ''}`}
+        </p>
+      </div>
 
       {/* One-tap: log a meal straight from today's plan */}
       {planned.length > 0 && (
@@ -208,17 +233,40 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
           </div>
 
           {/* Results — verified DB facts (green) vs AI estimate (amber) */}
-          {results.length > 0 && (
+          {results.length > 0 && !picking && (
             <div className="space-y-1.5 max-h-72 overflow-y-auto">
+              {results.some((f) => f.brand) && (
+                <p className="text-ivory/35 text-[10px] px-0.5">Don&apos;t see your exact brand? Pick the generic one at the top — macros are close across brands unless you know yours specifically.</p>
+              )}
               {results.map((f, i) => (
-                <button key={i} onClick={() => logSearchFood(f)} disabled={saving} className="w-full text-left flex items-center gap-2 bg-charcoal border border-smoke rounded-lg px-3 py-2 hover:border-gold/50 transition-colors disabled:opacity-50">
+                <button key={i} onClick={() => { if (f.source === 'usda') { setPicking(f); setQty('100'); setUnit('g') } else { logEstimatedFood(f) } }} disabled={saving} className="w-full text-left flex items-center gap-2 bg-charcoal border border-smoke rounded-lg px-3 py-2 hover:border-gold/50 transition-colors disabled:opacity-50">
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-xs font-medium truncate">{f.name}{f.brand ? <span className="text-ivory/40"> · {f.brand}</span> : null}</p>
-                    <p className="text-ivory/40 text-[10px]">{f.servings}{f.serving_label ? ` ${f.serving_label}` : ''} · {f.calories} cal · {f.protein_g}P · {f.carbs_g}C · {f.fats_g}F</p>
+                    <p className="text-ivory/40 text-[10px]">{f.source === 'usda' ? 'per 100g' : `${f.servings} ${f.serving_label || 'serving'}`} · {f.calories} cal · {f.protein_g}P · {f.carbs_g}C · {f.fats_g}F</p>
                   </div>
                   <span className={`shrink-0 text-[8px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${f.source === 'usda' ? 'bg-green-500/15 text-green-400' : 'bg-amber-500/15 text-amber-400'}`}>{f.source === 'usda' ? '✓ verified' : '~ estimate'}</span>
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Quantity picker — how much did she actually have? */}
+          {picking && scaled && (
+            <div className="bg-charcoal border border-gold/40 rounded-lg p-3 space-y-3">
+              <p className="text-white text-sm font-semibold">{picking.brand ? `${picking.name} (${picking.brand})` : picking.name}</p>
+              <div className="flex gap-2 items-center">
+                <input value={qty} onChange={(e) => setQty(e.target.value)} inputMode="decimal" className="w-24 bg-obsidian border border-smoke rounded-lg px-3 py-2 text-white text-sm focus:border-gold/60 outline-none" />
+                <div className="flex rounded-lg overflow-hidden border border-smoke">
+                  {(['g', 'oz'] as const).map((u) => (
+                    <button key={u} onClick={() => setUnit(u)} className={`px-3 py-2 text-xs font-bold uppercase ${unit === u ? 'bg-gold text-obsidian' : 'bg-obsidian text-ivory/50'}`}>{u}</button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-ivory/50 text-xs">{scaled.calories} cal · {scaled.protein_g}g protein · {scaled.carbs_g}g carbs · {scaled.fats_g}g fat</p>
+              <div className="flex gap-2">
+                <button onClick={confirmLogFood} disabled={saving || grams <= 0} className="flex-1 bg-gold text-obsidian py-2.5 font-bold text-xs uppercase tracking-wider rounded-lg disabled:opacity-50">{saving ? 'Logging…' : 'Log it'}</button>
+                <button onClick={() => setPicking(null)} className="px-4 py-2.5 text-ivory/50 text-xs font-semibold hover:text-white">Cancel</button>
+              </div>
             </div>
           )}
 
