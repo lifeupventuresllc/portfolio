@@ -79,7 +79,7 @@ export default async function WorkoutSession() {
 
   return (
     <div className="min-h-screen bg-obsidian px-4 py-8">
-      <WorkoutPlayer program={program} firstName={firstName} startDay={startDay} />
+      <WorkoutPlayer program={program} firstName={firstName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} />
     </div>
   )
 }

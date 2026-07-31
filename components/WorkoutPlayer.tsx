@@ -7,23 +7,30 @@ import Ring from '@/components/Ring'
 import Confetti from '@/components/Confetti'
 import QuickFeedback from '@/components/QuickFeedback'
 import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
-import { buildSteps, dayLabels, estimateWorkoutMinutes, type WorkoutStep } from '@/lib/workout-steps'
+import { buildSteps, dayLabels, estimateWorkoutMinutes, trimStepsToTarget, type WorkoutStep } from '@/lib/workout-steps'
 import type { WorkoutProgram } from '@/lib/workout'
 
 // Guided in-workout player. Opens straight into TODAY'S session (no picker
 // screen); a compact switcher lets her change the day. One countdown interval
 // per step (not recreated every second) so the timer runs smooth.
-export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
+export default function WorkoutPlayer({ program, firstName, startDay = 0, targetMinutes }: {
   program: WorkoutProgram
   firstName: string
   startDay?: number
+  // Set when Coach Asa's chat approved a time-crunch/low-energy/re-entry adjustment
+  // for today — genuinely shortens the session instead of just relabeling it.
+  targetMinutes?: number
 }) {
   const router = useRouter()
   const labels = dayLabels(program)
   const clamp = (d: number) => Math.min(Math.max(d, 0), Math.max(labels.length - 1, 0))
+  const buildDay = (d: number) => {
+    const full = buildSteps(program, d)
+    return targetMinutes ? trimStepsToTarget(full, targetMinutes) : full
+  }
 
   const [dayIdx, setDayIdx] = useState(clamp(startDay))
-  const [steps, setSteps] = useState<WorkoutStep[]>(() => buildSteps(program, clamp(startDay)))
+  const [steps, setSteps] = useState<WorkoutStep[]>(() => buildDay(clamp(startDay)))
   const [i, setI] = useState(0)
   const [left, setLeft] = useState<number | null>(null)
   const [paused, setPaused] = useState(false)
@@ -38,7 +45,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
   advanceRef.current = () => { if (i + 1 >= steps.length) finish(); else setI(i + 1) }
 
   function selectDay(d: number) {
-    setDayIdx(clamp(d)); setSteps(buildSteps(program, clamp(d)))
+    setDayIdx(clamp(d)); setSteps(buildDay(clamp(d)))
     setI(0); setDone(false); setPaused(false); setSwitching(false)
   }
   function finish() {
@@ -104,7 +111,9 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0 }: {
       <div className="flex items-center justify-between gap-3 mb-3">
         <button onClick={() => router.push('/plan')} className="text-ivory/50 hover:text-gold text-xs font-semibold">← My week</button>
         <button onClick={() => setSwitching((s) => !s)} className="text-center">
-          <p className="text-gold text-[10px] font-semibold tracking-[0.2em] uppercase">Today&apos;s session · about {estimateWorkoutMinutes(steps)} min</p>
+          <p className="text-gold text-[10px] font-semibold tracking-[0.2em] uppercase">
+            {targetMinutes ? '⚡ Shortened for today' : "Today's session"} · about {estimateWorkoutMinutes(steps)} min
+          </p>
           <p className="text-white text-sm font-bold leading-tight">{labels[dayIdx]} <span className="text-ivory/40">▾</span></p>
         </button>
         <span className="text-ivory/50 text-xs tabular-nums w-10 text-right">{i + 1}/{steps.length}</span>

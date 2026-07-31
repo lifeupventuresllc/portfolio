@@ -37,6 +37,46 @@ export function estimateWorkoutMinutes(steps: WorkoutStep[]): number {
   return Math.max(1, Math.round(totalSeconds / 60))
 }
 
+// Genuinely shortens a session to fit a target duration — used when Coach Asa's
+// chat approves a time-crunch/low-energy/re-entry adjustment (`workoutChange.toMinutes`).
+// Keeps warm-up and cool-down (home track) intact, then greedily keeps exercises
+// (paired with their following rest step, so a superset never loses just its rest)
+// in original order until the budget runs out. Always keeps at least one exercise —
+// never returns an empty session even if the target is very short.
+export function trimStepsToTarget(steps: WorkoutStep[], targetMinutes: number): WorkoutStep[] {
+  if (steps.length === 0) return steps
+  const stepCost = (s: WorkoutStep) => s.seconds ?? (parseMins(s.detail) != null ? parseMins(s.detail)! * 60 : DEFAULT_WORK_SECONDS)
+
+  const hasWarmup = steps[0]?.phase === 'Warm-up'
+  const hasCooldown = steps[steps.length - 1]?.phase === 'Cool-down'
+  const warmup = hasWarmup ? [steps[0]] : []
+  const cooldown = hasCooldown ? [steps[steps.length - 1]] : []
+  const middle = steps.slice(hasWarmup ? 1 : 0, steps.length - (hasCooldown ? 1 : 0))
+
+  // Group each work step with its immediately-following rest step so they travel together.
+  const chunks: WorkoutStep[][] = []
+  for (let i = 0; i < middle.length; i++) {
+    if (middle[i].rest) continue // already attached to the previous chunk
+    const chunk = [middle[i]]
+    if (middle[i + 1]?.rest) chunk.push(middle[i + 1])
+    chunks.push(chunk)
+  }
+
+  const fixedSeconds = [...warmup, ...cooldown].reduce((sum, s) => sum + stepCost(s), 0)
+  const budgetSeconds = Math.max(0, targetMinutes * 60 - fixedSeconds)
+
+  const kept: WorkoutStep[] = []
+  let used = 0
+  for (const chunk of chunks) {
+    const cost = chunk.reduce((sum, s) => sum + stepCost(s), 0)
+    if (kept.length === 0 || used + cost <= budgetSeconds) { kept.push(...chunk); used += cost }
+    else break
+  }
+  if (kept.length === 0 && chunks.length > 0) kept.push(...chunks[0])
+
+  return [...warmup, ...kept, ...cooldown]
+}
+
 export function dayLabels(program: WorkoutProgram): string[] {
   if (program.track === 'home' && program.home) return program.home.days.map((d) => d.title)
   return (program.gymDays || []).map((d) => `Day ${d.dayNum}: ${d.title}`)
