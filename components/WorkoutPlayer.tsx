@@ -9,6 +9,7 @@ import QuickFeedback from '@/components/QuickFeedback'
 import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { buildSteps, dayLabels, estimateWorkoutMinutes, trimStepsToTarget, type WorkoutStep } from '@/lib/workout-steps'
 import type { WorkoutProgram } from '@/lib/workout'
+import { hapticTap } from '@/lib/haptics'
 
 // Guided in-workout player. Opens straight into TODAY'S session (no picker
 // screen); a compact switcher lets her change the day. One countdown interval
@@ -50,6 +51,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
   }
   function finish() {
     setDone(true)
+    hapticTap(30) // one satisfying buzz on the moment she actually finishes
     const today = localTodayISO()
     try {
       localStorage.setItem('luf_workout_progress', JSON.stringify({ date: today, i: steps.length, total: steps.length, done: true }))
@@ -96,7 +98,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
         <p className="text-ivory/60 text-sm mb-8">You showed up and you finished. That&apos;s the whole game. I logged it for your streak.</p>
         <button onClick={() => router.push('/plan')} className="luf-glow w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl">Back to my week</button>
         <p className="text-gold text-sm font-semibold mt-4">— Coach Asa</p>
-        <QuickFeedback category="workout" context={`${labels[dayIdx]} · day ${dayIdx + 1}`} dark />
+        <QuickFeedback category="workout" context={`${labels[dayIdx]} · day ${dayIdx + 1}`} dark reviewGate />
       </div>
     )
   }
@@ -166,7 +168,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
           {isTimed ? (
             <button onClick={() => setPaused((p) => !p)} className="flex-1 bg-charcoal border border-gold/40 text-gold px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl active:scale-[.98] transition-transform">{paused ? 'Resume' : 'Pause'}</button>
           ) : (
-            <button onClick={() => advanceRef.current()} className="luf-glow flex-1 bg-gold text-obsidian px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl active:scale-[.98] transition-transform">Done — Next →</button>
+            <button onClick={() => { hapticTap(); advanceRef.current() }} className="luf-glow flex-1 bg-gold text-obsidian px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl active:scale-[.98] transition-transform">Done — Next →</button>
           )}
           <button onClick={() => advanceRef.current()} className="px-5 py-4 rounded-2xl bg-charcoal border border-smoke text-ivory/60 active:scale-95 transition-transform">→</button>
         </div>

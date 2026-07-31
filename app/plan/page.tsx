@@ -89,12 +89,16 @@ export default async function PlanDashboard() {
   }
 
   const todayIso = localDateISO()
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment] = await Promise.all([
+  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('calories, meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
+    svc.from('challenge_intake').select('form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
   ])
+  // She built her plan with just the quick required questions — invite her (once)
+  // into the optional second pass rather than making her clear it up front.
+  const profileNeedsFinishing = !(intakeRow?.form_data as { optional_completed?: boolean } | null)?.optional_completed
 
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
     ? (nutritionPlan.meals as WeekPlan) : null
@@ -182,6 +186,18 @@ export default async function PlanDashboard() {
 
       {/* Infrequent — only renders itself when she's actually eligible */}
       <LevelUpNudge />
+
+      {/* One-time invite into the optional intake pass she skipped to get here fast.
+          Disappears for good once she finishes it — never nags. */}
+      {profileNeedsFinishing && (
+        <Link href="/plan/intake?tier=optional" className="group flex items-center justify-between gap-3 bg-charcoal border border-smoke rounded-2xl px-5 py-3.5 hover:border-gold/40 transition-colors">
+          <div>
+            <p className="text-white font-semibold text-sm">Fine-tune your plan — 60 seconds</p>
+            <p className="text-ivory/50 text-xs mt-0.5">A few more details (schedule, food likes, injuries) makes it fit even better.</p>
+          </div>
+          <span className="text-gold text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
+        </Link>
+      )}
 
       {/* Persistent feedback surface — always here, not just a popup */}
       <FeedbackCard />

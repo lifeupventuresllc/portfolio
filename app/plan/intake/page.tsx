@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import CountUp from '@/components/CountUp'
+import { hapticTap } from '@/lib/haptics'
 
 type Targets = { calories: number; protein_g: number; carbs_g: number; fats_g: number; bmr: number; tdee: number }
 
@@ -11,13 +12,41 @@ const INJURIES = [
   { v: 'wrist', l: 'Wrist' }, { v: 'elbow', l: 'Elbow' }, { v: 'hip', l: 'Hip' }, { v: 'ankle', l: 'Ankle' },
 ]
 
-// One warm question per screen. Same data as before — just effortless.
+const FOCUS_AREAS = [
+  { v: 'core', l: '🎯 Core & waistline', d: 'Flatter stomach, defined middle' },
+  { v: 'legs', l: '🦵🏽 Legs & glutes', d: 'Lift, shape, and strengthen' },
+  { v: 'arms', l: '💪🏽 Arms & back', d: 'Tone and define upper body' },
+  { v: 'overall', l: '✨ All-over', d: 'Balanced, head to toe' },
+]
+
+// Required tier: the minimum to get her a real plan fast (name, goal, focus, body).
+// Everything else is a second, optional pass she's invited into AFTER she's already
+// seen her numbers — not a wall she has to clear before experiencing anything.
+const REQUIRED_STEPS = ['name', 'goal', 'focus', 'body']
+const OPTIONAL_STEPS = [
+  'target', 'activity', 'experience', 'training_style', 'location', 'days', 'cook', 'injuries', 'other', 'postpartum', 'food',
+]
+
+// One warm question per screen. Same data as before — just effortless, and
+// the deep questions come after her first win instead of before it.
 export default function ConversationalIntake() {
+  return (
+    <Suspense fallback={null}>
+      <ConversationalIntakeInner />
+    </Suspense>
+  )
+}
+
+function ConversationalIntakeInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const startInOptional = searchParams.get('tier') === 'optional'
+
+  const [tier, setTier] = useState<'required' | 'optional'>(startInOptional ? 'optional' : 'required')
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState<'fwd' | 'back'>('fwd')
   const [f, setF] = useState({
-    name: '', goal: '', age: '', sex: 'female', heightFt: '5', heightIn: '4', weight_lbs: '',
+    name: '', goal: '', focus_area: '', age: '', sex: 'female', heightFt: '5', heightIn: '4', weight_lbs: '',
     target_lbs: '', activity_level: '', experience_level: '', training_location: '',
     days_per_week: '', cook_days_per_week: '', weekly_food_budget: '', food_preferences: '', dislikes_allergies: '',
     postpartum: '', training_style: '', other_info: '',
@@ -31,6 +60,7 @@ export default function ConversationalIntake() {
   // Seamless blueprint→app conversion — if she already did the free Calorie Blueprint,
   // pull her answers forward instead of making her retype her name/age/height/weight/goal.
   useEffect(() => {
+    if (startInOptional) return // she already has a plan — nothing to prefill
     fetch('/api/plan/blueprint-lookup').then((r) => r.json()).then((d) => {
       if (!d?.found || !d.blueprint) return
       const b = d.blueprint
@@ -60,17 +90,15 @@ export default function ConversationalIntake() {
   const toggleInjury = (v: string) => setInjuries((a) => (a.includes(v) ? a.filter((x) => x !== v) : [...a, v]))
 
   // choosing a single-select option auto-advances (that "texting a coach" feel)
-  const pick = (k: string, v: string) => { set(k, v); setTimeout(next, 160) }
+  const pick = (k: string, v: string) => { hapticTap(); set(k, v); setTimeout(next, 160) }
 
   const firstName = f.name.trim().split(' ')[0] || 'you'
 
-  const STEPS = [
-    'name', 'goal', 'body', 'target', 'activity', 'experience', 'training_style', 'location', 'days', 'cook', 'injuries', 'other', 'postpartum', 'food',
-  ]
+  const STEPS = tier === 'required' ? REQUIRED_STEPS : OPTIONAL_STEPS
   const total = STEPS.length
   const pct = Math.round(((step + 1) / total) * 100)
 
-  async function build() {
+  async function build(refining: boolean) {
     if (!f.age || !f.weight_lbs) { setError('I just need your age and weight to get your numbers right.'); return }
     setPhase('building')
     setError('')
@@ -81,25 +109,33 @@ export default function ConversationalIntake() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: f.name, age: Number(f.age), sex: f.sex, height_in, weight_lbs: Number(f.weight_lbs),
-          goal: f.goal || 'lose', target_lbs: Number(f.target_lbs) || null,
+          goal: f.goal || 'lose', target_lbs: Number(f.target_lbs) || null, focus_area: f.focus_area || 'overall',
           activity_level: f.activity_level || 'moderate', experience_level: f.experience_level || 'beginner',
           training_location: f.training_location || 'gym', days_per_week: Number(f.days_per_week) || 3,
           cook_days_per_week: Number(f.cook_days_per_week) || 2, weekly_food_budget: Number(f.weekly_food_budget) || null,
           food_preferences: f.food_preferences, dislikes_allergies: f.dislikes_allergies,
           injuries, injuries_limitations: '', postpartum: f.postpartum === 'yes',
           training_style: f.training_style || 'none', other_info: f.other_info,
+          refining,
         }),
       })
       const data = await res.json()
-      // let the "building" moment breathe for at least ~2.2s
-      const wait = Math.max(0, 2200 - (Date.now() - start))
+      // let the "building" moment breathe for at least ~2.2s (skip the pause on a quiet refine)
+      const wait = refining ? 0 : Math.max(0, 2200 - (Date.now() - start))
       await new Promise((r) => setTimeout(r, wait))
-      if (data.success) { setTargets(data.targets); setPhase('done') }
-      else { setError(data.error || 'Something went wrong.'); setPhase('quiz') }
+      if (data.success) {
+        setTargets(data.targets)
+        if (refining) router.push('/plan')
+        else setPhase('done')
+      } else { setError(data.error || 'Something went wrong.'); setPhase('quiz') }
     } catch { setError('Something went wrong. Try again.'); setPhase('quiz') }
   }
 
-  // ---------- shared UI ----------
+  function startOptionalTier() {
+    setTier('optional'); setDir('fwd'); setError(''); setStep(0); setPhase('quiz')
+  }
+
+  // ---------- shared UI (dark — used by the optional second-pass + building/done chrome it shares) ----------
   const Screen = ({ children }: { children: React.ReactNode }) => (
     <div key={step} className={dir === 'fwd' ? 'q-in-fwd' : 'q-in-back'}>{children}</div>
   )
@@ -109,54 +145,144 @@ export default function ConversationalIntake() {
   const input = 'w-full px-4 py-3.5 bg-obsidian border border-smoke rounded-xl text-white focus:outline-none focus:border-gold transition-colors'
   const primaryBtn = 'w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-[1.02] disabled:opacity-40'
 
+  // ---------- shared UI (light — the new required-tier, spacious/minimal, "one thing at a time") ----------
+  const LQ = ({ children }: { children: React.ReactNode }) => <h2 className="text-3xl sm:text-4xl font-bold text-ink leading-snug mb-2 text-balance">{children}</h2>
+  const LHint = ({ children }: { children: React.ReactNode }) => <p className="text-ink/50 text-base mb-10">{children}</p>
+  const lopt = (active: boolean) => `w-full text-left px-6 py-5 rounded-3xl border transition-all duration-200 ${active ? 'bg-white border-gold shadow-[0_8px_30px_rgba(201,168,76,0.14)] scale-[1.01] text-ink' : 'bg-white border-ink/10 hover:border-gold/50 hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-ink'}`
+  const linput = 'w-full px-5 py-4 bg-white border border-ink/15 rounded-2xl text-ink text-lg placeholder-ink/30 focus:outline-none focus:border-gold transition-colors'
+  const lPrimaryBtn = 'w-full bg-gold text-obsidian px-8 py-5 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-40'
+
   // ---------- BUILDING moment ----------
   if (phase === 'building') {
+    const light = tier === 'required'
     return (
-      <div className="min-h-screen bg-obsidian flex items-center justify-center px-6">
+      <div className={`min-h-screen flex items-center justify-center px-6 ${light ? 'bg-paper' : 'bg-obsidian'}`}>
         <div className="text-center q-in-fwd">
           <div className="relative w-24 h-24 mx-auto mb-8">
-            <div className="absolute inset-0 rounded-full border-2 border-gold/20" />
+            <div className={`absolute inset-0 rounded-full border-2 ${light ? 'border-gold/25' : 'border-gold/20'}`} />
             <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-gold animate-spin" style={{ animationDuration: '0.9s' }} />
             <div className="absolute inset-0 flex items-center justify-center text-3xl">💪🏽</div>
           </div>
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">One moment</p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Coach Asa is building your plan…</h1>
-          <p className="text-ivory/60 text-sm">Crunching your numbers, matching your workout, and setting up your meals for {firstName}.</p>
+          <h1 className={`text-2xl sm:text-3xl font-bold mb-2 ${light ? 'text-ink' : 'text-white'}`}>
+            {tier === 'optional' ? 'Fine-tuning your plan…' : 'Coach Asa is building your plan…'}
+          </h1>
+          <p className={light ? 'text-ink/50 text-sm' : 'text-ivory/60 text-sm'}>Crunching your numbers, matching your workout, and setting up your meals for {firstName}.</p>
         </div>
       </div>
     )
   }
 
-  // ---------- DONE / reveal ----------
+  // ---------- DONE / reveal (light — this is the reward moment, stays part of the same light experience) ----------
   if (phase === 'done' && targets) {
     return (
-      <div className="min-h-screen bg-obsidian px-4 py-16">
+      <div className="min-h-screen bg-paper px-4 py-16">
         <div className="max-w-lg mx-auto text-center q-in-fwd">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">Your plan is ready</p>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">Let&apos;s do this, {firstName} 🎉</h1>
-          <p className="text-ivory/60 text-sm mb-8">I built your numbers, generated your workout, and set up your meal budget. Here&apos;s your daily target:</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-ink mb-3">Let&apos;s do this, {firstName} 🎉</h1>
+          <p className="text-ink/50 text-sm mb-8">I built your numbers, generated your workout, and set up your meal budget. Here&apos;s your daily target:</p>
           <div className="grid grid-cols-2 gap-3 mb-8">
             {[
               { l: 'Daily calories', v: targets.calories, c: 'text-gold' },
-              { l: 'Protein', v: targets.protein_g, s: 'g', c: 'text-green-400' },
-              { l: 'Carbs', v: targets.carbs_g, s: 'g', c: 'text-white' },
-              { l: 'Fats', v: targets.fats_g, s: 'g', c: 'text-white' },
+              { l: 'Protein', v: targets.protein_g, s: 'g', c: 'text-emerald-600' },
+              { l: 'Carbs', v: targets.carbs_g, s: 'g', c: 'text-ink' },
+              { l: 'Fats', v: targets.fats_g, s: 'g', c: 'text-ink' },
             ].map((t) => (
-              <div key={t.l} className="bg-charcoal border border-smoke rounded-2xl p-5">
-                <p className="text-ivory/40 text-xs uppercase tracking-wider mb-1">{t.l}</p>
+              <div key={t.l} className="bg-white border border-ink/10 rounded-3xl p-5">
+                <p className="text-ink/35 text-xs uppercase tracking-wider mb-1">{t.l}</p>
                 <p className={`text-3xl font-bold ${t.c}`}><CountUp value={t.v} suffix={t.s || ''} /></p>
               </div>
             ))}
           </div>
-          <button onClick={() => router.push('/plan')} className={primaryBtn}>See my plan</button>
-          <p className="text-gold text-sm font-semibold mt-4">— Coach Asa</p>
+          <button onClick={() => router.push('/plan')} className={lPrimaryBtn}>See my plan</button>
+          <button onClick={startOptionalTier} className="w-full mt-3 text-ink/50 text-sm font-semibold hover:text-gold transition-colors">
+            Fine-tune it for you — 60 seconds →
+          </button>
+          <p className="text-gold text-sm font-semibold mt-5">— Coach Asa</p>
         </div>
       </div>
     )
   }
 
-  // ---------- QUIZ ----------
-  const s = STEPS[step]
+  // ---------- REQUIRED TIER (light, spacious, one thing at a time) ----------
+  if (tier === 'required') {
+    const s = REQUIRED_STEPS[step]
+    return (
+      <div className="min-h-screen bg-paper px-4 py-10 flex flex-col">
+        <div className="max-w-md w-full mx-auto mb-12">
+          <div className="flex items-center gap-3">
+            {step > 0 ? <button onClick={back} className="text-ink/40 hover:text-gold text-sm">←</button> : <span className="w-3" />}
+            <div className="flex-1 h-1 bg-ink/8 rounded-full overflow-hidden">
+              <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+            </div>
+            <span className="text-ink/30 text-xs tabular-nums">{step + 1}/{total}</span>
+          </div>
+        </div>
+
+        <div className="max-w-md w-full mx-auto flex-1">
+          {carriedFromBlueprint && step === 0 && (
+            <p className="text-emerald-600 text-xs font-semibold mb-4">🎉 Pulled in your info from your Calorie Blueprint — just confirm as you go.</p>
+          )}
+          <Screen>
+            {s === 'name' && (<>
+              <LQ>First — what should I call you?</LQ>
+              <LHint>I coach you by name, not by number.</LHint>
+              <input autoFocus value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={linput}
+                onKeyDown={(e) => e.key === 'Enter' && f.name.trim() && next()} />
+              <button onClick={next} disabled={!f.name.trim()} className={`${lPrimaryBtn} mt-8`}>Let&apos;s go →</button>
+            </>)}
+
+            {s === 'goal' && (<>
+              <LQ>What are we doing together, {firstName}?</LQ>
+              <LHint>Pick the one that&apos;s calling your name.</LHint>
+              <div className="space-y-3">
+                {[{ v: 'lose', l: '🔥 Lose fat', d: 'Lean out, keep your curves' }, { v: 'gain', l: '💪🏽 Build & tone', d: 'Add shape and strength' }, { v: 'maintain', l: '⚖️ Maintain', d: 'Hold steady, feel great' }].map((o) => (
+                  <button key={o.v} onClick={() => pick('goal', o.v)} className={lopt(f.goal === o.v)}>
+                    <span className="block text-lg">{o.l}</span><span className="block text-sm font-normal mt-0.5 text-ink/40">{o.d}</span>
+                  </button>
+                ))}
+              </div>
+            </>)}
+
+            {s === 'focus' && (<>
+              <LQ>What do you want to feel proudest of?</LQ>
+              <LHint>This shapes how I weight your workout — no wrong answer.</LHint>
+              <div className="grid grid-cols-2 gap-3">
+                {FOCUS_AREAS.map((o) => (
+                  <button key={o.v} onClick={() => pick('focus_area', o.v)} className={lopt(f.focus_area === o.v)}>
+                    <span className="block text-lg">{o.l}</span><span className="block text-xs font-normal mt-1 text-ink/40">{o.d}</span>
+                  </button>
+                ))}
+              </div>
+            </>)}
+
+            {s === 'body' && (<>
+              <LQ>Tell me about your body.</LQ>
+              <LHint>This dials in your exact calories — no guessing.</LHint>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div><label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Age</label><input type="number" value={f.age} onChange={(e) => set('age', e.target.value)} className={linput} /></div>
+                <div><label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Weight (lbs)</label><input type="number" value={f.weight_lbs} onChange={(e) => set('weight_lbs', e.target.value)} className={linput} /></div>
+              </div>
+              <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Height</label>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <select value={f.heightFt} onChange={(e) => set('heightFt', e.target.value)} className={linput}>{[4, 5, 6].map((n) => <option key={n} value={n}>{n} ft</option>)}</select>
+                <select value={f.heightIn} onChange={(e) => set('heightIn', e.target.value)} className={linput}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={i}>{i} in</option>)}</select>
+              </div>
+              <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Sex (for your metabolism math)</label>
+              <div className="grid grid-cols-2 gap-3 mb-8">
+                {[{ v: 'female', l: 'Female' }, { v: 'male', l: 'Male' }].map((o) => <button key={o.v} onClick={() => { hapticTap(); set('sex', o.v) }} className={`py-3.5 rounded-2xl text-sm font-semibold border transition-colors ${f.sex === o.v ? 'bg-white border-gold text-ink' : 'bg-white border-ink/10 text-ink/50'}`}>{o.l}</button>)}
+              </div>
+              {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+              <button onClick={() => { if (!f.age || !f.weight_lbs) { setError('Add your age and weight so I can nail your numbers.'); return } build(false) }} className={lPrimaryBtn}>✨ Build my plan</button>
+            </>)}
+          </Screen>
+        </div>
+      </div>
+    )
+  }
+
+  // ---------- OPTIONAL TIER (dark — back into the regular app experience) ----------
+  const s = OPTIONAL_STEPS[step]
   return (
     <div className="min-h-screen bg-obsidian px-4 py-8 flex flex-col">
       {/* progress */}
@@ -171,50 +297,7 @@ export default function ConversationalIntake() {
       </div>
 
       <div className="max-w-lg w-full mx-auto flex-1">
-        {carriedFromBlueprint && step === 0 && (
-          <p className="text-emerald-400 text-xs font-semibold mb-4 flex items-center gap-1.5">🎉 Pulled in your info from your Calorie Blueprint — just confirm as you go.</p>
-        )}
         <Screen>
-          {s === 'name' && (<>
-            <Q>First — what should I call you?</Q>
-            <Hint>I coach you by name, not by number.</Hint>
-            <input autoFocus value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={input}
-              onKeyDown={(e) => e.key === 'Enter' && f.name.trim() && next()} />
-            <button onClick={next} disabled={!f.name.trim()} className={`${primaryBtn} mt-6`}>Let&apos;s go →</button>
-          </>)}
-
-          {s === 'goal' && (<>
-            <Q>What are we doing together, {firstName}?</Q>
-            <Hint>Pick the one that&apos;s calling your name.</Hint>
-            <div className="space-y-3">
-              {[{ v: 'lose', l: '🔥 Lose fat', d: 'Lean out, keep your curves' }, { v: 'gain', l: '💪🏽 Build & tone', d: 'Add shape and strength' }, { v: 'maintain', l: '⚖️ Maintain', d: 'Hold steady, feel great' }].map((o) => (
-                <button key={o.v} onClick={() => pick('goal', o.v)} className={opt(f.goal === o.v)}>
-                  <span className="block">{o.l}</span><span className={`block text-xs font-normal mt-0.5 ${f.goal === o.v ? 'text-gold/70' : 'text-ivory/40'}`}>{o.d}</span>
-                </button>
-              ))}
-            </div>
-          </>)}
-
-          {s === 'body' && (<>
-            <Q>Tell me about your body.</Q>
-            <Hint>This dials in your exact calories — no guessing.</Hint>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div><label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Age</label><input type="number" value={f.age} onChange={(e) => set('age', e.target.value)} className={input} /></div>
-              <div><label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Weight (lbs)</label><input type="number" value={f.weight_lbs} onChange={(e) => set('weight_lbs', e.target.value)} className={input} /></div>
-            </div>
-            <label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Height</label>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <select value={f.heightFt} onChange={(e) => set('heightFt', e.target.value)} className={input}>{[4, 5, 6].map((n) => <option key={n} value={n}>{n} ft</option>)}</select>
-              <select value={f.heightIn} onChange={(e) => set('heightIn', e.target.value)} className={input}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={i}>{i} in</option>)}</select>
-            </div>
-            <label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Sex (for your metabolism math)</label>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {[{ v: 'female', l: 'Female' }, { v: 'male', l: 'Male' }].map((o) => <button key={o.v} onClick={() => set('sex', o.v)} className={`py-3 rounded-xl text-sm font-semibold ${f.sex === o.v ? 'bg-charcoal bg-gradient-to-br from-gold/20 to-charcoal text-gold border border-gold/40' : 'bg-charcoal border border-smoke text-ivory/60'}`}>{o.l}</button>)}
-            </div>
-            {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
-            <button onClick={() => { if (!f.age || !f.weight_lbs) { setError('Add your age and weight so I can nail your numbers.'); return } next() }} className={primaryBtn}>Continue →</button>
-          </>)}
-
           {s === 'target' && (<>
             <Q>How much are we {f.goal === 'gain' ? 'building' : 'shifting'}?</Q>
             <Hint>Ballpark is perfect — we adjust as you go.</Hint>
@@ -339,7 +422,7 @@ export default function ConversationalIntake() {
             <label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Weekly food budget ($)</label>
             <input type="number" value={f.weekly_food_budget} onChange={(e) => set('weekly_food_budget', e.target.value)} placeholder="e.g. 90" className={`${input} mb-6`} />
             {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
-            <button onClick={build} className={primaryBtn}>✨ Build my plan</button>
+            <button onClick={() => build(true)} className={primaryBtn}>✨ Update my plan</button>
           </>)}
         </Screen>
       </div>

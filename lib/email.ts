@@ -111,14 +111,14 @@ export async function sendChallengeWelcome(email: string, name: string, tier: 'a
     replyTo: REPLY_TO,
     subject: "You're in! Welcome to Snatched Without Starving",
     headers: UNSUB_HEADERS,
-    text: `Welcome ${firstName}!\n\n${tierBlurb}\n\nStep 1 — create your account with THIS email (${email}) so I can build your custom plan:\n${APP_URL}/signup\n\nOnce you're in, you'll fill out a quick intake (your goal, stats, budget, and the foods you love) and I'll build your training + nutrition around it.\n\nLet's get you snatched — without starving.\n\n— Coach Asa\nasaluke.io`,
+    text: `Welcome ${firstName}!\n\n${tierBlurb}\n\nStep 1 — create your account with THIS email (${email}) so I can build your custom plan:\n${APP_URL}/signup?redirect=/plan/intake\n\nOnce you're in, you'll fill out a quick intake (your goal, stats, budget, and the foods you love) and I'll build your training + nutrition around it.\n\nLet's get you snatched — without starving.\n\n— Coach Asa\nasaluke.io`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #C9A84C;">You're in, ${firstName}! 🙌🏽</h1>
         <p style="color: #374151; line-height: 1.7;">${tierBlurb}</p>
         <p style="color: #374151; line-height: 1.7;"><strong>Step 1 — create your account</strong> with this same email (${email}) so I can build your custom plan:</p>
         <p style="margin: 20px 0;">
-          <a href="${APP_URL}/signup" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Create My Account</a>
+          <a href="${APP_URL}/signup?redirect=/plan/intake" style="display: inline-block; background: #C9A84C; color: #0A0A0F; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Create My Account</a>
         </p>
         <p style="color: #374151; line-height: 1.7;">Once you're in, you'll fill out a quick intake — your goal, stats, budget, and the foods you love — and I'll build your training and nutrition around it.</p>
         <p style="color: #374151; line-height: 1.7;">Let's get you snatched — without starving.</p>

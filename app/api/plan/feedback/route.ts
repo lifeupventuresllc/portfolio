@@ -35,10 +35,11 @@ export async function POST(request: NextRequest) {
   const context = typeof body.context === 'string' ? body.context.slice(0, 200) : ''
   const page = typeof body.page === 'string' ? body.page.slice(0, 200) : ''
   const device = typeof body.device === 'string' ? body.device.slice(0, 100) : ''
+  const reviewGate = !!body.reviewGate
 
   await svc.from('challenge_progress').insert({
     enrollment_id: enrollment.id, user_id: user.id, logged_on: localDateISO(),
-    note: '__feedback__', measurements: { rating, text, category, severity, context, page, device },
+    note: '__feedback__', measurements: { rating, text, category, severity, context, page, device, reviewGate },
   })
   return NextResponse.json({ success: true })
 }

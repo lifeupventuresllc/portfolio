@@ -48,11 +48,16 @@ export default function AuthForm({ mode }: AuthFormProps) {
         if (!accepted) {
           throw new Error('Please accept the Terms of Service and EULA to create your account.')
         }
+        // Carry ?redirect= through to the confirmation link so paying customers
+        // land back on /plan/intake (or wherever they came from) instead of the
+        // homepage once they confirm their email — was previously dropped here.
+        const params = new URLSearchParams(window.location.search)
+        const redirect = params.get('redirect') || '/plan'
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+            emailRedirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(redirect)}`,
           },
         })
         if (error) throw error
@@ -79,9 +84,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
       return
     }
     setLoading(true)
+    const params = new URLSearchParams(window.location.search)
+    const redirect = params.get('redirect') || '/plan'
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/api/auth/callback?next=/plan` },
+      options: { redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(redirect)}` },
     })
     if (error) { setError(error.message); setLoading(false) }
     // On success the browser redirects to Google, so no further handling here.

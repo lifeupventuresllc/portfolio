@@ -13,11 +13,16 @@ import { deviceLabel, markFeedbackSent, FEEDBACK_SEVERITIES, type FeedbackCatego
 // `dark`: set true when this renders inside a bg-charcoal/bg-obsidian card (e.g. a
 // completion banner) rather than directly on the white page — flips idle-state text
 // from ink (dark-on-white) to ivory (light-on-dark) so it stays readable either way.
-export default function QuickFeedback({ category, context, dark = false, onSent }: {
-  category: FeedbackCategory; context?: string; dark?: boolean; onSent?: () => void
+// `reviewGate`: at high-trust moments (workout finish, streak milestones), ask
+// satisfaction FIRST — a happy tap routes to an actual App Store review ask instead
+// of the usual "what would make this better" follow-up; an unhappy tap still routes
+// into the normal private severity/text flow below, never to the App Store. This
+// protects the rating: only people already glad it's working get asked to rate it.
+export default function QuickFeedback({ category, context, dark = false, reviewGate = false, onSent }: {
+  category: FeedbackCategory; context?: string; dark?: boolean; reviewGate?: boolean; onSent?: () => void
 }) {
   const pathname = usePathname()
-  const [phase, setPhase] = useState<'idle' | 'up' | 'down' | 'sent'>('idle')
+  const [phase, setPhase] = useState<'idle' | 'up' | 'down' | 'review' | 'sent'>('idle')
   const [severity, setSeverity] = useState<FeedbackSeverity | null>(null)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
@@ -27,13 +32,18 @@ export default function QuickFeedback({ category, context, dark = false, onSent 
     try {
       await fetch('/api/plan/feedback', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating, category, context, severity: severityVal, text: textVal, page: pathname, device: deviceLabel() }),
+        body: JSON.stringify({ rating, category, context, severity: severityVal, text: textVal, page: pathname, device: deviceLabel(), reviewGate }),
       })
     } catch { /* best-effort — never block her flow over a feedback ping */ }
     markFeedbackSent()
     setSending(false)
     setPhase('sent')
     onSent?.()
+  }
+
+  function tapUp() {
+    if (reviewGate) { setPhase('review'); return }
+    setPhase('up')
   }
 
   if (phase === 'sent') {
@@ -65,6 +75,31 @@ export default function QuickFeedback({ category, context, dark = false, onSent 
     )
   }
 
+  // High-trust moment + she's happy — ask her to actually rate it, instead of
+  // (or before) another follow-up question. Logs the 'up' either way she exits.
+  if (phase === 'review') {
+    const storeUrl = process.env.NEXT_PUBLIC_APP_STORE_URL
+    return (
+      <div className="mt-3 bg-obsidian/90 border border-smoke rounded-2xl p-4 text-center">
+        <p className="text-ivory/70 text-sm font-semibold mb-3">🙏🏽 So glad it&apos;s working! Mind leaving a quick review?</p>
+        <div className="flex flex-col gap-2">
+          <a
+            href={storeUrl || '#'}
+            target="_blank" rel="noopener noreferrer"
+            onClick={() => send('up')}
+            aria-disabled={!storeUrl}
+            className={`bg-gold text-obsidian px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-center ${!storeUrl ? 'opacity-40 pointer-events-none' : ''}`}
+          >
+            Leave a review →
+          </a>
+          <button onClick={() => send('up')} disabled={sending} className="text-ivory/40 text-xs hover:text-ivory/70 transition-colors disabled:opacity-40">
+            {sending ? 'Saving…' : 'Maybe later'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // 👍 still gets an instant, low-pressure thanks — but layers in one optional
   // question so a happy tap can still surface a real suggestion, not just a rating.
   if (phase === 'up') {
@@ -86,8 +121,8 @@ export default function QuickFeedback({ category, context, dark = false, onSent 
 
   return (
     <div className="flex items-center justify-center gap-3 mt-3">
-      <span className={`${dark ? 'text-ivory/50' : 'text-ink/40'} text-xs`}>How was this?</span>
-      <button onClick={() => setPhase('up')} disabled={sending} className="text-xl active:scale-90 transition-transform disabled:opacity-40" aria-label="Working well">👍</button>
+      <span className={`${dark ? 'text-ivory/50' : 'text-ink/40'} text-xs`}>{reviewGate ? 'Enjoying Life-Up Fitness so far?' : 'How was this?'}</span>
+      <button onClick={tapUp} disabled={sending} className="text-xl active:scale-90 transition-transform disabled:opacity-40" aria-label="Working well">👍</button>
       <button onClick={() => setPhase('down')} disabled={sending} className="text-xl active:scale-90 transition-transform disabled:opacity-40" aria-label="Something's off">👎</button>
     </div>
   )

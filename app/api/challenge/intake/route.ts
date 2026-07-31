@@ -41,6 +41,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No challenge enrollment found for your account.' }, { status: 404 })
     }
 
+    // Upsert intake (one per enrollment)
+    const { data: existingIntake } = await svc
+      .from('challenge_intake')
+      .select('id, experience_level, form_data')
+      .eq('enrollment_id', enrollment.id)
+      .maybeSingle()
+
+    // She may have only done the required tier (name/goal/focus/body) so far — once
+    // she completes the optional second pass, this flag flips and stays flipped,
+    // so the dashboard's "finish your profile" nudge knows to stop showing.
+    const priorFormData = (existingIntake?.form_data || {}) as Record<string, unknown>
+    const optionalCompleted = !!body.refining || !!priorFormData.optional_completed
+
     const intakePayload = {
       enrollment_id: enrollment.id,
       user_id: user.id,
@@ -66,15 +79,10 @@ export async function POST(request: NextRequest) {
         postpartum: !!body.postpartum,
         training_style: body.training_style || 'none',
         other_info: body.other_info || '',
+        focus_area: body.focus_area || 'overall',
+        optional_completed: optionalCompleted,
       },
     }
-
-    // Upsert intake (one per enrollment)
-    const { data: existingIntake } = await svc
-      .from('challenge_intake')
-      .select('id, experience_level')
-      .eq('enrollment_id', enrollment.id)
-      .maybeSingle()
 
     if (existingIntake) {
       // Only reset level_started_at when the level ITSELF changed — an unrelated
