@@ -19,6 +19,13 @@ export function localDateISO(tz: string = getTimezone(), at: Date = new Date()):
   return at.toLocaleDateString('en-CA', { timeZone: tz }) // en-CA formats as YYYY-MM-DD
 }
 
+// 0-23 hour in the user's timezone — used to guess which meal she's talking
+// about when she mentions eating something in chat, without asking her.
+export function localHourNumber(tz: string = getTimezone(), at: Date = new Date()): number {
+  const h = at.toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', hour12: false })
+  return parseInt(h, 10) % 24
+}
+
 // Mon=0 … Sun=6 in the user's timezone (drives the weekday meal index).
 export function localMondayIndex(tz: string = getTimezone(), at: Date = new Date()): number {
   const wd = at.toLocaleDateString('en-US', { timeZone: tz, weekday: 'short' })
