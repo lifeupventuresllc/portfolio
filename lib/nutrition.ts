@@ -134,7 +134,11 @@ function macrosFor(calories: number, protein_g: number, goal: Goal): Macros {
 // Deficit/surplus per goal + plan intensity (rest, workout)
 function adjustments(goal: Goal, aggressive: boolean): { rest: number; workout: number } {
   if (goal === 'lose') {
-    return aggressive ? { rest: -600, workout: -500 } : { rest: -450, workout: -350 }
+    // Locked constants (Master Blueprint spec, Step 5) — the SAME deficit applies to
+    // rest and workout days; the day-type difference already lives in maintenance via
+    // Exercise Burn. A mismatched rest/workout deficit here breaks the spec's required
+    // sanity check (Workout Day eat − Rest Day eat must equal Exercise Burn exactly).
+    return aggressive ? { rest: -500, workout: -500 } : { rest: -275, workout: -275 }
   }
   if (goal === 'gain') {
     return aggressive ? { rest: 500, workout: 500 } : { rest: 250, workout: 250 }
