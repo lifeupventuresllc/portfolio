@@ -13,11 +13,29 @@ const INJURIES = [
 ]
 
 const FOCUS_AREAS = [
-  { v: 'core', l: '🎯 Core & waistline', d: 'Flatter stomach, defined middle' },
-  { v: 'legs', l: '🦵🏽 Legs & glutes', d: 'Lift, shape, and strengthen' },
-  { v: 'arms', l: '💪🏽 Arms & back', d: 'Tone and define upper body' },
-  { v: 'overall', l: '✨ All-over', d: 'Balanced, head to toe' },
+  { v: 'core', l: 'Core & waistline', d: 'Flatter stomach, defined middle' },
+  { v: 'legs', l: 'Legs & glutes', d: 'Lift, shape, and strengthen' },
+  { v: 'arms', l: 'Arms & back', d: 'Tone and define upper body' },
+  { v: 'overall', l: 'All-over', d: 'Balanced, head to toe' },
 ]
+
+// Simple illustrated body silhouette, highlighting the zone each option shapes.
+// Not real photography (no assets exist for that yet) — but gives a real visual
+// cue instead of just an emoji, matching the competitor pattern of showing her
+// what she's choosing rather than just naming it.
+function BodyFocusIcon({ zone }: { zone: 'core' | 'legs' | 'arms' | 'overall' }) {
+  const on = (part: string) => (zone === 'overall' || zone === part ? '#C9A84C' : 'rgba(10,10,15,0.10)')
+  return (
+    <svg viewBox="0 0 100 160" width="56" height="90" aria-hidden="true">
+      <circle cx="50" cy="16" r="13" fill="rgba(10,10,15,0.10)" />
+      <rect x="14" y="34" width="15" height="50" rx="7" fill={on('arms')} />
+      <rect x="71" y="34" width="15" height="50" rx="7" fill={on('arms')} />
+      <rect x="32" y="32" width="36" height="52" rx="11" fill={on('core')} />
+      <rect x="33" y="86" width="15" height="62" rx="7" fill={on('legs')} />
+      <rect x="52" y="86" width="15" height="62" rx="7" fill={on('legs')} />
+    </svg>
+  )
+}
 
 // Required tier: the minimum to get her a real plan fast (name, goal, focus, body).
 // Everything else is a second, optional pass she's invited into AFTER she's already
@@ -249,8 +267,9 @@ function ConversationalIntakeInner() {
               <LHint>This shapes how I weight your workout — no wrong answer.</LHint>
               <div className="grid grid-cols-2 gap-3">
                 {FOCUS_AREAS.map((o) => (
-                  <button key={o.v} onClick={() => pick('focus_area', o.v)} className={lopt(f.focus_area === o.v)}>
-                    <span className="block text-lg">{o.l}</span><span className="block text-xs font-normal mt-1 text-ink/40">{o.d}</span>
+                  <button key={o.v} onClick={() => pick('focus_area', o.v)} className={`${lopt(f.focus_area === o.v)} !text-center flex flex-col items-center`}>
+                    <BodyFocusIcon zone={o.v as 'core' | 'legs' | 'arms' | 'overall'} />
+                    <span className="block text-base font-semibold mt-2">{o.l}</span><span className="block text-xs font-normal mt-1 text-ink/40">{o.d}</span>
                   </button>
                 ))}
               </div>
@@ -298,15 +317,36 @@ function ConversationalIntakeInner() {
 
       <div className="max-w-lg w-full mx-auto flex-1">
         <Screen>
-          {s === 'target' && (<>
-            <Q>How much are we {f.goal === 'gain' ? 'building' : 'shifting'}?</Q>
-            <Hint>Ballpark is perfect — we adjust as you go.</Hint>
-            <div className="space-y-3">
-              {[{ v: '10', l: '5–10 lbs' }, { v: '15', l: '10–15 lbs' }, { v: '20', l: '15+ lbs' }, { v: '', l: "Not sure — you tell me" }].map((o) => (
-                <button key={o.l} onClick={() => pick('target_lbs', o.v)} className={opt(f.target_lbs === o.v)}>{o.l}</button>
-              ))}
-            </div>
-          </>)}
+          {s === 'target' && (() => {
+            const delta = f.target_lbs ? Number(f.target_lbs) : 10
+            const startW = Number(f.weight_lbs) || 0
+            const goalW = f.goal === 'gain' ? startW + delta : startW - delta
+            return (<>
+              <Q>How much are we {f.goal === 'gain' ? 'building' : 'shifting'}?</Q>
+              <Hint>Drag to your number — ballpark is perfect, we adjust as you go.</Hint>
+              <div className="flex items-center justify-between mb-5">
+                <div className="text-center">
+                  <p className="text-ivory/40 text-[10px] uppercase tracking-wider mb-1">Now</p>
+                  <p className="text-white text-2xl font-bold tabular-nums">{startW || '—'}</p>
+                </div>
+                <div className="flex-1 mx-4 h-1.5 bg-charcoal rounded-full overflow-hidden">
+                  <div className="h-full bg-gold rounded-full transition-all duration-150" style={{ width: `${Math.min(100, (delta / 40) * 100)}%` }} />
+                </div>
+                <div className="text-center">
+                  <p className="text-gold text-[10px] uppercase tracking-wider mb-1">Goal</p>
+                  <p className="text-gold text-2xl font-bold tabular-nums">{startW ? goalW : '—'}</p>
+                </div>
+              </div>
+              <input
+                type="range" min={5} max={40} step={1} value={delta}
+                onChange={(e) => { hapticTap(6); set('target_lbs', e.target.value) }}
+                className="w-full accent-gold mb-2"
+              />
+              <p className="text-center text-ivory/50 text-sm mb-8">{delta} lbs {f.goal === 'gain' ? 'to build' : 'to lose'}</p>
+              <button onClick={next} className={primaryBtn}>Continue →</button>
+              <button onClick={() => { set('target_lbs', ''); next() }} className="w-full text-center text-ivory/40 text-xs mt-4 hover:text-gold transition-colors">Not sure — you tell me →</button>
+            </>)
+          })()}
 
           {s === 'activity' && (<>
             <Q>How active is your day, outside workouts?</Q>
