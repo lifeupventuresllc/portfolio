@@ -100,16 +100,18 @@ function round(n: number): number {
 
 // Step 7 — gender + goal protein target (grams/lb) with floors
 function proteinGrams(inputs: BlueprintInputs): { grams: number; label: string } {
-  const w = inputs.weight_lbs
+  // Protein is targeted off her/his GOAL bodyweight, not current — the target reflects
+  // where they're headed, not where they are. Falls back to current weight when no goal
+  // weight is set so the calc never breaks.
+  const w = inputs.goal_weight_lbs || inputs.weight_lbs
   if (inputs.sex === 'male') {
-    // Caloric deficit (cut) = HIGHEST protein to protect muscle while losing (Asa's method:
-    // he keeps protein in the 200s across 180–208 lb, never dropping it as bodyweight falls).
-    // 1.1 g/lb keeps a cutter elevated (180→198, 195→215, 208→229). Gain 1.0, maintain 0.8.
-    const factor = inputs.goal === 'gain' ? 1.0 : inputs.goal === 'maintain' ? 0.8 : 1.1
-    return { grams: Math.max(140, round(w * factor)), label: `${factor}g/lb (min 140g)` }
+    // 1.0-1.5 g/lb range: highest on a cut (protect muscle in a deficit), lowest at
+    // maintenance, a solid middle number for a lean gain.
+    const factor = inputs.goal === 'gain' ? 1.25 : inputs.goal === 'maintain' ? 1.0 : 1.5
+    return { grams: Math.max(140, round(w * factor)), label: `${factor}g/lb goal weight (min 140g)` }
   }
   const factor = inputs.goal === 'gain' ? 0.8 : inputs.goal === 'maintain' ? 0.7 : 0.75
-  return { grams: Math.max(100, round(w * factor)), label: `${factor}g/lb (min 100g)` }
+  return { grams: Math.max(100, round(w * factor)), label: `${factor}g/lb goal weight (min 100g)` }
 }
 
 // Step 8 — macro split built AROUND a fixed protein target
