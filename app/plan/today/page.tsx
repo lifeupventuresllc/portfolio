@@ -128,6 +128,16 @@ export default async function TodayView() {
               <p className="text-ivory/60 text-sm">Your workout is being prepared. Refresh in a moment.</p>
             )}
           </section>
+
+          {/* Coach access lives here now instead of its own tab — she should
+              never feel like reaching Asa takes more than one tap from Today. */}
+          <Link href="/plan/coach" className="flex items-center justify-between gap-3 bg-charcoal border border-gold/30 rounded-2xl px-5 py-4 hover:border-gold/60 transition-colors">
+            <div>
+              <p className="text-white font-semibold text-sm">🧠 Talk to Coach Asa</p>
+              <p className="text-ivory/60 text-xs mt-0.5">Tell me about your day, ask a question, book a call.</p>
+            </div>
+            <span className="text-gold text-sm shrink-0">→</span>
+          </Link>
         </div>
       </div>
     </div>
