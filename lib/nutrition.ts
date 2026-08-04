@@ -109,7 +109,7 @@ function proteinGrams(inputs: BlueprintInputs): { grams: number; label: string }
     return { grams: Math.max(140, round(w * factor)), label: `${factor}g/lb (min 140g)` }
   }
   const factor = inputs.goal === 'gain' ? 0.8 : inputs.goal === 'maintain' ? 0.7 : 0.75
-  return { grams: Math.max(120, round(w * factor)), label: `${factor}g/lb (min 120g)` }
+  return { grams: Math.max(100, round(w * factor)), label: `${factor}g/lb (min 100g)` }
 }
 
 // Step 8 — macro split built AROUND a fixed protein target
@@ -138,13 +138,13 @@ function adjustments(goal: Goal, aggressive: boolean): { rest: number; workout: 
     // rest and workout days; the day-type difference already lives in maintenance via
     // Exercise Burn. A mismatched rest/workout deficit here breaks the spec's required
     // sanity check (Workout Day eat − Rest Day eat must equal Exercise Burn exactly).
-    return aggressive ? { rest: -500, workout: -500 } : { rest: -275, workout: -275 }
+    return aggressive ? { rest: -500, workout: -500 } : { rest: -250, workout: -250 }
   }
   if (goal === 'gain') {
     return aggressive ? { rest: 500, workout: 500 } : { rest: 250, workout: 250 }
   }
   // maintain: current = at maintenance; aggressive = light recomp cut
-  return aggressive ? { rest: -250, workout: -200 } : { rest: 0, workout: 0 }
+  return aggressive ? { rest: -250, workout: -250 } : { rest: 0, workout: 0 }
 }
 
 function buildPlan(
