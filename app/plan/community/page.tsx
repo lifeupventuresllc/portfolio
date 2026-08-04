@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { COMMUNITY_URL } from '@/lib/bonuses'
+import { getLeaderboard } from '@/lib/leaderboard'
 import PostBox from '@/components/PostBox'
 
 export const dynamic = 'force-dynamic'
@@ -32,6 +33,8 @@ export default async function Community() {
   const { data: posts } = await svc.from('challenge_community_posts')
     .select('id, name, body, created_at').order('created_at', { ascending: false }).limit(50)
 
+  const { leaderboard, spotlight } = await getLeaderboard(enrollment.id as string)
+
   const linked = COMMUNITY_URL && COMMUNITY_URL !== '#'
 
   return (
@@ -46,6 +49,31 @@ export default async function Community() {
           <a href={COMMUNITY_URL} target="_blank" rel="noopener noreferrer" className="block text-center bg-charcoal border border-gold/30 rounded-2xl py-3 mb-5 text-gold font-semibold text-sm hover:bg-gold/5">
             Join the live community →
           </a>
+        )}
+
+        {spotlight && (
+          <div className="bg-charcoal border border-gold/30 rounded-2xl p-4 mb-5">
+            <p className="text-gold text-xs font-semibold tracking-[0.2em] uppercase mb-1">This week&apos;s spotlight</p>
+            <p className="text-white text-sm">
+              <span className="font-semibold">{spotlight.isYou ? 'You' : spotlight.name}</span> — {spotlight.streak} day streak 🔥
+            </p>
+          </div>
+        )}
+
+        {leaderboard.length > 1 && (
+          <div className="bg-charcoal border border-smoke rounded-2xl p-4 mb-5">
+            <p className="text-ivory/50 text-xs font-semibold tracking-[0.2em] uppercase mb-3">Leaderboard</p>
+            <div className="space-y-2">
+              {leaderboard.map((entry, i) => (
+                <div key={i} className="flex items-center justify-between text-sm">
+                  <span className={entry.isYou ? 'text-gold font-semibold' : 'text-ivory/70'}>
+                    {i + 1}. {entry.isYou ? 'You' : entry.name}
+                  </span>
+                  <span className="text-ivory/40">{entry.streak}d</span>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         <PostBox />
