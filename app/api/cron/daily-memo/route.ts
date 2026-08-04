@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendPush, pushConfigured, type StoredSub } from '@/lib/push'
-import { localDateISO, localHourNumber, localDayNumber } from '@/lib/localdate'
-import { pickDailyMemo, dailySendHour } from '@/lib/daily-memos'
+import { localDateISO, localDayNumber } from '@/lib/localdate'
+import { pickDailyMemo } from '@/lib/daily-memos'
 
-// Runs hourly (see vercel.json). For each subscriber with a known timezone,
-// fires once per local day at a time that's stable-for-the-day but varies
-// day to day — never exactly on the hour every day, never at night. Cheap
-// to run hourly since almost every check is a no-op (wrong hour, or already
-// sent today).
+// HOBBY-TIER VERSION: Vercel Hobby caps cron jobs at once/day, so this runs
+// once daily (see vercel.json) instead of hourly — every subscriber gets
+// today's memo on this single run, no per-user randomized send hour yet.
+// `dailySendHour`/`DAILY_MEMO_WINDOW` in lib/daily-memos.ts are already
+// built for the real "varies day to day, 8am-6pm local" experience — once
+// Asa upgrades to Pro, switch vercel.json back to "0 * * * *" and restore
+// the hour-gating check (see git history on this file for the exact diff)
+// so it becomes per-user-randomized again instead of a single fixed time.
 export async function GET(request: NextRequest) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -23,10 +26,6 @@ export async function GET(request: NextRequest) {
     const tz = s.timezone as string
     const today = localDateISO(tz)
     if (s.last_daily_memo_sent === today) { skipped++; continue }
-
-    const hourNow = localHourNumber(tz)
-    const targetHour = dailySendHour(tz + s.endpoint, today)
-    if (hourNow < targetHour) { skipped++; continue }
 
     const memo = pickDailyMemo(tz + s.endpoint, today, localDayNumber(tz))
     const r = await sendPush(s as StoredSub, { title: memo.title, body: memo.body, url: '/plan' })

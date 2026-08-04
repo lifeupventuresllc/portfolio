@@ -22,7 +22,7 @@
     },
     {
       "path": "/api/cron/daily-memo",
-      "schedule": "0 * * * *"
+      "schedule": "0 17 * * *"
     }
   ]
 }
