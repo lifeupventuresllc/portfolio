@@ -24,9 +24,10 @@ export async function POST(request: NextRequest) {
   const endpoint = sub?.endpoint
   const p256dh = sub?.keys?.p256dh
   const auth = sub?.keys?.auth
+  const timezone: string | undefined = body?.timezone
   if (!endpoint || !p256dh || !auth) return NextResponse.json({ error: 'Invalid subscription.' }, { status: 400 })
   await svc.from('push_subscriptions').upsert(
-    { endpoint, p256dh, auth, user_id: user.id, enrollment_id: enrollment?.id ?? null },
+    { endpoint, p256dh, auth, user_id: user.id, enrollment_id: enrollment?.id ?? null, timezone: timezone || null },
     { onConflict: 'endpoint' }
   )
   return NextResponse.json({ ok: true })

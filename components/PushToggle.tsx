@@ -36,7 +36,8 @@ export default function PushToggle() {
       if (perm !== 'granted') { setMsg('Allow notifications to turn on reminders.'); setBusy(false); return }
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(PUBLIC) })
-      const res = await fetch('/api/plan/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON() }) })
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      const res = await fetch('/api/plan/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), timezone }) })
       if (res.ok) { setEnabled(true); setMsg('Reminders on. 💛') } else setMsg('Could not save — try again.')
     } catch { setMsg('Could not turn on reminders on this device.') }
     setBusy(false)
