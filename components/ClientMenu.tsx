@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import PushToggle from '@/components/PushToggle'
+import CalendarToggle from '@/components/CalendarToggle'
 import { createClient } from '@/lib/supabase/client'
 
 // The ☰ menu on the client home dashboard — keeps the home screen simple while
@@ -131,6 +132,9 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
               ))}
               <div className="px-2 pt-3 mt-1 border-t border-smoke">
                 <PushToggle />
+              </div>
+              <div className="px-2 pt-3 mt-1 border-t border-smoke">
+                <CalendarToggle />
               </div>
               <div className="px-2 pt-3 mt-1 border-t border-smoke">
                 <button onClick={handleSignOut} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-charcoal transition-colors w-full text-left">

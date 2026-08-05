@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { sendPush, pushConfigured, type StoredSub } from '@/lib/push'
 import { localDateISO } from '@/lib/localdate'
 import { detectDip, isSilentDip } from '@/lib/dip-detection'
+import { isPackedSchedule, calendarConfigured } from '@/lib/google-calendar'
 
 // Daily reminder: nudge anyone who opted into push and hasn't shown up today.
 // Layer 1, Phase 1 of the primary feature ("the app that already knows you"):
@@ -55,7 +56,9 @@ export async function GET(request: NextRequest) {
       const localToday = localDateISO((s.timezone as string) || undefined)
       const dip = detectDip(byEnrollment.get(s.enrollment_id as string) || new Set(), localToday)
       const silent = isSilentDip(lastActiveByEnrollment.get(s.enrollment_id as string) || null)
-      if (dip.isDip || silent) {
+      // Only hit the Calendar API when the cheaper signals didn't already trigger.
+      const packed = !dip.isDip && !silent && calendarConfigured && await isPackedSchedule(s.enrollment_id as string)
+      if (dip.isDip || silent || packed) {
         dipsCaught++
         payload = {
           title: 'You’ve been carrying a lot 💛',
