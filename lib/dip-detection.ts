@@ -42,3 +42,15 @@ export function detectDip(loggedDates: Set<string>, todayISO: string): DipSignal
     priorStreakPeak: peak,
   }
 }
+
+// Phase 2 passive signal: total app silence, catches her even earlier than a
+// missed workout/food day would — she can go quiet before anything is
+// technically "due." No permission prompt needed, just a real visit
+// timestamp (see components/TrackAppOpen.tsx).
+const SILENCE_DAYS_THRESHOLD = 3
+
+export function isSilentDip(lastActiveAt: string | null, now: Date = new Date()): boolean {
+  if (!lastActiveAt) return false
+  const days = (now.getTime() - new Date(lastActiveAt).getTime()) / 86400000
+  return days >= SILENCE_DAYS_THRESHOLD
+}

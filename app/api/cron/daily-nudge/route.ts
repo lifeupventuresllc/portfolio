@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendPush, pushConfigured, type StoredSub } from '@/lib/push'
 import { localDateISO } from '@/lib/localdate'
-import { detectDip } from '@/lib/dip-detection'
+import { detectDip, isSilentDip } from '@/lib/dip-detection'
 
 // Daily reminder: nudge anyone who opted into push and hasn't shown up today.
 // Layer 1, Phase 1 of the primary feature ("the app that already knows you"):
@@ -26,15 +26,20 @@ export async function GET(request: NextRequest) {
   const { data: subs } = await svc.from('push_subscriptions').select('endpoint, p256dh, auth, enrollment_id, timezone')
   const enrollmentIds = (subs || []).map((s) => s.enrollment_id).filter(Boolean) as string[]
 
-  const { data: progress } = enrollmentIds.length
-    ? await svc.from('challenge_progress').select('enrollment_id, logged_on').eq('note', '__daily__').in('enrollment_id', enrollmentIds)
-    : { data: [] }
+  const [{ data: progress }, { data: enrollments }] = enrollmentIds.length
+    ? await Promise.all([
+        svc.from('challenge_progress').select('enrollment_id, logged_on').eq('note', '__daily__').in('enrollment_id', enrollmentIds),
+        svc.from('challenge_enrollments').select('id, last_active_at').in('id', enrollmentIds),
+      ])
+    : [{ data: [] }, { data: [] }]
   const byEnrollment = new Map<string, Set<string>>()
   for (const row of progress || []) {
     const id = row.enrollment_id as string
     if (!byEnrollment.has(id)) byEnrollment.set(id, new Set())
     byEnrollment.get(id)!.add(row.logged_on as string)
   }
+  const lastActiveByEnrollment = new Map<string, string | null>()
+  for (const e of enrollments || []) lastActiveByEnrollment.set(e.id as string, e.last_active_at as string | null)
 
   let sent = 0, removed = 0, skipped = 0, dipsCaught = 0
   for (const s of (subs || [])) {
@@ -49,7 +54,8 @@ export async function GET(request: NextRequest) {
     if (s.enrollment_id) {
       const localToday = localDateISO((s.timezone as string) || undefined)
       const dip = detectDip(byEnrollment.get(s.enrollment_id as string) || new Set(), localToday)
-      if (dip.isDip) {
+      const silent = isSilentDip(lastActiveByEnrollment.get(s.enrollment_id as string) || null)
+      if (dip.isDip || silent) {
         dipsCaught++
         payload = {
           title: 'You’ve been carrying a lot 💛',
