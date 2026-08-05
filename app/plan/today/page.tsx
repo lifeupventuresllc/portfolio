@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import FoodLog, { type PlannedItem } from '@/components/FoodLog'
 import DipCard from '@/components/DipCard'
+import FoodDipCard from '@/components/FoodDipCard'
 import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { detectDip } from '@/lib/dip-detection'
 import { shortVersionFor } from '@/lib/workout-short'
@@ -29,10 +30,11 @@ export default async function TodayView() {
 
   const firstName = (enrollment.name || user.email?.split('@')[0] || 'there').split(' ')[0]
 
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }] = await Promise.all([
+  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, { data: foodLogRows }] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('measurements, logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
+    svc.from('challenge_food_log').select('logged_on').eq('enrollment_id', enrollment.id),
   ])
 
   const tz = getTimezone()
@@ -70,6 +72,11 @@ export default async function TodayView() {
   const dip = detectDip(loggedDates, localDateISO(tz))
   const dipMoves = dip.isDip && program ? shortVersionFor(program, startDay) : []
 
+  // Same mechanic, nutrition side — a real logging streak that just broke,
+  // not someone who's never logged food before.
+  const foodLoggedDates = new Set((foodLogRows || []).map((r) => r.logged_on as string))
+  const foodDip = detectDip(foodLoggedDates, localDateISO(tz))
+
   return (
     <div className="min-h-screen bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto">
@@ -91,6 +98,11 @@ export default async function TodayView() {
             </div>
             <span className="text-blue-300 text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
           </Link>
+
+          {/* Nutrition side of the same primary-feature mechanic: a real logging
+              streak just broke. No macro breakdown, no logging-in-detail ask —
+              just reassurance. Clears itself the moment she logs anything below. */}
+          {foodDip.isDip && <FoodDipCard />}
 
           {/* Food log — the heartbeat of the daily view. Budget = TODAY'S calorie target
               (workout days higher, rest days lower); the app already knows which day this is. */}
