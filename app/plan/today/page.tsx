@@ -2,7 +2,10 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import FoodLog, { type PlannedItem } from '@/components/FoodLog'
-import { getTimezone, localMondayIndex } from '@/lib/localdate'
+import DipCard from '@/components/DipCard'
+import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
+import { detectDip } from '@/lib/dip-detection'
+import { shortVersionFor } from '@/lib/workout-short'
 import type { WorkoutProgram } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
 
@@ -29,7 +32,7 @@ export default async function TodayView() {
   const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
-    svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
+    svc.from('challenge_progress').select('measurements, logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
   ])
 
   const tz = getTimezone()
@@ -45,10 +48,11 @@ export default async function TodayView() {
   // Today's workout — same rotation as the session player (by # workouts finished).
   const program = (workoutPlan?.plan as WorkoutProgram) || null
   let todayWorkout: { title: string; muscles?: string[] } | null = null
+  let startDay = 0
   if (program) {
     const numDays = program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)
     const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
-    const startDay = numDays > 0 ? completed % numDays : 0
+    startDay = numDays > 0 ? completed % numDays : 0
     if (program.track === 'home') {
       const d = program.home?.days[startDay]
       if (d) todayWorkout = { title: d.title }
@@ -58,6 +62,14 @@ export default async function TodayView() {
     }
   }
 
+  // Layer 1, Phase 1 of the primary feature: catch her before she quits.
+  // A dip is a real streak that just broke — not someone who's never been
+  // consistent (that's onboarding, not a spiral). Runs off data already
+  // logged, no new integrations.
+  const loggedDates = new Set((doneRows || []).map((r) => r.logged_on as string))
+  const dip = detectDip(loggedDates, localDateISO(tz))
+  const dipMoves = dip.isDip && program ? shortVersionFor(program, startDay) : []
+
   return (
     <div className="min-h-screen bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto">
@@ -66,6 +78,10 @@ export default async function TodayView() {
         <h1 className="text-3xl font-bold text-white mb-6">Today, {firstName}</h1>
 
         <div className="space-y-6">
+          {/* The primary feature, live: she was on a real streak and it just broke.
+              This leads, ahead of everything else — the smaller ask comes first. */}
+          {dip.isDip && dipMoves.length > 0 && <DipCard moves={dipMoves} />}
+
           {/* The zero-decision escape hatch — for the moment she's out, off-plan, and
               would otherwise have to decide (or skip eating entirely). */}
           <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-charcoal bg-gradient-to-br from-blue-500/15 to-charcoal border border-blue-500/30 rounded-2xl px-5 py-4 hover:border-blue-400/60 transition-colors">
