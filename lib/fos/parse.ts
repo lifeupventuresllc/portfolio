@@ -34,13 +34,20 @@ const CLASSIFY_SYSTEM = `You read a message a woman sends her fitness coach abou
 
 Pick the single best match. If more than one could apply, pick whichever is most central to what she needs right now. Use "none" liberally — only classify a real signal when it's clearly there.`
 
+// A confident "none" from Claude (nothing situational here) and "the call never
+// happened" (unconfigured / failed) are different outcomes — the first should NOT
+// fall through to the regex matcher (which can misfire on unrelated words, e.g.
+// "my daughter's stressed about her exam" hitting the stressed pattern), only the
+// second should. `ok: false` means the caller should try parseSignal() instead.
+type AIClassifyResult = { ok: true; signal: LifeSignal | null } | { ok: false }
+
 // Claude-based intent classifier — replaces the regex matcher below as the primary
 // path now that the key is live. Falls back to the rule-based parser (still
-// zero-AI, always available) if unconfigured or the call fails, so the operator
-// never goes silent. Output shape is identical either way: recover()'s hand-tuned,
-// identity-affirming copy is untouched — only how we read her is upgraded.
-export async function parseSignalAI(text: string): Promise<LifeSignal | null> {
-  if (!anthropicConfigured() || !text.trim()) return null
+// zero-AI, always available) only when unconfigured or the call fails, so the
+// operator never goes silent. Output shape is identical either way: recover()'s
+// hand-tuned, identity-affirming copy is untouched — only how we read her is upgraded.
+export async function parseSignalAI(text: string): Promise<AIClassifyResult> {
+  if (!anthropicConfigured() || !text.trim()) return { ok: false }
   try {
     const client = new Anthropic()
     const msg = await client.messages.create({
@@ -52,20 +59,21 @@ export async function parseSignalAI(text: string): Promise<LifeSignal | null> {
       messages: [{ role: 'user', content: text }],
     })
     const block = msg.content.find((b) => b.type === 'tool_use')
-    if (!block || block.type !== 'tool_use') return null
+    if (!block || block.type !== 'tool_use') return { ok: false }
     const input = block.input as { kind: string; minutes?: number; days?: number; free_at?: string }
     switch (input.kind) {
-      case 'time_crunch': return { kind: 'time_crunch', minutes: input.minutes ?? 20 }
-      case 'exhausted': return { kind: 'exhausted' }
-      case 'poor_sleep': return { kind: 'poor_sleep' }
-      case 'schedule_change': return { kind: 'schedule_change', freeAt: input.free_at || undefined }
-      case 'eat_out': return { kind: 'eat_out' }
-      case 'missed': return { kind: 'missed', days: input.days ?? 2 }
-      case 'craving': return { kind: 'craving' }
-      case 'stressed': return { kind: 'stressed' }
-      default: return null
+      case 'time_crunch': return { ok: true, signal: { kind: 'time_crunch', minutes: input.minutes ?? 20 } }
+      case 'exhausted': return { ok: true, signal: { kind: 'exhausted' } }
+      case 'poor_sleep': return { ok: true, signal: { kind: 'poor_sleep' } }
+      case 'schedule_change': return { ok: true, signal: { kind: 'schedule_change', freeAt: input.free_at || undefined } }
+      case 'eat_out': return { ok: true, signal: { kind: 'eat_out' } }
+      case 'missed': return { ok: true, signal: { kind: 'missed', days: input.days ?? 2 } }
+      case 'craving': return { ok: true, signal: { kind: 'craving' } }
+      case 'stressed': return { ok: true, signal: { kind: 'stressed' } }
+      case 'none': return { ok: true, signal: null }
+      default: return { ok: false }
     }
-  } catch { return null }
+  } catch { return { ok: false } }
 }
 
 // Rule-based intent parser: turn what she types ("I only have 20 minutes", "I'm

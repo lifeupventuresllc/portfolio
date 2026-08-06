@@ -67,9 +67,9 @@ export async function POST(request: NextRequest) {
   if (!message) return NextResponse.json({ error: 'Say something first.' }, { status: 400 })
   await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'user', content: message })
 
-  const aiSignal = await parseSignalAI(message)
-  const signal = aiSignal ?? parseSignal(message)
-  const signalSource: 'ai' | 'rule' = aiSignal ? 'ai' : 'rule'
+  const aiResult = await parseSignalAI(message)
+  const signal = aiResult.ok ? aiResult.signal : parseSignal(message)
+  const signalSource: 'ai' | 'rule' = aiResult.ok ? 'ai' : 'rule'
 
   // Nothing situational matched — check whether she's actually just telling us
   // what she ate ("I had a slice of pizza"). Real Claude detection (see
