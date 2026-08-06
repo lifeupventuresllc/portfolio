@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { localDateISO, localHourNumber } from '@/lib/localdate'
 import { recover, type LifeSignal } from '@/lib/fos/recovery'
-import { parseSignal } from '@/lib/fos/parse'
+import { parseSignal, parseSignalAI } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
 import type { FosEventKind } from '@/lib/fos/types'
 
-// The Fitness OS operator (Phase 1). She tells it about her day; it replies in Coach
-// Asa's voice with a goal-protecting adjustment she can approve / modify / reject.
-// Runs on the rule-based recovery engine — persists to the fos_* tables when migration
-// 017 is applied, and degrades to a live preview (no persistence) until then.
+// The Fitness OS operator. She tells it about her day; it replies in Coach Asa's
+// voice with a goal-protecting adjustment she can approve / modify / reject.
+// Reading her message runs Claude first (parseSignalAI), falling back to the
+// zero-dependency regex parser if the key's unconfigured or the call fails —
+// the response copy itself (recover()) is untouched either way.
 
 async function resolve() {
   const supabase = createClient()
@@ -66,7 +67,9 @@ export async function POST(request: NextRequest) {
   if (!message) return NextResponse.json({ error: 'Say something first.' }, { status: 400 })
   await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'user', content: message })
 
-  const signal = parseSignal(message)
+  const aiSignal = await parseSignalAI(message)
+  const signal = aiSignal ?? parseSignal(message)
+  const signalSource: 'ai' | 'rule' = aiSignal ? 'ai' : 'rule'
 
   // Nothing situational matched — check whether she's actually just telling us
   // what she ate ("I had a slice of pizza"). Real Claude detection (see
@@ -106,7 +109,7 @@ export async function POST(request: NextRequest) {
     const { data: adj } = await svc.from('fos_adjustments').insert({
       enrollment_id: eid, user_id: user.id, for_date: today, trigger: message,
       workout_change: plan.workoutChange ?? null, nutrition_change: plan.nutritionChange ?? null,
-      message: reply, status: 'recommended', source: 'rule',
+      message: reply, status: 'recommended', source: signalSource,
     }).select('id').maybeSingle()
     adjustmentId = (adj?.id as string) ?? null
   }
