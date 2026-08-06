@@ -12,38 +12,43 @@ export type FoodEstimate = {
   calories: number; protein_g: number; carbs_g: number; fats_g: number; source: 'estimated'
 }
 
-const SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    foods: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        properties: {
-          name: { type: 'string' },
-          servings: { type: 'number' },
-          calories: { type: 'integer' },
-          protein_g: { type: 'integer' },
-          carbs_g: { type: 'integer' },
-          fats_g: { type: 'integer' },
+// Forced tool-use is how this SDK version gets schema-constrained output —
+// there is no `output_config`/`json_schema` response-format shorthand.
+const RECORD_FOODS_TOOL = {
+  name: 'record_foods',
+  description: 'Record the estimated foods and their nutrition.',
+  input_schema: {
+    type: 'object' as const,
+    additionalProperties: false,
+    properties: {
+      foods: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            name: { type: 'string' },
+            servings: { type: 'number' },
+            calories: { type: 'integer' },
+            protein_g: { type: 'integer' },
+            carbs_g: { type: 'integer' },
+            fats_g: { type: 'integer' },
+          },
+          required: ['name', 'servings', 'calories', 'protein_g', 'carbs_g', 'fats_g'],
         },
-        required: ['name', 'servings', 'calories', 'protein_g', 'carbs_g', 'fats_g'],
       },
     },
+    required: ['foods'],
   },
-  required: ['foods'],
-} as const
+}
 
 export function anthropicConfigured(): boolean {
   return !!process.env.ANTHROPIC_API_KEY
 }
 
-function parseFoods(text: string): FoodEstimate[] {
-  const parsed = JSON.parse(text)
-  const foods = Array.isArray(parsed?.foods) ? parsed.foods : []
-  return foods.map((f: Record<string, unknown>) => ({
+function parseFoods(input: unknown): FoodEstimate[] {
+  const foods = Array.isArray((input as Record<string, unknown>)?.foods) ? (input as { foods: unknown[] }).foods : []
+  return foods.map((f) => f as Record<string, unknown>).map((f) => ({
     name: String(f.name || 'Food'),
     brand: null,
     servings: Number(f.servings) || 1,
@@ -63,15 +68,16 @@ export async function estimateFoods(description: string): Promise<FoodEstimate[]
   try {
     const client = new Anthropic()
     const msg = await client.messages.create({
-      model: 'claude-opus-4-8',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       system:
         'You are a nutrition estimator. Given a spoken/typed description of food someone ate, return your best estimate of each distinct food item with realistic calories and macros in grams for the amount described. Use standard serving sizes when quantity is vague. Return integers for calories and grams. Only estimate — never claim these are exact.',
-      output_config: { format: { type: 'json_schema', schema: SCHEMA } },
+      tools: [RECORD_FOODS_TOOL],
+      tool_choice: { type: 'tool', name: 'record_foods' },
       messages: [{ role: 'user', content: `Estimate the nutrition for: ${description}` }],
     })
-    const block = msg.content.find((b) => b.type === 'text')
-    return block && block.type === 'text' ? parseFoods(block.text) : []
+    const block = msg.content.find((b) => b.type === 'tool_use')
+    return block && block.type === 'tool_use' ? parseFoods(block.input) : []
   } catch { return [] }
 }
 
@@ -84,14 +90,15 @@ export async function detectEatenFood(message: string): Promise<FoodEstimate[]> 
   try {
     const client = new Anthropic()
     const msg = await client.messages.create({
-      model: 'claude-opus-4-8',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       system:
         "You are reading a casual message someone sent their fitness coach about their day. Determine whether she is describing something she ALREADY ATE OR DRANK (past tense, actually consumed) — not a craving, not something she's considering, not a question, not a hypothetical. If she is not clearly describing food already consumed, return an empty foods array. If she is, return each distinct food item with a realistic calorie/macro estimate for the amount described (assume a standard serving if vague). Return integers for calories and grams.",
-      output_config: { format: { type: 'json_schema', schema: SCHEMA } },
+      tools: [RECORD_FOODS_TOOL],
+      tool_choice: { type: 'tool', name: 'record_foods' },
       messages: [{ role: 'user', content: message }],
     })
-    const block = msg.content.find((b) => b.type === 'text')
-    return block && block.type === 'text' ? parseFoods(block.text) : []
+    const block = msg.content.find((b) => b.type === 'tool_use')
+    return block && block.type === 'tool_use' ? parseFoods(block.input) : []
   } catch { return [] }
 }
