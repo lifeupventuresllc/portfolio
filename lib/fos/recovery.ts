@@ -1,4 +1,5 @@
 import type { NutritionChange, WorkoutChange } from './types'
+import type { Injury } from '@/lib/workout-exercises'
 
 // Recovery mode — the operator's non-punishing response to real life. Rule-based, so it
 // works with ZERO AI dependency; the Claude layer (Phase 2) will later enrich the wording
@@ -14,6 +15,7 @@ export type LifeSignal =
   | { kind: 'missed'; days: number }
   | { kind: 'craving' }
   | { kind: 'stressed' }
+  | { kind: 'injury'; bodyPart: Injury }
 
 export type RecoveryPlan = {
   message: string
@@ -70,6 +72,13 @@ export function recover(signal: LifeSignal, normalMinutes = 45): RecoveryPlan {
         message: `Stress is real, and today doesn't have to be perfect — it just has to be something. I kept today short and simple so you're not adding pressure on top of pressure. One small win still counts.`,
         workoutChange: { toMinutes: 20, swapTo: 'light mobility + short circuit', reason: 'high stress' },
       }
+    case 'injury': {
+      const part = signal.bodyPart.replace('_', ' ')
+      return {
+        message: `Got it — thank you for telling me about your ${part}. I swapped today's session to moves that are safe for it, and I'll keep it that way going forward so you don't have to bring it up again. Your goal doesn't pause — we just protect you while you get there. Want me to lock that in?`,
+        workoutChange: { reason: `protecting your ${part}`, injuryBodyPart: signal.bodyPart },
+      }
+    }
   }
 }
 

@@ -1,6 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { LifeSignal } from './recovery'
 import { anthropicConfigured } from '@/lib/food-estimate'
+import type { Injury } from '@/lib/workout-exercises'
+
+const INJURY_BODY_PARTS = ['knee', 'lower_back', 'shoulder', 'wrist', 'elbow', 'hip', 'ankle'] as const
 
 const CLASSIFY_TOOL = {
   name: 'classify_life_signal',
@@ -11,17 +14,19 @@ const CLASSIFY_TOOL = {
     properties: {
       kind: {
         type: 'string',
-        enum: ['time_crunch', 'exhausted', 'poor_sleep', 'schedule_change', 'eat_out', 'missed', 'craving', 'stressed', 'none'],
+        enum: ['time_crunch', 'exhausted', 'poor_sleep', 'schedule_change', 'eat_out', 'missed', 'craving', 'stressed', 'injury', 'none'],
       },
       minutes: { type: 'integer', description: 'time_crunch only: minutes she said she has available' },
       days: { type: 'integer', description: 'missed only: how many days she thinks she missed' },
       free_at: { type: 'string', description: 'schedule_change only: a time she mentioned being free, if any' },
+      body_part: { type: 'string', enum: [...INJURY_BODY_PARTS], description: 'injury only: which body part, using lower_back for any back pain' },
     },
     required: ['kind'],
   },
 }
 
 const CLASSIFY_SYSTEM = `You read a message a woman sends her fitness coach about her day and classify it into exactly one category:
+- injury: she mentions a NEW pain, strain, or injury (hurt/pulled/tweaked/sprained/rolled/twisted something) — not routine post-workout soreness. If she mentions an injury AND something else (like time), still classify as injury — safety takes priority.
 - time_crunch: she's short on time today ("only have 20 min", "in a hurry")
 - exhausted: low energy, drained, burnt out
 - poor_sleep: didn't sleep well / no sleep
@@ -32,7 +37,7 @@ const CLASSIFY_SYSTEM = `You read a message a woman sends her fitness coach abou
 - stressed: stressed, overwhelmed, anxious, too much going on
 - none: nothing above applies — small talk, a question, describing food already eaten, or anything unclear
 
-Pick the single best match. If more than one could apply, pick whichever is most central to what she needs right now. Use "none" liberally — only classify a real signal when it's clearly there.`
+Pick the single best match. If more than one could apply (other than injury, which always wins), pick whichever is most central to what she needs right now. Use "none" liberally — only classify a real signal when it's clearly there.`
 
 // A confident "none" from Claude (nothing situational here) and "the call never
 // happened" (unconfigured / failed) are different outcomes — the first should NOT
@@ -60,7 +65,7 @@ export async function parseSignalAI(text: string): Promise<AIClassifyResult> {
     })
     const block = msg.content.find((b) => b.type === 'tool_use')
     if (!block || block.type !== 'tool_use') return { ok: false }
-    const input = block.input as { kind: string; minutes?: number; days?: number; free_at?: string }
+    const input = block.input as { kind: string; minutes?: number; days?: number; free_at?: string; body_part?: string }
     switch (input.kind) {
       case 'time_crunch': return { ok: true, signal: { kind: 'time_crunch', minutes: input.minutes ?? 20 } }
       case 'exhausted': return { ok: true, signal: { kind: 'exhausted' } }
@@ -70,6 +75,10 @@ export async function parseSignalAI(text: string): Promise<AIClassifyResult> {
       case 'missed': return { ok: true, signal: { kind: 'missed', days: input.days ?? 2 } }
       case 'craving': return { ok: true, signal: { kind: 'craving' } }
       case 'stressed': return { ok: true, signal: { kind: 'stressed' } }
+      case 'injury': {
+        const part = (INJURY_BODY_PARTS as readonly string[]).includes(input.body_part || '') ? (input.body_part as Injury) : null
+        return part ? { ok: true, signal: { kind: 'injury', bodyPart: part } } : { ok: false }
+      }
       case 'none': return { ok: true, signal: null }
       default: return { ok: false }
     }
@@ -81,6 +90,20 @@ export async function parseSignalAI(text: string): Promise<AIClassifyResult> {
 // act on. Fallback path when Claude is unconfigured or fails — see parseSignalAI above.
 export function parseSignal(text: string): LifeSignal | null {
   const t = ` ${text.toLowerCase()} `
+
+  // Injury — checked first, safety takes priority over anything else she also mentions.
+  if (/\b(hurt|pulled|tweaked|sprained|rolled|twisted|strained|injured)\b/.test(t)) {
+    const bodyPart: Injury | null =
+      /ankle/.test(t) ? 'ankle'
+      : /knee/.test(t) ? 'knee'
+      : /back/.test(t) ? 'lower_back'
+      : /shoulder/.test(t) ? 'shoulder'
+      : /wrist/.test(t) ? 'wrist'
+      : /elbow/.test(t) ? 'elbow'
+      : /hip/.test(t) ? 'hip'
+      : null
+    if (bodyPart) return { kind: 'injury', bodyPart }
+  }
 
   // Time crunch — "20 min", "only have 30 minutes", "short on time"
   const mMatch = t.match(/(\d{1,3})\s*(?:min|minute)/)

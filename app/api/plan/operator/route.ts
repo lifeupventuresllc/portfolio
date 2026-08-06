@@ -4,7 +4,8 @@ import { localDateISO, localHourNumber } from '@/lib/localdate'
 import { recover, type LifeSignal } from '@/lib/fos/recovery'
 import { parseSignal, parseSignalAI } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
-import type { FosEventKind } from '@/lib/fos/types'
+import type { FosEventKind, WorkoutChange } from '@/lib/fos/types'
+import type { Injury } from '@/lib/workout-exercises'
 
 // The Fitness OS operator. She tells it about her day; it replies in Coach Asa's
 // voice with a goal-protecting adjustment she can approve / modify / reject.
@@ -33,6 +34,7 @@ const eventKindFor = (s: LifeSignal): FosEventKind =>
   : s.kind === 'poor_sleep' ? 'poor_sleep'
   : s.kind === 'craving' ? 'craving'
   : s.kind === 'stressed' ? 'stressed'
+  : s.kind === 'injury' ? 'injury'
   : 'message'
 
 export async function GET() {
@@ -53,9 +55,28 @@ export async function POST(request: NextRequest) {
   // Action: she approved / modified / rejected a recommended adjustment.
   if (body.adjustmentId !== undefined && body.status) {
     const status = ['approved', 'modified', 'rejected'].includes(body.status) ? body.status : 'approved'
-    if (body.adjustmentId) await svc.from('fos_adjustments').update({ status }).eq('id', body.adjustmentId).eq('enrollment_id', eid)
+    let injuryPersisted: Injury | null = null
+    if (body.adjustmentId) {
+      const { data: updated } = await svc.from('fos_adjustments').update({ status }).eq('id', body.adjustmentId).eq('enrollment_id', eid).select('workout_change').maybeSingle()
+      // An approved injury signal doesn't just adjust today — it teaches the app
+      // permanently, so she never has to mention the same injury again. Written to
+      // her real intake record, the same field the workout engine already reads.
+      const injuryBodyPart = status === 'approved' ? (updated?.workout_change as WorkoutChange | null)?.injuryBodyPart : undefined
+      if (injuryBodyPart) {
+        const { data: intake } = await svc.from('challenge_intake').select('form_data').eq('enrollment_id', eid).maybeSingle()
+        if (intake) {
+          const fd = (intake.form_data || {}) as Record<string, unknown>
+          const existing = Array.isArray(fd.injuries) ? (fd.injuries as Injury[]) : []
+          if (!existing.includes(injuryBodyPart)) {
+            await svc.from('challenge_intake').update({ form_data: { ...fd, injuries: [...existing, injuryBodyPart] } }).eq('enrollment_id', eid)
+          }
+          injuryPersisted = injuryBodyPart
+        }
+      }
+    }
     await svc.from('fos_events').insert({ enrollment_id: eid, user_id: user.id, occurred_on: today, kind: 'adjustment', summary: `Adjustment ${status}`, payload: { adjustmentId: body.adjustmentId, status } })
-    const reply = status === 'approved' ? "Locked in. I've got the rest — go be great. 💛"
+    const reply = status === 'approved'
+      ? (injuryPersisted ? "Locked in — and I've noted it so every future workout stays safe for it automatically. You won't need to bring it up again. 💛" : "Locked in. I've got the rest — go be great. 💛")
       : status === 'rejected' ? "No problem — we'll keep today as planned. You're always in control."
       : "Got it — tell me what you'd rather do and I'll rework it around your goal."
     await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: reply })

@@ -1,5 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/server'
-import type { FosProfile, FosEvent } from './types'
+import type { FosProfile, FosEvent, WorkoutChange, NutritionChange } from './types'
 
 // The context data-layer for the Fitness Operating System (Phase 0 foundation).
 // Read/write the living profile + append life events. Server-only (uses the service
@@ -54,8 +54,8 @@ export async function getApprovedTodayAdjustment(enrollmentId: string, todayISO:
     .order('created_at', { ascending: false }).limit(1).maybeSingle()
   if (!data) return null
   return {
-    workoutChange: (data.workout_change as { toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home' } | null) ?? null,
-    nutritionChange: (data.nutrition_change as { calorieDelta?: number; dinnerSuggestion?: string; reason?: string } | null) ?? null,
+    workoutChange: (data.workout_change as WorkoutChange | null) ?? null,
+    nutritionChange: (data.nutrition_change as NutritionChange | null) ?? null,
     message: (data.message as string | null) ?? null,
   }
 }

@@ -8,7 +8,7 @@ import { broadcastRefresh } from '@/lib/useLiveRefresh'
 // goal-protecting adjustment she can approve / modify / reject. "The goal never
 // changes. The path changes."
 type Msg = { role: 'user' | 'operator'; content: string }
-type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string }
+type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; injuryBodyPart?: string }
 type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string }
 type Adjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionChange?: NutritionChange }
 
@@ -68,7 +68,8 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
   const adjLines = (a: Adjustment) => {
     const out: string[] = []
     const w = a.workoutChange, n = a.nutritionChange
-    if (w?.toMinutes) out.push(`Workout → ${w.toMinutes}-min ${w.swapTo || 'session'}`)
+    if (w?.injuryBodyPart) out.push(`Workout → swapped to protect your ${w.injuryBodyPart.replace('_', ' ')}, from now on`)
+    else if (w?.toMinutes) out.push(`Workout → ${w.toMinutes}-min ${w.swapTo || 'session'}`)
     else if (w?.reason) out.push(`Workout → re-slotted (${w.reason})`)
     if (n?.dinnerSuggestion) out.push(`Nutrition → ${n.dinnerSuggestion}`)
     if (n?.calorieDelta) out.push(`Calories → ${n.calorieDelta > 0 ? '+' : ''}${n.calorieDelta}`)
@@ -78,7 +79,7 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
   return (
     <div className="max-w-2xl mx-auto pb-6">
       <div className="flex items-center justify-between mb-4">
-        <Link href="/plan" className="inline-flex items-center gap-1 bg-charcoal border border-gold/40 text-gold text-xs font-semibold px-3 py-1.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all">← My plan</Link>
+        <Link href="/plan" className="inline-flex items-center gap-1 bg-charcoal border border-gold/40 text-gold text-xs font-semibold px-3 py-1.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all">← Dashboard</Link>
         <p className="text-gold text-[10px] uppercase tracking-[0.2em] font-semibold">Coach Asa · your operator</p>
       </div>
 

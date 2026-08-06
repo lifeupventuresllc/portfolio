@@ -1,3 +1,5 @@
+import type { Injury } from '@/lib/workout-exercises'
+
 // The Fitness Operating System — shared types + the principles the operator obeys.
 // It OPERATES her fitness life; it does not just track it.
 
@@ -27,7 +29,7 @@ export type FosProfile = {
 export type FosEventKind =
   | 'message' | 'adjustment' | 'win' | 'miss' | 'excuse'
   | 'schedule_change' | 'eat_out' | 'travel' | 'low_energy' | 'poor_sleep' | 'note'
-  | 'craving' | 'stressed'
+  | 'craving' | 'stressed' | 'injury'
 
 export type FosEvent = {
   id?: string
@@ -38,7 +40,7 @@ export type FosEvent = {
 }
 
 export type AdjustmentStatus = 'recommended' | 'approved' | 'modified' | 'rejected'
-export type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home' }
+export type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home'; injuryBodyPart?: Injury }
 export type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string }
 
 export type FosAdjustment = {

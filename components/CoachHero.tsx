@@ -10,7 +10,7 @@ import { winAffirmation } from '@/lib/affirmations'
 // page jump. Warm, minimal, alive: a gold "A" avatar, a personal greeting, and an
 // inline conversation. Approving a change refreshes the supporting cards on the spot.
 type Msg = { role: 'user' | 'operator'; content: string }
-type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home' }
+type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home'; injuryBodyPart?: string }
 type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string }
 type Adjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionChange?: NutritionChange }
 
@@ -132,7 +132,8 @@ export default function CoachHero({ firstName }: { firstName: string }) {
 
   const adjLines = (a: Adjustment) => {
     const out: string[] = []; const w = a.workoutChange, n = a.nutritionChange
-    if (w?.trackOverride) out.push(`Workout → swapped to a ${w.trackOverride === 'home' ? 'bodyweight home' : 'gym'} session${w.toMinutes ? `, ${w.toMinutes} min` : ''}`)
+    if (w?.injuryBodyPart) out.push(`Workout → swapped to protect your ${w.injuryBodyPart.replace('_', ' ')}, from now on`)
+    else if (w?.trackOverride) out.push(`Workout → swapped to a ${w.trackOverride === 'home' ? 'bodyweight home' : 'gym'} session${w.toMinutes ? `, ${w.toMinutes} min` : ''}`)
     else if (w?.toMinutes) out.push(`Workout → ${w.toMinutes}-min ${w.swapTo || 'session'}`)
     else if (w?.reason) out.push('Workout → re-slotted for today')
     if (n?.dinnerSuggestion) out.push(`Nutrition → ${n.dinnerSuggestion}`)

@@ -53,8 +53,13 @@ export default async function WorkoutSession() {
   // track (e.g. plan says gym, she said home today) — regenerate a TODAY-ONLY session
   // on the track she's actually on, from the same stored intake, without touching her
   // permanent plan. This is the fix for "I said home but still got barbell squats."
+  // A freshly-approved injury needs the same TODAY-ONLY regeneration: by the time she
+  // lands here, the operator route already wrote it into intake.form_data.injuries
+  // (permanent, every future plan honors it too), but today's cached weekly program
+  // was generated before that write, so it still needs a fresh pull to reflect it.
   const trackOverride = todayAdjustment?.workoutChange?.trackOverride
-  if (trackOverride && trackOverride !== program.track && intake) {
+  const injuryOverride = todayAdjustment?.workoutChange?.injuryBodyPart
+  if (((trackOverride && trackOverride !== program.track) || injuryOverride) && intake) {
     const level = (intake.experience_level === 'advanced' ? 3 : intake.experience_level === 'intermediate' ? 2 : 1) as Level
     const goal = (intake.goal === 'gain' || intake.goal === 'maintain' ? intake.goal : 'lose') as 'lose' | 'gain' | 'maintain'
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
@@ -63,7 +68,7 @@ export default async function WorkoutSession() {
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
     const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle
     program = generateWorkout({
-      name: (enrollment.name as string) || 'Your', sex, track: trackOverride, level, goal,
+      name: (enrollment.name as string) || 'Your', sex, track: trackOverride || program.track, level, goal,
       daysPerWeek: Number(intake.days_per_week) || 3, weekNumber: 1, injuries, postpartum, trainingStyle,
     })
   }
