@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { weightClassFor } from '@/lib/escape-plan'
-import { localDateISO } from '@/lib/localdate'
+import { weightClassFor, budgetTierFromWeekly, pickForNow, doordashSearchUrl, priceTierFor, type FastFoodMeal } from '@/lib/escape-plan'
+import { localDateISO, localHourNumber } from '@/lib/localdate'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,13 +29,21 @@ export default async function EatingOutNow() {
   }
   if (!enrollment) redirect('/plan')
 
-  const { data: intake } = await svc.from('challenge_intake').select('weight_lbs').eq('enrollment_id', enrollment.id).maybeSingle()
+  const { data: intake } = await svc.from('challenge_intake').select('weight_lbs, weekly_food_budget').eq('enrollment_id', enrollment.id).maybeSingle()
   const wc = weightClassFor(Number(intake?.weight_lbs) || 170)
   // Rotate by calendar day (not day-of-week) so she cycles through every option
   // before repeating, instead of seeing the same "Monday" order every single week.
   // Stable within a day (same recommendation if she checks twice today).
   const epochDays = Math.floor(new Date(`${localDateISO()}T00:00:00Z`).getTime() / 86400000)
   const day = wc.days[epochDays % wc.days.length]
+
+  // Phase 4 (Layer 1): "pick one, right now" — narrowed to exactly 2 options for
+  // whatever meal it actually is at this moment, filtered to what she can already
+  // afford (her own stated weekly food budget from intake, not a new question).
+  const hour = localHourNumber()
+  const nowSlot: FastFoodMeal['slot'] = hour < 11 ? 'Breakfast' : hour < 15 ? 'Lunch' : hour < 20 ? 'Dinner' : 'Snack'
+  const budgetTier = budgetTierFromWeekly(Number(intake?.weekly_food_budget) || null)
+  const nowPicks = pickForNow(wc, nowSlot, budgetTier, epochDays)
 
   return (
     <div className="min-h-screen bg-obsidian px-4 py-12">
@@ -47,8 +55,35 @@ export default async function EatingOutNow() {
           <span className="text-[9px] bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">✓ Decided For You</span>
         </div>
         <h1 className="text-3xl font-bold text-white mb-2">Don&apos;t think about it — order this.</h1>
-        <p className="text-ivory/60 text-sm mb-8">No planning, no guessing. High protein keeps you full and stops the crash-and-crave cycle. Just order what&apos;s below.</p>
+        <p className="text-ivory/60 text-sm mb-6">No planning, no guessing. High protein keeps you full and stops the crash-and-crave cycle.</p>
 
+        {/* Pick one, right now — narrowed to exactly 2 for whatever meal it is this
+            moment, within what she already told us she spends. This is the actual
+            decision she needs made; the full day below is just reference context. */}
+        {nowPicks.length > 0 && (
+          <div className="mb-8">
+            <p className="text-white font-medium text-sm mb-2.5">You don&apos;t need a plan in your hand to stay you — pick one, you&apos;ve got this. 💛</p>
+            <p className="text-gold text-[10px] font-bold uppercase tracking-wider mb-2.5">{SLOT_ICON[nowSlot] || ''} Pick one for {nowSlot.toLowerCase()}, right now</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {nowPicks.map((m, i) => (
+                <div key={i} className="bg-charcoal bg-gradient-to-br from-gold/10 to-charcoal border border-gold/30 rounded-2xl p-5 flex flex-col">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <p className="text-white font-bold text-sm">{m.restaurant}</p>
+                    <span className="text-ivory/40 text-xs shrink-0">{priceTierFor(m.restaurant, m.order)}</span>
+                  </div>
+                  <p className="text-ivory/70 text-sm mb-3 flex-1">{m.order}</p>
+                  <p className="text-gold text-xs font-semibold mb-3">{m.cal} cal · {m.protein}g protein</p>
+                  <a href={doordashSearchUrl(m.restaurant)} target="_blank" rel="noopener noreferrer"
+                    className="text-center bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+                    Find it on DoorDash
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <p className="text-ivory/40 text-xs font-semibold uppercase tracking-wider mb-3">Your full day, for reference</p>
         <div className="bg-charcoal bg-gradient-to-br from-gold/10 to-charcoal border border-gold/30 rounded-2xl p-5 mb-6 flex flex-wrap gap-x-6 gap-y-1 justify-between">
           <div><p className="text-ivory/40 text-[10px] uppercase tracking-wider">Today&apos;s target</p><p className="text-gold font-bold">{day.total.toLocaleString()} cal</p></div>
           <div><p className="text-ivory/40 text-[10px] uppercase tracking-wider">Protein</p><p className="text-white font-bold">{wc.proteinTarget}g</p></div>
@@ -67,7 +102,7 @@ export default async function EatingOutNow() {
           ))}
         </div>
 
-        <p className="text-ivory/45 text-xs mt-6 text-center">This is your Escape Plan — swapped in automatically for your weight range. No cooking, no tracking, just order and go.</p>
+        <p className="text-ivory/45 text-xs mt-6 text-center">This is your Escape Plan — swapped in automatically for your weight range and budget. No cooking, no tracking, just order and go.</p>
       </div>
     </div>
   )

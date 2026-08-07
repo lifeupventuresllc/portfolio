@@ -132,3 +132,58 @@ export const ESCAPE_PLAN: WeightClass[] = [WC1, WC2, WC3]
 export function weightClassFor(lbs: number): WeightClass {
   return ESCAPE_PLAN.find(w => lbs >= w.minLbs && lbs <= w.maxLbs) || WC1
 }
+
+// ============================================================
+// Phase 4 (Layer 1) — budget-aware "pick one, right now" version of the
+// Escape Plan. DoorDash has no public API for reading a user's real order
+// history or spending (confirmed 2026-08-07 — their developer platform is
+// merchant/logistics-only, and even that requires an approved partnership),
+// so this derives a budget comfort level from her own stated weekly food
+// budget (already collected at intake) instead of fabricated real-time
+// pricing. Tiers are deliberately categorical ($/$$/$$$), never invented
+// exact dollar amounts — precise prices vary by location/day and we have
+// no live source of truth for them.
+// ============================================================
+
+export type PriceTier = '$' | '$$' | '$$$'
+
+const RESTAURANT_BASE_TIER: Record<string, PriceTier> = {
+  "McDonald's": '$', 'Taco Bell': '$', 'Subway': '$', 'Grab & go': '$', 'Burger King': '$', "Wendy's": '$',
+  'Chick-fil-A': '$$', 'Chipotle': '$$', 'Panda Express': '$$', 'Starbucks': '$$',
+}
+const TIER_RANK: Record<PriceTier, number> = { '$': 0, '$$': 1, '$$$': 2 }
+const bumpUp = (t: PriceTier): PriceTier => (t === '$' ? '$$' : '$$$')
+
+/** Estimated comfort tier, not a real price — see the note above. */
+export function priceTierFor(restaurant: string, order: string): PriceTier {
+  const base = RESTAURANT_BASE_TIER[restaurant] || '$$'
+  const upsized = /double|extra (chicken|patty|meat)|2 servings|2 wraps/i.test(order)
+  return upsized ? bumpUp(base) : base
+}
+
+/** Her weekly grocery budget (already collected at intake) as a proxy for eating-out
+ * comfort level — reused rather than asking a new question, so this costs her nothing. */
+export function budgetTierFromWeekly(weeklyBudget: number | null | undefined): PriceTier {
+  if (!weeklyBudget || weeklyBudget <= 0) return '$$'
+  if (weeklyBudget < 75) return '$'
+  if (weeklyBudget <= 150) return '$$'
+  return '$$$'
+}
+
+/** Exactly 2 distinct options for the CURRENT meal slot, within her budget comfort tier
+ * when possible, rotating daily so it's not the same 2 every time she checks. */
+export function pickForNow(wc: WeightClass, slot: FastFoodMeal['slot'], budgetTier: PriceTier, epochDay: number): FastFoodMeal[] {
+  const candidates = wc.days.flatMap((d) => d.meals.filter((m) => m.slot === slot))
+  if (candidates.length === 0) return []
+  const withinBudget = candidates.filter((m) => TIER_RANK[priceTierFor(m.restaurant, m.order)] <= TIER_RANK[budgetTier])
+  const pool = withinBudget.length >= 2 ? withinBudget : candidates
+  const start = epochDay % pool.length
+  const first = pool[start]
+  const second = pool.find((c, i) => i !== start && (c.restaurant !== first.restaurant || c.order !== first.order)) || pool[(start + 1) % pool.length]
+  return second ? [first, second] : [first]
+}
+
+/** No API/OAuth needed — DoorDash's public search URL, not order automation. */
+export function doordashSearchUrl(restaurant: string): string {
+  return `https://www.doordash.com/search/store/${encodeURIComponent(restaurant)}/`
+}
