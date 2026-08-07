@@ -17,16 +17,26 @@ export async function GET(request: NextRequest) {
   if (!pushConfigured) return NextResponse.json({ ok: true, note: 'push not configured', sent: 0 })
 
   const svc = createServiceClient()
-  const today = new Date().toISOString().slice(0, 10) // UTC day (batch approximation)
-
-  const { data: logged } = await svc.from('challenge_food_log').select('enrollment_id').eq('logged_on', today)
-  const loggedSet = new Set((logged || []).map((r) => r.enrollment_id as string))
-
   const { data: subs } = await svc.from('push_subscriptions').select('endpoint, p256dh, auth, enrollment_id, timezone')
+  const enrollmentIds = (subs || []).map((s) => s.enrollment_id).filter(Boolean) as string[]
+
+  // Keyed per enrollment, not one shared UTC date — same fix as daily-nudge:
+  // a single shared "today" silently mismatches her real local logged_on
+  // rows for a large share of non-US timezones.
+  const { data: logged } = enrollmentIds.length
+    ? await svc.from('challenge_food_log').select('enrollment_id, logged_on').in('enrollment_id', enrollmentIds)
+    : { data: [] }
+  const loggedByEnrollment = new Map<string, Set<string>>()
+  for (const row of logged || []) {
+    const id = row.enrollment_id as string
+    if (!loggedByEnrollment.has(id)) loggedByEnrollment.set(id, new Set())
+    loggedByEnrollment.get(id)!.add(row.logged_on as string)
+  }
 
   let sent = 0, removed = 0, skipped = 0, dipsCaught = 0
   for (const s of (subs || [])) {
-    if (s.enrollment_id && loggedSet.has(s.enrollment_id as string)) { skipped++; continue }
+    const localToday = localDateISO((s.timezone as string) || undefined)
+    if (s.enrollment_id && loggedByEnrollment.get(s.enrollment_id as string)?.has(localToday)) { skipped++; continue }
 
     let payload = {
       title: 'Have you eaten yet today? 🍽️',
@@ -35,7 +45,6 @@ export async function GET(request: NextRequest) {
     }
 
     if (s.enrollment_id) {
-      const localToday = localDateISO((s.timezone as string) || undefined)
       const assessment = await assessLifePattern(s.enrollment_id as string, localToday)
       if (assessment.isDip) {
         dipsCaught++

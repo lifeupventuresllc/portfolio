@@ -26,14 +26,15 @@ export type LifePatternAssessment = {
   confidence: 'low' | 'high'
 }
 
-// Chat-reported signals count toward a pattern only when there are 2+ within
-// the window — a single mention of feeling tired isn't a pattern on its own,
-// it's just a Tuesday. 'craving' is deliberately excluded: it's a normal,
-// frequent, one-off urge already handled by its own chat response, not
-// evidence of an ongoing rough patch.
+// Chat-reported signals count toward a pattern only when there are 2+ DISTINCT
+// DAYS within the window — two stressed/tired messages in one conversation is
+// still just a Tuesday, not a pattern; it has to show up more than once across
+// separate days. 'craving' is deliberately excluded: it's a normal, frequent,
+// one-off urge already handled by its own chat response, not evidence of an
+// ongoing rough patch.
 const STRESS_EVENT_KINDS = new Set(['stressed', 'low_energy', 'poor_sleep'])
 const STRESS_WINDOW_DAYS = 3
-const STRESS_MIN_EVENTS = 2
+const STRESS_MIN_DAYS = 2
 
 // Personal-baseline comparison, same philosophy as detectDip's "3+ day prior
 // streak" requirement — a spike only counts relative to HER OWN normal, never
@@ -43,13 +44,14 @@ const EAT_OUT_BASELINE_WINDOW_DAYS = 28
 const EAT_OUT_MIN_RECENT_COUNT = 3 // floor so sparse data can't false-positive
 
 function isEatingOutSpike(eatOutDates: string[], todayISO: string): boolean {
-  const recentCutoff = addDaysISO(todayISO, -EAT_OUT_RECENT_WINDOW_DAYS)
-  const baselineCutoff = addDaysISO(todayISO, -EAT_OUT_BASELINE_WINDOW_DAYS)
+  // Cutoffs are inclusive of today, so an N-day window starts N-1 days back
+  // (today, today-1, ..., today-(N-1) = N distinct calendar days).
+  const recentCutoff = addDaysISO(todayISO, -(EAT_OUT_RECENT_WINDOW_DAYS - 1))
+  const baselineCutoff = addDaysISO(recentCutoff, -EAT_OUT_BASELINE_WINDOW_DAYS)
   const recent = new Set(eatOutDates.filter((d) => d >= recentCutoff && d <= todayISO))
   const baseline = new Set(eatOutDates.filter((d) => d >= baselineCutoff && d < recentCutoff))
   if (recent.size < EAT_OUT_MIN_RECENT_COUNT) return false
-  const baselineDays = EAT_OUT_BASELINE_WINDOW_DAYS - EAT_OUT_RECENT_WINDOW_DAYS
-  const baselineWeeklyRate = (baseline.size / baselineDays) * 7
+  const baselineWeeklyRate = (baseline.size / EAT_OUT_BASELINE_WINDOW_DAYS) * 7
   const recentWeeklyRate = (recent.size / EAT_OUT_RECENT_WINDOW_DAYS) * 7
   return recentWeeklyRate >= Math.max(3, baselineWeeklyRate * 1.8)
 }
@@ -60,7 +62,7 @@ export async function assessLifePattern(enrollmentId: string, todayISO: string):
     svc.from('challenge_progress').select('logged_on').eq('enrollment_id', enrollmentId).eq('note', '__daily__'),
     svc.from('challenge_food_log').select('logged_on, source').eq('enrollment_id', enrollmentId),
     svc.from('challenge_enrollments').select('last_active_at').eq('id', enrollmentId).maybeSingle(),
-    svc.from('fos_events').select('kind, occurred_on').eq('enrollment_id', enrollmentId).gte('occurred_on', addDaysISO(todayISO, -STRESS_WINDOW_DAYS)),
+    svc.from('fos_events').select('kind, occurred_on').eq('enrollment_id', enrollmentId).gte('occurred_on', addDaysISO(todayISO, -(STRESS_WINDOW_DAYS - 1))),
   ])
 
   const signals: PatternSignal[] = []
@@ -76,8 +78,8 @@ export async function assessLifePattern(enrollmentId: string, todayISO: string):
   const eatOutDates = (foodRows || []).filter((r) => r.source === 'escape_plan').map((r) => r.logged_on as string)
   if (isEatingOutSpike(eatOutDates, todayISO)) signals.push('eating_out_spike')
 
-  const stressCount = (eventRows || []).filter((e) => STRESS_EVENT_KINDS.has(e.kind as string)).length
-  if (stressCount >= STRESS_MIN_EVENTS) signals.push('recent_stress')
+  const stressDays = new Set((eventRows || []).filter((e) => STRESS_EVENT_KINDS.has(e.kind as string)).map((e) => e.occurred_on as string))
+  if (stressDays.size >= STRESS_MIN_DAYS) signals.push('recent_stress')
 
   // Only hit the Calendar API when nothing cheaper already fired — same
   // cost-conscious ordering the daily-nudge cron already used.
