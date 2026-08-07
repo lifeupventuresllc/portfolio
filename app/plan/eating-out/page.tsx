@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { weightClassFor, budgetTierFromWeekly, pickForNow, doordashSearchUrl, priceTierFor, type FastFoodMeal } from '@/lib/escape-plan'
 import { localDateISO, localHourNumber } from '@/lib/localdate'
+import EatingOutPicks from '@/components/EatingOutPicks'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,22 +65,11 @@ export default async function EatingOutNow() {
           <div className="mb-8">
             <p className="text-white font-medium text-sm mb-2.5">You don&apos;t need a plan in your hand to stay you — pick one, you&apos;ve got this. 💛</p>
             <p className="text-gold text-[10px] font-bold uppercase tracking-wider mb-2.5">{SLOT_ICON[nowSlot] || ''} Pick one for {nowSlot.toLowerCase()}, right now</p>
-            <div className="grid sm:grid-cols-2 gap-3">
-              {nowPicks.map((m, i) => (
-                <div key={i} className="bg-charcoal bg-gradient-to-br from-gold/10 to-charcoal border border-gold/30 rounded-2xl p-5 flex flex-col">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-white font-bold text-sm">{m.restaurant}</p>
-                    <span className="text-ivory/40 text-xs shrink-0">{priceTierFor(m.restaurant, m.order)}</span>
-                  </div>
-                  <p className="text-ivory/70 text-sm mb-3 flex-1">{m.order}</p>
-                  <p className="text-gold text-xs font-semibold mb-3">{m.cal} cal · {m.protein}g protein</p>
-                  <a href={doordashSearchUrl(m.restaurant)} target="_blank" rel="noopener noreferrer"
-                    className="text-center bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
-                    Find it on DoorDash
-                  </a>
-                </div>
-              ))}
-            </div>
+            <EatingOutPicks picks={nowPicks.map((m) => ({
+              restaurant: m.restaurant, order: m.order, cal: m.cal, protein: m.protein, carbs: m.carbs, fat: m.fat,
+              priceTier: priceTierFor(m.restaurant, m.order), doordashUrl: doordashSearchUrl(m.restaurant),
+              meal: nowSlot.toLowerCase() as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+            }))} />
           </div>
         )}
 
