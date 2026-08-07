@@ -23,7 +23,7 @@ function downloadPDF(base64: string, filename: string) {
 }
 
 export default function CoachWorkoutTool() {
-  const [f, setF] = useState({ name: '', track: 'gym', level: '1', goal: 'lose', daysPerWeek: '3', weekNumber: '1' })
+  const [f, setF] = useState({ name: '', track: 'gym', level: '1', goal: 'lose', daysPerWeek: '3', weekNumber: '1', weightLb: '', heightIn: '', age: '' })
   const [injuries, setInjuries] = useState<string[]>([])
   const [targets, setTargets] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -96,6 +96,15 @@ export default function CoachWorkoutTool() {
             <div>
               <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Week #</label>
               <input type="number" value={f.weekNumber} onChange={(e) => set('weekNumber', e.target.value)} className={input} />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Client stats (optional — powers the at-home calorie-burn estimate)</label>
+            <div className="grid grid-cols-3 gap-3">
+              <input type="number" value={f.weightLb} onChange={(e) => set('weightLb', e.target.value)} placeholder="Weight (lb)" className={input} />
+              <input type="number" value={f.heightIn} onChange={(e) => set('heightIn', e.target.value)} placeholder="Height (in)" className={input} />
+              <input type="number" value={f.age} onChange={(e) => set('age', e.target.value)} placeholder="Age" className={input} />
             </div>
           </div>
 

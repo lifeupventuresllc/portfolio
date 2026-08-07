@@ -30,6 +30,9 @@ export async function POST(request: NextRequest) {
       targets: (Array.isArray(b.targets) ? b.targets : []) as Muscle[],
       postpartum: !!b.postpartum,
       trainingStyle: (b.trainingStyle || 'none') as TrainingStyle,
+      weightLb: b.weightLb ? Number(b.weightLb) : undefined,
+      heightIn: b.heightIn ? Number(b.heightIn) : undefined,
+      age: b.age ? Number(b.age) : undefined,
     })
     const bytes = await generateWorkoutPDF(prog)
     const pdfBase64 = Buffer.from(bytes).toString('base64')

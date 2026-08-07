@@ -70,8 +70,12 @@ function cover(doc: PDFDocument, f: Fonts, prog: WorkoutProgram) {
   const notes: string[] = []
   if (prog.targetNote) notes.push('FOCUS: ' + prog.targetNote)
   ;(prog.injuryNotes || []).forEach(n => notes.push(n))
+  if (prog.track === 'home' && prog.home?.estCaloriesTotal) notes.push(`ESTIMATED WEEKLY BURN: ~${prog.home.estCaloriesTotal} cal`)
   if (notes.length) {
-    const nh = 16 + notes.length * 12
+    // nh previously had zero bottom padding — the last note's baseline landed exactly
+    // on the box's bottom border regardless of note count, so it visually overlapped
+    // the border line. +8 gives real clearance below the last line.
+    const nh = 24 + notes.length * 12
     cardBox(p, 36, 132, W - 72, nh, C.card, C.gold, 1.2)
     tL(p, 'MODIFICATIONS & FOCUS', 48, 132 + nh - 14, 8, f.bold, C.gold)
     let ny = 132 + nh - 28
@@ -152,12 +156,21 @@ function homeDayPage(doc: PDFDocument, f: Fonts, prog: WorkoutProgram, d: HomeDa
     tR(p, e.duration, W - 50, y - 21, 11, f.bold, C.gold)
     y -= 42
   })
+  tL(p, `Round complete — rest 30-45 sec, then start back at the top. Repeat until your ${prog.home!.minutes} are up.`, 36, y - 4, 7.5, f.reg, C.gray)
+  y -= 24
   cardBox(p, 36, y - 34, W - 72, 34, C.card, C.pink, 1.2)
   tL(p, 'Cool-down (3 min) — ' + prog.home!.cooldown.join(' · '), 48, y - 21, 8, f.reg, C.grayL)
   y -= 44
   cardBox(p, 36, y - 36, W - 72, 36, hex('#16120a'), C.green, 1.4)
   tL(p, 'OUTSIDE WALKING', 48, y - 15, 8.5, f.bold, C.green)
   tL(p, prog.home!.walking, 48, y - 29, 8, f.reg, C.grayL)
+  if (d.estCalories !== undefined) {
+    y -= 46
+    cardBox(p, 36, y - 36, W - 72, 36, hex('#0c1a10'), C.green, 1.4)
+    tL(p, "TODAY'S ESTIMATED BURN", 48, y - 15, 8.5, f.bold, C.green)
+    tL(p, 'Estimate based on your stats — actual burn varies by pace and effort.', 48, y - 29, 7, f.reg, C.gray)
+    tR(p, `~${d.estCalories} cal`, W - 50, y - 22, 14, f.bold, C.gold2)
+  }
 }
 
 export async function generateWorkoutPDF(prog: WorkoutProgram): Promise<Uint8Array> {

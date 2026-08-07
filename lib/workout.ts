@@ -31,6 +31,12 @@ export interface WorkoutInputs {
   targets?: Muscle[]
   postpartum?: boolean // surfaces postpartum-labeled ab work first, see pickAb
   trainingStyle?: TrainingStyle
+  // Optional — only needed to surface a personalized calorie-burn estimate on the
+  // home track. Omit any of the three and estCalories/estCaloriesTotal are left
+  // undefined (existing callers with no stats see zero change in output).
+  weightLb?: number
+  heightIn?: number
+  age?: number
 }
 
 export interface Superset { title: string; push: GymExercise; pull: GymExercise; reps: string }
@@ -53,19 +59,38 @@ export interface GymDay {
   ab: { upper: AbExercise; lower: AbExercise; scheme: string }
   cardio: CardioFinisher
 }
-export interface HomeDay { dayNum: number; title: string; exercises: { name: string; duration: string; imageUrl?: string }[] }
+export interface HomeDay { dayNum: number; title: string; exercises: { name: string; duration: string; imageUrl?: string }[]; estCalories?: number }
 export interface WorkoutProgram {
   name: string; track: 'gym' | 'home'; level: Level; levelLabel: string; goal: string
   weekNumber: number; daysPerWeek: number
   gymDays?: GymDay[]
   injuryNotes?: string[]
   targetNote?: string
-  home?: { minutes: string; warmup: string[]; days: HomeDay[]; cooldown: string[]; walking: string }
+  home?: { minutes: string; warmup: string[]; days: HomeDay[]; cooldown: string[]; walking: string; estCaloriesTotal?: number }
 }
 
 const LEVEL_LABEL: Record<Level, string> = { 1: 'Beginner', 2: 'Intermediate', 3: 'Advanced' }
 const REP_SCHEME: Record<Level, string> = { 1: '2 × 10–12', 2: '3 × 15 / 12 / 10', 3: '3 × 20 / 15 / 12' }
 const AB_SCHEME: Record<Level, string> = { 1: '2 sets × 8–12', 2: '2–3 sets × 12–15', 3: '3–4 sets × 15+ (add weight)' }
+
+// Personalized calorie estimate: METs scaled off the client's own Mifflin-St Jeor BMR
+// (weight+height+age+sex) rather than the generic population-average "1 MET = 1
+// kcal/kg/hr" assumption — same approach validated against Kyra's real Calorie
+// Blueprint numbers (reproduces her published BMR exactly). MET rises with level
+// since the home pool itself gets more vigorous (HIIT/plyo) at higher levels.
+const HOME_MET: Record<Level, number> = { 1: 3.2, 2: 4.5, 3: 6.5 }
+function mifflinBMR(weightLb: number, heightIn: number, age: number, sex?: WorkoutInputs['sex']): number {
+  const kg = weightLb * 0.453592
+  const cm = heightIn * 2.54
+  const base = 10 * kg + 6.25 * cm - 5 * age
+  return sex === 'male' ? base + 5 : base - 161
+}
+function estimateHomeCalories(inp: WorkoutInputs, level: Level, minutesLabel: string): number | undefined {
+  if (!inp.weightLb || !inp.heightIn || !inp.age) return undefined
+  const minutes = parseInt(minutesLabel, 10) || 20
+  const bmr = mifflinBMR(inp.weightLb, inp.heightIn, inp.age, inp.sex)
+  return Math.round(HOME_MET[level] * (bmr / 24) * (minutes / 60))
+}
 
 // ── Split system ─────────────────────────────────────────────
 // A day = 3 push/pull supersets. Each slot names the muscles its push
@@ -264,7 +289,11 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
 
   const injuries = inp.injuries || []
   const avail = HOME_POOL.filter(e => e.level <= level && !isContraindicated(e.name, injuries))
-  const homeAbSafe = HOME_AB_PRIORITY.filter(a => !isContraindicated(a.name, injuries))
+  // Real bug fixed here: this filter previously only excluded contraindicated moves —
+  // it never capped by minLevel, so a Beginner (level 1) home program could get served
+  // "Reclined Leg Raise (Advanced)" for core work. Gym-track's pickAb already does this
+  // level cap correctly; home-track's core picker just never had the equivalent check.
+  const homeAbSafe = HOME_AB_PRIORITY.filter(a => a.minLevel <= level && !isContraindicated(a.name, injuries))
   const byType = (types: string[], off: number, count: number) => {
     let picked: { name: string; duration: string; imageUrl?: string }[] = []
     if (types.includes('core')) {
@@ -287,6 +316,9 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
     return { name: pick.name, duration: '60 sec', imageUrl: (pick as { imageUrl?: string }).imageUrl }
   }
 
+  const minutes = level === 1 && (week <= 1) ? '20 min' : '15 min'
+  const estCalories = estimateHomeCalories(inp, level, minutes)
+
   const days: HomeDay[] = split.map((focus, i) => {
     const off = week + i
     let types: string[]
@@ -294,15 +326,16 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
     else if (focus.startsWith('Upper')) types = ['upper', 'core']
     else types = ['leg', 'upper', 'core']
     const exercises = [...byType(types, off, 4), finisher(off + 3)]
-    return { dayNum: i + 1, title: `Day ${i + 1}: ${focus}`, exercises }
+    return { dayNum: i + 1, title: `Day ${i + 1}: ${focus}`, exercises, estCalories }
   })
 
   return {
-    minutes: level === 1 && (week <= 1) ? '20 min' : '15 min',
+    minutes,
     warmup: HOME_WARMUP,
     days,
     cooldown: HOME_COOLDOWN,
     walking: walkingIntervals(level),
+    estCaloriesTotal: estCalories !== undefined ? estCalories * days.length : undefined,
   }
 }
 
