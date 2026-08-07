@@ -101,7 +101,7 @@ export function messageForStructural(a: StructuralAssessment): { title: string; 
     if (s.kind === 'eating_out_structural') parts.push('eating out regularly now, not just once in a while')
   }
   return {
-    title: 'Your real pattern, not your starting guess 💛',
-    body: `Looking at the last few weeks, you've been ${parts.join(' and ')}. That's not failing the plan — the plan just doesn't match your real life anymore. Want me to update it around what's actually true? Same goal, a path that actually fits.`,
+    title: "I've been paying attention 💛",
+    body: `Over these last few weeks, I've noticed you're ${parts.join(' and ')} — and that's not you falling short, that's just what your real life looks like right now. Let's build the plan around the real you, not the version of you from week one. Same goal — I'll just walk it with you differently.`,
   }
 }

@@ -92,29 +92,33 @@ export async function assessLifePattern(enrollmentId: string, todayISO: string):
 
 // Identity-affirming copy that scales with how much is actually going on — a
 // real combination gets validated as "a lot," not treated the same as one
-// isolated blip. Never names a count, never guilt, never "you missed."
+// isolated blip. Never names a count, never guilt, never "you missed." Also
+// deliberately written as presence, not a report — "I noticed" and "let's,"
+// never a neutral system observation about her from a distance (see
+// luf-hand-in-hand-principle: this should read like someone walking next to
+// her, not accountability alone).
 export function messageForPattern(a: LifePatternAssessment): { title: string; body: string } {
   if (a.confidence === 'high') {
     return {
       title: "You've been carrying a lot 💛",
-      body: "A few things have been heavier than usual lately — that's real, and it's okay. You don't have to catch up on everything at once. Just something small today still counts.",
+      body: "I can tell a few things have been heavier than usual lately — that's real, and it's okay. You don't have to catch up on everything at once. I'm not going anywhere — something small today still counts.",
     }
   }
   if (a.signals.includes('workout_dip')) {
-    return { title: "You've been carrying a lot 💛", body: 'No pressure to bounce back to full speed. Just this today — that still counts.' }
+    return { title: "You've been carrying a lot 💛", body: "No pressure to bounce back to full speed. I'm right here — just this today still counts." }
   }
   if (a.signals.includes('food_dip')) {
-    return { title: "Today doesn't have to be perfect 💛", body: "Let's not worry about the full plan today — just protein and water, that's the whole goal." }
+    return { title: "Today doesn't have to be perfect 💛", body: "Let's not worry about the full plan today — just protein and water, that's the whole goal. I'll pick it back up with you tomorrow either way." }
   }
   if (a.signals.includes('eating_out_spike')) {
-    return { title: 'No judgment on the takeout 💛', body: "It's been more grab-and-go than usual lately — totally okay. Want today to be simpler?" }
+    return { title: "I noticed, and it's okay 💛", body: "It's been more grab-and-go than usual lately — no judgment from me. Want me to make today simpler with you?" }
   }
   if (a.signals.includes('recent_stress')) {
-    return { title: "I hear you 💛", body: "It sounds like it's been a lot lately. Today doesn't have to be perfect — just something, and that counts." }
+    return { title: "I hear you 💛", body: "It sounds like it's been a lot lately, and I'm not just checking a box here — today doesn't have to be perfect, just something, and I'll count that with you." }
   }
   if (a.signals.includes('packed_schedule')) {
-    return { title: 'Your week looks stacked 💛', body: "Before it gets overwhelming — want today to be a smaller ask?" }
+    return { title: 'I see how stacked your week looks 💛', body: "Before it catches up with you — let's make today a smaller ask, together." }
   }
   // 'silent' — no prior specific-behavior data to reference, just a warm re-entry.
-  return { title: 'Good to see you 💛', body: "No pressure to catch up on anything — just pick back up from right here." }
+  return { title: "I'm glad you're back 💛", body: "You didn't lose anything by stepping away — let's just pick back up, right from here." }
 }
