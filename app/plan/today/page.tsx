@@ -3,8 +3,10 @@ import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import FoodLog, { type PlannedItem } from '@/components/FoodLog'
 import LifePatternCard from '@/components/LifePatternCard'
+import PlanEvolutionCard from '@/components/PlanEvolutionCard'
 import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
+import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
 import { shortVersionFor } from '@/lib/workout-short'
 import type { WorkoutProgram } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
@@ -72,6 +74,13 @@ export default async function TodayView() {
   const patternMessage = patternAssessment.isDip ? messageForPattern(patternAssessment) : null
   const showWorkoutAction = dipMoves.length > 0 && patternAssessment.signals.includes('workout_dip')
 
+  // Layer 1 Phase 5: the longer-horizon counterpart to the acute pattern
+  // engine above — a real 3-week pattern means the plan itself doesn't
+  // match her life anymore, not just a rough day. Never rewrites anything
+  // without her approval. See lib/fos/plan-evolution.ts.
+  const structuralAssessment = await assessStructuralPattern(enrollment.id as string, localDateISO(tz))
+  const structuralMessage = messageForStructural(structuralAssessment)
+
   return (
     <div className="min-h-screen bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto">
@@ -84,6 +93,10 @@ export default async function TodayView() {
               not a stack of separate cards. This leads, ahead of everything else —
               the smaller ask comes first. */}
           {patternMessage && <LifePatternCard title={patternMessage.title} body={patternMessage.body} showWorkoutAction={showWorkoutAction} moves={dipMoves} />}
+
+          {/* Layer 1 Phase 5 — a real multi-week pattern, not a today problem.
+              Sits below the acute card since it's a bigger decision, never forced. */}
+          {structuralMessage && <PlanEvolutionCard title={structuralMessage.title} body={structuralMessage.body} />}
 
           {/* The zero-decision escape hatch — for the moment she's out, off-plan, and
               would otherwise have to decide (or skip eating entirely). */}
