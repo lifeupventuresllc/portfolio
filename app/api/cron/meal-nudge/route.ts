@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendPush, pushConfigured, type StoredSub } from '@/lib/push'
 import { localDateISO } from '@/lib/localdate'
-import { detectDip } from '@/lib/dip-detection'
+import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 
-// Midday reminder: nudge anyone who hasn't logged any food yet today. Layer 1, Phase 1
-// of the primary feature, nutrition side: if she was logging consistently and stopped
-// (a real dip, not a never-logged-before user), she gets the "just protein and water"
-// smaller ask instead of the standard "have you eaten?" nudge — no macro breakdown to
-// hit, no guilt over the gap. Recovery-mindset copy either way.
+// Midday reminder: nudge anyone who hasn't logged any food yet today. Layer 1
+// of the primary feature, nutrition side: the unified life-pattern engine
+// (see lib/fos/pattern.ts) reads across every signal already collected, not
+// just food-logging alone — if something real is going on, she gets the
+// smaller ask instead of the standard "have you eaten?" nudge — no macro
+// breakdown to hit, no guilt over the gap. Recovery-mindset copy either way.
 export async function GET(request: NextRequest) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -22,17 +23,6 @@ export async function GET(request: NextRequest) {
   const loggedSet = new Set((logged || []).map((r) => r.enrollment_id as string))
 
   const { data: subs } = await svc.from('push_subscriptions').select('endpoint, p256dh, auth, enrollment_id, timezone')
-  const enrollmentIds = (subs || []).map((s) => s.enrollment_id).filter(Boolean) as string[]
-
-  const { data: history } = enrollmentIds.length
-    ? await svc.from('challenge_food_log').select('enrollment_id, logged_on').in('enrollment_id', enrollmentIds)
-    : { data: [] }
-  const byEnrollment = new Map<string, Set<string>>()
-  for (const row of history || []) {
-    const id = row.enrollment_id as string
-    if (!byEnrollment.has(id)) byEnrollment.set(id, new Set())
-    byEnrollment.get(id)!.add(row.logged_on as string)
-  }
 
   let sent = 0, removed = 0, skipped = 0, dipsCaught = 0
   for (const s of (subs || [])) {
@@ -46,14 +36,11 @@ export async function GET(request: NextRequest) {
 
     if (s.enrollment_id) {
       const localToday = localDateISO((s.timezone as string) || undefined)
-      const dip = detectDip(byEnrollment.get(s.enrollment_id as string) || new Set(), localToday)
-      if (dip.isDip) {
+      const assessment = await assessLifePattern(s.enrollment_id as string, localToday)
+      if (assessment.isDip) {
         dipsCaught++
-        payload = {
-          title: 'Today doesn’t have to be perfect 💛',
-          body: 'Let’s not worry about the full plan today — just protein and water, that’s the whole goal.',
-          url: '/plan/today',
-        }
+        const { title, body } = messageForPattern(assessment)
+        payload = { title, body, url: '/plan/today' }
       }
     }
 

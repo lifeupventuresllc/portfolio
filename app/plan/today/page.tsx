@@ -2,10 +2,9 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import FoodLog, { type PlannedItem } from '@/components/FoodLog'
-import DipCard from '@/components/DipCard'
-import FoodDipCard from '@/components/FoodDipCard'
+import LifePatternCard from '@/components/LifePatternCard'
 import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
-import { detectDip } from '@/lib/dip-detection'
+import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { shortVersionFor } from '@/lib/workout-short'
 import type { WorkoutProgram } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
@@ -30,11 +29,10 @@ export default async function TodayView() {
 
   const firstName = (enrollment.name || user.email?.split('@')[0] || 'there').split(' ')[0]
 
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, { data: foodLogRows }] = await Promise.all([
+  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('measurements, logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
-    svc.from('challenge_food_log').select('logged_on').eq('enrollment_id', enrollment.id),
   ])
 
   const tz = getTimezone()
@@ -64,18 +62,15 @@ export default async function TodayView() {
     }
   }
 
-  // Layer 1, Phase 1 of the primary feature: catch her before she quits.
-  // A dip is a real streak that just broke — not someone who's never been
-  // consistent (that's onboarding, not a spiral). Runs off data already
-  // logged, no new integrations.
-  const loggedDates = new Set((doneRows || []).map((r) => r.logged_on as string))
-  const dip = detectDip(loggedDates, localDateISO(tz))
-  const dipMoves = dip.isDip && program ? shortVersionFor(program, startDay) : []
-
-  // Same mechanic, nutrition side — a real logging streak that just broke,
-  // not someone who's never logged food before.
-  const foodLoggedDates = new Set((foodLogRows || []).map((r) => r.logged_on as string))
-  const foodDip = detectDip(foodLoggedDates, localDateISO(tz))
+  // Layer 1's primary feature, unified: reads across every behavioral signal
+  // already being collected (workout, food logging, app-open silence,
+  // eating-out frequency, chat-reported stress, calendar) as ONE combined
+  // read instead of separate siloed checks — a real rough patch shows up as
+  // a combination, not one clean threshold crossing. See lib/fos/pattern.ts.
+  const patternAssessment = await assessLifePattern(enrollment.id as string, localDateISO(tz))
+  const dipMoves = patternAssessment.isDip && program ? shortVersionFor(program, startDay) : []
+  const patternMessage = patternAssessment.isDip ? messageForPattern(patternAssessment) : null
+  const showWorkoutAction = dipMoves.length > 0 && patternAssessment.signals.includes('workout_dip')
 
   return (
     <div className="min-h-screen bg-obsidian px-4 py-12">
@@ -85,9 +80,10 @@ export default async function TodayView() {
         <h1 className="text-3xl font-bold text-white mb-6">Today, {firstName}</h1>
 
         <div className="space-y-6">
-          {/* The primary feature, live: she was on a real streak and it just broke.
-              This leads, ahead of everything else — the smaller ask comes first. */}
-          {dip.isDip && dipMoves.length > 0 && <DipCard moves={dipMoves} />}
+          {/* The primary feature, live: one unified read across everything she does,
+              not a stack of separate cards. This leads, ahead of everything else —
+              the smaller ask comes first. */}
+          {patternMessage && <LifePatternCard title={patternMessage.title} body={patternMessage.body} showWorkoutAction={showWorkoutAction} moves={dipMoves} />}
 
           {/* The zero-decision escape hatch — for the moment she's out, off-plan, and
               would otherwise have to decide (or skip eating entirely). */}
@@ -98,11 +94,6 @@ export default async function TodayView() {
             </div>
             <span className="text-blue-300 text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
           </Link>
-
-          {/* Nutrition side of the same primary-feature mechanic: a real logging
-              streak just broke. No macro breakdown, no logging-in-detail ask —
-              just reassurance. Clears itself the moment she logs anything below. */}
-          {foodDip.isDip && <FoodDipCard />}
 
           {/* Food log — the heartbeat of the daily view. Budget = TODAY'S calorie target
               (workout days higher, rest days lower); the app already knows which day this is. */}
