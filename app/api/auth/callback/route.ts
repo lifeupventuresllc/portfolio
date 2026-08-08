@@ -39,8 +39,31 @@ export async function GET(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user?.email) {
-      // Check if welcome email was already sent
       const service = createServiceClient()
+
+      // The app is free now — every new account gets a real, fully-active
+      // enrollment immediately, no Stripe checkout required. Idempotent:
+      // matches an existing row by user_id first, then links by email for
+      // the rare guest-purchase-then-signup case, before creating a new one.
+      let { data: enrollment } = await service.from('challenge_enrollments').select('id').eq('user_id', user.id).maybeSingle()
+      if (!enrollment) {
+        const { data: byEmail } = await service.from('challenge_enrollments').select('id').eq('email', user.email).is('user_id', null).maybeSingle()
+        if (byEmail) {
+          await service.from('challenge_enrollments').update({ user_id: user.id }).eq('id', byEmail.id)
+          enrollment = byEmail
+        }
+      }
+      if (!enrollment) {
+        await service.from('challenge_enrollments').insert({
+          user_id: user.id,
+          email: user.email,
+          name: (user.user_metadata?.full_name as string | undefined) || user.email.split('@')[0],
+          tier: 'inner_circle', status: 'active', amount: 0,
+          tier_started_at: new Date().toISOString(), started_at: new Date().toISOString(),
+        })
+      }
+
+      // Check if welcome email was already sent
       const { data: existing } = await service
         .from('emails')
         .select('id')
