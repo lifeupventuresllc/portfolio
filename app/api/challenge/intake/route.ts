@@ -96,14 +96,23 @@ export async function POST(request: NextRequest) {
       await svc.from('challenge_intake').insert(intakePayload)
     }
 
-    // Auto-calculate her calorie + macro targets
+    // Auto-calculate her calorie + macro targets. Protein is meant to target her GOAL
+    // weight, not current — she saw a specific goal-weight number on the "target" step
+    // of intake (defaults to a 10lb shift when she skips it, same as that step's own
+    // preview math), but it was never actually reaching this calculation, so protein
+    // was silently using current weight instead — a real bug, not a different formula.
+    const weightLbs = Number(body.weight_lbs)
+    const deltaLbs = Number(body.target_lbs) || 10
+    const goalWeightLbs = body.goal === 'gain' ? weightLbs + deltaLbs : weightLbs - deltaLbs
+
     const targets = calcNutritionTargets({
       age: Number(body.age),
       sex: body.sex || 'female',
       height_in: Number(body.height_in),
-      weight_lbs: Number(body.weight_lbs),
+      weight_lbs: weightLbs,
       activity_level: body.activity_level,
       goal: body.goal,
+      goal_weight_lbs: goalWeightLbs,
     })
 
     // Create/refresh a draft Week 1 nutrition plan (macros auto; coach fills meals from The Menu)

@@ -254,6 +254,7 @@ export function buildBlueprint(inputs: BlueprintInputs): Blueprint {
 export function calcNutritionTargets(inputs: {
   age: number; sex: Sex; height_in: number; weight_lbs: number
   activity_level: Activity; goal: Goal; workout_days_per_week?: number; workout_length?: WorkoutLength
+  goal_weight_lbs?: number
 }) {
   const bp = buildBlueprint({
     age: inputs.age,
@@ -264,6 +265,7 @@ export function calcNutritionTargets(inputs: {
     activity: inputs.activity_level,
     workout_days_per_week: inputs.workout_days_per_week ?? 4,
     workout_length: inputs.workout_length ?? '45_60_both',
+    goal_weight_lbs: inputs.goal_weight_lbs,
   })
   const avgDaily = round(bp.current.weeklyEat / 7)
   const m = bp.current.workout.macros
