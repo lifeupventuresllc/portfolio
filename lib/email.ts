@@ -72,7 +72,7 @@ export async function sendWelcomeEmail(email: string) {
     replyTo: REPLY_TO,
     subject: 'Welcome to Asa Luke',
     headers: UNSUB_HEADERS,
-    text: `Welcome!\n\nYour account is confirmed and ready to go.\n\nHere's what you can do next:\n- Check out my services at ${APP_URL}\n- Content editing, audio engineering, and fitness packages available\n\n— Asa Luke\nasaluke.io`,
+    text: `Welcome!\n\nYour account is confirmed and ready to go.\n\nHere's what you can do next:\n- Check out my services at ${APP_URL}\n- Content editing and audio engineering packages available\n\n— Asa Luke\nasaluke.io`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #C9A84C;">Welcome</h1>
@@ -97,13 +97,10 @@ export async function sendWelcomeEmail(email: string) {
   }
 }
 
-export async function sendChallengeWelcome(email: string, name: string, tier: 'app' | 'challenge' | 'inner_circle') {
+// Every account gets full access now — no paid tiers left to describe.
+export async function sendChallengeWelcome(email: string, name: string) {
   const firstName = (name || '').split(' ')[0] || 'sis'
-  const tierBlurb = tier === 'inner_circle'
-    ? "You're in the Inner Circle — the full app PLUS weekly 1:1 video calls with me, direct access between calls, fully custom plans, and faith + mindset coaching."
-    : tier === 'challenge'
-    ? "You just joined the 6-Week Challenge — the full app (custom training, done-for-you weekly nutrition, daily check-ins) PLUS a video call with me every month."
-    : "You're in — full access to custom training, done-for-you weekly nutrition, daily check-ins, and everything else the app does. Whenever you're ready for a video call with me, you can upgrade any time."
+  const tierBlurb = "You're in — full, free access to custom training, done-for-you weekly nutrition, Coach Asa, and everything else the app does. No trial, no card, nothing to cancel later."
 
   const { error } = await resend.emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,

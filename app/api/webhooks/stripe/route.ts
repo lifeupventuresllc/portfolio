@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
             await supabase.from('emails').insert({ user_id: linkedUserId, email, type: 'purchase' })
           }
           if (email) {
-            await sendChallengeWelcome(email, name, tier)
+            await sendChallengeWelcome(email, name)
           }
 
           await dispatchWebhooks('challenge.enrolled', { email, tier, amount: session.amount_total })
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
             await supabase.from('emails').insert({ user_id: linkedUserId, email, type: 'purchase' })
           }
           if (email) {
-            await sendChallengeWelcome(email, name, tier)
+            await sendChallengeWelcome(email, name)
           }
 
           await dispatchWebhooks('challenge.enrolled', {
