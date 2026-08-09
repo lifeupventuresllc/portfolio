@@ -176,7 +176,7 @@ export default function BlueprintPage() {
                 <input type="number" value={form.age} onChange={(e) => set('age', e.target.value)} placeholder="28" className={input} />
               </div>
               <div>
-                <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Sex</label>
+                <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Gender</label>
                 <select value={form.sex} onChange={(e) => set('sex', e.target.value)} className={input}>
                   <option value="female">Female</option>
                   <option value="male">Male</option>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import CountUp from '@/components/CountUp'
 import { hapticTap } from '@/lib/haptics'
@@ -102,6 +102,19 @@ function ConversationalIntakeInner() {
   }, [])
 
   const set = (k: string, v: string) => setF((s) => ({ ...s, [k]: v }))
+
+  // Each question fully remounts on step change (for the slide transition), which
+  // kills focus and closes her keyboard — a bare `autoFocus` prop on a remounted
+  // element isn't reliably honored by mobile browsers (they're stricter about
+  // auto-popping the keyboard outside a direct tap), so she was having to manually
+  // tap every single field, every step. Re-focusing explicitly after the transition
+  // settles is the fix that actually works on real phones.
+  const primaryInputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    const t = setTimeout(() => primaryInputRef.current?.focus(), 420) // just after the .38s slide-in animation
+    return () => clearTimeout(t)
+  }, [step, tier])
+
   const go = (n: number) => { setDir(n > step ? 'fwd' : 'back'); setError(''); setStep(n) }
   const next = () => go(step + 1)
   const back = () => go(Math.max(0, step - 1))
@@ -245,7 +258,7 @@ function ConversationalIntakeInner() {
             {s === 'name' && (<>
               <LQ>First — what should I call you?</LQ>
               <LHint>I coach you by name, not by number.</LHint>
-              <input autoFocus value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={linput}
+              <input ref={primaryInputRef} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={linput}
                 onKeyDown={(e) => e.key === 'Enter' && f.name.trim() && next()} />
               <button onClick={next} disabled={!f.name.trim()} className={`${lPrimaryBtn} mt-8`}>Let&apos;s go →</button>
             </>)}
@@ -279,7 +292,7 @@ function ConversationalIntakeInner() {
               <LQ>Tell me about your body.</LQ>
               <LHint>This dials in your exact calories — no guessing.</LHint>
               <div className="grid grid-cols-2 gap-3 mb-3">
-                <div><label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Age</label><input type="number" value={f.age} onChange={(e) => set('age', e.target.value)} className={linput} /></div>
+                <div><label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Age</label><input ref={primaryInputRef} type="number" value={f.age} onChange={(e) => set('age', e.target.value)} className={linput} /></div>
                 <div><label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Weight (lbs)</label><input type="number" value={f.weight_lbs} onChange={(e) => set('weight_lbs', e.target.value)} className={linput} /></div>
               </div>
               <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Height</label>
@@ -287,7 +300,7 @@ function ConversationalIntakeInner() {
                 <select value={f.heightFt} onChange={(e) => set('heightFt', e.target.value)} className={linput}>{[4, 5, 6].map((n) => <option key={n} value={n}>{n} ft</option>)}</select>
                 <select value={f.heightIn} onChange={(e) => set('heightIn', e.target.value)} className={linput}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={i}>{i} in</option>)}</select>
               </div>
-              <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Sex (for your metabolism math)</label>
+              <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Gender (for your metabolism math)</label>
               <div className="grid grid-cols-2 gap-3 mb-8">
                 {[{ v: 'female', l: 'Female' }, { v: 'male', l: 'Male' }].map((o) => <button key={o.v} onClick={() => { hapticTap(); set('sex', o.v) }} className={`py-3.5 rounded-2xl text-sm font-semibold border transition-colors ${f.sex === o.v ? 'bg-white border-gold text-ink' : 'bg-white border-ink/10 text-ink/50'}`}>{o.l}</button>)}
               </div>
@@ -456,7 +469,7 @@ function ConversationalIntakeInner() {
             <Q>Last thing — let&apos;s make the food *yours*.</Q>
             <Hint>Optional, but it&apos;s how I build meals you actually crave.</Hint>
             <label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Foods you love</label>
-            <input value={f.food_preferences} onChange={(e) => set('food_preferences', e.target.value)} placeholder="e.g. chicken, rice bowls, tacos" className={`${input} mb-3`} />
+            <input ref={primaryInputRef} value={f.food_preferences} onChange={(e) => set('food_preferences', e.target.value)} placeholder="e.g. chicken, rice bowls, tacos" className={`${input} mb-3`} />
             <label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Dislikes / allergies</label>
             <input value={f.dislikes_allergies} onChange={(e) => set('dislikes_allergies', e.target.value)} placeholder="e.g. no mushrooms, dairy-free" className={`${input} mb-3`} />
             <label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Weekly food budget ($)</label>
