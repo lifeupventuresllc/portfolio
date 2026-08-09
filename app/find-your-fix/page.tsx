@@ -253,11 +253,11 @@ export default function FindYourFix() {
           )}
 
           <div className="relative overflow-hidden bg-gradient-to-br from-[#1a1608] to-charcoal border border-gold/20 rounded-2xl p-5 mt-8 text-center">
-            <span className="inline-block text-gold text-[9px] font-bold tracking-[0.2em] uppercase mb-2 border border-gold/40 rounded-full px-2.5 py-0.5 bg-gold/5">Free For 14 Days</span>
+            <span className="inline-block text-gold text-[9px] font-bold tracking-[0.2em] uppercase mb-2 border border-gold/40 rounded-full px-2.5 py-0.5 bg-gold/5">100% Free</span>
             <h3 className="text-white text-base font-bold mb-1 text-balance">You now know your fix.</h3>
             <p className="text-ivory/50 text-xs mb-3 leading-relaxed">The Life-Up Fitness app builds your whole plan around it — meals, workouts, daily check-ins, all decided for you.</p>
             <a href="/challenge" className="inline-block bg-gold text-obsidian px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300 hover:scale-105">
-              Start free for 14 days →
+              Get started — 100% free →
             </a>
           </div>
         </div>

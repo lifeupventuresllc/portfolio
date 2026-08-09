@@ -26,11 +26,11 @@ export default function LandingPage() {
             </p>
             <p className="text-ink/60 text-lg leading-relaxed mb-6">
               Custom workouts, meals built around the foods you actually love, all the
-              decisions made for you — the full app, starting at $10/mo.
+              decisions made for you — the full app, 100% free.
             </p>
             <p className="text-sm mb-8">
               <span className="inline-block bg-gold/10 border border-gold/30 text-gold font-semibold px-3 py-1.5 rounded-xl">
-                Want me personally checking in on you? 6-Week Challenge = weekly. Inner Circle = twice a week.
+                No trial. No card. Just create your account.
               </span>
             </p>
             <div className="flex flex-wrap items-center gap-5">
@@ -39,7 +39,7 @@ export default function LandingPage() {
                 className="group relative inline-block bg-gold text-obsidian px-10 py-4 text-base font-bold tracking-wider uppercase rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
                 style={{ perspective: '600px', transformStyle: 'preserve-3d' }}
               >
-                Try free for 14 days — from $10/mo after
+                Get started — 100% free
               </Link>
               <Link href="/blueprint" className="text-ink/70 text-sm font-semibold hover:text-gold transition-colors underline underline-offset-4">
                 Start free with your Calorie Blueprint →

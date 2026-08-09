@@ -334,7 +334,7 @@ export default function BlueprintPage() {
                 </div>
                 <a href="/challenge"
                   className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-wider luf-glow transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_22px_55px_rgba(201,168,76,0.5)] active:scale-[0.98]">
-                  Start free for 14 days →
+                  Get started — 100% free →
                 </a>
               </div>
             </div>
