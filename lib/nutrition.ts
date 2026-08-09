@@ -100,18 +100,21 @@ function round(n: number): number {
 
 // Step 7 — gender + goal protein target (grams/lb) with floors
 function proteinGrams(inputs: BlueprintInputs): { grams: number; label: string } {
-  // Protein is targeted off her/his GOAL bodyweight, not current — the target reflects
-  // where they're headed, not where they are. Falls back to current weight when no goal
-  // weight is set so the calc never breaks.
-  const w = inputs.goal_weight_lbs || inputs.weight_lbs
+  // While cutting, protein is anchored to CURRENT weight, not goal — it's insurance
+  // against muscle loss, and that insurance shouldn't shrink as the goal weight (a
+  // moving, lower target) gets closer. Gain/maintain aren't in a deficit, so those
+  // stay goal-weight-based (falls back to current weight if no goal weight is set).
+  const goalBasis = inputs.goal_weight_lbs || inputs.weight_lbs
+  const w = inputs.goal === 'lose' ? inputs.weight_lbs : goalBasis
+  const basisLabel = inputs.goal === 'lose' ? 'current weight' : 'goal weight'
   if (inputs.sex === 'male') {
-    // 1.0-1.5 g/lb range: highest on a cut (protect muscle in a deficit), lowest at
-    // maintenance, a solid middle number for a lean gain.
-    const factor = inputs.goal === 'gain' ? 1.25 : inputs.goal === 'maintain' ? 1.0 : 1.5
-    return { grams: Math.max(140, round(w * factor)), label: `${factor}g/lb goal weight (min 140g)` }
+    // 1.0g/lb on a cut (anchored to current weight, real insurance against muscle
+    // loss) — 1.25 lean gain, 1.0 maintenance (both still goal-weight-based).
+    const factor = inputs.goal === 'gain' ? 1.25 : inputs.goal === 'maintain' ? 1.0 : 1.0
+    return { grams: Math.max(140, round(w * factor)), label: `${factor}g/lb ${basisLabel} (min 140g)` }
   }
   const factor = inputs.goal === 'gain' ? 0.8 : inputs.goal === 'maintain' ? 0.7 : 0.75
-  return { grams: Math.max(100, round(w * factor)), label: `${factor}g/lb goal weight (min 100g)` }
+  return { grams: Math.max(100, round(w * factor)), label: `${factor}g/lb ${basisLabel} (min 100g)` }
 }
 
 // Step 8 — macro split built AROUND a fixed protein target
