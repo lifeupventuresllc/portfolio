@@ -1,50 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
-import { getOrCreatePrice, FITNESS_PRICE_KEYS, FITNESS_PRICE_AMOUNTS, FITNESS_PRICE_NICKNAMES, type FitnessTier } from '@/lib/stripe-prices'
-
-const FITNESS_SLUG_TIER: Record<string, FitnessTier> = {
-  'fitness-app': 'app',
-  'fitness-challenge': 'challenge',
-  'fitness-inner-circle': 'inner_circle',
-}
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    const { productId, email, packageSlug, name, cohortSlug } = await request.json()
-
-    // New recurring fitness subscription tiers ($10 app / $20 challenge / $50 inner
-    // circle) — everyone gets the full app, tiers only differ on video-call access.
-    // Uses real persisted Stripe Prices (not inline price_data like everything else
-    // below) so a later cron can swap a subscription's price on the 6-week downgrade.
-    if (packageSlug && FITNESS_SLUG_TIER[packageSlug]) {
-      const tier = FITNESS_SLUG_TIER[packageSlug]
-      const priceId = await getOrCreatePrice(FITNESS_PRICE_KEYS[tier], FITNESS_PRICE_AMOUNTS[tier], FITNESS_PRICE_NICKNAMES[tier])
-
-      // Free trial only on App Access — Challenge/Inner Circle are paid coaching from day one.
-      const subscriptionData: Record<string, unknown> = { metadata: { type: 'fitness_subscription', tier } }
-      if (tier === 'app') subscriptionData.trial_period_days = 14
-
-      const sessionParams: Record<string, unknown> = {
-        payment_method_types: ['card'],
-        line_items: [{ price: priceId, quantity: 1 }],
-        mode: 'subscription',
-        success_url: `${process.env.NEXT_PUBLIC_APP_URL}/signup?redirect=/plan/intake&success=true`,
-        cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/challenge?canceled=true`,
-        allow_promotion_codes: true,
-        metadata: { userId: user?.id || 'guest', packageSlug, source: 'service-page', type: 'fitness_subscription', tier, name: name || '' },
-        subscription_data: subscriptionData,
-      }
-      if (email) sessionParams.customer_email = email
-      else if (user?.email) sessionParams.customer_email = user.email
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const session = await stripe().checkout.sessions.create(sessionParams as any)
-      return NextResponse.json({ url: session.url })
-    }
+    const { productId, email, packageSlug } = await request.json()
 
     // Direct checkout by slug (from service pages — no login required)
     if (packageSlug) {
@@ -62,9 +25,6 @@ export async function POST(request: NextRequest) {
         'bundle-empire':      { name: 'The Empire Package', description: 'Scale + Mix Pro + Fitness + Strategy', price: 99700, mode: 'subscription', category: 'content-editing' },
         'protein-budget-system': { name: 'The Protein Budget System', description: '15 recipes, meal plan, grocery lists, prep playbook', price: 2700, mode: 'payment', category: 'fitness' },
         'the-menu-cookbook': { name: 'The Menu — Complete Cookbook', description: '25 macro-friendly recipes, organized by meal type, with macros and cost per serving', price: 2599, mode: 'payment', category: 'fitness' },
-        'snatched-challenge':    { name: 'Snatched Without Starving — 6-Week Challenge', description: 'Custom training, done-for-you weekly nutrition, weekly coach check-ins, community + The Menu cookbook', price: 15000, mode: 'payment', category: 'fitness' },
-        'snatched-inner-circle': { name: 'Snatched Without Starving — Inner Circle', description: 'Everything in the Challenge + weekly 1:1 video calls, direct access, fully custom plans, faith + mindset coaching', price: 30000, mode: 'payment', category: 'fitness' },
-        'snatched-challenge-plan': { name: 'Snatched Without Starving — Challenge (Payment Plan)', description: '3 monthly payments of $50 — full challenge access from day one', price: 5000, mode: 'subscription', category: 'fitness' },
       }
 
       const pkg = PACKAGES[packageSlug]
@@ -106,28 +66,6 @@ export async function POST(request: NextRequest) {
         sessionParams.customer_email = email
       } else if (user?.email) {
         sessionParams.customer_email = user.email
-      }
-
-      // Challenge tiers: tag metadata + route to the challenge onboarding page.
-      // allow_promotion_codes lets a Stripe promo code (e.g. a 100%-off beta-test
-      // coupon) be entered at checkout, without touching the live price for anyone else.
-      if (packageSlug.startsWith('snatched-')) {
-        sessionParams.allow_promotion_codes = true
-        const tier = packageSlug === 'snatched-inner-circle' ? 'inner_circle' : 'challenge'
-        // After payment, guide her to create her account → straight into onboarding
-        sessionParams.success_url = `${process.env.NEXT_PUBLIC_APP_URL}/signup?redirect=/plan/intake&success=true`
-        sessionParams.cancel_url = `${process.env.NEXT_PUBLIC_APP_URL}/challenge?canceled=true`
-        sessionParams.metadata = {
-          ...(sessionParams.metadata as Record<string, string>),
-          type: 'challenge',
-          tier,
-          cohortSlug: cohortSlug || 'founding',
-          name: name || '',
-        }
-        // Payment plan: tag the subscription so the webhook auto-cancels it after 3 payments (3× $50)
-        if (isSubscription) {
-          sessionParams.subscription_data = { metadata: { installments: '3', type: 'challenge', tier } }
-        }
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

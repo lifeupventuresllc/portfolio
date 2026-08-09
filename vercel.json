@@ -17,10 +17,6 @@
       "schedule": "0 18 * * *"
     },
     {
-      "path": "/api/cron/tier-downgrade",
-      "schedule": "0 10 * * *"
-    },
-    {
       "path": "/api/cron/daily-memo",
       "schedule": "0 17 * * *"
     }
