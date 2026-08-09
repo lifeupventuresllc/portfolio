@@ -4,7 +4,7 @@ export const metadata = { title: 'Privacy Policy' }
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="July 13, 2026">
+    <LegalPage title="Privacy Policy" updated="August 9, 2026">
       <p>
         Life-Up Ventures LLC (&ldquo;we&rdquo;) respects your privacy. This policy explains what we collect through asaluke.io
         and the Life-Up Fitness apps, and how we use it.
@@ -25,8 +25,18 @@ export default function PrivacyPage() {
 
       <H2>Who we share it with</H2>
       <p>
-        Only service providers that help us operate: Supabase (database &amp; auth), Stripe (payments), Resend (email), and
-        Google (if you use Google Sign-In). They process data on our behalf under their own terms.
+        Only service providers that help us operate: Supabase (database &amp; auth), Stripe (payments), Resend (email),
+        Google (if you use Google Sign-In or connect your calendar), and Anthropic (the AI that powers Coach Asa). When you
+        message Coach Asa or ask it to estimate a meal, that message is sent to Anthropic to generate a response — this can
+        include things you mention about your day, your food, or how you&apos;re feeling. These providers process data on
+        our behalf under their own terms and don&apos;t use it to train their models on our clients&apos; behalf.
+      </p>
+
+      <H2>Coach Asa is AI-powered</H2>
+      <p>
+        When you message &ldquo;Coach Asa&rdquo; in the app, you&apos;re talking to an AI system, not always a human — it
+        reads what you say and responds automatically, adjusting your plan in real time. It&apos;s built to sound like a
+        real person because that&apos;s the experience we want, but it isn&apos;t one.
       </p>
 
       <H2>Your progress photos</H2>

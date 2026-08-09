@@ -4,7 +4,7 @@ export const metadata = { title: 'Terms of Service' }
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms of Service" updated="July 13, 2026">
+    <LegalPage title="Terms of Service" updated="August 9, 2026">
       <p>
         Welcome to Life-Up Fitness, operated by Life-Up Ventures LLC (&ldquo;we,&rdquo; &ldquo;us,&rdquo; &ldquo;Asa Luke&rdquo;).
         By creating an account, purchasing a program, or using asaluke.io and its apps
@@ -20,18 +20,19 @@ export default function TermsPage() {
         Provide accurate information at signup and keep it current. Notify us if you suspect unauthorized use.
       </p>
 
-      <H2>3. Programs, coaching &amp; purchases</H2>
+      <H2>3. The app &amp; digital products</H2>
       <p>
-        Purchases (challenges, coaching, cookbooks, and digital products) are billed through our payment processor, Stripe.
-        Prices are shown at checkout. Subscriptions and payment plans renew or bill on the schedule shown at purchase until
-        completed or canceled. Digital products are delivered electronically and are for your personal, non-commercial use.
+        The Life-Up Fitness app is free — no purchase or subscription is required to create an account or use its features.
+        Separate digital products (like the cookbook or the Protein Budget System) are purchased directly through our
+        payment processor, Stripe, at the price shown at checkout. These are one-time purchases delivered electronically
+        for your personal, non-commercial use.
       </p>
 
       <H2>4. Refunds &amp; guarantees</H2>
       <p>
-        Any results guarantee is conditional and described on the offer page — typically it requires you to complete your
-        weekly check-ins and follow your plan. Because digital products and coaching are delivered immediately, refunds are
-        granted at our discretion and per the specific offer terms. Contact us and we&apos;ll make it right where we reasonably can.
+        Any guarantee on a specific digital product is described on that product&apos;s offer page at the time of purchase.
+        Because digital products are delivered immediately, refunds are granted at our discretion and per the specific
+        offer terms. Contact us and we&apos;ll make it right where we reasonably can.
       </p>
 
       <H2>5. Health disclaimer</H2>
