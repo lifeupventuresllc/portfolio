@@ -68,10 +68,13 @@ export async function usdaSearchWithMacros(query: string, limit = 6): Promise<Fo
   const data = await res.json().catch(() => null)
   const foods = Array.isArray(data?.foods) ? data.foods : []
   const mapped = foods.map((f: Record<string, unknown>) => toResult(f))
-  // Generic (no brand) results first, each group keeping its own original relevance
-  // order — she shouldn't have to guess which branded result is "closest" when her
-  // exact brand isn't listed; a generic USDA reference food is the safe default.
-  const generic = mapped.filter((f: FoodResult) => !f.brand)
-  const branded = mapped.filter((f: FoodResult) => f.brand)
-  return [...generic, ...branded].slice(0, limit)
+  // Guarantee ONE generic result up front (a safe default when her exact brand isn't
+  // listed) WITHOUT burying every branded match behind it — the old "all generics,
+  // then all branded, then slice" approach could push a highly-relevant branded match
+  // (e.g. "protein pasta" — a real, specific product, not equivalent to generic pasta)
+  // off the end of the list entirely if enough loosely-related generics outranked it.
+  // Everything else fills in by USDA's own original relevance order, branded or not.
+  const topGeneric = mapped.find((f: FoodResult) => !f.brand)
+  const rest = mapped.filter((f: FoodResult) => f !== topGeneric)
+  return (topGeneric ? [topGeneric, ...rest] : rest).slice(0, limit)
 }
