@@ -26,10 +26,12 @@ export default function PrivacyPage() {
       <H2>Who we share it with</H2>
       <p>
         Only service providers that help us operate: Supabase (database &amp; auth), Stripe (payments), Resend (email),
-        Google (if you use Google Sign-In or connect your calendar), and Anthropic (the AI that powers Coach Asa). When you
-        message Coach Asa or ask it to estimate a meal, that message is sent to Anthropic to generate a response — this can
-        include things you mention about your day, your food, or how you&apos;re feeling. These providers process data on
-        our behalf under their own terms and don&apos;t use it to train their models on our clients&apos; behalf.
+        Google (if you use Google Sign-In or connect your calendar), Anthropic (the AI that powers Coach Asa), and Sentry
+        (error monitoring, so we can catch and fix bugs). When you message Coach Asa or ask it to estimate a meal, that
+        message is sent to Anthropic to generate a response — this can include things you mention about your day, your
+        food, or how you&apos;re feeling. If something breaks while you&apos;re using the Service, technical details about
+        that error are sent to Sentry to help us fix it. These providers process data on our behalf under their own terms
+        and don&apos;t use it to train their models on our clients&apos; behalf.
       </p>
 
       <H2>Coach Asa is AI-powered</H2>
