@@ -40,7 +40,8 @@ async function loadState(svc: ReturnType<typeof createServiceClient>, enrollment
 
 export async function GET() {
   const { user, enrollment, svc } = await resolve()
-  if (!user || !enrollment || !svc) return NextResponse.json({ streak: 0, today: null, week: [] })
+  if (!user) return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
+  if (!enrollment || !svc) return NextResponse.json({ streak: 0, today: null, week: [] })
   return NextResponse.json(await loadState(svc, enrollment.id as string))
 }
 

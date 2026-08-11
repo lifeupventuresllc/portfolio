@@ -53,7 +53,8 @@ async function loadDay(svc: ReturnType<typeof createServiceClient>, enrollmentId
 export async function GET(request: NextRequest) {
   const { user, enrollment, svc } = await resolve()
   const day = request.nextUrl.searchParams.get('date') || localDateISO()
-  if (!user || !enrollment || !svc) return NextResponse.json({ date: day, entries: [], totals: { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 }, target: { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 } })
+  if (!user) return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
+  if (!enrollment || !svc) return NextResponse.json({ date: day, entries: [], totals: { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 }, target: { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 } })
   return NextResponse.json(await loadDay(svc, enrollment.id as string, day))
 }
 

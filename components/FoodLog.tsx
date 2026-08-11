@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Ring from '@/components/Ring'
 import VoiceButton from '@/components/VoiceButton'
+import SessionExpiredNotice from '@/components/SessionExpiredNotice'
 
 type SearchFood = {
   name: string; brand: string | null; servings: number; serving_label: string | null
@@ -45,6 +46,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [pop, setPop] = useState(false)
+  const [expired, setExpired] = useState(false)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ name: '', meal: 'breakfast', servings: '1', calories: '', protein_g: '', carbs_g: '', fats_g: '' })
   // Accurate food search (USDA FoodData Central) + voice + AI-estimate fallback
@@ -111,13 +113,17 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
   }
 
   useEffect(() => {
-    fetch('/api/plan/food-log').then((r) => r.json()).then((d) => { setData(d); setLoading(false) }).catch(() => setLoading(false))
+    fetch('/api/plan/food-log').then((r) => {
+      if (r.status === 401) { setExpired(true); setLoading(false); return null }
+      return r.json()
+    }).then((d) => { if (d) setData(d); setLoading(false) }).catch(() => setLoading(false))
   }, [])
 
   async function post(body: Record<string, unknown>) {
     setSaving(true)
     try {
       const r = await fetch('/api/plan/food-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      if (r.status === 401) { setExpired(true); return }
       const d = await r.json()
       if (d?.totals) { setData(d); setPop(true); setTimeout(() => setPop(false), 700) }
     } finally { setSaving(false) }
@@ -164,6 +170,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
 
   return (
     <div className="bg-charcoal border border-gold/30 rounded-2xl p-5">
+      {expired && <div className="mb-4"><SessionExpiredNotice /></div>}
       <div className="flex items-center justify-between mb-1">
         <div>
           <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-0.5">Today&apos;s budget 💵</p>

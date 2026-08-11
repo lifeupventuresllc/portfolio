@@ -59,7 +59,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Redirect unauthenticated users away from protected routes
-  const protectedRoutes = ['/content', '/admin']
+  const protectedRoutes = ['/content', '/admin', '/plan']
   if (protectedRoutes.some(route => pathname.startsWith(route)) && !user) {
     const redirectUrl = new URL('/login', request.url)
     redirectUrl.searchParams.set('redirect', pathname)

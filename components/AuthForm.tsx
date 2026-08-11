@@ -3,16 +3,26 @@
 import { useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { mapAuthError } from '@/lib/auth-errors'
 
 type AuthFormProps = {
   mode: 'login' | 'signup' | 'reset'
 }
 
 export default function AuthForm({ mode }: AuthFormProps) {
+  const searchParams = useSearchParams()
+  // A failed email-confirmation or reset link redirects here with a reason —
+  // surface it instead of silently dropping the user on a blank form (was
+  // computed server-side in app/api/auth/callback/route.ts and thrown away).
+  const callbackReason = searchParams.get('error') === 'auth'
+    ? mapAuthError({ message: searchParams.get('reason') || '' })
+    : null
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(callbackReason)
   const [message, setMessage] = useState<string | null>(null)
   const [accepted, setAccepted] = useState(false)
 
@@ -70,8 +80,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
         setMessage('Check your email for a password reset link.')
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unexpected error occurred'
-      setError(msg)
+      setError(mapAuthError(err))
     } finally {
       setLoading(false)
     }
@@ -90,8 +99,16 @@ export default function AuthForm({ mode }: AuthFormProps) {
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(redirect)}` },
     })
-    if (error) { setError(error.message); setLoading(false) }
+    if (error) { setError(mapAuthError(error)); setLoading(false) }
     // On success the browser redirects to Google, so no further handling here.
+  }
+
+  async function handleResend() {
+    setLoading(true)
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    setLoading(false)
+    if (error) setError(mapAuthError(error))
+    else { setError(null); setMessage('Confirmation email resent — check your inbox.') }
   }
 
   const titles = {
@@ -112,6 +129,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
         {error && (
           <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-sm">
             {error}
+            {/confirm your email/i.test(error) && email && (
+              <button type="button" onClick={handleResend} className="block mt-1 text-gold underline">
+                Resend confirmation email
+              </button>
+            )}
           </div>
         )}
 

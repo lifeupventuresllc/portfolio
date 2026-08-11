@@ -5,6 +5,7 @@ import FoodLog, { type PlannedItem } from '@/components/FoodLog'
 import LifePatternCard from '@/components/LifePatternCard'
 import PlanEvolutionCard from '@/components/PlanEvolutionCard'
 import ClientMenu from '@/components/ClientMenu'
+import RebuildPlanButton from '@/components/RebuildPlanButton'
 import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
@@ -162,7 +163,11 @@ export default async function TodayView() {
                 <Link href="/plan/workout" className="luf-pulse shrink-0 inline-flex items-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform">▶ Start</Link>
               </div>
             ) : (
-              <p className="text-ivory/60 text-sm">Your workout is being prepared. Refresh in a moment.</p>
+              <div className="bg-charcoal border border-smoke rounded-2xl p-5 text-center">
+                <p className="text-white font-semibold mb-1">We hit a snag building your workout</p>
+                <p className="text-ivory/50 text-sm mb-3">Shouldn&apos;t take more than a second to fix.</p>
+                <RebuildPlanButton />
+              </div>
             )}
           </section>
 

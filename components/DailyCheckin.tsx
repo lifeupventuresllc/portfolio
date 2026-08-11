@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Ring from '@/components/Ring'
+import SessionExpiredNotice from '@/components/SessionExpiredNotice'
 
 type Today = { workout?: boolean; nutrition?: boolean } | null
 
@@ -10,20 +11,28 @@ export default function DailyCheckin() {
   const [today, setToday] = useState<Today>(null)
   const [loading, setLoading] = useState(true)
   const [pop, setPop] = useState<string | null>(null)
+  const [expired, setExpired] = useState(false)
 
   useEffect(() => {
-    fetch('/api/plan/daily').then((r) => r.json()).then((d) => { setStreak(d.streak || 0); setToday(d.today); setLoading(false) }).catch(() => setLoading(false))
+    fetch('/api/plan/daily').then((r) => {
+      if (r.status === 401) { setExpired(true); setLoading(false); return null }
+      return r.json()
+    }).then((d) => { if (d) { setStreak(d.streak || 0); setToday(d.today) }; setLoading(false) }).catch(() => setLoading(false))
   }, [])
 
   async function set(key: 'workout' | 'nutrition') {
+    const prev = today
     const now = !today?.[key]
     const next = { workout: !!today?.workout, nutrition: !!today?.nutrition, [key]: now }
     setToday(next)
     if (now) { setPop(key); setTimeout(() => setPop(null), 700) }
     const res = await fetch('/api/plan/daily', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next) })
+    if (res.status === 401) { setToday(prev); setExpired(true); return }
     const d = await res.json()
     setStreak(d.streak || 0); setToday(d.today)
   }
+
+  if (expired) return <SessionExpiredNotice />
 
   const both = !!today?.workout && !!today?.nutrition
   const items: { k: 'workout' | 'nutrition'; label: string; icon: string }[] = [

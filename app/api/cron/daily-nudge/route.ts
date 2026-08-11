@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   if (!pushConfigured) return NextResponse.json({ ok: true, note: 'push not configured', sent: 0 })
 
   const svc = createServiceClient()
-  const { data: subs } = await svc.from('push_subscriptions').select('endpoint, p256dh, auth, enrollment_id, timezone')
+  const { data: subs } = await svc.from('push_subscriptions').select('endpoint, p256dh, auth, enrollment_id, user_id, timezone')
   const enrollmentIds = (subs || []).map((s) => s.enrollment_id).filter(Boolean) as string[]
 
   // Keyed per enrollment, not one shared UTC date — she may already be on the
@@ -48,8 +48,9 @@ export async function GET(request: NextRequest) {
       url: '/plan',
     }
 
+    let assessment: Awaited<ReturnType<typeof assessLifePattern>> | null = null
     if (s.enrollment_id) {
-      const assessment = await assessLifePattern(s.enrollment_id as string, localToday)
+      assessment = await assessLifePattern(s.enrollment_id as string, localToday)
       if (assessment.isDip) {
         dipsCaught++
         const { title, body } = messageForPattern(assessment)
@@ -60,6 +61,18 @@ export async function GET(request: NextRequest) {
     const r = await sendPush(s as StoredSub, payload)
     if (r === 'ok') sent++
     else if (r === 'gone') { await svc.from('push_subscriptions').delete().eq('endpoint', (s as StoredSub).endpoint); removed++ }
+
+    // Beta metrics: one row per enrollment/day/source, upserted so a retry or a
+    // second cron pass this same local day can't double-log (see fos_risk_flags'
+    // unique index). Only from here and meal-nudge — the only two places outreach
+    // actually happens; see lib/fos/pattern.ts's beta-metrics note.
+    if (s.enrollment_id && assessment?.isDip) {
+      await svc.from('fos_risk_flags').upsert({
+        enrollment_id: s.enrollment_id, user_id: s.user_id ?? null, flagged_on: localToday,
+        source: 'daily-nudge', signals: assessment.signals, score: assessment.score, risk_band: assessment.riskBand,
+        intervention_sent: r === 'ok', intervention_sent_at: r === 'ok' ? new Date().toISOString() : null,
+      }, { onConflict: 'enrollment_id,flagged_on,source', ignoreDuplicates: true })
+    }
   }
   return NextResponse.json({ ok: true, sent, skipped, removed, dipsCaught })
 }
