@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import CountUp from '@/components/CountUp'
 import { hapticTap } from '@/lib/haptics'
+import { createClient } from '@/lib/supabase/client'
 
 type Targets = { calories: number; protein_g: number; carbs_g: number; fats_g: number; bmr: number; tdee: number }
 
@@ -59,6 +60,12 @@ function ConversationalIntakeInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const startInOptional = searchParams.get('tier') === 'optional'
+
+  async function handleSignOut() {
+    await createClient().auth.signOut()
+    router.push('/')
+    router.refresh()
+  }
 
   const [tier, setTier] = useState<'required' | 'optional'>(startInOptional ? 'optional' : 'required')
   const [step, setStep] = useState(0)
@@ -247,6 +254,7 @@ function ConversationalIntakeInner() {
               <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
             </div>
             <span className="text-ink/30 text-xs tabular-nums">{step + 1}/{total}</span>
+            <button onClick={handleSignOut} className="text-ink/30 hover:text-gold text-xs whitespace-nowrap">Sign out</button>
           </div>
         </div>
 
@@ -325,6 +333,7 @@ function ConversationalIntakeInner() {
             <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
           <span className="text-ivory/50 text-xs tabular-nums">{step + 1}/{total}</span>
+          <button onClick={handleSignOut} className="text-ivory/40 hover:text-gold text-xs whitespace-nowrap">Sign out</button>
         </div>
       </div>
 

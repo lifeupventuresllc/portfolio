@@ -4,10 +4,12 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import FoodLog, { type PlannedItem } from '@/components/FoodLog'
 import LifePatternCard from '@/components/LifePatternCard'
 import PlanEvolutionCard from '@/components/PlanEvolutionCard'
+import ClientMenu from '@/components/ClientMenu'
 import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
 import { shortVersionFor } from '@/lib/workout-short'
+import { LIVE_CALL } from '@/lib/live-call'
 import type { WorkoutProgram } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
 
@@ -84,7 +86,10 @@ export default async function TodayView() {
   return (
     <div className="min-h-screen bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto">
-        <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← My full plan</Link>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all">← My full plan</Link>
+          <ClientMenu firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
+        </div>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">{weekdayLabel}</p>
         <h1 className="text-3xl font-bold text-white mb-6">Today, {firstName}</h1>
 

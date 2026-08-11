@@ -100,8 +100,12 @@ export default function AuthForm({ mode }: AuthFormProps) {
     reset: 'Reset Password',
   }
 
+  // Anchored to a fixed top offset, not vertically centered — centering inside
+  // min-h-screen means the card re-centers (visibly shifts) every time the
+  // mobile keyboard changes the visible viewport height, which reads as the
+  // screen "shaking" while typing. A fixed top position never moves.
   return (
-    <div className="min-h-screen flex items-center justify-center pt-20 px-6">
+    <div className="min-h-screen flex justify-center pt-20 px-6">
       <div className="w-full max-w-md p-8 bg-charcoal rounded-2xl border border-smoke">
         <h1 className="text-2xl font-bold text-center text-white mb-6">{titles[mode]}</h1>
 
