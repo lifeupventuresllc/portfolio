@@ -133,7 +133,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 bg-obsidian border border-smoke rounded-xl text-white placeholder-ivory/30 focus:outline-none focus:border-gold transition-colors"
+              className="w-full px-4 py-3 bg-obsidian border border-smoke rounded-xl text-white text-base placeholder-ivory/30 focus:outline-none focus:border-gold transition-colors"
               placeholder="you@example.com"
             />
           </div>
@@ -151,7 +151,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full px-4 py-3 bg-obsidian border border-smoke rounded-xl text-white placeholder-ivory/30 focus:outline-none focus:border-gold transition-colors"
+                className="w-full px-4 py-3 bg-obsidian border border-smoke rounded-xl text-white text-base placeholder-ivory/30 focus:outline-none focus:border-gold transition-colors"
                 placeholder="••••••••"
               />
             </div>
