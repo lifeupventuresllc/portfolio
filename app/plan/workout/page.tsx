@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import WorkoutPlayer from '@/components/WorkoutPlayer'
 import { generateWorkout, type WorkoutProgram, type TrainingStyle } from '@/lib/workout'
+import { generateCardioSession } from '@/lib/cardio-session'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { localDateISO } from '@/lib/localdate'
@@ -57,14 +58,17 @@ export default async function WorkoutSession() {
   // lands here, the operator route already wrote it into intake.form_data.injuries
   // (permanent, every future plan honors it too), but today's cached weekly program
   // was generated before that write, so it still needs a fresh pull to reflect it.
+  // Available unconditionally — reused below for both the track/injury regeneration
+  // path and the cardio-content-swap path.
+  const level = (intake?.experience_level === 'advanced' ? 3 : intake?.experience_level === 'intermediate' ? 2 : 1) as Level
+  const injuries = (Array.isArray((intake?.form_data as { injuries?: Injury[] } | null)?.injuries)
+    ? (intake?.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
+
   const trackOverride = todayAdjustment?.workoutChange?.trackOverride
   const injuryOverride = todayAdjustment?.workoutChange?.injuryBodyPart
   if (((trackOverride && trackOverride !== program.track) || injuryOverride) && intake) {
-    const level = (intake.experience_level === 'advanced' ? 3 : intake.experience_level === 'intermediate' ? 2 : 1) as Level
     const goal = (intake.goal === 'gain' || intake.goal === 'maintain' ? intake.goal : 'lose') as 'lose' | 'gain' | 'maintain'
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
-    const injuries = (Array.isArray((intake.form_data as { injuries?: Injury[] } | null)?.injuries)
-      ? (intake.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
     const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle
     program = generateWorkout({
@@ -81,6 +85,22 @@ export default async function WorkoutSession() {
   const numDays = permanentPlan.track === 'home' ? (permanentPlan.home?.days.length || 1) : (permanentPlan.gymDays?.length || 1)
   const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
   const startDay = numDays > 0 ? completed % numDays : 0
+
+  // Coach Asa approved a real cardio/HIIT swap (not just a shorter version of
+  // whatever was scheduled) — splice today's slot only, request-scoped, her stored
+  // weekly plan is never touched. See lib/cardio-session.ts.
+  if (todayAdjustment?.workoutChange?.contentSwap === 'cardio') {
+    const offset = completed + startDay
+    if (program.track === 'home' && program.home) {
+      const days = [...program.home.days]
+      days[startDay] = { ...generateCardioSession('home', level, injuries, offset), dayNum: days[startDay]?.dayNum ?? startDay + 1 }
+      program = { ...program, home: { ...program.home, days } }
+    } else if (program.gymDays) {
+      const gymDays = [...program.gymDays]
+      gymDays[startDay] = { ...generateCardioSession('gym', level, injuries, offset), dayNum: gymDays[startDay]?.dayNum ?? startDay + 1 }
+      program = { ...program, gymDays }
+    }
+  }
 
   return (
     <div className="min-h-screen bg-obsidian px-4 py-8">

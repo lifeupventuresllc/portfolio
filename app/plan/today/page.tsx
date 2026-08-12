@@ -73,6 +73,11 @@ export default async function TodayView() {
       if (d) todayWorkout = { title: d.title, muscles: d.muscles }
     }
   }
+  // Approved cardio swap — show the title she'll actually get when she taps Start,
+  // not her originally-scheduled day (the real content swap happens in /plan/workout).
+  if (todayWorkout && todayAdjustment?.workoutChange?.contentSwap === 'cardio') {
+    todayWorkout = { title: 'Cardio & Conditioning' }
+  }
 
   // Layer 1's primary feature, unified: reads across every behavioral signal
   // already being collected (workout, food logging, app-open silence,

@@ -127,6 +127,10 @@ export default async function PlanDashboard() {
       if (d) todayWorkout = { title: d.title, muscles: d.muscles }
     }
   }
+  // Approved cardio swap — show the title she'll actually get when she taps Start.
+  if (todayWorkout && todayAdjustment?.workoutChange?.contentSwap === 'cardio') {
+    todayWorkout = { title: 'Cardio & Conditioning' }
+  }
   const affirmation = affirmationForDay(localDayNumber())
 
   // Did she already finish today's workout? (server truth for the workout ring's ✅ state)

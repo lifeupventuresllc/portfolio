@@ -20,6 +20,7 @@ const CLASSIFY_TOOL = {
       days: { type: 'integer', description: 'missed only: how many days she thinks she missed' },
       free_at: { type: 'string', description: 'schedule_change only: a time she mentioned being free, if any' },
       body_part: { type: 'string', enum: [...INJURY_BODY_PARTS], description: 'injury only: which body part, using lower_back for any back pain' },
+      workout_style: { type: 'string', enum: ['cardio'], description: 'Set ONLY if she explicitly asks for cardio/HIIT/a different type of workout than her usual one today — independent of kind, can accompany any category.' },
     },
     required: ['kind'],
   },
@@ -37,14 +38,16 @@ const CLASSIFY_SYSTEM = `You read a message a woman sends her fitness coach abou
 - stressed: stressed, overwhelmed, anxious, too much going on
 - none: nothing above applies — small talk, a question, describing food already eaten, or anything unclear
 
-Pick the single best match. If more than one could apply (other than injury, which always wins), pick whichever is most central to what she needs right now. Use "none" liberally — only classify a real signal when it's clearly there.`
+Pick the single best match. If more than one could apply (other than injury, which always wins), pick whichever is most central to what she needs right now. Use "none" liberally — only classify a real signal when it's clearly there.
+
+Separately, if she explicitly asks for cardio/HIIT/a different type of workout than usual (not just describing how she feels), also set workout_style — this can accompany any kind, e.g. "only have 20 min, want cardio" is still kind=time_crunch with workout_style=cardio.`
 
 // A confident "none" from Claude (nothing situational here) and "the call never
 // happened" (unconfigured / failed) are different outcomes — the first should NOT
 // fall through to the regex matcher (which can misfire on unrelated words, e.g.
 // "my daughter's stressed about her exam" hitting the stressed pattern), only the
 // second should. `ok: false` means the caller should try parseSignal() instead.
-type AIClassifyResult = { ok: true; signal: LifeSignal | null } | { ok: false }
+type AIClassifyResult = { ok: true; signal: LifeSignal | null; workoutStyle?: 'cardio' } | { ok: false }
 
 // Claude-based intent classifier — replaces the regex matcher below as the primary
 // path now that the key is live. Falls back to the rule-based parser (still
@@ -65,21 +68,22 @@ export async function parseSignalAI(text: string): Promise<AIClassifyResult> {
     })
     const block = msg.content.find((b) => b.type === 'tool_use')
     if (!block || block.type !== 'tool_use') return { ok: false }
-    const input = block.input as { kind: string; minutes?: number; days?: number; free_at?: string; body_part?: string }
+    const input = block.input as { kind: string; minutes?: number; days?: number; free_at?: string; body_part?: string; workout_style?: string }
+    const workoutStyle: 'cardio' | undefined = input.workout_style === 'cardio' ? 'cardio' : undefined
     switch (input.kind) {
-      case 'time_crunch': return { ok: true, signal: { kind: 'time_crunch', minutes: input.minutes ?? 20 } }
-      case 'exhausted': return { ok: true, signal: { kind: 'exhausted' } }
-      case 'poor_sleep': return { ok: true, signal: { kind: 'poor_sleep' } }
-      case 'schedule_change': return { ok: true, signal: { kind: 'schedule_change', freeAt: input.free_at || undefined } }
-      case 'eat_out': return { ok: true, signal: { kind: 'eat_out' } }
-      case 'missed': return { ok: true, signal: { kind: 'missed', days: input.days ?? 2 } }
-      case 'craving': return { ok: true, signal: { kind: 'craving' } }
-      case 'stressed': return { ok: true, signal: { kind: 'stressed' } }
+      case 'time_crunch': return { ok: true, signal: { kind: 'time_crunch', minutes: input.minutes ?? 20 }, workoutStyle }
+      case 'exhausted': return { ok: true, signal: { kind: 'exhausted' }, workoutStyle }
+      case 'poor_sleep': return { ok: true, signal: { kind: 'poor_sleep' }, workoutStyle }
+      case 'schedule_change': return { ok: true, signal: { kind: 'schedule_change', freeAt: input.free_at || undefined }, workoutStyle }
+      case 'eat_out': return { ok: true, signal: { kind: 'eat_out' }, workoutStyle }
+      case 'missed': return { ok: true, signal: { kind: 'missed', days: input.days ?? 2 }, workoutStyle }
+      case 'craving': return { ok: true, signal: { kind: 'craving' }, workoutStyle }
+      case 'stressed': return { ok: true, signal: { kind: 'stressed' }, workoutStyle }
       case 'injury': {
         const part = (INJURY_BODY_PARTS as readonly string[]).includes(input.body_part || '') ? (input.body_part as Injury) : null
-        return part ? { ok: true, signal: { kind: 'injury', bodyPart: part } } : { ok: false }
+        return part ? { ok: true, signal: { kind: 'injury', bodyPart: part }, workoutStyle } : { ok: false }
       }
-      case 'none': return { ok: true, signal: null }
+      case 'none': return { ok: true, signal: null, workoutStyle }
       default: return { ok: false }
     }
   } catch { return { ok: false } }
@@ -122,4 +126,11 @@ export function parseSignal(text: string): LifeSignal | null {
     return { kind: 'missed', days: dMatch ? parseInt(dMatch[1], 10) : 2 }
   }
   return null
+}
+
+// Independent of whichever kind matched — the regex-fallback counterpart to
+// CLASSIFY_TOOL's workout_style field, used only when parseSignalAI is
+// unconfigured/failed (see app/api/plan/operator/route.ts).
+export function detectWorkoutStyle(text: string): 'cardio' | undefined {
+  return /\b(cardio|hiit|high.intensity)\b/i.test(text) ? 'cardio' : undefined
 }

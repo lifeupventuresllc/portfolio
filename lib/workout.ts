@@ -167,7 +167,7 @@ function splitFor(sex: WorkoutInputs['sex'], days: number): DaySpec[] {
   return sex === 'male' ? maleSplit(days) : femaleSplit(days) // 'other'/undefined → female (avatar)
 }
 
-function rotate<T>(arr: T[], n: number): T[] {
+export function rotate<T>(arr: T[], n: number): T[] {
   if (!arr.length) return arr
   const k = ((n % arr.length) + arr.length) % arr.length
   return arr.slice(k).concat(arr.slice(0, k))
@@ -194,7 +194,7 @@ function pickGym(movement: Movement, muscles: string[], level: Level, weekOffset
 // she's flagged postpartum in intake. Injury filtering was missing here entirely
 // before (pre-existing gap, not introduced by the priority-pool work) — pickGym and
 // generateHome both already filtered by injuries, this closes the same gap for abs.
-function pickAb(zone: 'upper' | 'lower', level: Level, offset: number, postpartum = false, injuries: Injury[] = []): AbExercise {
+export function pickAb(zone: 'upper' | 'lower', level: Level, offset: number, postpartum = false, injuries: Injury[] = []): AbExercise {
   const base = AB_POOL.filter(a => a.zone === zone && a.minLevel <= level)
   const safe = base.filter(a => !isContraindicated(a.name, injuries))
   const inZoneLevel = safe.length ? safe : base // never end up with nothing just because every option got excluded

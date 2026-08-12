@@ -25,7 +25,19 @@ export type RecoveryPlan = {
 
 // Given a life signal + her normal workout length, return a forward-looking,
 // goal-protecting adjustment. Never guilt. Always the path forward.
-export function recover(signal: LifeSignal, normalMinutes = 45): RecoveryPlan {
+// workoutStyle is independent of signal.kind (see lib/fos/parse.ts's workout_style
+// field) — when set, the recommendation swaps to real cardio/HIIT content (see
+// lib/cardio-session.ts) instead of just adjusting duration on whatever was already
+// scheduled. Merged on afterward so every case above stays exactly as tuned.
+export function recover(signal: LifeSignal, normalMinutes = 45, workoutStyle?: 'cardio'): RecoveryPlan {
+  const plan = recoverBase(signal, normalMinutes)
+  if (workoutStyle === 'cardio') {
+    return { ...plan, workoutChange: { ...(plan.workoutChange || {}), contentSwap: 'cardio', swapTo: 'cardio & conditioning session' } }
+  }
+  return plan
+}
+
+function recoverBase(signal: LifeSignal, normalMinutes = 45): RecoveryPlan {
   switch (signal.kind) {
     case 'time_crunch': {
       const m = Math.max(10, Math.min(signal.minutes, normalMinutes))

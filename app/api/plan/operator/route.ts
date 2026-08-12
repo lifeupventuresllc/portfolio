@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { localDateISO, localHourNumber, addDaysISO } from '@/lib/localdate'
 import { recover, type LifeSignal } from '@/lib/fos/recovery'
-import { parseSignal, parseSignalAI } from '@/lib/fos/parse'
+import { parseSignal, parseSignalAI, detectWorkoutStyle } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
 import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
 import { extractProfileFacts, generateReply, describeDecision } from '@/lib/fos/memory'
@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
   const aiResult = await parseSignalAI(message)
   const signal = aiResult.ok ? aiResult.signal : parseSignal(message)
   const signalSource: 'ai' | 'rule' = aiResult.ok ? 'ai' : 'rule'
+  const workoutStyle = aiResult.ok ? aiResult.workoutStyle : detectWorkoutStyle(message)
 
   // Nothing situational matched — check whether she's actually just telling us
   // what she ate ("I had a slice of pizza"). Real Claude detection (see
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const plan = signal ? recover(signal, 45) : null
+  const plan = signal ? recover(signal, 45, workoutStyle) : null
   let reply = plan ? plan.message
     : "I hear you. Tell me what today looks like — how much time you've got, your energy, or what changed — and I'll adjust your plan around it while protecting your goal."
 
