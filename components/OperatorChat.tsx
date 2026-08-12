@@ -32,12 +32,24 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
   // Auto-grow the composer as she types or dictates, so a longer message stays fully
   // visible instead of scrolling sideways inside a fixed-height single-line input —
   // capped at ~6 lines, then it scrolls internally like any normal chat composer.
-  useEffect(() => {
+  // Bound directly to the native 'input' event (not just React's onChange->state->
+  // effect chain) — mobile Safari's dictation can update a field's value in ways
+  // that don't cleanly line up with a React re-render on every recognized word, so
+  // resizing here, synchronously, on the real DOM event, is the more reliable path.
+  const resize = () => {
     const el = textareaRef.current
     if (!el) return
     el.style.height = 'auto'
     el.style.height = `${Math.min(el.scrollHeight, 144)}px`
-  }, [input])
+    el.scrollTop = el.scrollHeight // keep the latest typed/dictated text in view, not scrolled above it
+  }
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.addEventListener('input', resize)
+    return () => el.removeEventListener('input', resize)
+  }, [])
+  useEffect(resize, [input])
 
   useEffect(() => {
     fetch('/api/plan/operator').then((r) => r.json()).then((d) => {
