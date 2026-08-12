@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import type { FosProfile, FosEvent, WorkoutChange, NutritionChange } from './types'
+import type { ExtractedFacts } from './memory'
 
 // The context data-layer for the Fitness Operating System (Phase 0 foundation).
 // Read/write the living profile + append life events. Server-only (uses the service
@@ -75,4 +76,50 @@ export async function recentEvents(enrollmentId: string, sinceISO: string): Prom
     summary: (r.summary as string | null) ?? null,
     payload: (r.payload as Record<string, unknown>) ?? {},
   }))
+}
+
+const norm = (s: string) => s.trim().toLowerCase()
+
+// A re-mentioned fact is reinforced (moved to front), not duplicated or discarded —
+// this IS the "repeated patterns" handling: no separate frequency-counting needed,
+// the thing she keeps bringing up naturally ends up most prominent.
+function mergeArray(existing: string[], additions?: string[]): string[] | undefined {
+  if (!additions?.length) return undefined
+  const next = [...existing]
+  for (const raw of additions) {
+    const v = raw.trim()
+    if (!v) continue
+    const i = next.findIndex((e) => norm(e) === norm(v))
+    if (i !== -1) next.splice(i, 1)
+    next.unshift(v)
+  }
+  return next.slice(0, 20)
+}
+
+// Builds the snake_case patch for upsertProfile() from a fresh extraction —
+// returns only keys that actually changed, so a message with nothing new
+// (the common case) triggers no DB write at all.
+export function mergeProfilePatch(existing: FosProfile | null, extracted: ExtractedFacts): Record<string, unknown> {
+  const patch: Record<string, unknown> = {}
+  if (extracted.goal_summary) patch.goal_summary = extracted.goal_summary
+
+  const foodsLoved = mergeArray(existing?.foodsLoved ?? [], extracted.foods_loved)
+  if (foodsLoved) patch.foods_loved = foodsLoved
+  const foodsAvoided = mergeArray(existing?.foodsAvoided ?? [], extracted.foods_avoided)
+  if (foodsAvoided) patch.foods_avoided = foodsAvoided
+  const motivators = mergeArray(existing?.motivators ?? [], extracted.motivators)
+  if (motivators) patch.motivators = motivators
+  const discouragers = mergeArray(existing?.discouragers ?? [], extracted.discouragers)
+  if (discouragers) patch.discouragers = discouragers
+  const barriers = mergeArray(existing?.barriers ?? [], extracted.barriers)
+  if (barriers) patch.barriers = barriers
+
+  if (extracted.work_schedule_note || extracted.energy_note) {
+    const preferences = { ...(existing?.preferences ?? {}) } as Record<string, unknown>
+    if (extracted.work_schedule_note) preferences.work_schedule_note = extracted.work_schedule_note
+    if (extracted.energy_note) preferences.energy_note = extracted.energy_note
+    patch.preferences = preferences
+  }
+
+  return patch
 }

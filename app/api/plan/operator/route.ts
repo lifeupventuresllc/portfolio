@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { localDateISO, localHourNumber } from '@/lib/localdate'
+import { localDateISO, localHourNumber, addDaysISO } from '@/lib/localdate'
 import { recover, type LifeSignal } from '@/lib/fos/recovery'
 import { parseSignal, parseSignalAI } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
+import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
+import { extractProfileFacts, generateReply, describeDecision } from '@/lib/fos/memory'
 import type { FosEventKind, WorkoutChange } from '@/lib/fos/types'
 import type { Injury } from '@/lib/workout-exercises'
 
@@ -120,8 +122,26 @@ export async function POST(request: NextRequest) {
   }
 
   const plan = signal ? recover(signal, 45) : null
-  const reply = plan ? plan.message
+  let reply = plan ? plan.message
     : "I hear you. Tell me what today looks like — how much time you've got, your energy, or what changed — and I'll adjust your plan around it while protecting your goal."
+
+  // Personalize the wording (never the workoutChange/nutritionChange decision itself —
+  // that stays fully deterministic from recover() above) using accumulated memory, and
+  // pull out any durable new facts from this message. Both degrade to nothing on any
+  // failure — reply stays plan.message, profile stays untouched. See lib/fos/memory.ts.
+  if (plan && signal) {
+    const profile = await getProfile(eid)
+    const events = await recentEvents(eid, addDaysISO(today, -18))
+    const [generated, extracted] = await Promise.all([
+      generateReply({ herMessage: message, decision: describeDecision(signal, plan), profile, events }),
+      extractProfileFacts(message, profile),
+    ])
+    if (generated) reply = generated
+    if (extracted) {
+      const patch = mergeProfilePatch(profile, extracted)
+      if (Object.keys(patch).length > 0) await upsertProfile(eid, user.id, patch)
+    }
+  }
 
   await svc.from('fos_events').insert({ enrollment_id: eid, user_id: user.id, occurred_on: today, kind: signal ? eventKindFor(signal) : 'message', summary: message, payload: signal ? { signal } : {} })
 
