@@ -7,8 +7,7 @@ import WorkoutStatusCard from '@/components/WorkoutStatusCard'
 import StreakChip from '@/components/StreakChip'
 import CoachHero from '@/components/CoachHero'
 import FeedbackCard from '@/components/FeedbackCard'
-import MondayMemo from '@/components/MondayMemo'
-import LevelUpNudge from '@/components/LevelUpNudge'
+import GoalProgressBar from '@/components/GoalProgressBar'
 import TimezoneSync from '@/components/TimezoneSync'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
@@ -89,16 +88,14 @@ export default async function PlanDashboard() {
   }
 
   const todayIso = localDateISO()
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }] = await Promise.all([
+  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }, { data: latestCheckin }] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('calories, meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
-    svc.from('challenge_intake').select('form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
+    svc.from('challenge_intake').select('weight_lbs, goal_weight_lbs, goal').eq('enrollment_id', enrollment.id).maybeSingle(),
+    svc.from('challenge_checkins').select('weight_lbs').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('week_number', { ascending: false }).limit(1).maybeSingle(),
   ])
-  // She built her plan with just the quick required questions — invite her (once)
-  // into the optional second pass rather than making her clear it up front.
-  const profileNeedsFinishing = !(intakeRow?.form_data as { optional_completed?: boolean } | null)?.optional_completed
 
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
     ? (nutritionPlan.meals as WeekPlan) : null
@@ -133,6 +130,11 @@ export default async function PlanDashboard() {
   }
   const affirmation = affirmationForDay(localDayNumber())
 
+  const startWeight = Number(intakeRow?.weight_lbs) || 0
+  const goalWeight = Number(intakeRow?.goal_weight_lbs) || startWeight
+  const currentWeight = Number(latestCheckin?.weight_lbs) || startWeight
+  const goalDirection = (intakeRow?.goal === 'gain' || intakeRow?.goal === 'maintain' ? intakeRow.goal : 'lose') as 'lose' | 'gain' | 'maintain'
+
   // Did she already finish today's workout? (server truth for the workout ring's ✅ state)
   const workoutDoneToday = (doneRows || []).some(
     (r) => (r as { logged_on?: string }).logged_on === todayIso && (r.measurements as { workout?: boolean } | null)?.workout
@@ -140,27 +142,11 @@ export default async function PlanDashboard() {
 
   return shell(
     <div className="space-y-5">
-      {/* Conversational home, in strict problem-priority order:
-          #1 problem (time/decision fatigue) → Coach Asa decides her day for her.
-          #2 problem (craving/consistency without willpower) → the eating-out escape hatch,
-          front and center right below, not buried under self-talk/cards. */}
-
-      {/* Coach Asa — the living centerpiece; she talks right here */}
-      <CoachHero firstName={firstName} />
-
-      {/* Challenge + Inner Circle exclusive — invisible unless it's actually her
-          Monday AND Asa has recorded real audio for the slot her week earned */}
-      {(enrollment.tier === 'challenge' || enrollment.tier === 'inner_circle') && <MondayMemo />}
-
-      {/* The #2-problem solution, right behind #1 — she never has to figure out what to
-          eat when she's off her plan and craving something. */}
-      <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-gradient-to-br from-blue-500/25 to-charcoal bg-charcoal backdrop-blur-md border border-blue-400/40 rounded-2xl px-5 py-3.5 shadow-[0_0_30px_-10px_rgba(59,130,246,0.5)] hover:border-blue-400/70 hover:shadow-[0_0_36px_-8px_rgba(59,130,246,0.65)] transition-all">
-        <div>
-          <p className="text-white font-semibold text-sm">🍔 Away from home right now?</p>
-          <p className="text-ivory/60 text-xs mt-0.5">Tap for exactly what to order — no thinking, no searching.</p>
-        </div>
-        <span className="text-blue-300 text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
-      </Link>
+      {/* Tight above-the-fold hierarchy: self-talk → goal progress → today's
+          numbers → Coach Asa as the dominant centerpiece. Everything else that
+          used to live here (Monday memo, eating-out, level-up nudge, the
+          optional-intake invite) moved to /plan/today — this page stays a
+          quick glance, not a scroll. */}
 
       {/* Self-talk — compact banner */}
       <div className="luf-breathe rounded-2xl border border-emerald-400/25 bg-charcoal/90 backdrop-blur-md bg-gradient-to-br from-emerald-500/10 via-charcoal to-obsidian px-5 py-3.5 text-center shadow-[0_0_28px_-10px_rgba(52,211,153,0.45)]">
@@ -168,26 +154,21 @@ export default async function PlanDashboard() {
         <p className="text-white text-[15px] sm:text-base leading-snug font-medium text-balance">“{affirmation}”</p>
       </div>
 
+      <GoalProgressBar startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} />
+
       {/* Supporting, side by side — calories (left) · workout (right) */}
       <div className="grid grid-cols-2 gap-3.5">
         <CaloriesTodayCard budget={calBudget} dayType={todayDayType} compact />
         <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} compact />
       </div>
 
-      {/* Infrequent — only renders itself when she's actually eligible */}
-      <LevelUpNudge />
-
-      {/* One-time invite into the optional intake pass she skipped to get here fast.
-          Disappears for good once she finishes it — never nags. */}
-      {profileNeedsFinishing && (
-        <Link href="/plan/intake?tier=optional" className="group flex items-center justify-between gap-3 bg-charcoal border border-smoke rounded-2xl px-5 py-3.5 hover:border-gold/40 transition-colors">
-          <div>
-            <p className="text-white font-semibold text-sm">Fine-tune your plan — 60 seconds</p>
-            <p className="text-ivory/50 text-xs mt-0.5">A few more details (schedule, food likes, injuries) makes it fit even better.</p>
-          </div>
-          <span className="text-gold text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
-        </Link>
-      )}
+      {/* Coach Asa — the dominant centerpiece, circular frame around the
+          unchanged chat interface (a hard circular clip would cut off real
+          text/buttons, so the "circle" reads through a glow ring + aspect-
+          square shape rather than clipping the rectangular content inside). */}
+      <div className="relative aspect-square rounded-full bg-white shadow-[0_0_60px_-6px_rgba(255,255,255,0.6),0_0_160px_24px_rgba(201,168,76,0.45)] ring-4 ring-gold/40 p-7 overflow-y-auto">
+        <CoachHero firstName={firstName} />
+      </div>
 
       {/* Persistent feedback surface — always here, not just a popup */}
       <FeedbackCard />

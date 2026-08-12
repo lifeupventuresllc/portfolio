@@ -25,6 +25,9 @@ const config: Config = {
         smoke: '#2A2A35',
         paper: '#FFFFFF',
         ink: '#0A0A0A',
+        // Warm rose-pink, not a cool/neon pink — sits next to the existing warm
+        // gold (#C9A84C) on dark obsidian/charcoal grounds without clashing.
+        rose: '#EA5C87',
       },
       animation: {
         'slide-down': 'slide-down 0.2s ease-out',

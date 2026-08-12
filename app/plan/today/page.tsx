@@ -6,6 +6,8 @@ import LifePatternCard from '@/components/LifePatternCard'
 import PlanEvolutionCard from '@/components/PlanEvolutionCard'
 import ClientMenu from '@/components/ClientMenu'
 import RebuildPlanButton from '@/components/RebuildPlanButton'
+import MondayMemo from '@/components/MondayMemo'
+import LevelUpNudge from '@/components/LevelUpNudge'
 import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
@@ -37,12 +39,16 @@ export default async function TodayView() {
 
   const tz = getTimezone()
   const todayIso = localDateISO(tz)
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment] = await Promise.all([
+  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('measurements, logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
+    svc.from('challenge_intake').select('form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
   ])
+  // Moved here from /plan's dashboard (2026-08-12 redesign) — one-time invite into
+  // the optional intake pass she skipped to get here fast. Disappears for good once done.
+  const profileNeedsFinishing = !(intakeRow?.form_data as { optional_completed?: boolean } | null)?.optional_completed
 
   const weekdayLabel = new Date().toLocaleDateString('en-US', { timeZone: tz, weekday: 'long', month: 'short', day: 'numeric' })
   const mealIdx = localMondayIndex(tz) // Mon=0 … Sat=5, Sun=6, in the user's timezone
@@ -115,6 +121,11 @@ export default async function TodayView() {
           {/* Layer 1 Phase 5 — a real multi-week pattern, not a today problem.
               Sits below the acute card since it's a bigger decision, never forced. */}
           {structuralMessage && <PlanEvolutionCard title={structuralMessage.title} body={structuralMessage.body} />}
+
+          {/* Moved here from /plan's dashboard (2026-08-12 redesign) — Challenge +
+              Inner Circle exclusive, invisible unless it's actually her Monday AND
+              Asa has recorded real audio for the slot her week earned. */}
+          {(enrollment.tier === 'challenge' || enrollment.tier === 'inner_circle') && <MondayMemo />}
 
           {/* The zero-decision escape hatch — for the moment she's out, off-plan, and
               would otherwise have to decide (or skip eating entirely). */}
@@ -195,6 +206,22 @@ export default async function TodayView() {
             </div>
             <span className="text-gold text-sm shrink-0">→</span>
           </Link>
+
+          {/* Moved here from /plan's dashboard (2026-08-12 redesign) — infrequent,
+              only renders itself when she's actually eligible. */}
+          <LevelUpNudge />
+
+          {/* Moved here from /plan's dashboard (2026-08-12 redesign) — one-time
+              invite, disappears for good once she finishes the optional pass. */}
+          {profileNeedsFinishing && (
+            <Link href="/plan/intake?tier=optional" className="group flex items-center justify-between gap-3 bg-charcoal border border-smoke rounded-2xl px-5 py-3.5 hover:border-gold/40 transition-colors">
+              <div>
+                <p className="text-white font-semibold text-sm">Fine-tune your plan — 60 seconds</p>
+                <p className="text-ivory/50 text-xs mt-0.5">A few more details (schedule, food likes, injuries) makes it fit even better.</p>
+              </div>
+              <span className="text-gold text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
+            </Link>
+          )}
         </div>
       </div>
     </div>
