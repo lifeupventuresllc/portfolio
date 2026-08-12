@@ -27,6 +27,17 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
   const [sending, setSending] = useState(false)
   const [pending, setPending] = useState<Adjustment | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Auto-grow the composer as she types or dictates, so a longer message stays fully
+  // visible instead of scrolling sideways inside a fixed-height single-line input —
+  // capped at ~6 lines, then it scrolls internally like any normal chat composer.
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 144)}px`
+  }, [input])
 
   useEffect(() => {
     fetch('/api/plan/operator').then((r) => r.json()).then((d) => {
@@ -120,12 +131,16 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
       </div>
 
       {/* Composer — normal flow (no sticky) so the iOS keyboard doesn't make it jump */}
-      <form onSubmit={(e) => { e.preventDefault(); send(input) }} className="flex gap-2">
-        <input
+      <form onSubmit={(e) => { e.preventDefault(); send(input) }} className="flex gap-2 items-end">
+        <textarea
+          ref={textareaRef}
           value={input} onChange={(e) => setInput(e.target.value)} disabled={sending}
           placeholder="Tell me about your day…"
+          rows={1}
           autoComplete="off" autoCorrect="on" enterKeyHint="send" inputMode="text"
-          className="flex-1 bg-charcoal border border-smoke rounded-2xl px-4 py-3 text-base text-white placeholder:text-ivory/30 focus:border-gold/60 focus:outline-none"
+          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
+          className="flex-1 bg-charcoal border border-smoke rounded-2xl px-4 py-3 text-base text-white placeholder:text-ivory/30 focus:border-gold/60 focus:outline-none resize-none overflow-y-auto leading-snug"
+          style={{ maxHeight: 144 }}
         />
         <button type="submit" disabled={sending || !input.trim()} className="bg-gold text-obsidian px-5 py-3 font-bold text-sm rounded-2xl disabled:opacity-40 active:scale-95 transition-transform">{sending ? '…' : 'Send'}</button>
       </form>
