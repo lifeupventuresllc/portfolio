@@ -105,17 +105,26 @@ type Prospect = {
   created_at: string
 }
 
-type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'projects' | 'templates' | 'intake' | 'marketing'
+type TabName = 'overview' | 'marketing' | 'customers' | 'projects'
 
 // Everything dealing with marketing/advertisement, consolidated under one parent
 // tab instead of 9 separate top-level ones. "machine" is the new bulk-upload ->
 // AI-caption -> auto-schedule build (see SocialPublisher) — Asa's explicit ask was
-// that THIS specific build carry the "Marketing Machine" label.
-type MarketingSubTab = 'machine' | 'planner' | 'schedule' | 'leads' | 'outreach' | 'broadcast' | 'tracker' | 'analytics' | 'affiliates'
+// that THIS specific build carry the "Marketing Machine" label. Templates lives
+// here too — it's a tool used while doing outreach/support, not a customer record.
+type MarketingSubTab = 'machine' | 'planner' | 'schedule' | 'leads' | 'outreach' | 'broadcast' | 'tracker' | 'analytics' | 'affiliates' | 'templates'
 const MARKETING_SUB_LABEL: Record<MarketingSubTab, string> = {
   machine: 'Marketing Machine', planner: 'Content Planner', schedule: 'Content Schedule',
   leads: 'Leads', outreach: 'Outreach', broadcast: 'Broadcast', tracker: 'Outreach Tracker',
+  templates: 'Templates',
   analytics: 'Analytics', affiliates: 'Affiliates',
+}
+
+// "Who are our people and what have they done" — accounts, money, email
+// history, and service intake, all in one place, same pattern as Marketing.
+type CustomersSubTab = 'users' | 'payments' | 'emails' | 'intake'
+const CUSTOMERS_SUB_LABEL: Record<CustomersSubTab, string> = {
+  users: 'Users', payments: 'Payments', emails: 'Emails', intake: 'Intake',
 }
 
 function DailyOutreachTracker() {
@@ -192,6 +201,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
 
   const [activeTab, setActiveTab] = useState<TabName>('overview')
   const [activeMarketingTab, setActiveMarketingTab] = useState<MarketingSubTab>('machine')
+  const [activeCustomersTab, setActiveCustomersTab] = useState<CustomersSubTab>('users')
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [emailRecords, setEmailRecords] = useState<EmailRecord[]>([])
@@ -456,16 +466,22 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
     prospectStatusFilter === 'all' || p.status === prospectStatusFilter
   )
 
-  const tabs: TabName[] = isAdmin
-    ? ['overview', 'marketing', 'projects', 'intake', 'templates', 'users', 'payments', 'emails']
-    : ['overview', 'marketing', 'projects', 'intake', 'templates', 'users', 'payments', 'emails']
+  // 4 top-level tabs — Overview and Marketing already established, Customers
+  // (Users/Payments/Emails/Intake) and Projects round it out. Same set for both
+  // roles: sub-tab CONTENT differs (Marketing) or specific in-panel actions are
+  // isAdmin-gated (e.g. refunds, role changes) — visibility of the tab itself isn't.
+  const tabs: TabName[] = ['overview', 'marketing', 'customers', 'projects']
 
   // Support role gets a narrower slice of Marketing (matches its pre-existing
-  // top-level access: schedule/leads/outreach only, no planner/publish/broadcast/
-  // tracker/analytics/affiliates).
+  // top-level access: schedule/leads/outreach/templates only, no planner/publish/
+  // broadcast/tracker/analytics/affiliates).
   const marketingSubTabs: MarketingSubTab[] = isAdmin
-    ? ['machine', 'planner', 'schedule', 'leads', 'outreach', 'broadcast', 'tracker', 'analytics', 'affiliates']
-    : ['schedule', 'leads', 'outreach']
+    ? ['machine', 'planner', 'schedule', 'leads', 'outreach', 'broadcast', 'tracker', 'analytics', 'affiliates', 'templates']
+    : ['schedule', 'leads', 'outreach', 'templates']
+
+  // Users/Payments/Emails/Intake were already equally viewable by both roles
+  // before this reorg (only specific actions inside each were isAdmin-gated).
+  const customersSubTabs: CustomersSubTab[] = ['users', 'payments', 'emails', 'intake']
 
   if (loading) {
     return (
@@ -680,8 +696,8 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
         </div>
       )}
 
-      {/* Users Tab */}
-      {activeTab === 'users' && (
+      {/* Users */}
+      {activeTab === 'customers' && activeCustomersTab === 'users' && (
         <div className="bg-charcoal rounded-xl border border-smoke p-6">
           <div className="flex flex-wrap gap-4 mb-6">
             <input
@@ -737,8 +753,8 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
         </div>
       )}
 
-      {/* Payments Tab */}
-      {activeTab === 'payments' && (
+      {/* Payments */}
+      {activeTab === 'customers' && activeCustomersTab === 'payments' && (
         <div className="bg-charcoal rounded-xl border border-smoke p-6">
           <div className="flex flex-wrap gap-4 mb-6">
             <select
@@ -805,8 +821,8 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
         </div>
       )}
 
-      {/* Emails Tab (CRM) */}
-      {activeTab === 'emails' && (
+      {/* Emails (CRM) */}
+      {activeTab === 'customers' && activeCustomersTab === 'emails' && (
         <div className="bg-charcoal rounded-xl border border-smoke p-6">
           <div className="flex flex-wrap gap-4 mb-6">
             <select
@@ -860,6 +876,24 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
               }`}
             >
               {MARKETING_SUB_LABEL[sub]}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Customers — who our people are and what they've done, consolidated
+          from 4 flat top-level tabs (Users/Payments/Emails/Intake). */}
+      {activeTab === 'customers' && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {customersSubTabs.map((sub) => (
+            <button
+              key={sub}
+              onClick={() => setActiveCustomersTab(sub)}
+              className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeCustomersTab === sub ? 'bg-gold text-obsidian' : 'bg-charcoal border border-smoke text-ivory/60 hover:text-ivory/90'
+              }`}
+            >
+              {CUSTOMERS_SUB_LABEL[sub]}
             </button>
           ))}
         </div>
@@ -1046,10 +1080,10 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
       {activeTab === 'projects' && <ProjectBoard />}
 
       {/* Intake Tab */}
-      {activeTab === 'intake' && <IntakeSubmissions />}
+      {activeTab === 'customers' && activeCustomersTab === 'intake' && <IntakeSubmissions />}
 
       {/* Templates Tab */}
-      {activeTab === 'templates' && <Templates />}
+      {activeTab === 'marketing' && activeMarketingTab === 'templates' && <Templates />}
 
       {/* Broadcast */}
       {activeTab === 'marketing' && activeMarketingTab === 'broadcast' && isAdmin && <BroadcastPanel />}
