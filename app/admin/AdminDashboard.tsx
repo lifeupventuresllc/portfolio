@@ -16,6 +16,7 @@ import OutreachTrackerPanel from '@/components/OutreachTracker'
 import TrafficAnalytics from '@/components/TrafficAnalytics'
 import ContentPlanner from '@/components/ContentPlanner'
 import SocialPublisher from '@/components/SocialPublisher'
+import OutreachDrafter from '@/components/OutreachDrafter'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 type Profile = {
@@ -104,7 +105,18 @@ type Prospect = {
   created_at: string
 }
 
-type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'affiliates' | 'leads' | 'outreach' | 'projects' | 'templates' | 'intake' | 'schedule' | 'broadcast' | 'tracker' | 'analytics' | 'planner' | 'publish'
+type TabName = 'overview' | 'users' | 'payments' | 'emails' | 'projects' | 'templates' | 'intake' | 'marketing'
+
+// Everything dealing with marketing/advertisement, consolidated under one parent
+// tab instead of 9 separate top-level ones. "machine" is the new bulk-upload ->
+// AI-caption -> auto-schedule build (see SocialPublisher) — Asa's explicit ask was
+// that THIS specific build carry the "Marketing Machine" label.
+type MarketingSubTab = 'machine' | 'planner' | 'schedule' | 'leads' | 'outreach' | 'broadcast' | 'tracker' | 'analytics' | 'affiliates'
+const MARKETING_SUB_LABEL: Record<MarketingSubTab, string> = {
+  machine: 'Marketing Machine', planner: 'Content Planner', schedule: 'Content Schedule',
+  leads: 'Leads', outreach: 'Outreach', broadcast: 'Broadcast', tracker: 'Outreach Tracker',
+  analytics: 'Analytics', affiliates: 'Affiliates',
+}
 
 function DailyOutreachTracker() {
   const today = new Date().toISOString().split('T')[0]
@@ -179,6 +191,7 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
   const isAdmin = userRole === 'admin'
 
   const [activeTab, setActiveTab] = useState<TabName>('overview')
+  const [activeMarketingTab, setActiveMarketingTab] = useState<MarketingSubTab>('machine')
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [emailRecords, setEmailRecords] = useState<EmailRecord[]>([])
@@ -444,8 +457,15 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
   )
 
   const tabs: TabName[] = isAdmin
-    ? ['overview', 'planner', 'publish', 'schedule', 'leads', 'outreach', 'broadcast', 'tracker', 'analytics', 'projects', 'intake', 'templates', 'users', 'payments', 'emails', 'affiliates']
-    : ['overview', 'schedule', 'leads', 'outreach', 'projects', 'intake', 'templates', 'users', 'payments', 'emails']
+    ? ['overview', 'marketing', 'projects', 'intake', 'templates', 'users', 'payments', 'emails']
+    : ['overview', 'marketing', 'projects', 'intake', 'templates', 'users', 'payments', 'emails']
+
+  // Support role gets a narrower slice of Marketing (matches its pre-existing
+  // top-level access: schedule/leads/outreach only, no planner/publish/broadcast/
+  // tracker/analytics/affiliates).
+  const marketingSubTabs: MarketingSubTab[] = isAdmin
+    ? ['machine', 'planner', 'schedule', 'leads', 'outreach', 'broadcast', 'tracker', 'analytics', 'affiliates']
+    : ['schedule', 'leads', 'outreach']
 
   if (loading) {
     return (
@@ -827,8 +847,35 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
         </div>
       )}
 
-      {/* CRM Leads Tab */}
-      {activeTab === 'leads' && (
+      {/* Marketing — sub-nav for everything marketing/advertisement-related,
+          consolidated under one parent tab instead of 9 flat top-level ones. */}
+      {activeTab === 'marketing' && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {marketingSubTabs.map((sub) => (
+            <button
+              key={sub}
+              onClick={() => setActiveMarketingTab(sub)}
+              className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeMarketingTab === sub ? 'bg-gold text-obsidian' : 'bg-charcoal border border-smoke text-ivory/60 hover:text-ivory/90'
+              }`}
+            >
+              {MARKETING_SUB_LABEL[sub]}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Social Publisher — "Marketing Machine": bulk-upload -> AI caption -> auto-schedule */}
+      {activeTab === 'marketing' && activeMarketingTab === 'machine' && isAdmin && <SocialPublisher />}
+
+      {/* Content Planner */}
+      {activeTab === 'marketing' && activeMarketingTab === 'planner' && isAdmin && <ContentPlanner />}
+
+      {/* Content Schedule */}
+      {activeTab === 'marketing' && activeMarketingTab === 'schedule' && <ContentSchedule />}
+
+      {/* CRM Leads */}
+      {activeTab === 'marketing' && activeMarketingTab === 'leads' && (
         <div className="space-y-6">
           {/* Lead Stats */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -911,8 +958,8 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
         </div>
       )}
 
-      {/* Outreach / SDR Tab */}
-      {activeTab === 'outreach' && (
+      {/* Outreach / SDR */}
+      {activeTab === 'marketing' && activeMarketingTab === 'outreach' && (
         <div className="space-y-6">
           {/* Prospect Stats */}
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
@@ -928,6 +975,9 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
 
           {/* CSV Import */}
           <CsvImporter onImported={fetchData} />
+
+          {/* AI Drafting — opener/follow-up/response per prospect, sending stays manual */}
+          <OutreachDrafter prospects={prospects} onUpdated={fetchData} />
 
           <div className="bg-charcoal rounded-xl border border-smoke p-6">
             <div className="flex flex-wrap gap-4 mb-6">
@@ -996,32 +1046,22 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
       {activeTab === 'projects' && <ProjectBoard />}
 
       {/* Intake Tab */}
-      {/* Schedule Tab */}
-      {activeTab === 'schedule' && <ContentSchedule />}
-
-      {/* Intake Tab */}
       {activeTab === 'intake' && <IntakeSubmissions />}
 
       {/* Templates Tab */}
       {activeTab === 'templates' && <Templates />}
 
-      {/* Broadcast Tab (Admin only) */}
-      {activeTab === 'broadcast' && isAdmin && <BroadcastPanel />}
+      {/* Broadcast */}
+      {activeTab === 'marketing' && activeMarketingTab === 'broadcast' && isAdmin && <BroadcastPanel />}
 
-      {/* Tracker Tab (Admin only) */}
-      {activeTab === 'tracker' && isAdmin && <OutreachTrackerPanel />}
+      {/* Outreach Tracker */}
+      {activeTab === 'marketing' && activeMarketingTab === 'tracker' && isAdmin && <OutreachTrackerPanel />}
 
-      {/* Content Planner Tab (Admin only) */}
-      {activeTab === 'planner' && isAdmin && <ContentPlanner />}
+      {/* Analytics */}
+      {activeTab === 'marketing' && activeMarketingTab === 'analytics' && isAdmin && <TrafficAnalytics />}
 
-      {/* Social Publisher Tab (Admin only) */}
-      {activeTab === 'publish' && isAdmin && <SocialPublisher />}
-
-      {/* Analytics Tab (Admin only) */}
-      {activeTab === 'analytics' && isAdmin && <TrafficAnalytics />}
-
-      {/* Affiliates Tab (Admin only) */}
-      {activeTab === 'affiliates' && isAdmin && (
+      {/* Affiliates */}
+      {activeTab === 'marketing' && activeMarketingTab === 'affiliates' && isAdmin && (
         <div className="space-y-6">
           {/* Create Affiliate */}
           <div className="bg-charcoal rounded-xl border border-smoke p-6">
