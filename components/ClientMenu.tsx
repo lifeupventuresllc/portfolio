@@ -103,7 +103,7 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
       {open && (
         <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-0 h-full w-[85%] max-w-xs bg-obsidian border-l border-smoke overflow-y-auto overscroll-contain luf-page">
+          <div className="absolute right-0 top-0 h-[100dvh] w-[85%] max-w-xs bg-obsidian border-l border-smoke overflow-y-auto overscroll-contain luf-page">
             <div className="flex items-center justify-between px-5 py-4 border-b border-smoke">
               <div>
                 <p className="text-gold text-[10px] uppercase tracking-[0.25em] font-semibold">Life-Up Fitness</p>
