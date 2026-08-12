@@ -9,6 +9,7 @@ import RebuildPlanButton from '@/components/RebuildPlanButton'
 import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
+import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { shortVersionFor } from '@/lib/workout-short'
 import { LIVE_CALL } from '@/lib/live-call'
 import type { WorkoutProgram } from '@/lib/workout'
@@ -34,13 +35,15 @@ export default async function TodayView() {
 
   const firstName = (enrollment.name || user.email?.split('@')[0] || 'there').split(' ')[0]
 
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }] = await Promise.all([
+  const tz = getTimezone()
+  const todayIso = localDateISO(tz)
+  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('measurements, logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
+    getApprovedTodayAdjustment(enrollment.id as string, todayIso),
   ])
 
-  const tz = getTimezone()
   const weekdayLabel = new Date().toLocaleDateString('en-US', { timeZone: tz, weekday: 'long', month: 'short', day: 'numeric' })
   const mealIdx = localMondayIndex(tz) // Mon=0 … Sat=5, Sun=6, in the user's timezone
 
@@ -49,6 +52,10 @@ export default async function TodayView() {
     ? (nutritionPlan.meals as WeekPlan) : null
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
   const planned: PlannedItem[] = (todayMeals?.meals || []).map((m) => ({ slot: m.slot, name: m.name, cal: m.cal, protein: m.protein, carbs: m.carbs, fat: m.fat }))
+
+  // Coach Asa adjusted today's calories? Reflect it in the budget — same as /plan's dashboard.
+  const calDelta = Number(todayAdjustment?.nutritionChange?.calorieDelta) || 0
+  const calBudget = calDelta ? Math.max(0, (todayMeals?.target ?? 0) + calDelta) : (todayMeals?.target ?? null)
 
   // Today's workout — same rotation as the session player (by # workouts finished).
   const program = (workoutPlan?.plan as WorkoutProgram) || null
@@ -116,7 +123,7 @@ export default async function TodayView() {
 
           {/* Food log — the heartbeat of the daily view. Budget = TODAY'S calorie target
               (workout days higher, rest days lower); the app already knows which day this is. */}
-          <FoodLog planned={planned} budget={todayMeals?.target ?? null} dayType={todayMeals?.dayType ?? null} />
+          <FoodLog planned={planned} budget={calBudget} dayType={todayMeals?.dayType ?? null} />
 
           {/* Today's planned meals */}
           <section>
@@ -159,6 +166,9 @@ export default async function TodayView() {
                 <div>
                   <p className="text-white font-semibold text-sm">{todayWorkout.title}</p>
                   {todayWorkout.muscles?.length ? <p className="text-ivory/50 text-xs mt-0.5">{todayWorkout.muscles.join(' · ')}</p> : null}
+                  {todayAdjustment?.workoutChange && (
+                    <p className="text-gold text-[11px] mt-1 font-semibold">✨ Adjusted: {todayAdjustment.workoutChange.toMinutes ? `${todayAdjustment.workoutChange.toMinutes}-min ` : ''}{todayAdjustment.workoutChange.swapTo || 'adapted for today'}</p>
+                  )}
                 </div>
                 <Link href="/plan/workout" className="luf-pulse shrink-0 inline-flex items-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform">▶ Start</Link>
               </div>
