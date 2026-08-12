@@ -20,6 +20,9 @@ export type ExtractedFacts = {
   motivators?: string[]
   discouragers?: string[]
   barriers?: string[]
+  // General durable personal-life facts that don't fit the fitness-specific buckets
+  // above — family, home life, anything a real coach would just remember about her.
+  personal_notes?: string[]
 }
 
 function describeProfile(profile: FosProfile | null): string {
@@ -35,6 +38,8 @@ function describeProfile(profile: FosProfile | null): string {
   if (typeof workNote === 'string' && workNote) lines.push(`Work: ${workNote}`)
   const energyNote = profile.preferences?.energy_note
   if (typeof energyNote === 'string' && energyNote) lines.push(`Energy: ${energyNote}`)
+  const personalNotes = profile.preferences?.personal_notes
+  if (Array.isArray(personalNotes) && personalNotes.length) lines.push(`Personal: ${personalNotes.join('; ')}`)
   return lines.length ? lines.join('\n') : 'Nothing known yet.'
 }
 
@@ -58,6 +63,7 @@ const EXTRACT_TOOL = {
       motivators: { type: 'array', items: { type: 'string' }, description: 'What keeps her going' },
       discouragers: { type: 'array', items: { type: 'string' }, description: 'What tends to knock her off track emotionally' },
       barriers: { type: 'array', items: { type: 'string' }, description: 'Recurring practical obstacles, e.g. "no gym access on weekends"' },
+      personal_notes: { type: 'array', items: { type: 'string' }, description: 'Durable family/home/personal-life facts that don\'t fit the fields above, e.g. "has two kids, ages 4 and 7" or "husband travels for work most weeks"' },
     },
     required: [],
   },
@@ -67,7 +73,7 @@ function extractSystem(profile: FosProfile | null): string {
   return `You read one message a woman sends her fitness coach and pull out only the durable facts about her real life worth remembering permanently — the kind a good human coach would silently jot in her file and recall next month, not just today's mood.
 
 Extract a fact ONLY if it is:
-- A concrete, generalizable fact about her life, schedule, work, family, food preferences, motivations, or recurring obstacles — stated as fact, not as a one-off feeling.
+- A concrete, generalizable fact about her life, schedule, work, family, home life, food preferences, motivations, or recurring obstacles — stated as fact, not as a one-off feeling. Family/home details that don't obviously fit the fitness-specific fields (foods, motivators, barriers, etc.) still matter — use personal_notes for those, e.g. kids' ages, a partner's travel schedule, a move, anything that helps you actually know her as a person.
 - Something that would still be true and useful next week, not just how she feels right now.
 
 Do NOT extract:

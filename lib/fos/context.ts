@@ -114,10 +114,14 @@ export function mergeProfilePatch(existing: FosProfile | null, extracted: Extrac
   const barriers = mergeArray(existing?.barriers ?? [], extracted.barriers)
   if (barriers) patch.barriers = barriers
 
-  if (extracted.work_schedule_note || extracted.energy_note) {
+  const existingPersonalNotes = Array.isArray(existing?.preferences?.personal_notes) ? (existing!.preferences.personal_notes as string[]) : []
+  const personalNotes = mergeArray(existingPersonalNotes, extracted.personal_notes)
+
+  if (extracted.work_schedule_note || extracted.energy_note || personalNotes) {
     const preferences = { ...(existing?.preferences ?? {}) } as Record<string, unknown>
     if (extracted.work_schedule_note) preferences.work_schedule_note = extracted.work_schedule_note
     if (extracted.energy_note) preferences.energy_note = extracted.energy_note
+    if (personalNotes) preferences.personal_notes = personalNotes
     patch.preferences = preferences
   }
 
