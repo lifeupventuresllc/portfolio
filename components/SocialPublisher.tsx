@@ -27,6 +27,14 @@ type ScheduledPost = {
   created_at: string
 }
 
+type ContentSettings = {
+  id: string
+  caption_template: string
+  cadence: Record<string, { per_week: number; times: string[] }>
+}
+
+type BatchFile = { file: File; note: string }
+
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   draft: { bg: 'rgba(212,197,160,0.12)', text: '#D4C5A0' },
   scheduled: { bg: 'rgba(59,130,246,0.12)', text: '#60a5fa' },
@@ -41,6 +49,19 @@ export default function SocialPublisher() {
   const [loading, setLoading] = useState(true)
   const [showScheduler, setShowScheduler] = useState(false)
   const [filter, setFilter] = useState('all')
+
+  // Bulk upload (Content Engine) — always shown, not hidden behind a toggle;
+  // this is the primary action, not an extra. Defaults to 'both' since that's
+  // the common case (removes a required click for the typical upload).
+  const [batchFiles, setBatchFiles] = useState<BatchFile[]>([])
+  const [batchPlatform, setBatchPlatform] = useState('both')
+  const [uploadingBatch, setUploadingBatch] = useState(false)
+  const [batchResult, setBatchResult] = useState<string | null>(null)
+
+  // Settings (caption template + cadence)
+  const [showSettings, setShowSettings] = useState(false)
+  const [settings, setSettings] = useState<ContentSettings | null>(null)
+  const [savingSettings, setSavingSettings] = useState(false)
 
   // Scheduler form
   const [platform, setPlatform] = useState('instagram')
@@ -63,6 +84,62 @@ export default function SocialPublisher() {
   }, [filter])
 
   useEffect(() => { loadData() }, [loadData])
+
+  useEffect(() => {
+    fetch('/api/social/settings').then(r => r.json()).then(d => { if (d.settings) setSettings(d.settings) })
+  }, [])
+
+  function onPickFiles(fileList: FileList | null) {
+    if (!fileList) return
+    setBatchFiles(Array.from(fileList).map(file => ({ file, note: '' })))
+    setBatchResult(null)
+  }
+
+  function updateNote(index: number, note: string) {
+    setBatchFiles(prev => prev.map((bf, i) => (i === index ? { ...bf, note } : bf)))
+  }
+
+  function removeBatchFile(index: number) {
+    setBatchFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  async function generateAndSchedule() {
+    if (!batchFiles.length) return
+    setUploadingBatch(true)
+    setBatchResult(null)
+    try {
+      const form = new FormData()
+      batchFiles.forEach(bf => form.append('files', bf.file))
+      form.append('notes', JSON.stringify(batchFiles.map(bf => bf.note)))
+      form.append('platform', batchPlatform)
+      const res = await fetch('/api/social/upload-batch', { method: 'POST', body: form })
+      const data = await res.json()
+      if (!res.ok) { setBatchResult(data.error || 'Upload failed.'); return }
+      const failed = (data.posts || []).filter((p: { error?: string }) => p.error)
+      setBatchResult(failed.length ? `Scheduled with ${failed.length} error(s) — check console.` : `Scheduled ${data.posts.length} post(s).`)
+      if (failed.length) console.error('Batch upload errors:', failed)
+      setBatchFiles([])
+      await loadData()
+    } finally {
+      setUploadingBatch(false)
+    }
+  }
+
+  async function saveSettings() {
+    if (!settings) return
+    setSavingSettings(true)
+    try {
+      const res = await fetch('/api/social/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: settings.id, caption_template: settings.caption_template, cadence: settings.cadence }),
+      })
+      const data = await res.json()
+      if (data.settings) setSettings(data.settings)
+    } finally {
+      setSavingSettings(false)
+    }
+  }
 
   async function schedulePost() {
     setScheduling(true)
@@ -171,6 +248,101 @@ export default function SocialPublisher() {
               </a>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Bulk Upload (Content Engine) — the primary action, always visible, not
+          gated behind a toggle. Three real steps: you upload, everything else
+          (captions, hashtags, scheduling, posting) happens on its own. */}
+      <div style={{ background: '#1A1A22', border: '1px solid #C9A84C', borderRadius: 8, padding: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <h3 style={{ color: '#C9A84C', fontSize: 16, fontWeight: 600 }}>Upload Once, It Handles the Month</h3>
+          <button onClick={() => setShowSettings(!showSettings)} style={{ padding: '6px 12px', borderRadius: 6, background: 'transparent', color: '#D4C5A0', fontSize: 12, cursor: 'pointer', border: '1px solid #2A2A35' }}>
+            {showSettings ? 'Close Settings' : 'Settings'}
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 14, marginBottom: 4, flexWrap: 'wrap' }}>
+          {[
+            { n: 1, label: 'You upload' },
+            { n: 2, label: 'We caption & schedule it' },
+            { n: 3, label: 'It posts itself, live' },
+          ].map((s) => (
+            <div key={s.n} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#0A0A0F', border: '1px solid #2A2A35', borderRadius: 20, padding: '6px 12px' }}>
+              <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#C9A84C', color: '#0A0A0F', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{s.n}</span>
+              <span style={{ color: '#D4C5A0', fontSize: 12 }}>{s.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {showSettings && settings && (
+          <div style={{ marginTop: 16, padding: 16, background: '#0A0A0F', borderRadius: 8, border: '1px solid #2A2A35' }}>
+            <label style={{ color: '#D4C5A0', fontSize: 12, display: 'block', marginBottom: 6 }}>Caption structure template</label>
+            <textarea
+              value={settings.caption_template}
+              onChange={e => setSettings({ ...settings, caption_template: e.target.value })}
+              rows={6}
+              style={{ width: '100%', padding: 10, borderRadius: 6, background: '#1A1A22', border: '1px solid #2A2A35', color: '#F5F5F5', fontSize: 12, fontFamily: 'monospace', resize: 'vertical' }}
+            />
+            <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
+              {['instagram', 'tiktok'].map(p => (
+                <div key={p} style={{ flex: '1 1 200px' }}>
+                  <label style={{ color: '#D4C5A0', fontSize: 12, textTransform: 'capitalize', display: 'block', marginBottom: 6 }}>{p} — posts/week</label>
+                  <input
+                    type="number" min={1} max={7}
+                    value={settings.cadence?.[p]?.per_week ?? 7}
+                    onChange={e => setSettings({ ...settings, cadence: { ...settings.cadence, [p]: { per_week: parseInt(e.target.value) || 1, times: settings.cadence?.[p]?.times || ['09:00'] } } })}
+                    style={{ width: '100%', padding: 8, borderRadius: 6, background: '#1A1A22', border: '1px solid #2A2A35', color: '#F5F5F5', fontSize: 13 }}
+                  />
+                  <input
+                    type="time"
+                    value={settings.cadence?.[p]?.times?.[0] || '09:00'}
+                    onChange={e => setSettings({ ...settings, cadence: { ...settings.cadence, [p]: { per_week: settings.cadence?.[p]?.per_week ?? 7, times: [e.target.value] } } })}
+                    style={{ width: '100%', padding: 8, borderRadius: 6, background: '#1A1A22', border: '1px solid #2A2A35', color: '#F5F5F5', fontSize: 13, marginTop: 6 }}
+                  />
+                </div>
+              ))}
+            </div>
+            <button onClick={saveSettings} disabled={savingSettings} style={{ marginTop: 12, padding: '8px 16px', borderRadius: 6, background: '#C9A84C', color: '#0A0A0F', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', opacity: savingSettings ? 0.5 : 1 }}>
+              {savingSettings ? 'Saving...' : 'Save Settings'}
+            </button>
+          </div>
+        )}
+
+        <div style={{ marginTop: 16 }}>
+            <input type="file" accept="video/*" multiple onChange={e => onPickFiles(e.target.files)} style={{ color: '#D4C5A0', fontSize: 13 }} />
+
+            {batchFiles.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+                {batchFiles.map((bf, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', background: '#0A0A0F', padding: 10, borderRadius: 6 }}>
+                    <span style={{ color: '#F5F5F5', fontSize: 12, flex: '0 0 160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bf.file.name}</span>
+                    <input
+                      value={bf.note}
+                      onChange={e => updateNote(i, e.target.value)}
+                      placeholder="What's this video about? (e.g. leg day form fix)"
+                      style={{ flex: 1, padding: 8, borderRadius: 6, background: '#1A1A22', border: '1px solid #2A2A35', color: '#F5F5F5', fontSize: 12 }}
+                    />
+                    <button onClick={() => removeBatchFile(i)} style={{ padding: '4px 10px', borderRadius: 4, background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', fontSize: 11, cursor: 'pointer' }}>
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
+              {['instagram', 'tiktok', 'both'].map(p => (
+                <button key={p} onClick={() => setBatchPlatform(p)} style={{ padding: '6px 14px', borderRadius: 6, border: `1px solid ${batchPlatform === p ? '#C9A84C' : '#2A2A35'}`, background: batchPlatform === p ? 'rgba(201,168,76,0.15)' : 'transparent', color: batchPlatform === p ? '#C9A84C' : '#D4C5A0', fontSize: 12, cursor: 'pointer', textTransform: 'capitalize' }}>
+                  {p}
+                </button>
+              ))}
+              <button onClick={generateAndSchedule} disabled={uploadingBatch || !batchFiles.length} style={{ marginLeft: 'auto', padding: '10px 20px', borderRadius: 6, background: '#C9A84C', color: '#0A0A0F', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', opacity: uploadingBatch || !batchFiles.length ? 0.5 : 1 }}>
+                {uploadingBatch ? 'Generating & Scheduling...' : 'Generate & Schedule'}
+              </button>
+            </div>
+
+            {batchResult && <p style={{ color: '#D4C5A0', fontSize: 12, marginTop: 8 }}>{batchResult}</p>}
         </div>
       </div>
 
