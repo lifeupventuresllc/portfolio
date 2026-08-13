@@ -8,6 +8,7 @@ import StreakChip from '@/components/StreakChip'
 import CoachHero from '@/components/CoachHero'
 import FeedbackCard from '@/components/FeedbackCard'
 import GoalProgressBar from '@/components/GoalProgressBar'
+import WeeklyCheckinPrompt from '@/components/WeeklyCheckinPrompt'
 import TimezoneSync from '@/components/TimezoneSync'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
@@ -94,7 +95,7 @@ export default async function PlanDashboard() {
     svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
     svc.from('challenge_intake').select('weight_lbs, target_lbs, goal').eq('enrollment_id', enrollment.id).maybeSingle(),
-    svc.from('challenge_checkins').select('weight_lbs').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('week_number', { ascending: false }).limit(1).maybeSingle(),
+    svc.from('challenge_checkins').select('weight_lbs, submitted_at').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('submitted_at', { ascending: false }).limit(1).maybeSingle(),
   ])
 
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
@@ -144,6 +145,15 @@ export default async function PlanDashboard() {
     (r) => (r as { logged_on?: string }).logged_on === todayIso && (r.measurements as { workout?: boolean } | null)?.workout
   )
 
+  // Weekly check-in nudge — the goal bar above and Coach Asa's pace-aware replies
+  // both depend on real weigh-ins, and nothing was ever prompting her for one (the
+  // checkin page is fully opt-in). Due every 7 days from her last real weigh-in, or
+  // from enrollment start if she's never checked in — matches the checkin page's
+  // own "check in with me every week" copy, not a new cadence invented here.
+  const lastCheckinAt = (latestCheckin?.submitted_at as string | undefined) || (enrollment.started_at as string | undefined)
+  const daysSinceCheckin = lastCheckinAt ? Math.floor((Date.parse(todayIso) - Date.parse(lastCheckinAt)) / 86400000) : 0
+  const checkinDue = daysSinceCheckin >= 7
+
   return shell(
     <div className="space-y-5">
       {/* Tight above-the-fold hierarchy: self-talk → goal progress → today's
@@ -151,6 +161,8 @@ export default async function PlanDashboard() {
           used to live here (Monday memo, eating-out, level-up nudge, the
           optional-intake invite) moved to /plan/today — this page stays a
           quick glance, not a scroll. */}
+
+      {checkinDue && <WeeklyCheckinPrompt firstName={firstName} todayIso={todayIso} />}
 
       {/* Self-talk — compact banner */}
       <div className="luf-breathe rounded-2xl border border-emerald-400/25 bg-charcoal/90 backdrop-blur-md bg-gradient-to-br from-emerald-500/10 via-charcoal to-obsidian px-5 py-3.5 text-center shadow-[0_0_28px_-10px_rgba(52,211,153,0.45)]">
