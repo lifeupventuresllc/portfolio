@@ -148,7 +148,7 @@ export async function generateReply(input: {
 // Plain-language rendering of what recover() decided — NOT its hand-written .message.
 // This is what generateReply() is grounded in, so the model never sees (and can't
 // just restyle) one of recovery.ts's fixed sentences.
-export function describeDecision(signal: LifeSignal, plan: RecoveryPlan): string {
+export function describeDecision(signal: LifeSignal | null, plan: RecoveryPlan): string {
   const parts: string[] = []
   if (plan.workoutChange) {
     const wc = plan.workoutChange
@@ -165,6 +165,6 @@ export function describeDecision(signal: LifeSignal, plan: RecoveryPlan): string
     if (nc.dinnerSuggestion) bits.push(nc.dinnerSuggestion)
     if (bits.length) parts.push(`Nutrition: ${bits.join(', ')}${nc.reason ? ` (reason: ${nc.reason})` : ''}.`)
   }
-  if (!parts.length) parts.push(`Acknowledge what she said (${signal.kind.replace('_', ' ')}) — no concrete plan change this time.`)
+  if (!parts.length) parts.push(`Acknowledge what she said${signal ? ` (${signal.kind.replace('_', ' ')})` : ''} — no concrete plan change this time.`)
   return parts.join(' ')
 }

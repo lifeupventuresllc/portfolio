@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { localDateISO, localHourNumber, addDaysISO } from '@/lib/localdate'
-import { recover, type LifeSignal } from '@/lib/fos/recovery'
+import { recover, type LifeSignal, type RecoveryPlan } from '@/lib/fos/recovery'
 import { parseSignal, parseSignalAI, detectWorkoutStyle } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
 import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
@@ -123,7 +123,18 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const plan = signal ? recover(signal, 45, workoutStyle) : null
+  // She asked for a workout-style swap (e.g. "can I get cardio today?") with no
+  // other situational content — recover() needs a real LifeSignal to switch on,
+  // but "just wants cardio" isn't one of its 9 kinds, so signal comes back null
+  // even though workoutStyle is set. Without this, the request silently vanished
+  // into the generic fallback reply below — a real gap, not an edge case, given
+  // this is exactly how someone would naturally ask.
+  const plan: RecoveryPlan | null = signal ? recover(signal, 45, workoutStyle)
+    : workoutStyle === 'cardio' ? {
+        message: "Cardio it is — let's get your heart rate up today. Want me to lock that in?",
+        workoutChange: { contentSwap: 'cardio', swapTo: 'cardio & conditioning session', reason: 'requested cardio' },
+      }
+    : null
   let reply = plan ? plan.message
     : "I hear you. Tell me what today looks like — how much time you've got, your energy, or what changed — and I'll adjust your plan around it while protecting your goal."
 
@@ -131,7 +142,7 @@ export async function POST(request: NextRequest) {
   // that stays fully deterministic from recover() above) using accumulated memory, and
   // pull out any durable new facts from this message. Both degrade to nothing on any
   // failure — reply stays plan.message, profile stays untouched. See lib/fos/memory.ts.
-  if (plan && signal) {
+  if (plan) {
     const profile = await getProfile(eid)
     const [events, goalDrift] = await Promise.all([
       recentEvents(eid, addDaysISO(today, -18)),
