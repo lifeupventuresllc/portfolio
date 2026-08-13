@@ -38,6 +38,16 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
   const [done, setDone] = useState(false)
   const [switching, setSwitching] = useState(false)
 
+  // finish() fires this save without awaiting it, so the confetti/"that's done"
+  // screen never waits on a network round trip. But a fast tap on "Back to my
+  // week" could still beat the save to the server — the dashboard's first render
+  // reads stale (not-done) data, then a moment later the client re-fetch catches
+  // up and it flips to done. Real, reported lag. Fix: await this ref before
+  // navigating, not before showing the completion screen — by the time she's
+  // read "That's done" the save has almost always already resolved, so this
+  // costs nothing in the common case and only actually waits when she's fast.
+  const savedRef = useRef<Promise<unknown>>(Promise.resolve())
+
   const step = steps[i]
   const isTimed = step?.seconds != null
 
@@ -58,7 +68,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
       // Pre-mark today's workout celebration so the dashboard shows ✅ without re-confetti.
       localStorage.setItem('luf_celebrated_workout-' + today, '1')
     } catch { /* ignore */ }
-    fetch('/api/plan/daily', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workout: true }) })
+    savedRef.current = fetch('/api/plan/daily', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workout: true }) })
       .catch(() => {})
       .finally(() => broadcastRefresh())
   }
@@ -96,7 +106,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
         <p className="text-6xl mb-4">🔥</p>
         <h1 className="text-3xl font-bold text-white mb-2">That&apos;s done, {firstName}.</h1>
         <p className="text-ivory/60 text-sm mb-8">You showed up and you finished. That&apos;s the whole game. I logged it for your streak.</p>
-        <button onClick={() => router.push('/plan')} className="luf-glow w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl">Back to my week</button>
+        <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} className="luf-glow w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl">Back to my week</button>
         <p className="text-gold text-sm font-semibold mt-4">— Coach Asa</p>
         <QuickFeedback category="workout" context={`${labels[dayIdx]} · day ${dayIdx + 1}`} dark reviewGate />
       </div>
