@@ -6,6 +6,7 @@ import { parseSignal, parseSignalAI, detectWorkoutStyle } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
 import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
 import { extractProfileFacts, generateReply, describeDecision } from '@/lib/fos/memory'
+import { assessGoalDrift } from '@/lib/fos/goal-drift'
 import type { FosEventKind, WorkoutChange } from '@/lib/fos/types'
 import type { Injury } from '@/lib/workout-exercises'
 
@@ -132,9 +133,12 @@ export async function POST(request: NextRequest) {
   // failure — reply stays plan.message, profile stays untouched. See lib/fos/memory.ts.
   if (plan && signal) {
     const profile = await getProfile(eid)
-    const events = await recentEvents(eid, addDaysISO(today, -18))
+    const [events, goalDrift] = await Promise.all([
+      recentEvents(eid, addDaysISO(today, -18)),
+      assessGoalDrift(eid, today),
+    ])
     const [generated, extracted] = await Promise.all([
-      generateReply({ herMessage: message, decision: describeDecision(signal, plan), profile, events }),
+      generateReply({ herMessage: message, decision: describeDecision(signal, plan), profile, events, goalContext: goalDrift?.note ?? null }),
       extractProfileFacts(message, profile),
     ])
     if (generated) reply = generated

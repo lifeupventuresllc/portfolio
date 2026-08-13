@@ -93,7 +93,7 @@ export default async function PlanDashboard() {
     svc.from('challenge_nutrition_plans').select('calories, meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
-    svc.from('challenge_intake').select('weight_lbs, goal_weight_lbs, goal').eq('enrollment_id', enrollment.id).maybeSingle(),
+    svc.from('challenge_intake').select('weight_lbs, target_lbs, goal').eq('enrollment_id', enrollment.id).maybeSingle(),
     svc.from('challenge_checkins').select('weight_lbs').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('week_number', { ascending: false }).limit(1).maybeSingle(),
   ])
 
@@ -130,8 +130,12 @@ export default async function PlanDashboard() {
   }
   const affirmation = affirmationForDay(localDayNumber())
 
+  // challenge_intake has no goal_weight_lbs column — it's always derived from
+  // weight_lbs +/- target_lbs (a delta, defaults to 10), same as
+  // app/api/challenge/intake/route.ts computes it at intake time.
   const startWeight = Number(intakeRow?.weight_lbs) || 0
-  const goalWeight = Number(intakeRow?.goal_weight_lbs) || startWeight
+  const targetDelta = Number(intakeRow?.target_lbs) || 10
+  const goalWeight = intakeRow?.goal === 'gain' ? startWeight + targetDelta : startWeight - targetDelta
   const currentWeight = Number(latestCheckin?.weight_lbs) || startWeight
   const goalDirection = (intakeRow?.goal === 'gain' || intakeRow?.goal === 'maintain' ? intakeRow.goal : 'lose') as 'lose' | 'gain' | 'maintain'
 
