@@ -63,6 +63,13 @@ export default async function TodayView() {
   const calDelta = Number(todayAdjustment?.nutritionChange?.calorieDelta) || 0
   const calBudget = calDelta ? Math.max(0, (todayMeals?.target ?? 0) + calDelta) : (todayMeals?.target ?? null)
 
+  // She told Coach Asa she's eating out today (an ad-hoc chat approval, not a
+  // pre-scheduled plan day) — the fixed meal list below is now irrelevant, she's
+  // not cooking it. Same "Eat-out day" treatment as a plan day that was already
+  // scheduled that way, so approving in chat has a real, visible effect here
+  // instead of only living in the chat transcript.
+  const eatingOutToday = !!todayMeals?.eatOut || !!todayAdjustment?.nutritionChange?.eatingOut
+
   // Today's workout — same rotation as the session player (by # workouts finished).
   const program = (workoutPlan?.plan as WorkoutProgram) || null
   let todayWorkout: { title: string; muscles?: string[] } | null = null
@@ -128,14 +135,18 @@ export default async function TodayView() {
           {(enrollment.tier === 'challenge' || enrollment.tier === 'inner_circle') && <MondayMemo />}
 
           {/* The zero-decision escape hatch — for the moment she's out, off-plan, and
-              would otherwise have to decide (or skip eating entirely). */}
-          <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-charcoal bg-gradient-to-br from-blue-500/15 to-charcoal border border-blue-500/30 rounded-2xl px-5 py-4 hover:border-blue-400/60 transition-colors">
-            <div>
-              <p className="text-white font-semibold text-sm">🍔 Away from home right now?</p>
-              <p className="text-ivory/60 text-xs mt-0.5">Tap for exactly what to order — no thinking, no searching.</p>
-            </div>
-            <span className="text-blue-300 text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
-          </Link>
+              would otherwise have to decide (or skip eating entirely). Hidden when
+              today's already flagged as an eat-out day (the meal section below
+              becomes this exact same link) so she isn't shown the same CTA twice. */}
+          {!eatingOutToday && (
+            <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-charcoal bg-gradient-to-br from-blue-500/15 to-charcoal border border-blue-500/30 rounded-2xl px-5 py-4 hover:border-blue-400/60 transition-colors">
+              <div>
+                <p className="text-white font-semibold text-sm">🍔 Away from home right now?</p>
+                <p className="text-ivory/60 text-xs mt-0.5">Tap for exactly what to order — no thinking, no searching.</p>
+              </div>
+              <span className="text-blue-300 text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
+            </Link>
+          )}
 
           {/* Food log — the heartbeat of the daily view. Budget = TODAY'S calorie target
               (workout days higher, rest days lower); the app already knows which day this is. */}
@@ -144,11 +155,20 @@ export default async function TodayView() {
           {/* Today's planned meals */}
           <section>
             <h2 className="text-white font-bold text-lg mb-3">What&apos;s on your plan today</h2>
-            {todayMeals ? (
+            {eatingOutToday ? (
+              <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-charcoal bg-gradient-to-br from-blue-500/15 to-charcoal border border-blue-500/30 rounded-2xl p-5 hover:border-blue-400/60 transition-colors">
+                <div>
+                  <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold bg-blue-500/15 text-blue-300 mb-2">Eat-out day</span>
+                  <p className="text-white font-semibold text-sm">🍔 See exactly what to order</p>
+                  <p className="text-ivory/60 text-xs mt-0.5">No thinking, no searching — picked for you, budget-matched.</p>
+                </div>
+                <span className="text-blue-300 text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
+              </Link>
+            ) : todayMeals ? (
               <div className="bg-charcoal border border-smoke rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <span className={`text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold ${todayMeals.eatOut ? 'bg-blue-500/15 text-blue-300' : todayMeals.dayType === 'workout' ? 'bg-gold/15 text-gold' : 'bg-white/8 text-ivory/60'}`}>
-                    {todayMeals.eatOut ? 'Eat-out day' : todayMeals.dayType === 'workout' ? 'Workout day' : 'Rest day'}
+                  <span className={`text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold ${todayMeals.dayType === 'workout' ? 'bg-gold/15 text-gold' : 'bg-white/8 text-ivory/60'}`}>
+                    {todayMeals.dayType === 'workout' ? 'Workout day' : 'Rest day'}
                   </span>
                   <span className="text-ivory/40 text-xs">Target {todayMeals.target} cal · {todayMeals.totalProtein}g protein planned</span>
                 </div>

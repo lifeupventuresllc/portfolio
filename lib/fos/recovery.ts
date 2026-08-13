@@ -65,7 +65,7 @@ function recoverBase(signal: LifeSignal, normalMinutes = 45): RecoveryPlan {
     case 'eat_out':
       return {
         message: `Enjoy it. Pick what you love — just log it when you eat (search it or say it) and I'll keep your budget accurate for the rest of the day automatically. No guilt, no manual math.`,
-        nutritionChange: { dinnerSuggestion: 'balance the rest of the day', reason: 'eating out' },
+        nutritionChange: { dinnerSuggestion: 'balance the rest of the day', reason: 'eating out', eatingOut: true },
       }
     case 'missed':
       return {

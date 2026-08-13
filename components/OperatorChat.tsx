@@ -9,7 +9,7 @@ import { broadcastRefresh } from '@/lib/useLiveRefresh'
 // changes. The path changes."
 type Msg = { role: 'user' | 'operator'; content: string }
 type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; injuryBodyPart?: string }
-type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string }
+type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string; eatingOut?: boolean }
 type Adjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionChange?: NutritionChange }
 
 const CHIPS = [
@@ -130,6 +130,11 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
               <button onClick={() => decide('modified')} className="bg-charcoal border border-gold/40 text-gold px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Modify</button>
               <button onClick={() => decide('rejected')} className="bg-charcoal border border-smoke text-ivory/60 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Reject</button>
             </div>
+            {pending.nutritionChange?.eatingOut && (
+              <Link href="/plan/eating-out" className="mt-2.5 flex items-center justify-center gap-1.5 bg-obsidian border border-blue-500/30 text-blue-300 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:border-blue-400/60 transition-colors">
+                🍔 Show me my options
+              </Link>
+            )}
           </div>
         )}
         <div ref={endRef} />
