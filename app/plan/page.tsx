@@ -12,7 +12,7 @@ import WeeklyCheckinPrompt from '@/components/WeeklyCheckinPrompt'
 import TimezoneSync from '@/components/TimezoneSync'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
-import { localDateISO, localMondayIndex, localDayNumber } from '@/lib/localdate'
+import { localDateISO, localMondayIndex, localDayNumber, addDaysISO } from '@/lib/localdate'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import type { WorkoutProgram } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
@@ -89,13 +89,15 @@ export default async function PlanDashboard() {
   }
 
   const todayIso = localDateISO()
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }, { data: latestCheckin }] = await Promise.all([
+  const consistencyWindowStart = addDaysISO(todayIso, -13) // 14 days incl. today, ~2 weeks
+  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }, { data: latestCheckin }, { data: foodLogRows }] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('calories, meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
-    svc.from('challenge_intake').select('weight_lbs, target_lbs, goal').eq('enrollment_id', enrollment.id).maybeSingle(),
+    svc.from('challenge_intake').select('weight_lbs, target_lbs, goal, days_per_week').eq('enrollment_id', enrollment.id).maybeSingle(),
     svc.from('challenge_checkins').select('weight_lbs, submitted_at').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('submitted_at', { ascending: false }).limit(1).maybeSingle(),
+    svc.from('challenge_food_log').select('logged_on').eq('enrollment_id', enrollment.id).gte('logged_on', consistencyWindowStart),
   ])
 
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
@@ -140,6 +142,25 @@ export default async function PlanDashboard() {
   const currentWeight = Number(latestCheckin?.weight_lbs) || startWeight
   const goalDirection = (intakeRow?.goal === 'gain' || intakeRow?.goal === 'maintain' ? intakeRow.goal : 'lose') as 'lose' | 'gain' | 'maintain'
 
+  // Consistency stat — deliberately separate from the weight math above, never
+  // blended into it (a good-effort stretch with a stubborn scale shouldn't make the
+  // goal bar lie in the "good" direction). Shown alongside it, smaller, clearly
+  // labeled as consistency, not progress. 14-day window: workouts = completed vs.
+  // her own planned days/week (capped 100%, no plan yet = 0 rather than divide-by-
+  // zero); nutrition = days she logged anything, a real-but-honest proxy for
+  // engagement — not strict calorie-budget adherence, which would need reconstructing
+  // each historical day's day-type-specific target and isn't worth that complexity
+  // for a small dashboard stat.
+  const workoutDaysInWindow = new Set(
+    (doneRows || [])
+      .filter((r) => (r as { logged_on?: string }).logged_on! >= consistencyWindowStart && (r.measurements as { workout?: boolean } | null)?.workout)
+      .map((r) => (r as { logged_on?: string }).logged_on)
+  ).size
+  const plannedPerWeek = Number(intakeRow?.days_per_week) || 0
+  const workoutConsistencyPct = plannedPerWeek > 0 ? Math.min(100, Math.round((workoutDaysInWindow / (plannedPerWeek * 2)) * 100)) : 0
+  const nutritionDaysLogged = new Set((foodLogRows || []).map((r) => r.logged_on as string)).size
+  const nutritionConsistencyPct = Math.min(100, Math.round((nutritionDaysLogged / 14) * 100))
+
   // Did she already finish today's workout? (server truth for the workout ring's ✅ state)
   const workoutDoneToday = (doneRows || []).some(
     (r) => (r as { logged_on?: string }).logged_on === todayIso && (r.measurements as { workout?: boolean } | null)?.workout
@@ -170,7 +191,7 @@ export default async function PlanDashboard() {
         <p className="text-white text-[15px] sm:text-base leading-snug font-medium text-balance">“{affirmation}”</p>
       </div>
 
-      <GoalProgressBar startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} />
+      <GoalProgressBar startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} workoutConsistencyPct={workoutConsistencyPct} nutritionConsistencyPct={nutritionConsistencyPct} />
 
       {/* Supporting, side by side — calories (left) · workout (right) */}
       <div className="grid grid-cols-2 gap-3.5">

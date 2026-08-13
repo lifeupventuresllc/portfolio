@@ -4,13 +4,28 @@
 // bar itself is the visual "how far along" read Asa asked to be prominent.
 const TICKS = Array.from({ length: 11 }, (_, i) => i * 10) // 0,10,...,100
 
+// Small, separate consistency chip — deliberately NOT part of the bar's fill
+// math above (see app/plan/page.tsx for why). Lives inside this same card,
+// smaller, so it's visible without becoming its own dashboard real estate.
+function ConsistencyChip({ workoutPct, nutritionPct }: { workoutPct: number; nutritionPct: number }) {
+  return (
+    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-smoke/60 text-[11px] text-ivory/40">
+      <span className="uppercase tracking-wider font-semibold text-ivory/30">Consistency · 14d</span>
+      <span>🏋🏽 {workoutPct}%</span>
+      <span>🍽️ {nutritionPct}%</span>
+    </div>
+  )
+}
+
 export default function GoalProgressBar({
-  startWeight, currentWeight, goalWeight, goal,
+  startWeight, currentWeight, goalWeight, goal, workoutConsistencyPct, nutritionConsistencyPct,
 }: {
   startWeight: number
   currentWeight: number
   goalWeight: number
   goal: 'lose' | 'gain' | 'maintain'
+  workoutConsistencyPct: number
+  nutritionConsistencyPct: number
 }) {
   if (goal === 'maintain') {
     return (
@@ -18,6 +33,7 @@ export default function GoalProgressBar({
         <p className="text-rose text-[10px] uppercase tracking-wider font-semibold mb-1">Your progress</p>
         <p className="text-white font-bold text-lg">Holding steady at {Math.round(currentWeight)} lbs 💪🏽</p>
         <p className="text-ivory/50 text-sm mt-0.5">Right around your goal of {Math.round(goalWeight)} lbs — consistency is the whole game now.</p>
+        <ConsistencyChip workoutPct={workoutConsistencyPct} nutritionPct={nutritionConsistencyPct} />
       </div>
     )
   }
@@ -48,6 +64,7 @@ export default function GoalProgressBar({
         <span className="text-rose font-semibold">{pct}%</span>
         <span>{Math.round(goalWeight)} lbs goal</span>
       </div>
+      <ConsistencyChip workoutPct={workoutConsistencyPct} nutritionPct={nutritionConsistencyPct} />
     </div>
   )
 }
