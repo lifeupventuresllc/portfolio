@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { localDateISO, localHourNumber, addDaysISO } from '@/lib/localdate'
 import { recover, type LifeSignal, type RecoveryPlan } from '@/lib/fos/recovery'
-import { parseSignal, parseSignalAI, detectWorkoutStyle } from '@/lib/fos/parse'
+import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
 import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
 import { extractProfileFacts, generateReply, describeDecision } from '@/lib/fos/memory'
@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
   const signal = aiResult.ok ? aiResult.signal : parseSignal(message)
   const signalSource: 'ai' | 'rule' = aiResult.ok ? 'ai' : 'rule'
   const workoutStyle = aiResult.ok ? aiResult.workoutStyle : detectWorkoutStyle(message)
+  const location = aiResult.ok ? aiResult.location : detectLocation(message)
 
   // Nothing situational matched — check whether she's actually just telling us
   // what she ate ("I had a slice of pizza"). Real Claude detection (see
@@ -129,12 +130,32 @@ export async function POST(request: NextRequest) {
   // even though workoutStyle is set. Without this, the request silently vanished
   // into the generic fallback reply below — a real gap, not an edge case, given
   // this is exactly how someone would naturally ask.
-  const plan: RecoveryPlan | null = signal ? recover(signal, 45, workoutStyle)
+  let plan: RecoveryPlan | null = signal ? recover(signal, 45, workoutStyle)
     : workoutStyle === 'cardio' ? {
         message: "Cardio it is — let's get your heart rate up today. Want me to lock that in?",
         workoutChange: { contentSwap: 'cardio', swapTo: 'cardio & conditioning session', reason: 'requested cardio' },
       }
     : null
+
+  // She told us where she's training today — never ask when she's already said it.
+  // 'traveling' maps to the home/bodyweight track since that's the equipment-free
+  // one; it has no dedicated track of its own (see app/plan/workout/page.tsx's
+  // trackOverride, which only understands 'home' | 'gym'). If nothing else matched
+  // above, her just naming her location is still enough on its own to act on.
+  if (location) {
+    const trackOverride: 'home' | 'gym' = location === 'gym' ? 'gym' : 'home'
+    if (plan) {
+      plan = { ...plan, workoutChange: { ...(plan.workoutChange || {}), trackOverride } }
+    } else {
+      plan = {
+        message: location === 'traveling'
+          ? "Got it — no equipment where you are, so I'll keep today's session bodyweight-only. Want me to lock that in?"
+          : `Got it — switching today to your ${trackOverride} session. Want me to lock that in?`,
+        workoutChange: { trackOverride, reason: location === 'traveling' ? 'traveling — no equipment' : `training at ${location}` },
+      }
+    }
+  }
+
   let reply = plan ? plan.message
     : "I hear you. Tell me what today looks like — how much time you've got, your energy, or what changed — and I'll adjust your plan around it while protecting your goal."
 
