@@ -171,12 +171,21 @@ export function budgetTierFromWeekly(weeklyBudget: number | null | undefined): P
 }
 
 /** Exactly 2 distinct options for the CURRENT meal slot, within her budget comfort tier
- * when possible, rotating daily so it's not the same 2 every time she checks. */
-export function pickForNow(wc: WeightClass, slot: FastFoodMeal['slot'], budgetTier: PriceTier, epochDay: number): FastFoodMeal[] {
+ * when possible, rotating daily so it's not the same 2 every time she checks.
+ * remainingCal (her real calorie target for today minus what she's already logged,
+ * see app/plan/eating-out/page.tsx) further narrows to picks that actually fit what
+ * she has left — a 15% cushion so a normal meal isn't excluded over a handful of
+ * calories. When too few options genuinely fit (she has very little left), falls
+ * back to the closest matches rather than silently ignoring calories altogether. */
+export function pickForNow(wc: WeightClass, slot: FastFoodMeal['slot'], budgetTier: PriceTier, epochDay: number, remainingCal?: number): FastFoodMeal[] {
   const candidates = wc.days.flatMap((d) => d.meals.filter((m) => m.slot === slot))
   if (candidates.length === 0) return []
   const withinBudget = candidates.filter((m) => TIER_RANK[priceTierFor(m.restaurant, m.order)] <= TIER_RANK[budgetTier])
-  const pool = withinBudget.length >= 2 ? withinBudget : candidates
+  let pool = withinBudget.length >= 2 ? withinBudget : candidates
+  if (remainingCal != null && remainingCal > 0) {
+    const fitsCalories = pool.filter((m) => m.cal <= remainingCal * 1.15)
+    pool = fitsCalories.length >= 2 ? fitsCalories : [...pool].sort((a, b) => Math.abs(a.cal - remainingCal) - Math.abs(b.cal - remainingCal))
+  }
   const start = epochDay % pool.length
   const first = pool[start]
   const second = pool.find((c, i) => i !== start && (c.restaurant !== first.restaurant || c.order !== first.order)) || pool[(start + 1) % pool.length]
