@@ -63,7 +63,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
         // homepage once they confirm their email — was previously dropped here.
         const params = new URLSearchParams(window.location.search)
         const redirect = params.get('redirect') || '/plan'
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -71,6 +71,15 @@ export default function AuthForm({ mode }: AuthFormProps) {
           },
         })
         if (error) throw error
+        // "Confirm email" off in Supabase → signUp() already returns a real,
+        // usable session — let her straight in instead of making her leave the
+        // app to click a link. Falls back to the confirmation-email message
+        // below if a session isn't there (confirmation still required).
+        if (data.session) {
+          await fetch('/api/auth/signup-complete', { method: 'POST' })
+          window.location.href = redirect
+          return
+        }
         setMessage('Check your email to confirm your account.')
       } else if (mode === 'reset') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {

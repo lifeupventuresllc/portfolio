@@ -9,6 +9,7 @@ import CoachHero from '@/components/CoachHero'
 import FeedbackCard from '@/components/FeedbackCard'
 import GoalProgressBar from '@/components/GoalProgressBar'
 import WeeklyCheckinPrompt from '@/components/WeeklyCheckinPrompt'
+import VerifyEmailBanner from '@/components/VerifyEmailBanner'
 import TimezoneSync from '@/components/TimezoneSync'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
@@ -53,6 +54,7 @@ export default async function PlanDashboard() {
     <div className="min-h-screen bg-obsidian px-4 py-12">
       <TimezoneSync />
       <div className="max-w-3xl mx-auto">
+        {!user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />}
         <div className="flex items-center justify-between mb-6 bg-obsidian border border-white/10 rounded-2xl px-5 py-4">
           <div>
             <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Life-Up Fitness</p>
