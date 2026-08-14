@@ -45,13 +45,13 @@ export default function CheckinForm({ firstName }: { firstName: string }) {
     <div className="bg-charcoal border border-smoke rounded-3xl p-6 sm:p-8 space-y-5">
       <div>
         <label className={label}>Where&apos;s your weight today? (lbs)</label>
-        <input type="number" value={f.weight_lbs} onChange={(e) => set('weight_lbs', e.target.value)} placeholder="e.g. 168" className={input} />
+        <input type="number" inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={f.weight_lbs} onChange={(e) => set('weight_lbs', e.target.value)} placeholder="e.g. 168" className={input} />
       </div>
       <div>
         <label className={label}>Measurements (inches) — optional, but they tell the real story</label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[['waist', 'Waist'], ['hips', 'Hips'], ['thighs', 'Thighs'], ['arms', 'Arms']].map(([k, l]) => (
-            <input key={k} type="number" value={f[k as keyof typeof f]} onChange={(e) => set(k, e.target.value)} placeholder={l} className={input} />
+            <input key={k} type="number" inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={f[k as keyof typeof f]} onChange={(e) => set(k, e.target.value)} placeholder={l} className={input} />
           ))}
         </div>
       </div>

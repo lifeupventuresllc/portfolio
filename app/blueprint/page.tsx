@@ -173,7 +173,7 @@ export default function BlueprintPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Age</label>
-                <input type="number" value={form.age} onChange={(e) => set('age', e.target.value)} placeholder="28" className={input} />
+                <input type="number" inputMode="numeric" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={form.age} onChange={(e) => set('age', e.target.value)} placeholder="28" className={input} />
               </div>
               <div>
                 <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Gender</label>
@@ -187,19 +187,19 @@ export default function BlueprintPage() {
             <div className="grid grid-cols-4 gap-3">
               <div>
                 <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Feet</label>
-                <input type="number" value={form.feet} onChange={(e) => set('feet', e.target.value)} placeholder="5" className={input} />
+                <input type="number" inputMode="numeric" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={form.feet} onChange={(e) => set('feet', e.target.value)} placeholder="5" className={input} />
               </div>
               <div>
                 <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Inches</label>
-                <input type="number" value={form.inches} onChange={(e) => set('inches', e.target.value)} placeholder="6" className={input} />
+                <input type="number" inputMode="numeric" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={form.inches} onChange={(e) => set('inches', e.target.value)} placeholder="6" className={input} />
               </div>
               <div>
                 <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Weight</label>
-                <input type="number" value={form.weight_lbs} onChange={(e) => set('weight_lbs', e.target.value)} placeholder="150" className={input} />
+                <input type="number" inputMode="numeric" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={form.weight_lbs} onChange={(e) => set('weight_lbs', e.target.value)} placeholder="150" className={input} />
               </div>
               <div>
                 <label className="text-ivory/50 text-xs uppercase tracking-wider mb-2 block">Goal wt</label>
-                <input type="number" value={form.goal_weight_lbs} onChange={(e) => set('goal_weight_lbs', e.target.value)} placeholder="140" className={input} />
+                <input type="number" inputMode="numeric" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={form.goal_weight_lbs} onChange={(e) => set('goal_weight_lbs', e.target.value)} placeholder="140" className={input} />
               </div>
             </div>
 
@@ -248,9 +248,9 @@ export default function BlueprintPage() {
             </div>
 
             <div className="border-t border-smoke pt-4 space-y-3">
-              <input type="text" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={input} />
-              <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="Your email (your blueprint lands here too)" className={input} />
-              <input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="Phone (so Coach Asa can follow up)" className={input} />
+              <input type="text" autoCorrect="off" autoCapitalize="words" spellCheck={false} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={input} />
+              <input type="email" autoComplete="email" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="Your email (your blueprint lands here too)" className={input} />
+              <input type="tel" inputMode="tel" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="Phone (so Coach Asa can follow up)" className={input} />
             </div>
 
             {error && <p className="text-red-400 text-sm">{error}</p>}

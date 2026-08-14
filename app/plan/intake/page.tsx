@@ -267,6 +267,7 @@ function ConversationalIntakeInner() {
               <LQ>First — what should I call you?</LQ>
               <LHint>I coach you by name, not by number.</LHint>
               <input ref={primaryInputRef} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={linput}
+                autoCorrect="off" autoCapitalize="words" spellCheck={false}
                 onKeyDown={(e) => e.key === 'Enter' && f.name.trim() && next()} />
               <button onClick={next} disabled={!f.name.trim()} className={`${lPrimaryBtn} mt-8`}>Let&apos;s go →</button>
             </>)}
@@ -300,8 +301,8 @@ function ConversationalIntakeInner() {
               <LQ>Tell me about your body.</LQ>
               <LHint>This dials in your exact calories — no guessing.</LHint>
               <div className="grid grid-cols-2 gap-3 mb-3">
-                <div><label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Age</label><input ref={primaryInputRef} type="number" value={f.age} onChange={(e) => set('age', e.target.value)} className={linput} /></div>
-                <div><label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Weight (lbs)</label><input type="number" value={f.weight_lbs} onChange={(e) => set('weight_lbs', e.target.value)} className={linput} /></div>
+                <div><label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Age</label><input ref={primaryInputRef} type="number" inputMode="numeric" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={f.age} onChange={(e) => set('age', e.target.value)} className={linput} /></div>
+                <div><label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Weight (lbs)</label><input type="number" inputMode="numeric" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={f.weight_lbs} onChange={(e) => set('weight_lbs', e.target.value)} className={linput} /></div>
               </div>
               <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Height</label>
               <div className="grid grid-cols-2 gap-3 mb-3">
@@ -478,11 +479,11 @@ function ConversationalIntakeInner() {
             <Q>Last thing — let&apos;s make the food *yours*.</Q>
             <Hint>Optional, but it&apos;s how I build meals you actually crave.</Hint>
             <label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Foods you love</label>
-            <input ref={primaryInputRef} value={f.food_preferences} onChange={(e) => set('food_preferences', e.target.value)} placeholder="e.g. chicken, rice bowls, tacos" className={`${input} mb-3`} />
+            <input ref={primaryInputRef} value={f.food_preferences} onChange={(e) => set('food_preferences', e.target.value)} placeholder="e.g. chicken, rice bowls, tacos" className={`${input} mb-3`} autoCorrect="off" spellCheck={false} />
             <label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Dislikes / allergies</label>
-            <input value={f.dislikes_allergies} onChange={(e) => set('dislikes_allergies', e.target.value)} placeholder="e.g. no mushrooms, dairy-free" className={`${input} mb-3`} />
+            <input value={f.dislikes_allergies} onChange={(e) => set('dislikes_allergies', e.target.value)} placeholder="e.g. no mushrooms, dairy-free" className={`${input} mb-3`} autoCorrect="off" spellCheck={false} />
             <label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Weekly food budget ($)</label>
-            <input type="number" value={f.weekly_food_budget} onChange={(e) => set('weekly_food_budget', e.target.value)} placeholder="e.g. 90" className={`${input} mb-6`} />
+            <input type="number" inputMode="numeric" value={f.weekly_food_budget} onChange={(e) => set('weekly_food_budget', e.target.value)} placeholder="e.g. 90" className={`${input} mb-6`} autoCorrect="off" autoCapitalize="off" spellCheck={false} />
             {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
             <button onClick={() => build(true)} className={primaryBtn}>✨ Update my plan</button>
           </>)}

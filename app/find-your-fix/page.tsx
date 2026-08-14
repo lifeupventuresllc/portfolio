@@ -183,9 +183,9 @@ export default function FindYourFix() {
         <div className="max-w-lg w-full mx-auto q-in-fwd">
           <Q>Last thing — where should I send it?</Q>
           <Hint>Enter your email + number so I can send your full {blockerWord} plan, plus your free guide.</Hint>
-          <input autoFocus value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={`${input} mb-3`} />
-          <input type="email" value={f.email} onChange={(e) => set('email', e.target.value)} placeholder="Your email" className={`${input} mb-3`} />
-          <input type="tel" value={f.phone} onChange={(e) => set('phone', e.target.value)} placeholder="Phone (optional)" className={`${input} mb-6`} />
+          <input autoFocus autoCorrect="off" autoCapitalize="words" spellCheck={false} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={`${input} mb-3`} />
+          <input type="email" autoComplete="email" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={f.email} onChange={(e) => set('email', e.target.value)} placeholder="Your email" className={`${input} mb-3`} />
+          <input type="tel" inputMode="tel" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={f.phone} onChange={(e) => set('phone', e.target.value)} placeholder="Phone (optional)" className={`${input} mb-6`} />
           {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
           <button onClick={submit} disabled={!f.email} className={primaryBtn}>🎯 Unlock My Full Plan</button>
         </div>
@@ -307,7 +307,7 @@ export default function FindYourFix() {
                 <button key={o.v} onClick={() => set('schedule', o.v)} className={opt(f.schedule === o.v)}>{o.l}</button>
               ))}
             </div>
-            <input type="number" inputMode="numeric" value={f.weightLbs} onChange={(e) => set('weightLbs', e.target.value)} placeholder="Current weight (lbs)" className={`${input} mb-6`} />
+            <input type="number" inputMode="numeric" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={f.weightLbs} onChange={(e) => set('weightLbs', e.target.value)} placeholder="Current weight (lbs)" className={`${input} mb-6`} />
             <button onClick={next} disabled={!f.weightLbs || !f.schedule} className={primaryBtn}>Continue →</button>
           </>)}
 

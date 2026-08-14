@@ -262,7 +262,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
             <div className="bg-charcoal border border-gold/40 rounded-lg p-3 space-y-3">
               <p className="text-white text-sm font-semibold">{picking.brand ? `${picking.name} (${picking.brand})` : picking.name}</p>
               <div className="flex gap-2 items-center">
-                <input value={qty} onChange={(e) => setQty(e.target.value)} inputMode="decimal" className="w-24 bg-obsidian border border-smoke rounded-lg px-3 py-2 text-white text-sm focus:border-gold/60 outline-none" />
+                <input value={qty} onChange={(e) => setQty(e.target.value)} inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="w-24 bg-obsidian border border-smoke rounded-lg px-3 py-2 text-white text-sm focus:border-gold/60 outline-none" />
                 <div className="flex rounded-lg overflow-hidden border border-smoke">
                   {(['g', 'oz'] as const).map((u) => (
                     <button key={u} onClick={() => setUnit(u)} className={`px-3 py-2 text-xs font-bold uppercase ${unit === u ? 'bg-gold text-obsidian' : 'bg-obsidian text-ivory/50'}`}>{u}</button>
@@ -296,13 +296,13 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
                 <select value={form.meal} onChange={(e) => setForm({ ...form, meal: e.target.value })} className="bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm focus:border-gold/60 outline-none">
                   {MEALS.map((m) => <option key={m} value={m}>{MEAL_LABEL[m]}</option>)}
                 </select>
-                <input value={form.servings} onChange={(e) => setForm({ ...form, servings: e.target.value })} inputMode="decimal" placeholder="Servings" className="bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+                <input value={form.servings} onChange={(e) => setForm({ ...form, servings: e.target.value })} inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} placeholder="Servings" className="bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {([['calories', 'Cal'], ['protein_g', 'Protein'], ['carbs_g', 'Carbs'], ['fats_g', 'Fats']] as const).map(([k, lbl]) => (
                   <div key={k}>
                     <label className="text-ivory/40 text-[9px] uppercase tracking-wider block mb-1">{lbl}</label>
-                    <input value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} inputMode="numeric" placeholder="0" className="w-full bg-charcoal border border-smoke rounded-lg px-2 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+                    <input value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} inputMode="numeric" autoCorrect="off" autoCapitalize="off" spellCheck={false} placeholder="0" className="w-full bg-charcoal border border-smoke rounded-lg px-2 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
                   </div>
                 ))}
               </div>

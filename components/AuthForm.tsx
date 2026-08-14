@@ -161,6 +161,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
               id="email"
               type="email"
               autoComplete="email"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -178,6 +181,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 id="password"
                 type="password"
                 autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

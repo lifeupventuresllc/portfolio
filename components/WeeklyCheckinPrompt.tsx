@@ -55,7 +55,7 @@ export default function WeeklyCheckinPrompt({ firstName, todayIso }: { firstName
       <p className="text-white text-sm mb-4">Where&apos;s your weight today? This is how I actually track your real progress toward your goal — takes five seconds.</p>
       <div className="flex gap-2 mb-2">
         <input
-          type="number" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)}
+          type="number" inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={weight} onChange={(e) => setWeight(e.target.value)}
           placeholder="e.g. 168" disabled={loading}
           className="flex-1 min-w-0 bg-obsidian border border-smoke rounded-xl px-4 py-3 text-base text-white placeholder:text-ivory/30 focus:border-gold/60 focus:outline-none"
         />
