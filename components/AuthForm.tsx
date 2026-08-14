@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -26,15 +26,23 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [message, setMessage] = useState<string | null>(null)
   const [accepted, setAccepted] = useState(false)
 
-  // Fresh non-singleton client to avoid any cached state.
+  // Fresh non-singleton client to avoid any cached state — but built ONCE per
+  // mount (useMemo, empty deps), not on every render. It was previously
+  // recreated inline in the component body, which meant every keystroke (each
+  // one triggers a re-render via setEmail/setPassword) spun up a brand-new
+  // GoTrueClient — real work (localStorage reads, internal timers) on every
+  // single character. On a real phone that's enough main-thread cost to
+  // stutter and knock the input's focus, which read as "the keyboard exits
+  // after every letter." A different root cause from the earlier
+  // autoCorrect/QuickType fix (word-boundary symptom) — this was per-keystroke.
   // Sanitize the env values: the anon key is a JWT (only [A-Za-z0-9._-]) — strip ANY
   // other char (a stray newline/invisible char baked into the env var was making the
   // fetch Authorization header value invalid and blocking every login).
-  const supabase = createBrowserClient(
+  const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!.replace(/\s/g, ''),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.replace(/[^A-Za-z0-9._-]/g, ''),
     { isSingleton: false }
-  )
+  ), [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
