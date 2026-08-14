@@ -38,6 +38,24 @@ function BodyFocusIcon({ zone }: { zone: 'core' | 'legs' | 'arms' | 'overall' })
   )
 }
 
+// Module-level, NOT defined inside the component — the real cause of the reported
+// "types one letter, keyboard closes, screen shakes" bug on this page. A component
+// defined inside a render function gets a brand-new identity every render; typing
+// in ANY field on the page re-renders the whole component (every keystroke calls
+// setF), so Screen/Q/Hint/LQ/LHint were all being redefined every letter — React
+// saw a "different" component type and unmounted + remounted the whole subtree,
+// including whichever input was focused. Same bug class already caught and fixed
+// in find-your-fix/page.tsx; it just never got ported over here. Screen needs
+// step/dir from the enclosing component's state, so those are now explicit props
+// instead of closed-over locals.
+function Screen({ step, dir, children }: { step: number; dir: 'fwd' | 'back'; children: React.ReactNode }) {
+  return <div key={step} className={dir === 'fwd' ? 'q-in-fwd' : 'q-in-back'}>{children}</div>
+}
+const Q = ({ children }: { children: React.ReactNode }) => <h2 className="text-2xl sm:text-3xl font-bold text-white leading-snug mb-1">{children}</h2>
+const Hint = ({ children }: { children: React.ReactNode }) => <p className="text-ivory/60 text-sm mb-7">{children}</p>
+const LQ = ({ children }: { children: React.ReactNode }) => <h2 className="text-3xl sm:text-4xl font-bold text-ink leading-snug mb-2 text-balance">{children}</h2>
+const LHint = ({ children }: { children: React.ReactNode }) => <p className="text-ink/50 text-base mb-10">{children}</p>
+
 // Required tier: the minimum to get her a real plan fast (name, goal, focus, body).
 // Everything else is a second, optional pass she's invited into AFTER she's already
 // seen her numbers — not a wall she has to clear before experiencing anything.
@@ -174,18 +192,9 @@ function ConversationalIntakeInner() {
   }
 
   // ---------- shared UI (dark — used by the optional second-pass + building/done chrome it shares) ----------
-  const Screen = ({ children }: { children: React.ReactNode }) => (
-    <div key={step} className={dir === 'fwd' ? 'q-in-fwd' : 'q-in-back'}>{children}</div>
-  )
-  const Q = ({ children }: { children: React.ReactNode }) => <h2 className="text-2xl sm:text-3xl font-bold text-white leading-snug mb-1">{children}</h2>
-  const Hint = ({ children }: { children: React.ReactNode }) => <p className="text-ivory/60 text-sm mb-7">{children}</p>
   const opt = (active: boolean) => `w-full text-left px-5 py-4 rounded-2xl border font-semibold transition-all duration-200 ${active ? 'bg-charcoal bg-gradient-to-br from-gold/20 to-charcoal border-gold scale-[1.01] text-gold' : 'bg-charcoal border-smoke hover:border-gold/50 hover:bg-charcoal/70 text-white'}`
   const input = 'w-full px-4 py-3.5 bg-obsidian border border-smoke rounded-xl text-white focus:outline-none focus:border-gold transition-colors'
   const primaryBtn = 'w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-[1.02] disabled:opacity-40'
-
-  // ---------- shared UI (light — the new required-tier, spacious/minimal, "one thing at a time") ----------
-  const LQ = ({ children }: { children: React.ReactNode }) => <h2 className="text-3xl sm:text-4xl font-bold text-ink leading-snug mb-2 text-balance">{children}</h2>
-  const LHint = ({ children }: { children: React.ReactNode }) => <p className="text-ink/50 text-base mb-10">{children}</p>
   const lopt = (active: boolean) => `w-full text-left px-6 py-5 rounded-3xl border transition-all duration-200 ${active ? 'bg-white border-gold shadow-[0_8px_30px_rgba(201,168,76,0.14)] scale-[1.01] text-ink' : 'bg-white border-ink/10 hover:border-gold/50 hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-ink'}`
   const linput = 'w-full px-5 py-4 bg-white border border-ink/15 rounded-2xl text-ink text-lg placeholder-ink/30 focus:outline-none focus:border-gold transition-colors'
   const lPrimaryBtn = 'w-full bg-gold text-obsidian px-8 py-5 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-40'
@@ -262,7 +271,7 @@ function ConversationalIntakeInner() {
           {carriedFromBlueprint && step === 0 && (
             <p className="text-emerald-600 text-xs font-semibold mb-4">🎉 Pulled in your info from your Calorie Blueprint — just confirm as you go.</p>
           )}
-          <Screen>
+          <Screen step={step} dir={dir}>
             {s === 'name' && (<>
               <LQ>First — what should I call you?</LQ>
               <LHint>I coach you by name, not by number.</LHint>
@@ -339,7 +348,7 @@ function ConversationalIntakeInner() {
       </div>
 
       <div className="max-w-lg w-full mx-auto flex-1">
-        <Screen>
+        <Screen step={step} dir={dir}>
           {s === 'target' && (() => {
             const delta = f.target_lbs ? Number(f.target_lbs) : 10
             const startW = Number(f.weight_lbs) || 0
