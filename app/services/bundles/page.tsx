@@ -125,7 +125,7 @@ export default function BundlesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-obsidian">
+    <div className="min-h-[100dvh] bg-obsidian">
       {/* Hero */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(201,168,76,0.08),transparent_70%)]" />

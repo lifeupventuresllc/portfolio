@@ -131,7 +131,7 @@ export default function BlueprintPage() {
   }
 
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="min-h-[100dvh] bg-paper">
       <RevealScript />
       <section className="relative pt-32 pb-10 px-4 overflow-hidden">
         <HeroVideoBG srcs={['/videos/hero-fitness-1.mp4', '/videos/hero-fitness-4.mp4', '/videos/hero-fitness-3.mp4', '/videos/hero-fitness-5.mp4', '/videos/hero-fitness-2.mp4']} />

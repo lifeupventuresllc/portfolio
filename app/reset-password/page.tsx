@@ -3,7 +3,7 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { mapAuthError } from '@/lib/auth-errors'
 import AuthForm from '@/components/AuthForm'
@@ -15,7 +15,11 @@ function UpdatePasswordForm() {
   const [message, setMessage] = useState<string | null>(null)
   const [sessionChecked, setSessionChecked] = useState(false)
   const [hasSession, setHasSession] = useState(false)
-  const supabase = createClient()
+  // Built once per mount, not on every render — see components/AuthForm.tsx for
+  // why: createClient() was previously re-run on every keystroke (typing the new
+  // password re-renders this component), spinning up a brand-new GoTrueClient
+  // every single character, which is real per-keystroke cost on a real phone.
+  const supabase = useMemo(() => createClient(), [])
 
   // A reset link only works once and expires — if she lands here without a live
   // recovery session (link already used, or too old), the update call below would
@@ -48,7 +52,7 @@ function UpdatePasswordForm() {
 
   if (sessionChecked && !hasSession) {
     return (
-      <div className="min-h-screen flex justify-center pt-20 px-6">
+      <div className="min-h-[100dvh] flex justify-center pt-20 px-6">
         <div className="w-full max-w-md p-8 bg-charcoal rounded-2xl border border-smoke text-center">
           <h1 className="text-2xl font-bold text-white mb-2">This link has expired</h1>
           <p className="text-ivory/50 text-sm mb-6">Password reset links only work once and expire after a while. Request a new one and we&apos;ll send it right over.</p>
@@ -61,7 +65,7 @@ function UpdatePasswordForm() {
   }
 
   return (
-    <div className="min-h-screen flex justify-center pt-20 px-6">
+    <div className="min-h-[100dvh] flex justify-center pt-20 px-6">
       <div className="w-full max-w-md p-8 bg-charcoal rounded-2xl border border-smoke">
         <h1 className="text-2xl font-bold text-center text-white mb-6">Set New Password</h1>
 

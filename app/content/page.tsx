@@ -171,14 +171,14 @@ export default function ClientPortalPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-obsidian pt-24 flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-obsidian pt-24 flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-obsidian pt-24 pb-16">
+    <div className="min-h-[100dvh] bg-obsidian pt-24 pb-16">
       <div className="max-w-4xl mx-auto px-6">
         {/* Header */}
         <div className="mb-10">

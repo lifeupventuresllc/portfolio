@@ -66,7 +66,7 @@ export default function AffiliatePage() {
   if (submitted) {
     const referralLink = `https://www.asaluke.io/funnel?ref=${referralCode}`
     return (
-      <div className="min-h-screen bg-obsidian pt-20 pb-16 px-4 flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-obsidian pt-20 pb-16 px-4 flex items-center justify-center">
         <div className="max-w-md w-full text-center">
           <div style={{ fontSize: 48, marginBottom: 16 }}>&#127881;</div>
           <h1 className="text-3xl font-bold text-gold mb-4">You&apos;re In</h1>
@@ -101,7 +101,7 @@ export default function AffiliatePage() {
   }
 
   return (
-    <div className="min-h-screen bg-obsidian pt-20 pb-16 px-4">
+    <div className="min-h-[100dvh] bg-obsidian pt-20 pb-16 px-4">
       <div className="max-w-lg mx-auto">
         <h1 className="text-3xl font-bold text-white mb-2 text-center">
           Become an <span className="text-gold">Affiliate</span>

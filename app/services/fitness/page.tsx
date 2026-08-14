@@ -52,7 +52,7 @@ const FAQ = [
 
 export default function ProteinBudgetSystemPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-paper" />}>
+    <Suspense fallback={<div className="min-h-[100dvh] bg-paper" />}>
       <ProteinBudgetSystemContent />
     </Suspense>
   )
@@ -93,7 +93,7 @@ function ProteinBudgetSystemContent() {
   }
 
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="min-h-[100dvh] bg-paper">
       {/* Success / Canceled banners */}
       {showSuccess && (
         <div className="fixed top-0 inset-x-0 z-50 bg-green-600 text-white text-center py-4 px-4">

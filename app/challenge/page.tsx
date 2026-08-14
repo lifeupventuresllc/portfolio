@@ -26,7 +26,7 @@ const FAQ = [
 
 export default function ChallengePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-paper" />}>
+    <Suspense fallback={<div className="min-h-[100dvh] bg-paper" />}>
       <ChallengeContent />
     </Suspense>
   )
@@ -36,7 +36,7 @@ function ChallengeContent() {
   const [openFaq, setOpenFaq] = useState<number | null>(null)
 
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="min-h-[100dvh] bg-paper">
       {/* Hero */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">
         <HeroVideoBG srcs={['/videos/hero-fitness-4.mp4', '/videos/hero-fitness-5.mp4', '/videos/hero-fitness-2.mp4', '/videos/hero-fitness-1.mp4', '/videos/hero-fitness-3.mp4']} />

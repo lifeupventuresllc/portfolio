@@ -121,7 +121,7 @@ export default function Daily10Dashboard() {
   const goalPct = data ? Math.min(100, Math.round((data.daily_10_goal.actual / data.daily_10_goal.target) * 100)) : 0
 
   return (
-    <div className="min-h-screen bg-obsidian text-ivory px-4 sm:px-8 pt-24 pb-8">
+    <div className="min-h-[100dvh] bg-obsidian text-ivory px-4 sm:px-8 pt-24 pb-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>

@@ -70,7 +70,7 @@ export default function FitnessGuide() {
   const [weightClass, setWeightClass] = useState(1)
 
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="min-h-[100dvh] bg-paper">
       <div className="max-w-3xl mx-auto px-6 py-16">
         {/* Header */}
         <div className="text-center mb-16">

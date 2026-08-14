@@ -51,7 +51,7 @@ export default async function PlanDashboard() {
   const firstName = (enrollment?.name || user.email?.split('@')[0] || 'there').split(' ')[0]
 
   const shell = (children: React.ReactNode, menu: React.ReactNode = null) => (
-    <div className="min-h-screen bg-obsidian px-4 py-12">
+    <div className="min-h-[100dvh] bg-obsidian px-4 py-12">
       <TimezoneSync />
       <div className="max-w-3xl mx-auto">
         {!user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />}

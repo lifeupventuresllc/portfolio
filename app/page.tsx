@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="min-h-[100dvh] bg-paper">
       <JsonLd data={localBusinessSchema} />
       <RevealScript />
 

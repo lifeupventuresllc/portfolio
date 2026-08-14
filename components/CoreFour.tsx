@@ -432,7 +432,7 @@ export default function CoreFour() {
   const nextMonth = () => { if (calMonth === 11) { setCalMonth(0); setCalYear((y) => y + 1) } else setCalMonth((m) => m + 1) }
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-10">
+    <div className="min-h-[100dvh] bg-obsidian px-4 py-10">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-4 text-xs">
           <a href="/admin" className="text-ivory/40 hover:text-gold transition-colors">← Admin</a>

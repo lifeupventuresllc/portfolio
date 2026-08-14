@@ -10,7 +10,7 @@ export default function LegalPage({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-obsidian px-4 pt-28 pb-24">
+    <div className="min-h-[100dvh] bg-obsidian px-4 pt-28 pb-24">
       <div className="max-w-2xl mx-auto">
         <Link href="/" className="text-ivory/40 text-xs hover:text-gold mb-4 inline-block">← Back to home</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-2">Legal</p>

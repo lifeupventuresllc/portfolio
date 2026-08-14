@@ -60,7 +60,7 @@ export default function RootLayout({
         <JsonLd data={organizationSchema} />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-obsidian min-h-screen flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-obsidian min-h-[100dvh] flex flex-col`}
       >
         <PWARegister />
         <SiteChrome>{children}</SiteChrome>

@@ -110,7 +110,7 @@ export default async function TodayView() {
   const structuralMessage = messageForStructural(structuralAssessment)
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-12">
+    <div className="min-h-[100dvh] bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between gap-3 mb-4">
           <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all">← My full plan</Link>

@@ -53,7 +53,7 @@ export default function CoachWorkoutTool() {
   }
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-16">
+    <div className="min-h-[100dvh] bg-obsidian px-4 py-16">
       <div className="max-w-2xl mx-auto">
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-2">Coach Tool</p>
         <h1 className="text-3xl font-bold text-white mb-2">Workout Generator</h1>

@@ -143,7 +143,7 @@ export default function FindYourFix() {
 
   if (phase === 'building') {
     return (
-      <div className="min-h-screen bg-obsidian flex items-center justify-center px-6">
+      <div className="min-h-[100dvh] bg-obsidian flex items-center justify-center px-6">
         <div className="text-center q-in-fwd">
           <div className="relative w-24 h-24 mx-auto mb-8">
             <div className="absolute inset-0 rounded-full border-2 border-gold/20" />
@@ -160,7 +160,7 @@ export default function FindYourFix() {
 
   if (phase === 'teaser' && teaserDiagnosis) {
     return (
-      <div className="min-h-screen bg-obsidian flex items-center justify-center px-4 py-16">
+      <div className="min-h-[100dvh] bg-obsidian flex items-center justify-center px-4 py-16">
         <div className="max-w-lg w-full mx-auto text-center q-in-fwd">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-4">Your Fix, Found</p>
           <h1 className="text-4xl sm:text-5xl font-black text-white mb-5 leading-[1.05]">
@@ -179,7 +179,7 @@ export default function FindYourFix() {
 
   if (phase === 'contact') {
     return (
-      <div className="min-h-screen bg-obsidian px-4 py-16 flex flex-col justify-center">
+      <div className="min-h-[100dvh] bg-obsidian px-4 py-16 flex flex-col justify-center">
         <div className="max-w-lg w-full mx-auto q-in-fwd">
           <Q>Last thing — where should I send it?</Q>
           <Hint>Enter your email + number so I can send your full {blockerWord} plan, plus your free guide.</Hint>
@@ -196,7 +196,7 @@ export default function FindYourFix() {
   if (phase === 'done' && result) {
     const bigDownloadBtn = 'w-full bg-gold text-obsidian px-8 py-6 font-black text-lg uppercase tracking-wide rounded-3xl transition-all duration-300 hover:scale-[1.03] shadow-[0_0_50px_-10px_rgba(201,168,76,0.5)]'
     return (
-      <div className="min-h-screen bg-obsidian px-4 py-16">
+      <div className="min-h-[100dvh] bg-obsidian px-4 py-16">
         <EmojiConfetti fire={celebrate} onDone={() => setCelebrate(false)} />
         <div className="max-w-lg mx-auto text-center q-in-fwd">
           <p className="luf-pop text-6xl mb-4">🎉</p>
@@ -267,7 +267,7 @@ export default function FindYourFix() {
 
   const s = STEPS[step]
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-8 flex flex-col">
+    <div className="min-h-[100dvh] bg-obsidian px-4 py-8 flex flex-col">
       <div className="max-w-lg w-full mx-auto mb-8">
         <div className="flex items-center gap-3">
           {step > 0 ? <button onClick={back} className="text-ivory/50 hover:text-gold text-sm">←</button> : <span className="w-3" />}

@@ -251,7 +251,7 @@ export default function FounderOS() {
     .reverse()
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-10">
+    <div className="min-h-[100dvh] bg-obsidian px-4 py-10">
       <div className="max-w-3xl mx-auto">
         {/* Minimal top bar — this page has no site nav (standalone cockpit) */}
         <div className="flex items-center justify-between mb-4 text-xs">

@@ -82,7 +82,7 @@ export default async function ClientProfile({ params }: { params: { id: string }
   )
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-12">
+    <div className="min-h-[100dvh] bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto space-y-4">
         <Link href="/admin/clients" className="text-ivory/40 text-xs hover:text-gold">← All clients</Link>
 

@@ -135,11 +135,21 @@ export default function AuthForm({ mode }: AuthFormProps) {
   }
 
   // Anchored to a fixed top offset, not vertically centered — centering inside
-  // min-h-screen means the card re-centers (visibly shifts) every time the
+  // min-h-[100dvh] means the card re-centers (visibly shifts) every time the
   // mobile keyboard changes the visible viewport height, which reads as the
   // screen "shaking" while typing. A fixed top position never moves.
+  // min-h-[100dvh] alone is min-height:100vh — iOS Safari's 100vh does NOT
+  // account for the on-screen keyboard, so while it's up the container's CSS
+  // height and the real visible viewport disagree. Every re-render (every
+  // keystroke, since typing calls setEmail/setPassword) gives the browser
+  // another chance to reconcile that mismatch, which can shift/scroll the
+  // page while an input is focused — and iOS blurs a focused input the
+  // instant the page scrolls under it, which is exactly "keyboard closes
+  // every letter, screen shakes." Same fix already proven elsewhere in this
+  // app for the identical symptom (ClientMenu.tsx's drawer): 100dvh instead
+  // of a plain viewport unit, which DOES track the real visible area.
   return (
-    <div className="min-h-screen flex justify-center pt-20 px-6">
+    <div className="min-h-[100dvh] flex justify-center pt-20 px-6">
       <div className="w-full max-w-md p-8 bg-charcoal rounded-2xl border border-smoke">
         <h1 className="text-2xl font-bold text-center text-white mb-6">{titles[mode]}</h1>
 

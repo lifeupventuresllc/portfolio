@@ -70,7 +70,7 @@ export default function FunnelPage() {
   const selected = selectedService ? SERVICES[selectedService] : null
 
   return (
-    <div className="min-h-screen bg-obsidian flex items-center justify-center px-6 py-16">
+    <div className="min-h-[100dvh] bg-obsidian flex items-center justify-center px-6 py-16">
       <div className="w-full max-w-2xl">
 
         {step === 1 && (

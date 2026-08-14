@@ -194,7 +194,7 @@ function ConversationalIntakeInner() {
   if (phase === 'building') {
     const light = tier === 'required'
     return (
-      <div className={`min-h-screen flex items-center justify-center px-6 ${light ? 'bg-paper' : 'bg-obsidian'}`}>
+      <div className={`min-h-[100dvh] flex items-center justify-center px-6 ${light ? 'bg-paper' : 'bg-obsidian'}`}>
         <div className="text-center q-in-fwd">
           <div className="relative w-24 h-24 mx-auto mb-8">
             <div className={`absolute inset-0 rounded-full border-2 ${light ? 'border-gold/25' : 'border-gold/20'}`} />
@@ -214,7 +214,7 @@ function ConversationalIntakeInner() {
   // ---------- DONE / reveal (light — this is the reward moment, stays part of the same light experience) ----------
   if (phase === 'done' && targets) {
     return (
-      <div className="min-h-screen bg-paper px-4 py-16">
+      <div className="min-h-[100dvh] bg-paper px-4 py-16">
         <div className="max-w-lg mx-auto text-center q-in-fwd">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">Your plan is ready</p>
           <h1 className="text-3xl sm:text-4xl font-bold text-ink mb-3">Let&apos;s do this, {firstName} 🎉</h1>
@@ -246,7 +246,7 @@ function ConversationalIntakeInner() {
   if (tier === 'required') {
     const s = REQUIRED_STEPS[step]
     return (
-      <div className="min-h-screen bg-paper px-4 py-10 flex flex-col">
+      <div className="min-h-[100dvh] bg-paper px-4 py-10 flex flex-col">
         <div className="max-w-md w-full mx-auto mb-12">
           <div className="flex items-center gap-3">
             {step > 0 ? <button onClick={back} className="text-ink/40 hover:text-gold text-sm">←</button> : <span className="w-3" />}
@@ -325,7 +325,7 @@ function ConversationalIntakeInner() {
   // ---------- OPTIONAL TIER (dark — back into the regular app experience) ----------
   const s = OPTIONAL_STEPS[step]
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-8 flex flex-col">
+    <div className="min-h-[100dvh] bg-obsidian px-4 py-8 flex flex-col">
       {/* progress */}
       <div className="max-w-lg w-full mx-auto mb-8">
         <div className="flex items-center gap-3">

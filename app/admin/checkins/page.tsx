@@ -30,7 +30,7 @@ export default async function AdminCheckins() {
   const pending = list.filter((c) => c.status !== 'reviewed')
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-16">
+    <div className="min-h-[100dvh] bg-obsidian px-4 py-16">
       <div className="max-w-2xl mx-auto">
         <Link href="/admin/clients" className="text-ivory/40 text-xs hover:text-gold mb-2 inline-block">← Your clients</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-2">Coach Tool</p>

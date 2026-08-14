@@ -39,7 +39,7 @@ export default function ClearSessionPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-obsidian flex items-center justify-center">
+    <div className="min-h-[100dvh] bg-obsidian flex items-center justify-center">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-white mb-4">
           {done ? 'Session Cleared!' : 'Clearing session...'}

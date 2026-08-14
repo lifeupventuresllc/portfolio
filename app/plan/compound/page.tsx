@@ -39,7 +39,7 @@ export default async function CompoundDayPage() {
   const today = rotated.slice(0, 6)
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-12">
+    <div className="min-h-[100dvh] bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto">
         <Link href="/plan" className="text-ivory/50 text-sm mb-6 inline-block hover:text-gold transition-colors">← Back to my plan</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Optional</p>

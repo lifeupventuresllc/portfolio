@@ -37,7 +37,7 @@ export default async function WorkoutSession() {
 
   if (!workoutPlan?.plan) {
     return (
-      <div className="min-h-screen bg-obsidian px-4 py-16">
+      <div className="min-h-[100dvh] bg-obsidian px-4 py-16">
         <div className="max-w-md mx-auto text-center">
           <h1 className="text-2xl font-bold text-white mb-2">No workout yet</h1>
           <p className="text-ivory/60 text-sm mb-6">Finish your quick intake and I&apos;ll build your training.</p>
@@ -103,7 +103,7 @@ export default async function WorkoutSession() {
   }
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-8">
+    <div className="min-h-[100dvh] bg-obsidian px-4 py-8">
       <WorkoutPlayer program={program} firstName={firstName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} />
     </div>
   )

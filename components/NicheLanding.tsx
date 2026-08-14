@@ -46,7 +46,7 @@ export default function NicheLanding({ headline, subheadline, painPoints, soluti
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-obsidian pt-20 px-6">
+      <div className="min-h-[100dvh] bg-obsidian pt-20 px-6">
         <div className="max-w-2xl mx-auto text-center py-20">
           <div className="text-6xl mb-6">🎉</div>
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">You&apos;re In!</h1>
@@ -65,7 +65,7 @@ export default function NicheLanding({ headline, subheadline, painPoints, soluti
   }
 
   return (
-    <div className="min-h-screen bg-obsidian pt-20">
+    <div className="min-h-[100dvh] bg-obsidian pt-20">
       {/* Hero */}
       <section className="px-6 py-16 md:py-24">
         <div className="max-w-3xl mx-auto text-center">

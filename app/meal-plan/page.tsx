@@ -26,7 +26,7 @@ export default function MealBuilder() {
   const input = 'w-24 px-3 py-2 bg-obsidian border border-smoke rounded-xl text-white text-sm focus:outline-none focus:border-gold'
 
   return (
-    <div className="min-h-screen bg-paper px-4 py-10">
+    <div className="min-h-[100dvh] bg-paper px-4 py-10">
       <div className="max-w-3xl mx-auto">
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-2">Meal Plan Builder</p>
         <h1 className="text-3xl font-bold text-ink mb-1">Spend Your Calories</h1>

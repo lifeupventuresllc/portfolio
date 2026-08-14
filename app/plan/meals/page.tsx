@@ -30,7 +30,7 @@ export default async function MealsPage() {
   // Needs intake to know her calorie targets
   if (!enrollment || !intake) {
     return (
-      <div className="min-h-screen bg-obsidian px-4 py-16">
+      <div className="min-h-[100dvh] bg-obsidian px-4 py-16">
         <div className="max-w-md mx-auto text-center">
           <h1 className="text-2xl font-bold text-white mb-2">Let&apos;s get your numbers first</h1>
           <p className="text-ivory/60 text-sm mb-6">Complete your quick intake so we can portion your meals to your calories.</p>
@@ -51,7 +51,7 @@ export default async function MealsPage() {
   const cookDays = ([1, 2, 3].includes(Number(intake.form_data?.cook_days_per_week)) ? Number(intake.form_data.cook_days_per_week) : 2) as 1 | 2 | 3
 
   return (
-    <div className="min-h-screen bg-obsidian px-4 py-12">
+    <div className="min-h-[100dvh] bg-obsidian px-4 py-12">
       <div className="max-w-3xl mx-auto">
         <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Back to my plan</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Meal Builder</p>

@@ -61,7 +61,7 @@ export default function ContentIntakePage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-obsidian flex items-center justify-center px-6 pt-32">
+      <div className="min-h-[100dvh] bg-obsidian flex items-center justify-center px-6 pt-32">
         <div className="max-w-md text-center">
           <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,7 +79,7 @@ export default function ContentIntakePage() {
   }
 
   return (
-    <div className="min-h-screen bg-obsidian px-6 pt-32 pb-20">
+    <div className="min-h-[100dvh] bg-obsidian px-6 pt-32 pb-20">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-12">
           <p className="text-gold text-xs font-semibold tracking-[0.3em] uppercase mb-3">Content Editing</p>

@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function AudioGuide() {
   return (
-    <div className="min-h-screen bg-obsidian">
+    <div className="min-h-[100dvh] bg-obsidian">
       <div className="max-w-3xl mx-auto px-6 py-16">
         {/* Header */}
         <div className="text-center mb-16">
