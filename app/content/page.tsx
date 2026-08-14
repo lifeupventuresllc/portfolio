@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
@@ -95,7 +95,10 @@ export default function ClientPortalPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploadProjectId, setUploadProjectId] = useState<string | null>(null)
 
-  const supabase = createClient()
+  // Memoized, not recreated on every render — see Navbar.tsx for why: an
+  // unmemoized client combined with a [supabase]-dependent effect is a real
+  // infinite-render loop, not just an inefficiency.
+  const supabase = useMemo(() => createClient(), [])
 
   const fetchProjects = useCallback(async () => {
     const res = await fetch('/api/client/projects')

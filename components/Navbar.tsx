@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 type Profile = {
@@ -14,7 +14,17 @@ const FITNESS_PATHS = ['/challenge', '/blueprint', '/services/fitness', '/meal-p
 export default function Navbar() {
   const router = useRouter()
   const pathname = usePathname()
-  const supabase = createClient()
+  // Built once per mount, not on every render — this was the REAL bug behind
+  // Asa's sign-up typing report. createClient() was previously re-run on every
+  // render, and the effect below depends on [supabase] — so every render made
+  // a new client, which changed the dependency, which re-ran the effect, which
+  // called getUser()/setUser() (a new object each time), which triggered
+  // another render. A genuine infinite loop, continuously eating the main
+  // thread on every page that renders Navbar. /plan/* pages render "bare"
+  // (no Navbar at all, see SiteChrome.tsx), which is exactly why food logging
+  // and Coach Asa chat never showed this — only marketing pages like /signup
+  // have Navbar mounted.
+  const supabase = useMemo(() => createClient(), [])
   const [user, setUser] = useState<{ email?: string } | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 // 30-day content calendar data
@@ -258,7 +258,11 @@ export default function ContentPlanner() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [postedDays, setPostedDays] = useState<Record<number, boolean>>({})
   const [view, setView] = useState<'calendar' | 'list'>('calendar')
-  const supabase = createClient()
+  // Memoized, not recreated on every render — see Navbar.tsx for why: an
+  // unmemoized client combined with a [supabase]-dependent effect is a real
+  // infinite-render loop (new client -> effect refires -> setState -> render
+  // -> new client -> ...), not just an inefficiency.
+  const supabase = useMemo(() => createClient(), [])
 
   const loadPosted = useCallback(async () => {
     const { data } = await supabase

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AdminTable from '@/components/AdminTable'
 import SimpleChart from '@/components/SimpleChart'
@@ -196,7 +196,10 @@ function DailyOutreachTracker() {
 }
 
 export default function AdminDashboard({ userRole }: { userRole: string }) {
-  const supabase = createClient()
+  // Memoized, not recreated on every render — see Navbar.tsx for why: an
+  // unmemoized client combined with a [supabase]-dependent effect is a real
+  // infinite-render loop, not just an inefficiency.
+  const supabase = useMemo(() => createClient(), [])
   const isAdmin = userRole === 'admin'
 
   const [activeTab, setActiveTab] = useState<TabName>('overview')
