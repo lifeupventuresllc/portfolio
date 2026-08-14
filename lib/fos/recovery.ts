@@ -1,5 +1,18 @@
 import type { NutritionChange, WorkoutChange } from './types'
 import type { Injury } from '@/lib/workout-exercises'
+import { RECIPES } from '@/lib/recipes'
+import { rotate } from '@/lib/workout'
+
+// Real snacks from the same recipe database the Meal Builder uses — not invented
+// copy. A craving used to only get generic "get some protein in you" text with no
+// actual suggestion; this gives her something concrete she can act on immediately.
+// Rotated by day (not random) so it's stable if she checks twice today but still
+// varies day to day, matching the same pattern lib/escape-plan.ts's eating-out
+// picks already use.
+const CRAVING_SNACKS = RECIPES.filter((r) => r.category === 'snack')
+function cravingSnackPicks(dayOffset: number): { name: string; cal: number; protein: number }[] {
+  return rotate(CRAVING_SNACKS, dayOffset).slice(0, 2).map((s) => ({ name: s.name, cal: s.cal, protein: s.protein }))
+}
 
 // Recovery mode — the operator's non-punishing response to real life. Rule-based, so it
 // works with ZERO AI dependency; the Claude layer (Phase 2) will later enrich the wording
@@ -29,15 +42,15 @@ export type RecoveryPlan = {
 // field) — when set, the recommendation swaps to real cardio/HIIT content (see
 // lib/cardio-session.ts) instead of just adjusting duration on whatever was already
 // scheduled. Merged on afterward so every case above stays exactly as tuned.
-export function recover(signal: LifeSignal, normalMinutes = 45, workoutStyle?: 'cardio'): RecoveryPlan {
-  const plan = recoverBase(signal, normalMinutes)
+export function recover(signal: LifeSignal, normalMinutes = 45, workoutStyle?: 'cardio', dayOffset = 0): RecoveryPlan {
+  const plan = recoverBase(signal, normalMinutes, dayOffset)
   if (workoutStyle === 'cardio') {
     return { ...plan, workoutChange: { ...(plan.workoutChange || {}), contentSwap: 'cardio', swapTo: 'cardio & conditioning session' } }
   }
   return plan
 }
 
-function recoverBase(signal: LifeSignal, normalMinutes = 45): RecoveryPlan {
+function recoverBase(signal: LifeSignal, normalMinutes = 45, dayOffset = 0): RecoveryPlan {
   switch (signal.kind) {
     case 'time_crunch': {
       const m = Math.max(10, Math.min(signal.minutes, normalMinutes))
@@ -74,11 +87,14 @@ function recoverBase(signal: LifeSignal, normalMinutes = 45): RecoveryPlan {
           : `A few days off doesn't erase your progress. We don't start over here — we pick the path back up. Want me to make today an easy re-entry so it feels good to be back?`,
         workoutChange: { toMinutes: 20, swapTo: 'easy re-entry', reason: 'returning after a break' },
       }
-    case 'craving':
+    case 'craving': {
+      const picks = cravingSnackPicks(dayOffset)
+      const suggestion = picks.length ? picks.map((p) => `${p.name} (${p.cal} cal, ${p.protein}g protein)`).join(' or ') : 'something with real protein'
       return {
-        message: `A craving isn't a failure — it's your body asking for fuel. Get some protein in you now (tap "Away from home right now?" if you're out) and it'll ease off in a few minutes. No guilt, no starting over.`,
-        nutritionChange: { reason: 'craving — protein-first to quiet it' },
+        message: `A craving isn't a failure — it's your body asking for fuel. Try ${suggestion} — real food, ready in a minute (tap "Away from home right now?" instead if you're out) and it'll ease off shortly. No guilt, no starting over.`,
+        nutritionChange: { reason: 'craving — protein-first to quiet it', dinnerSuggestion: picks[0]?.name },
       }
+    }
     case 'stressed':
       return {
         message: `Stress is real, and today doesn't have to be perfect — it just has to be something. I kept today short and simple so you're not adding pressure on top of pressure. One small win still counts.`,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { localDateISO, localHourNumber, addDaysISO } from '@/lib/localdate'
+import { localDateISO, localHourNumber, localDayNumber, addDaysISO } from '@/lib/localdate'
 import { recover, type LifeSignal, type RecoveryPlan } from '@/lib/fos/recovery'
 import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
   // even though workoutStyle is set. Without this, the request silently vanished
   // into the generic fallback reply below — a real gap, not an edge case, given
   // this is exactly how someone would naturally ask.
-  let plan: RecoveryPlan | null = signal ? recover(signal, 45, workoutStyle)
+  let plan: RecoveryPlan | null = signal ? recover(signal, 45, workoutStyle, localDayNumber())
     : workoutStyle === 'cardio' ? {
         message: "Cardio it is — let's get your heart rate up today. Want me to lock that in?",
         workoutChange: { contentSwap: 'cardio', swapTo: 'cardio & conditioning session', reason: 'requested cardio' },
