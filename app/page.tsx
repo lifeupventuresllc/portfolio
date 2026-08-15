@@ -34,8 +34,15 @@ export default function LandingPage() {
               </span>
             </p>
             <div className="flex flex-wrap items-center gap-5">
+              {/* Straight to signup, not /challenge — that page is a near-duplicate
+                  of this same pitch (same headline, same "100% free" copy), so
+                  routing homepage traffic through it first was a real redundant
+                  hop: read the pitch, click Get Started, read almost the same
+                  pitch again, click Get Started again, THEN finally reach the
+                  form. /challenge still exists for other traffic (ads, social
+                  links) that hasn't seen this pitch yet. */}
               <Link
-                href="/challenge"
+                href="/signup?redirect=/plan/intake"
                 className="group relative inline-block bg-gold text-obsidian px-10 py-4 text-base font-bold tracking-wider uppercase rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
                 style={{ perspective: '600px', transformStyle: 'preserve-3d' }}
               >
