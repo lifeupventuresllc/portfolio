@@ -59,9 +59,16 @@ const LHint = ({ children }: { children: React.ReactNode }) => <p className="tex
 // Required tier: the minimum to get her a real plan fast (name, goal, focus, body).
 // Everything else is a second, optional pass she's invited into AFTER she's already
 // seen her numbers — not a wall she has to clear before experiencing anything.
-const REQUIRED_STEPS = ['name', 'goal', 'focus', 'body']
+// 'location', 'injuries', and 'food' (foods loved/avoided) moved here from the
+// optional tier — these aren't cosmetic, they directly drive plan accuracy and,
+// for injuries, safety. Skipping the optional pass used to mean a silently
+// generic plan: gym-track even for a home-only member, zero injury awareness,
+// no food preferences. Everything else stays deferred (weekly_food_budget
+// merged into the 'cook' optional step; activity/experience/training_style/
+// days_per_week/postpartum/other_info are genuinely secondary refinements).
+const REQUIRED_STEPS = ['name', 'goal', 'focus', 'body', 'location', 'injuries', 'food']
 const OPTIONAL_STEPS = [
-  'target', 'activity', 'experience', 'training_style', 'location', 'days', 'cook', 'injuries', 'other', 'postpartum', 'food',
+  'target', 'activity', 'experience', 'training_style', 'days', 'cook', 'postpartum', 'other',
 ]
 
 // One warm question per screen. Same data as before — just effortless, and
@@ -323,7 +330,39 @@ function ConversationalIntakeInner() {
                 {[{ v: 'female', l: 'Female' }, { v: 'male', l: 'Male' }].map((o) => <button key={o.v} onClick={() => { hapticTap(); set('sex', o.v) }} className={`py-3.5 rounded-2xl text-sm font-semibold border transition-colors ${f.sex === o.v ? 'bg-white border-gold text-ink' : 'bg-white border-ink/10 text-ink/50'}`}>{o.l}</button>)}
               </div>
               {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
-              <button onClick={() => { if (!f.age || !f.weight_lbs) { setError('Add your age and weight so I can nail your numbers.'); return } build(false) }} className={lPrimaryBtn}>✨ Build my plan</button>
+              <button onClick={() => { if (!f.age || !f.weight_lbs) { setError('Add your age and weight so I can nail your numbers.'); return } next() }} className={`${lPrimaryBtn} mt-8`}>Continue →</button>
+            </>)}
+
+            {s === 'location' && (<>
+              <LQ>Where will you train?</LQ>
+              <LHint>I&apos;ll build your workouts to fit your actual setup.</LHint>
+              <div className="space-y-3">
+                {[{ v: 'gym', l: '🏋🏽 Gym' }, { v: 'home', l: '🏠 Home' }, { v: 'both', l: '🔀 Both' }].map((o) => (
+                  <button key={o.v} onClick={() => pick('training_location', o.v)} className={lopt(f.training_location === o.v)}>{o.l}</button>
+                ))}
+              </div>
+            </>)}
+
+            {s === 'injuries' && (<>
+              <LQ>Anything I should train around?</LQ>
+              <LHint>Tap any that apply — I&apos;ll route your workout around them. (None is totally fine.)</LHint>
+              <div className="flex flex-wrap gap-2 mb-8">
+                {INJURIES.map((i) => (
+                  <button key={i.v} onClick={() => toggleInjury(i.v)} className={`px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${injuries.includes(i.v) ? 'bg-white border-gold text-ink shadow-[0_4px_20px_rgba(201,168,76,0.14)]' : 'bg-white border-ink/10 text-ink/50 hover:border-gold/50'}`}>{i.l}</button>
+                ))}
+              </div>
+              <button onClick={next} className={lPrimaryBtn}>{injuries.length ? 'Continue →' : 'None — continue →'}</button>
+            </>)}
+
+            {s === 'food' && (<>
+              <LQ>Last thing — let&apos;s make the food *yours*.</LQ>
+              <LHint>This is how I build meals you actually crave, not ones you&apos;ll dread.</LHint>
+              <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Foods you love</label>
+              <input ref={primaryInputRef} value={f.food_preferences} onChange={(e) => set('food_preferences', e.target.value)} placeholder="e.g. chicken, rice bowls, tacos" className={`${linput} mb-3`} autoCorrect="off" spellCheck={false} />
+              <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Dislikes / allergies</label>
+              <input value={f.dislikes_allergies} onChange={(e) => set('dislikes_allergies', e.target.value)} placeholder="e.g. no mushrooms, dairy-free" className={`${linput} mb-6`} autoCorrect="off" spellCheck={false} />
+              {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+              <button onClick={() => build(false)} className={lPrimaryBtn}>✨ Build my plan</button>
             </>)}
           </Screen>
         </div>
@@ -421,16 +460,6 @@ function ConversationalIntakeInner() {
             </div>
           </>)}
 
-          {s === 'location' && (<>
-            <Q>Where will you train?</Q>
-            <Hint>I&apos;ll build your workouts to fit your setup.</Hint>
-            <div className="space-y-3">
-              {[{ v: 'gym', l: '🏋🏽 Gym' }, { v: 'home', l: '🏠 Home' }, { v: 'both', l: '🔀 Both' }].map((o) => (
-                <button key={o.v} onClick={() => pick('training_location', o.v)} className={opt(f.training_location === o.v)}>{o.l}</button>
-              ))}
-            </div>
-          </>)}
-
           {s === 'days' && (<>
             <Q>How many days a week can you train?</Q>
             <Hint>Be honest — consistency beats intensity.</Hint>
@@ -444,35 +473,16 @@ function ConversationalIntakeInner() {
           {s === 'cook' && (<>
             <Q>How many days do you want to cook?</Q>
             <Hint>Cook once and I&apos;ll stretch it, or cook fresh more often — your call.</Hint>
-            <div className="space-y-3">
+            <div className="space-y-3 mb-7">
               {[{ v: '1', l: '1 day', d: 'Cook once, eat all week' }, { v: '2', l: '2 days', d: 'The sweet spot — always fresh' }, { v: '3', l: '3 days', d: 'Max variety' }].map((o) => (
-                <button key={o.v} onClick={() => pick('cook_days_per_week', o.v)} className={opt(f.cook_days_per_week === o.v)}>
+                <button key={o.v} onClick={() => { hapticTap(); set('cook_days_per_week', o.v) }} className={opt(f.cook_days_per_week === o.v)}>
                   <span className="block">{o.l}</span><span className={`block text-xs font-normal mt-0.5 ${f.cook_days_per_week === o.v ? 'text-gold/70' : 'text-ivory/40'}`}>{o.d}</span>
                 </button>
               ))}
             </div>
-          </>)}
-
-          {s === 'injuries' && (<>
-            <Q>Anything I should train around?</Q>
-            <Hint>Tap any that apply — I&apos;ll route your workout around them. (None is totally fine.)</Hint>
-            <div className="flex flex-wrap gap-2 mb-7">
-              {INJURIES.map((i) => (
-                <button key={i.v} onClick={() => toggleInjury(i.v)} className={`px-4 py-2.5 rounded-xl text-sm font-semibold ${injuries.includes(i.v) ? 'bg-charcoal bg-gradient-to-br from-gold/20 to-charcoal text-gold border border-gold/40' : 'bg-charcoal border border-smoke text-ivory/60'}`}>{i.l}</button>
-              ))}
-            </div>
-            <button onClick={next} className={primaryBtn}>{injuries.length ? 'Continue →' : 'None — continue →'}</button>
-          </>)}
-
-          {s === 'other' && (<>
-            <Q>Anything else I should know?</Q>
-            <Hint>Totally optional — schedule quirks, past experience, whatever&apos;s on your mind.</Hint>
-            <textarea
-              value={f.other_info} onChange={(e) => set('other_info', e.target.value)}
-              placeholder="e.g. I travel for work every other week, I've done this before and it didn't stick because..."
-              rows={4} className={`${input} resize-none mb-6`}
-            />
-            <button onClick={next} className={primaryBtn}>{f.other_info.trim() ? 'Continue →' : 'Nothing — continue →'}</button>
+            <label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Weekly food budget ($) — optional</label>
+            <input type="number" inputMode="numeric" value={f.weekly_food_budget} onChange={(e) => set('weekly_food_budget', e.target.value)} placeholder="e.g. 90" className={`${input} mb-6`} autoCorrect="off" autoCapitalize="off" spellCheck={false} />
+            <button onClick={next} disabled={!f.cook_days_per_week} className={primaryBtn}>Continue →</button>
           </>)}
 
           {s === 'postpartum' && (<>
@@ -484,15 +494,14 @@ function ConversationalIntakeInner() {
             </div>
           </>)}
 
-          {s === 'food' && (<>
-            <Q>Last thing — let&apos;s make the food *yours*.</Q>
-            <Hint>Optional, but it&apos;s how I build meals you actually crave.</Hint>
-            <label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Foods you love</label>
-            <input ref={primaryInputRef} value={f.food_preferences} onChange={(e) => set('food_preferences', e.target.value)} placeholder="e.g. chicken, rice bowls, tacos" className={`${input} mb-3`} autoCorrect="off" spellCheck={false} />
-            <label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Dislikes / allergies</label>
-            <input value={f.dislikes_allergies} onChange={(e) => set('dislikes_allergies', e.target.value)} placeholder="e.g. no mushrooms, dairy-free" className={`${input} mb-3`} autoCorrect="off" spellCheck={false} />
-            <label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Weekly food budget ($)</label>
-            <input type="number" inputMode="numeric" value={f.weekly_food_budget} onChange={(e) => set('weekly_food_budget', e.target.value)} placeholder="e.g. 90" className={`${input} mb-6`} autoCorrect="off" autoCapitalize="off" spellCheck={false} />
+          {s === 'other' && (<>
+            <Q>Anything else I should know?</Q>
+            <Hint>Totally optional — schedule quirks, past experience, whatever&apos;s on your mind.</Hint>
+            <textarea
+              value={f.other_info} onChange={(e) => set('other_info', e.target.value)}
+              placeholder="e.g. I travel for work every other week, I've done this before and it didn't stick because..."
+              rows={4} className={`${input} resize-none mb-6`}
+            />
             {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
             <button onClick={() => build(true)} className={primaryBtn}>✨ Update my plan</button>
           </>)}
