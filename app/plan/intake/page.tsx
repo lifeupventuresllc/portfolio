@@ -138,7 +138,11 @@ function ConversationalIntakeInner() {
   const toggleInjury = (v: string) => setInjuries((a) => (a.includes(v) ? a.filter((x) => x !== v) : [...a, v]))
 
   // choosing a single-select option auto-advances (that "texting a coach" feel)
-  const pick = (k: string, v: string) => { hapticTap(); set(k, v); setTimeout(next, 160) }
+  // 280ms, not the old 160 — the selected option's highlight (lopt's
+  // border/shadow/scale) runs on a 200ms CSS transition, so at 160 the screen
+  // was auto-advancing before that transition ever finished, which read as
+  // "it doesn't light up." Now it has time to actually show before it moves on.
+  const pick = (k: string, v: string) => { hapticTap(); set(k, v); setTimeout(next, 280) }
 
   const firstName = f.name.trim().split(' ')[0] || 'you'
 
@@ -295,8 +299,11 @@ function ConversationalIntakeInner() {
             </>)}
 
             {s === 'focus' && (<>
-              <LQ>What do you want to feel proudest of?</LQ>
-              <LHint>Tap one — watch it light up. This shapes how I weight your workout.</LHint>
+              {/* Smaller local heading/hint (not the shared LQ/LHint, which
+                  run mb-2/mb-10) — this step needs the vertical room back for
+                  the photo, which is the whole point of the screen. */}
+              <h2 className="text-2xl font-bold text-ink leading-snug mb-1 text-balance">What do you want to feel proudest of?</h2>
+              <p className="text-ink/50 text-sm mb-3">Tap one — watch it light up.</p>
               <div className="mb-3">
                 <FocusAreaPhoto active={(f.focus_area || null) as 'core' | 'legs' | 'arms' | 'overall' | null} />
               </div>
