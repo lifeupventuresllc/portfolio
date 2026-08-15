@@ -282,12 +282,12 @@ function ConversationalIntakeInner() {
                   { v: 'gain', l: '💪🏽 Build & tone', d: 'Add shape and strength', img: '/images/onboarding/goal-gain.jpg' },
                   { v: 'maintain', l: '⚖️ Maintain', d: 'Hold steady, feel great', img: '/images/onboarding/goal-maintain.jpg' },
                 ].map((o) => (
-                  <button key={o.v} onClick={() => pick('goal', o.v)} className={`${lopt(f.goal === o.v)} !flex items-center justify-between gap-4`}>
+                  <button key={o.v} onClick={() => pick('goal', o.v)} className={`${lopt(f.goal === o.v)} !flex items-center justify-between gap-4 !py-4`}>
                     <span>
                       <span className="block text-lg">{o.l}</span><span className="block text-sm font-normal mt-0.5 text-ink/40">{o.d}</span>
                     </span>
-                    <span className="relative w-16 h-16 shrink-0 rounded-2xl overflow-hidden">
-                      <Image src={o.img} alt="" fill sizes="64px" className="object-cover" />
+                    <span className="relative w-24 h-32 shrink-0 rounded-2xl overflow-hidden">
+                      <Image src={o.img} alt="" fill sizes="96px" className="object-cover" />
                     </span>
                   </button>
                 ))}
@@ -297,18 +297,18 @@ function ConversationalIntakeInner() {
             {s === 'focus' && (<>
               <LQ>What do you want to feel proudest of?</LQ>
               <LHint>Tap one — watch it light up. This shapes how I weight your workout.</LHint>
-              <div className="flex gap-4 items-start mb-6">
-                <div className="flex-1 space-y-2.5">
-                  {FOCUS_AREAS.map((o) => (
-                    <button key={o.v} onClick={() => { hapticTap(); set('focus_area', o.v) }} className={`${lopt(f.focus_area === o.v)} !px-4 !py-3.5`}>
-                      <span className="block text-sm font-semibold">{o.l}</span>
-                      <span className="block text-[11px] font-normal mt-0.5 text-ink/40">{o.d}</span>
-                    </button>
-                  ))}
-                </div>
-                <div className="w-[38%] shrink-0">
-                  <FocusAreaPhoto active={(f.focus_area || null) as 'core' | 'legs' | 'arms' | 'overall' | null} />
-                </div>
+              {/* Photo leads, full width — Asa's ask: it should read big on a real
+                  phone screen, not compete for space with the option list. */}
+              <div className="mb-4">
+                <FocusAreaPhoto active={(f.focus_area || null) as 'core' | 'legs' | 'arms' | 'overall' | null} />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5 mb-6">
+                {FOCUS_AREAS.map((o) => (
+                  <button key={o.v} onClick={() => { hapticTap(); set('focus_area', o.v) }} className={`${lopt(f.focus_area === o.v)} !px-3.5 !py-3 !text-center`}>
+                    <span className="block text-sm font-semibold">{o.l}</span>
+                    <span className="block text-[11px] font-normal mt-0.5 text-ink/40">{o.d}</span>
+                  </button>
+                ))}
               </div>
               <button onClick={next} disabled={!f.focus_area} className={lPrimaryBtn}>Continue →</button>
             </>)}
