@@ -297,12 +297,10 @@ function ConversationalIntakeInner() {
             {s === 'focus' && (<>
               <LQ>What do you want to feel proudest of?</LQ>
               <LHint>Tap one — watch it light up. This shapes how I weight your workout.</LHint>
-              {/* Photo leads, full width — Asa's ask: it should read big on a real
-                  phone screen, not compete for space with the option list. */}
-              <div className="mb-4">
+              <div className="mb-3">
                 <FocusAreaPhoto active={(f.focus_area || null) as 'core' | 'legs' | 'arms' | 'overall' | null} />
               </div>
-              <div className="grid grid-cols-2 gap-2.5 mb-6">
+              <div className="grid grid-cols-2 gap-2.5 mb-5">
                 {FOCUS_AREAS.map((o) => (
                   <button key={o.v} onClick={() => { hapticTap(); set('focus_area', o.v) }} className={`${lopt(f.focus_area === o.v)} !px-3.5 !py-3 !text-center`}>
                     <span className="block text-sm font-semibold">{o.l}</span>
