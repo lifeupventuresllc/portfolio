@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import CountUp from '@/components/CountUp'
+import FocusAreaPhoto from '@/components/FocusAreaPhoto'
 import { hapticTap } from '@/lib/haptics'
 import { createClient } from '@/lib/supabase/client'
 
@@ -20,23 +21,6 @@ const FOCUS_AREAS = [
   { v: 'overall', l: 'All-over', d: 'Balanced, head to toe' },
 ]
 
-// Simple illustrated body silhouette, highlighting the zone each option shapes.
-// Not real photography (no assets exist for that yet) — but gives a real visual
-// cue instead of just an emoji, matching the competitor pattern of showing her
-// what she's choosing rather than just naming it.
-function BodyFocusIcon({ zone }: { zone: 'core' | 'legs' | 'arms' | 'overall' }) {
-  const on = (part: string) => (zone === 'overall' || zone === part ? '#C9A84C' : 'rgba(10,10,15,0.10)')
-  return (
-    <svg viewBox="0 0 100 160" width="56" height="90" aria-hidden="true">
-      <circle cx="50" cy="16" r="13" fill="rgba(10,10,15,0.10)" />
-      <rect x="14" y="34" width="15" height="50" rx="7" fill={on('arms')} />
-      <rect x="71" y="34" width="15" height="50" rx="7" fill={on('arms')} />
-      <rect x="32" y="32" width="36" height="52" rx="11" fill={on('core')} />
-      <rect x="33" y="86" width="15" height="62" rx="7" fill={on('legs')} />
-      <rect x="52" y="86" width="15" height="62" rx="7" fill={on('legs')} />
-    </svg>
-  )
-}
 
 // Module-level, NOT defined inside the component — the real cause of the reported
 // "types one letter, keyboard closes, screen shakes" bug on this page. A component
@@ -302,15 +286,21 @@ function ConversationalIntakeInner() {
 
             {s === 'focus' && (<>
               <LQ>What do you want to feel proudest of?</LQ>
-              <LHint>This shapes how I weight your workout — no wrong answer.</LHint>
-              <div className="grid grid-cols-2 gap-3">
-                {FOCUS_AREAS.map((o) => (
-                  <button key={o.v} onClick={() => pick('focus_area', o.v)} className={`${lopt(f.focus_area === o.v)} !text-center flex flex-col items-center`}>
-                    <BodyFocusIcon zone={o.v as 'core' | 'legs' | 'arms' | 'overall'} />
-                    <span className="block text-base font-semibold mt-2">{o.l}</span><span className="block text-xs font-normal mt-1 text-ink/40">{o.d}</span>
-                  </button>
-                ))}
+              <LHint>Tap one — watch it light up. This shapes how I weight your workout.</LHint>
+              <div className="flex gap-4 items-start mb-6">
+                <div className="flex-1 space-y-2.5">
+                  {FOCUS_AREAS.map((o) => (
+                    <button key={o.v} onClick={() => { hapticTap(); set('focus_area', o.v) }} className={`${lopt(f.focus_area === o.v)} !px-4 !py-3.5`}>
+                      <span className="block text-sm font-semibold">{o.l}</span>
+                      <span className="block text-[11px] font-normal mt-0.5 text-ink/40">{o.d}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="w-[38%] shrink-0">
+                  <FocusAreaPhoto active={(f.focus_area || null) as 'core' | 'legs' | 'arms' | 'overall' | null} />
+                </div>
               </div>
+              <button onClick={next} disabled={!f.focus_area} className={lPrimaryBtn}>Continue →</button>
             </>)}
 
             {s === 'body' && (<>
