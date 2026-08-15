@@ -248,7 +248,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
             <button
               type="button"
               onClick={handleGoogle}
-              disabled={loading || (mode === 'signup' && !accepted)}
+              disabled={loading}
               className="w-full flex items-center justify-center gap-3 bg-white text-obsidian py-3 rounded-xl font-semibold hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
