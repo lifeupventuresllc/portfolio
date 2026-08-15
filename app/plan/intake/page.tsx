@@ -48,12 +48,15 @@ const LHint = ({ children }: { children: React.ReactNode }) => <p className="tex
 // optional tier — these aren't cosmetic, they directly drive plan accuracy and,
 // for injuries, safety. Skipping the optional pass used to mean a silently
 // generic plan: gym-track even for a home-only member, zero injury awareness,
-// no food preferences. Everything else stays deferred (weekly_food_budget
-// merged into the 'cook' optional step; activity/experience/training_style/
-// days_per_week/postpartum/other_info are genuinely secondary refinements).
+// no food preferences. activity_level moved into the 'body' required step too
+// (same question the standalone Calorie Blueprint asks — it feeds directly
+// into the calorie math, so it shouldn't be skippable via the optional tier).
+// Everything else stays deferred (weekly_food_budget merged into the 'cook'
+// optional step; experience/training_style/days_per_week/postpartum/other_info
+// are genuinely secondary refinements).
 const REQUIRED_STEPS = ['name', 'goal', 'focus', 'body', 'location', 'injuries', 'food']
 const OPTIONAL_STEPS = [
-  'target', 'activity', 'experience', 'training_style', 'days', 'cook', 'postpartum', 'other',
+  'target', 'experience', 'training_style', 'days', 'cook', 'postpartum', 'other',
 ]
 
 // One warm question per screen. Same data as before — just effortless, and
@@ -138,11 +141,11 @@ function ConversationalIntakeInner() {
   const toggleInjury = (v: string) => setInjuries((a) => (a.includes(v) ? a.filter((x) => x !== v) : [...a, v]))
 
   // choosing a single-select option auto-advances (that "texting a coach" feel)
-  // 280ms, not the old 160 — the selected option's highlight (lopt's
-  // border/shadow/scale) runs on a 200ms CSS transition, so at 160 the screen
-  // was auto-advancing before that transition ever finished, which read as
-  // "it doesn't light up." Now it has time to actually show before it moves on.
-  const pick = (k: string, v: string) => { hapticTap(); set(k, v); setTimeout(next, 280) }
+  // 420ms — the 280 bump wasn't enough on its own; against a busy photo
+  // thumbnail a thin border+soft shadow barely registers even with time to
+  // render. Paired with a much bolder active state above so the flash is
+  // actually unmistakable before it advances.
+  const pick = (k: string, v: string) => { hapticTap(); set(k, v); setTimeout(next, 420) }
 
   const firstName = f.name.trim().split(' ')[0] || 'you'
 
@@ -191,7 +194,11 @@ function ConversationalIntakeInner() {
   const opt = (active: boolean) => `w-full text-left px-5 py-4 rounded-2xl border font-semibold transition-all duration-200 ${active ? 'bg-charcoal bg-gradient-to-br from-gold/20 to-charcoal border-gold scale-[1.01] text-gold' : 'bg-charcoal border-smoke hover:border-gold/50 hover:bg-charcoal/70 text-white'}`
   const input = 'w-full px-4 py-3.5 bg-obsidian border border-smoke rounded-xl text-white focus:outline-none focus:border-gold transition-colors'
   const primaryBtn = 'w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-[1.02] disabled:opacity-40'
-  const lopt = (active: boolean) => `w-full text-left px-6 py-5 rounded-3xl border transition-all duration-200 ${active ? 'bg-white border-gold shadow-[0_8px_30px_rgba(201,168,76,0.14)] scale-[1.01] text-ink' : 'bg-white border-ink/10 hover:border-gold/50 hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-ink'}`
+  // Active state was too subtle to register against a busy photo thumbnail
+  // (thin 1px border + a 0.14-opacity shadow) — thicker gold border + a real
+  // ring + a much stronger shadow so it visibly "lights up," not just changes
+  // a hairline.
+  const lopt = (active: boolean) => `w-full text-left px-6 py-5 rounded-3xl border-2 transition-all duration-200 ${active ? 'bg-gold/5 border-gold ring-2 ring-gold/40 shadow-[0_8px_30px_rgba(201,168,76,0.45)] scale-[1.015] text-ink' : 'bg-white border-ink/10 hover:border-gold/50 hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-ink'}`
   const linput = 'w-full px-5 py-4 bg-white border border-ink/15 rounded-2xl text-ink text-lg placeholder-ink/30 focus:outline-none focus:border-gold transition-colors'
   const lPrimaryBtn = 'w-full bg-gold text-obsidian px-8 py-5 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-40'
 
@@ -251,7 +258,18 @@ function ConversationalIntakeInner() {
   if (tier === 'required') {
     const s = REQUIRED_STEPS[step]
     return (
-      <div className="min-h-[100dvh] bg-paper px-4 py-10 flex flex-col">
+      <div className={`min-h-[100dvh] px-4 py-10 flex flex-col relative overflow-hidden ${s === 'name' ? '' : 'bg-paper'}`}>
+        {s === 'name' && (
+          <>
+            <Image src="/images/onboarding/name-step.jpg" alt="" fill sizes="100vw" priority
+              className="object-cover object-[center_22%] -z-20" />
+            {/* Scrim: near-transparent at the top (the photo's own background
+                is already light there, so the header still reads fine over
+                it) fading to solid white by ~72% so the form at the bottom
+                has full contrast without a hard edge. */}
+            <div className="absolute inset-0 -z-10" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.16) 50%, rgba(255,255,255,0.97) 72%, #fff 100%)' }} />
+          </>
+        )}
         <div className="max-w-md w-full mx-auto mb-12">
           <div className="flex items-center gap-3">
             {step > 0 ? <button onClick={back} className="text-ink/40 hover:text-gold text-sm">←</button> : <span className="w-3" />}
@@ -264,17 +282,26 @@ function ConversationalIntakeInner() {
         </div>
 
         <div className="max-w-md w-full mx-auto flex-1">
-          {carriedFromBlueprint && step === 0 && (
-            <p className="text-emerald-600 text-xs font-semibold mb-4">🎉 Pulled in your info from your Calorie Blueprint — just confirm as you go.</p>
-          )}
           <Screen step={step} dir={dir}>
             {s === 'name' && (<>
-              <LQ>First — what should I call you?</LQ>
-              <LHint>I coach you by name, not by number.</LHint>
-              <input ref={primaryInputRef} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={linput}
-                autoCorrect="off" autoCapitalize="words" spellCheck={false}
-                onKeyDown={(e) => e.key === 'Enter' && f.name.trim() && next()} />
-              <button onClick={next} disabled={!f.name.trim()} className={`${lPrimaryBtn} mt-8`}>Let&apos;s go →</button>
+              {/* Pushed down so the photo leads — mirrors the mockup Asa
+                  picked (hero photo up top, form anchored near the bottom
+                  over the scrim). mt-[38vh] not absolute positioning, so it
+                  stays in normal flow with the Screen transition. The
+                  Blueprint-carryover banner moved in here too (was rendered
+                  above the photo where a green line had poor contrast) — it
+                  only ever shows on step 0, which is always this step. */}
+              <div className="mt-[38vh]">
+                {carriedFromBlueprint && (
+                  <p className="text-emerald-600 text-xs font-semibold mb-4">🎉 Pulled in your info from your Calorie Blueprint — just confirm as you go.</p>
+                )}
+                <LQ>First — what should I call you?</LQ>
+                <LHint>I coach you by name, not by number.</LHint>
+                <input ref={primaryInputRef} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={linput}
+                  autoCorrect="off" autoCapitalize="words" spellCheck={false}
+                  onKeyDown={(e) => e.key === 'Enter' && f.name.trim() && next()} />
+                <button onClick={next} disabled={!f.name.trim()} className={`${lPrimaryBtn} mt-8`}>Let&apos;s go →</button>
+              </div>
             </>)}
 
             {s === 'goal' && (<>
@@ -331,11 +358,24 @@ function ConversationalIntakeInner() {
                 <select value={f.heightIn} onChange={(e) => set('heightIn', e.target.value)} className={linput}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={i}>{i} in</option>)}</select>
               </div>
               <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Gender (for your metabolism math)</label>
-              <div className="grid grid-cols-2 gap-3 mb-8">
+              <div className="grid grid-cols-2 gap-3 mb-3">
                 {[{ v: 'female', l: 'Female' }, { v: 'male', l: 'Male' }].map((o) => <button key={o.v} onClick={() => { hapticTap(); set('sex', o.v) }} className={`py-3.5 rounded-2xl text-sm font-semibold border transition-colors ${f.sex === o.v ? 'bg-white border-gold text-ink' : 'bg-white border-ink/10 text-ink/50'}`}>{o.l}</button>)}
               </div>
+              {/* Same question the standalone Calorie Blueprint asks — was only
+                  in the OPTIONAL tier before, so anyone who skipped fine-tuning
+                  got a hardcoded 'moderate' guess baked into their real calorie
+                  math instead of their real activity level. Pre-filled and
+                  already answered (not hidden — she can still see/change it)
+                  when she's carried over from a real Blueprint submission, via
+                  the same ACTIVITY_MAP lookup above. */}
+              <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">How active is your day, outside workouts?</label>
+              <div className="grid grid-cols-2 gap-2.5 mb-8">
+                {[{ v: 'sedentary', l: 'Mostly sitting' }, { v: 'light', l: 'Lightly active' }, { v: 'moderate', l: 'On my feet a lot' }, { v: 'active', l: 'Very active' }].map((o) => (
+                  <button key={o.v} onClick={() => { hapticTap(); set('activity_level', o.v) }} className={`py-3 px-3 rounded-2xl text-sm font-semibold border transition-colors text-center ${f.activity_level === o.v ? 'bg-white border-gold text-ink shadow-[0_4px_20px_rgba(201,168,76,0.14)]' : 'bg-white border-ink/10 text-ink/50 hover:border-gold/50'}`}>{o.l}</button>
+                ))}
+              </div>
               {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
-              <button onClick={() => { if (!f.age || !f.weight_lbs) { setError('Add your age and weight so I can nail your numbers.'); return } next() }} className={`${lPrimaryBtn} mt-8`}>Continue →</button>
+              <button onClick={() => { if (!f.age || !f.weight_lbs) { setError('Add your age and weight so I can nail your numbers.'); return }; if (!f.activity_level) { setError('Pick how active your day is — it changes your calorie math.'); return }; next() }} className={`${lPrimaryBtn} mt-8`}>Continue →</button>
             </>)}
 
             {s === 'location' && (<>
@@ -423,18 +463,6 @@ function ConversationalIntakeInner() {
               <button onClick={() => { set('target_lbs', ''); next() }} className="w-full text-center text-ivory/40 text-xs mt-4 hover:text-gold transition-colors">Not sure — you tell me →</button>
             </>)
           })()}
-
-          {s === 'activity' && (<>
-            <Q>How active is your day, outside workouts?</Q>
-            <Hint>Desk job vs. always-on-your-feet changes your calories.</Hint>
-            <div className="space-y-3">
-              {[{ v: 'sedentary', l: 'Mostly sitting', d: 'Desk job, little movement' }, { v: 'light', l: 'Lightly active', d: 'Some walking day to day' }, { v: 'moderate', l: 'On my feet a lot', d: 'Moving most of the day' }, { v: 'active', l: 'Very active', d: 'Physical job / lots of steps' }].map((o) => (
-                <button key={o.v} onClick={() => pick('activity_level', o.v)} className={opt(f.activity_level === o.v)}>
-                  <span className="block">{o.l}</span><span className={`block text-xs font-normal mt-0.5 ${f.activity_level === o.v ? 'text-gold/70' : 'text-ivory/40'}`}>{o.d}</span>
-                </button>
-              ))}
-            </div>
-          </>)}
 
           {s === 'experience' && (<>
             <Q>Where are you at with training?</Q>
