@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import CountUp from '@/components/CountUp'
 import FocusAreaPhoto from '@/components/FocusAreaPhoto'
 import { hapticTap } from '@/lib/haptics'
@@ -276,9 +277,18 @@ function ConversationalIntakeInner() {
               <LQ>What are we doing together, {firstName}?</LQ>
               <LHint>Pick the one that&apos;s calling your name.</LHint>
               <div className="space-y-3">
-                {[{ v: 'lose', l: '🔥 Lose fat', d: 'Lean out, keep your curves' }, { v: 'gain', l: '💪🏽 Build & tone', d: 'Add shape and strength' }, { v: 'maintain', l: '⚖️ Maintain', d: 'Hold steady, feel great' }].map((o) => (
-                  <button key={o.v} onClick={() => pick('goal', o.v)} className={lopt(f.goal === o.v)}>
-                    <span className="block text-lg">{o.l}</span><span className="block text-sm font-normal mt-0.5 text-ink/40">{o.d}</span>
+                {[
+                  { v: 'lose', l: '🔥 Lose fat', d: 'Lean out, keep your curves', img: '/images/onboarding/goal-lose.jpg' },
+                  { v: 'gain', l: '💪🏽 Build & tone', d: 'Add shape and strength', img: '/images/onboarding/goal-gain.jpg' },
+                  { v: 'maintain', l: '⚖️ Maintain', d: 'Hold steady, feel great', img: '/images/onboarding/goal-maintain.jpg' },
+                ].map((o) => (
+                  <button key={o.v} onClick={() => pick('goal', o.v)} className={`${lopt(f.goal === o.v)} !flex items-center justify-between gap-4`}>
+                    <span>
+                      <span className="block text-lg">{o.l}</span><span className="block text-sm font-normal mt-0.5 text-ink/40">{o.d}</span>
+                    </span>
+                    <span className="relative w-16 h-16 shrink-0 rounded-2xl overflow-hidden">
+                      <Image src={o.img} alt="" fill sizes="64px" className="object-cover" />
+                    </span>
                   </button>
                 ))}
               </div>
