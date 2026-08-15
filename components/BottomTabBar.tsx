@@ -15,6 +15,10 @@ const TABS = [
 
 export default function BottomTabBar() {
   const pathname = usePathname() || ''
+  // Hidden during intake — she hasn't reached her actual dashboard yet, so
+  // Today/Progress/Community don't have anywhere real to point her to. Shows
+  // up starting the moment she lands on her real dashboard, not before.
+  if (pathname.startsWith('/plan/intake')) return null
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-charcoal border-t border-smoke pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-2xl mx-auto grid grid-cols-3">
