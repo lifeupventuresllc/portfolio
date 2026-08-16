@@ -331,9 +331,9 @@ function ConversationalIntakeInner() {
                   face read wrong. Photo below is sized to dominate the
                   screen; the option pills float over its bottom third on a
                   scrim instead of living in a separate section below it. */}
-              <h2 className="text-2xl font-bold text-ink leading-snug mb-1 text-balance">What do you want to feel proudest of?</h2>
-              <p className="text-ink/50 text-sm mb-3">Tap one — watch it light up.</p>
-              <div className="relative mx-auto h-[54dvh] max-h-[480px] min-h-[320px] aspect-[9/16] mb-4">
+              <h2 className="text-xl font-bold text-ink leading-snug mb-0.5 text-balance">What do you want to feel proudest of?</h2>
+              <p className="text-ink/50 text-xs mb-2">Tap one — watch it light up.</p>
+              <div className="relative mx-auto h-[66dvh] max-h-[600px] min-h-[320px] aspect-[9/16] mb-3">
                 <FocusAreaPhoto active={(f.focus_area || null) as 'core' | 'legs' | 'arms' | 'overall' | null}>
                   <div className="absolute inset-x-0 bottom-0 h-[42%] pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(255,255,255,0.98) 30%, rgba(255,255,255,0) 100%)' }} />
                   <div className="absolute inset-x-2.5 bottom-2.5 grid grid-cols-2 gap-2">
