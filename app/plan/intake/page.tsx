@@ -341,10 +341,7 @@ function ConversationalIntakeInner() {
                   real constraint at phone widths. */}
               <h2 className="text-xl font-bold text-ink leading-snug mb-0.5 text-balance">What do you want to feel proudest of?</h2>
               <p className="text-ink/50 text-xs mb-2">Tap one — watch it light up.</p>
-              {/* pb-28 so the fixed button bar below never covers the bottom
-                  of the photo/pills when the page scrolls (a full-width true
-                  9:16 photo runs taller than one screen on shorter phones). */}
-              <div className="relative w-full max-h-[640px] aspect-[9/16] mb-3 pb-28">
+              <div className="relative w-full max-h-[640px] aspect-[9/16] mb-3">
                 <FocusAreaPhoto active={(f.focus_area || null) as 'core' | 'legs' | 'arms' | 'overall' | null}>
                   <div className="absolute inset-x-0 bottom-0 h-[42%] pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(255,255,255,0.98) 30%, rgba(255,255,255,0) 100%)' }} />
                   <div className="absolute inset-x-2.5 bottom-2.5 grid grid-cols-2 gap-2">
@@ -357,6 +354,13 @@ function ConversationalIntakeInner() {
                   </div>
                 </FocusAreaPhoto>
               </div>
+              {/* Plain spacer in normal flow, NOT padding on the photo box above
+                  — padding-bottom on an aspect-ratio'd container shrinks its own
+                  content area (the bottom-anchored pills got measured against
+                  the padding edge instead of the real bottom, clipping their
+                  text). This just reserves scroll clearance so the fixed bar
+                  below never covers the photo. */}
+              <div className="h-28" aria-hidden="true" />
               {/* Fixed to the real viewport bottom, not normal document flow —
                   keeping the photo this large means the page can genuinely
                   run taller than one screen on shorter phones, and Asa
