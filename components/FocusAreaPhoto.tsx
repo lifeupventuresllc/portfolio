@@ -47,11 +47,12 @@ function Glow({ pos, active }: { pos: Dot; active: boolean }) {
         top: pos.top, left: pos.left, width: pos.width, height: pos.height,
         transform: 'translate(-50%, -50%)',
         // No blend mode — screen was washing this out to near-white over the
-        // white leggings (the glute zone), since 'screen' can't darken a
-        // pixel that's already near-white no matter how saturated the
-        // overlay color is. A plain opaque-core gradient reads as true red
-        // on every part of the photo, dark or light.
-        background: 'radial-gradient(circle, rgba(230,20,20,1) 0%, rgba(230,20,20,0.85) 45%, rgba(230,20,20,0) 74%)',
+        // white leggings (the glute zone). But a fully opaque core (the first
+        // fix) went too far the other way — read as a solid, blotchy red
+        // circle instead of a glow. Softer opacity + a slight blur so it
+        // actually looks illuminated, not painted on.
+        background: 'radial-gradient(circle, rgba(230,30,30,0.85) 0%, rgba(230,30,30,0.5) 45%, rgba(230,30,30,0) 75%)',
+        filter: 'blur(2px)',
         opacity: active ? 1 : 0,
       }}
     />
