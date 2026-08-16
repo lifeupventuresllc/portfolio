@@ -209,6 +209,23 @@ function pickGym(movement: Movement, muscles: string[], level: Level, weekOffset
   return exact.concat(fallback).slice(0, count)
 }
 
+// Real focus-area emphasis for arms/legs. The target-muscle sort inside
+// pickGym above only matters when a slot allows MORE THAN ONE candidate
+// muscle — but every slot in every DaySpec above already locks to exactly
+// one muscle (e.g. `push: ['chest']`), so there's no ambiguity left for that
+// sort to ever resolve differently. Caught this by actually testing a real
+// "arms focus" program against baseline and finding zero difference in any
+// exercise slot. Real fix: an extra accessory exercise from her focus
+// muscles, appended to the day's existing accessory work (same place the
+// calf-raise/tibialis pair already lives) — same shape as the 'core' bonus
+// ab exercise below, so all three focus areas behave consistently.
+function pickFocusAccessory(muscles: Muscle[], level: Level, offset: number, injuries: Injury[], usedNames: Set<string>): { name: string; reps: string; cue: string } | null {
+  const ok = (e: GymExercise) => muscles.includes(e.muscle) && e.minLevel <= level && !isContraindicated(e.name, injuries) && !usedNames.has(e.name)
+  const pick = rotate(GYM_POOL.filter(ok), offset)[0]
+  if (!pick) return null
+  return { name: pick.name, reps: REP_SCHEME[level], cue: `${pick.cue} (bonus set — from your chosen focus area)` }
+}
+
 // Priority pool (Asa's curated screenshot batch) is the PRIMARY source now — the
 // original generic pool is only a fallback for zone/level combos priority doesn't
 // cover. Postpartum-flagged entries take priority over priority over generic when
@@ -269,6 +286,8 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
       usedPush.add(push.name); usedPull.add(pull.name)
       return { title: `${push.name} + ${pull.name}`, push, pull, reps: REP_SCHEME[level] }
     })
+    const usedNames = new Set<string>(Array.from(usedPush).concat(Array.from(usedPull)))
+    const focusBonus = targets.length ? pickFocusAccessory(targets, level, off + 7, injuries, usedNames) : null
     return {
       dayNum,
       title: spec.title,
@@ -278,6 +297,7 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
       accessory: [
         { name: 'Standing Calf Raise', reps: level === 1 ? '2 × 15–20' : '3 × 15–20', cue: 'Rise onto toes, squeeze at the top, lower slow for a full stretch.' },
         { name: 'Single-Arm Tibialis Raise (wall)', reps: '2 × 15 each', cue: 'Back to wall, lift toes toward shins, squeeze the shin, lower slow.' },
+        ...(focusBonus ? [focusBonus] : []),
       ],
       ab: {
         upper: pickAb('upper', level, off, inp.postpartum, injuries),
@@ -313,6 +333,15 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
   const level = inp.level
   const week = inp.weekNumber || 1
   const coreFocus = inp.focusArea === 'core'
+  // Home exercises only carry a broad 'leg'/'upper'/'core'/'cardio' type, not
+  // per-muscle data like GYM_POOL — 'upper' is the closest available proxy
+  // for "arms & back". On a split that's already Leg-day/Upper-day
+  // alternating, every non-core pick on the matching day is already 100% the
+  // focus type (nothing to reorder) — the partition below mainly matters on
+  // Full Body days (level 1 or a 1-day/week split), where leg/upper/core mix
+  // together. The count bump below is what actually adds real extra volume
+  // on every split, tested against a real generated program before shipping.
+  const focusType: 'leg' | 'upper' | null = coreFocus ? null : inp.focusArea === 'legs' ? 'leg' : inp.focusArea === 'arms' ? 'upper' : null
   const split = homeSplit(inp.daysPerWeek || 3, level)
 
   const injuries = inp.injuries || []
@@ -332,9 +361,16 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
     }
     // prefer moves at the client's exact level (progression), fall back to lower levels only if needed
     const remaining = count - picked.length
-    const atLevel = avail.filter(e => types.includes(e.type) && e.type !== 'cardio' && e.level === level)
-    const lower = avail.filter(e => types.includes(e.type) && e.type !== 'cardio' && e.level < level)
-    const ordered = rotate(atLevel, off).concat(rotate(lower, off))
+    // Focus-type moves partitioned to the FRONT before rotating, not sorted-then-rotated —
+    // rotating a sorted array can shove the very items we just prioritized to the back,
+    // silently undoing the prioritization. Each partition still rotates independently so
+    // week-to-week variety is preserved within it.
+    const split2 = (arr: typeof avail) => focusType
+      ? { hi: arr.filter(e => e.type === focusType), lo: arr.filter(e => e.type !== focusType) }
+      : { hi: [] as typeof avail, lo: arr }
+    const atLevelSplit = split2(avail.filter(e => types.includes(e.type) && e.type !== 'cardio' && e.level === level))
+    const lowerSplit = split2(avail.filter(e => types.includes(e.type) && e.type !== 'cardio' && e.level < level))
+    const ordered = rotate(atLevelSplit.hi, off).concat(rotate(atLevelSplit.lo, off), rotate(lowerSplit.hi, off), rotate(lowerSplit.lo, off))
     return picked.concat(ordered.slice(0, remaining).map(e => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl })))
   }
   const finisher = (off: number) => {
@@ -353,7 +389,12 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
     if (focus.startsWith('Leg')) types = ['leg', 'core']
     else if (focus.startsWith('Upper')) types = ['upper', 'core']
     else types = ['leg', 'upper', 'core']
-    const exercises = [...byType(types, off, 4), finisher(off + 3)]
+    // Real extra volume on a matching day, not just reordering — an alternating
+    // Leg/Upper split has nothing left to reorder on its own matching day (every
+    // non-core pick there is already the focus type), so without this bump
+    // 'legs'/'arms' focus would do literally nothing on the most common split.
+    const bump = focusType && types.includes(focusType) ? 1 : 0
+    const exercises = [...byType(types, off, 4 + bump), finisher(off + 3)]
     return { dayNum: i + 1, title: `Day ${i + 1}: ${focus}`, exercises, estCalories }
   })
 
