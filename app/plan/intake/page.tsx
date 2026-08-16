@@ -341,7 +341,10 @@ function ConversationalIntakeInner() {
                   real constraint at phone widths. */}
               <h2 className="text-xl font-bold text-ink leading-snug mb-0.5 text-balance">What do you want to feel proudest of?</h2>
               <p className="text-ink/50 text-xs mb-2">Tap one — watch it light up.</p>
-              <div className="relative w-full max-h-[640px] aspect-[9/16] mb-3">
+              {/* pb-28 so the fixed button bar below never covers the bottom
+                  of the photo/pills when the page scrolls (a full-width true
+                  9:16 photo runs taller than one screen on shorter phones). */}
+              <div className="relative w-full max-h-[640px] aspect-[9/16] mb-3 pb-28">
                 <FocusAreaPhoto active={(f.focus_area || null) as 'core' | 'legs' | 'arms' | 'overall' | null}>
                   <div className="absolute inset-x-0 bottom-0 h-[42%] pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(255,255,255,0.98) 30%, rgba(255,255,255,0) 100%)' }} />
                   <div className="absolute inset-x-2.5 bottom-2.5 grid grid-cols-2 gap-2">
@@ -354,7 +357,17 @@ function ConversationalIntakeInner() {
                   </div>
                 </FocusAreaPhoto>
               </div>
-              <button onClick={next} disabled={!f.focus_area} className={lPrimaryBtn}>Continue →</button>
+              {/* Fixed to the real viewport bottom, not normal document flow —
+                  keeping the photo this large means the page can genuinely
+                  run taller than one screen on shorter phones, and Asa
+                  explicitly wants the photo size kept, not shrunk again. A
+                  fixed bar guarantees Continue is always visible/pressable
+                  regardless of how tall the photo renders on her device. */}
+              <div className="fixed inset-x-0 bottom-0 z-20 bg-paper/95 backdrop-blur-sm border-t border-ink/10 px-4 pt-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
+                <div className="max-w-md mx-auto">
+                  <button onClick={next} disabled={!f.focus_area} className={lPrimaryBtn}>Continue →</button>
+                </div>
+              </div>
             </>)}
 
             {s === 'body' && (<>
