@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import type { ReactNode } from 'react'
 
 // The real photo + dynamic zone-highlight version of the focus-area picker,
 // replacing the old hand-drawn BodyFocusIcon — matches the competitor pattern
@@ -8,15 +9,16 @@ import Image from 'next/image'
 // glows on the photo itself). The source photo (public/images/onboarding/
 // focus-area.jpg) is pre-cropped to a true 9:16 — cropping the FILE itself
 // (not just the CSS box) keeps these percentages simple: no separate math for
-// how much of the original frame is showing. The display box is HEIGHT-capped
-// (not full-width) so the photo + the option grid below it both fit one
-// screen without scrolling — width is derived from the aspect ratio, not set
-// directly, so the true frame (and these percentages) stay intact, just
-// smaller. Zone positions are pixel-measured against a percentage grid
-// overlaid on the actual source file, tightened to small precise dots (not
-// broad zones) per Asa's "right on the specific area, not just close"
-// feedback — they'll need re-tuning if this photo is ever swapped for a
-// differently-framed one.
+// how much of the original frame is showing. Sizing (how big the box is) is
+// now the CALLER's job — this component just fills w-full h-full of whatever
+// box it's given, so the true 9:16 frame (and these percentages) never gets
+// crop-shifted by a differently-proportioned container. Zone positions are
+// pixel-measured against a percentage grid overlaid on the actual source
+// file, tightened to small precise dots (not broad zones) per Asa's "right
+// on the specific area, not just close" feedback — they'll need re-tuning if
+// this photo is ever swapped for a differently-framed one. `children` renders
+// on top of the photo (after the glows) — used to float the option pills
+// directly over the image instead of in a separate section below it.
 type Zone = 'core' | 'legs' | 'arms' | 'overall'
 type Dot = { top: string; left: string; width: string; height: string }
 
@@ -59,14 +61,15 @@ function Glow({ pos, active }: { pos: Dot; active: boolean }) {
   )
 }
 
-export default function FocusAreaPhoto({ active }: { active: Zone | null }) {
+export default function FocusAreaPhoto({ active, children }: { active: Zone | null; children?: ReactNode }) {
   const zones: Exclude<Zone, 'overall'>[] = ['arms', 'core', 'legs']
   return (
-    <div className="relative mx-auto h-[36dvh] max-h-[340px] min-h-[220px] aspect-[9/16] rounded-2xl overflow-hidden bg-ink/5">
-      <Image src="/images/onboarding/focus-area.jpg" alt="" fill sizes="230px" className="object-cover" priority />
+    <div className="relative w-full h-full rounded-2xl overflow-hidden bg-ink/5">
+      <Image src="/images/onboarding/focus-area.jpg" alt="" fill sizes="(max-width: 640px) 90vw, 420px" className="object-cover" priority />
       {zones.map((z) => ZONE_GLOW[z].map((dot, i) => (
         <Glow key={`${z}-${i}`} pos={dot} active={active === z || active === 'overall'} />
       )))}
+      {children}
     </div>
   )
 }

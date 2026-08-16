@@ -326,21 +326,25 @@ function ConversationalIntakeInner() {
             </>)}
 
             {s === 'focus' && (<>
-              {/* Smaller local heading/hint (not the shared LQ/LHint, which
-                  run mb-2/mb-10) — this step needs the vertical room back for
-                  the photo, which is the whole point of the screen. */}
+              {/* Heading stays off the photo (plain text block, not overlaid)
+                  — Asa's call after the mockup: text sitting on top of her
+                  face read wrong. Photo below is sized to dominate the
+                  screen; the option pills float over its bottom third on a
+                  scrim instead of living in a separate section below it. */}
               <h2 className="text-2xl font-bold text-ink leading-snug mb-1 text-balance">What do you want to feel proudest of?</h2>
               <p className="text-ink/50 text-sm mb-3">Tap one — watch it light up.</p>
-              <div className="mb-3">
-                <FocusAreaPhoto active={(f.focus_area || null) as 'core' | 'legs' | 'arms' | 'overall' | null} />
-              </div>
-              <div className="grid grid-cols-2 gap-2.5 mb-5">
-                {FOCUS_AREAS.map((o) => (
-                  <button key={o.v} onClick={() => { hapticTap(); set('focus_area', o.v) }} className={`${lopt(f.focus_area === o.v)} !px-3.5 !py-3 !text-center`}>
-                    <span className="block text-sm font-semibold">{o.l}</span>
-                    <span className="block text-[11px] font-normal mt-0.5 text-ink/40">{o.d}</span>
-                  </button>
-                ))}
+              <div className="relative mx-auto h-[54dvh] max-h-[480px] min-h-[320px] aspect-[9/16] mb-4">
+                <FocusAreaPhoto active={(f.focus_area || null) as 'core' | 'legs' | 'arms' | 'overall' | null}>
+                  <div className="absolute inset-x-0 bottom-0 h-[42%] pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(255,255,255,0.98) 30%, rgba(255,255,255,0) 100%)' }} />
+                  <div className="absolute inset-x-2.5 bottom-2.5 grid grid-cols-2 gap-2">
+                    {FOCUS_AREAS.map((o) => (
+                      <button key={o.v} onClick={() => { hapticTap(); set('focus_area', o.v) }} className={`text-center rounded-2xl px-3 py-2.5 border-2 transition-all duration-200 ${f.focus_area === o.v ? 'bg-gold/5 border-gold ring-2 ring-gold/40 shadow-[0_8px_24px_rgba(201,168,76,0.4)]' : 'bg-white/95 border-ink/10'}`}>
+                        <span className="block text-xs font-semibold text-ink">{o.l}</span>
+                        <span className="block text-[10px] font-normal mt-0.5 text-ink/40">{o.d}</span>
+                      </button>
+                    ))}
+                  </div>
+                </FocusAreaPhoto>
               </div>
               <button onClick={next} disabled={!f.focus_area} className={lPrimaryBtn}>Continue →</button>
             </>)}
