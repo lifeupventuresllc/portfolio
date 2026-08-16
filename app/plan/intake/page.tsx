@@ -330,10 +330,18 @@ function ConversationalIntakeInner() {
                   — Asa's call after the mockup: text sitting on top of her
                   face read wrong. Photo below is sized to dominate the
                   screen; the option pills float over its bottom third on a
-                  scrim instead of living in a separate section below it. */}
+                  scrim instead of living in a separate section below it.
+                  WIDTH-driven now (was height-driven, capped, centered) —
+                  three rounds of "still not big enough" were because a
+                  height cap on a 9:16 box means the WIDTH shrinks to match,
+                  leaving empty space on both sides even as the box got
+                  taller. Full width + true aspect ratio (not cropped) fills
+                  the same width as every other element on the page, no gaps.
+                  max-h is just a safety ceiling for tablet/desktop, not a
+                  real constraint at phone widths. */}
               <h2 className="text-xl font-bold text-ink leading-snug mb-0.5 text-balance">What do you want to feel proudest of?</h2>
               <p className="text-ink/50 text-xs mb-2">Tap one — watch it light up.</p>
-              <div className="relative mx-auto h-[66dvh] max-h-[600px] min-h-[320px] aspect-[9/16] mb-3">
+              <div className="relative w-full max-h-[640px] aspect-[9/16] mb-3">
                 <FocusAreaPhoto active={(f.focus_area || null) as 'core' | 'legs' | 'arms' | 'overall' | null}>
                   <div className="absolute inset-x-0 bottom-0 h-[42%] pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(255,255,255,0.98) 30%, rgba(255,255,255,0) 100%)' }} />
                   <div className="absolute inset-x-2.5 bottom-2.5 grid grid-cols-2 gap-2">
