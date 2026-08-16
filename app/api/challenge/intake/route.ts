@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { calcNutritionTargets } from '@/lib/nutrition'
-import { generateWorkout, type TrainingStyle } from '@/lib/workout'
+import { generateWorkout, type TrainingStyle, type FocusArea } from '@/lib/workout'
 import type { Level, Injury } from '@/lib/workout-exercises'
 
 export async function POST(request: NextRequest) {
@@ -157,6 +157,7 @@ export async function POST(request: NextRequest) {
       injuries: (Array.isArray(body.injuries) ? body.injuries : []) as Injury[],
       postpartum: !!body.postpartum,
       trainingStyle: (body.training_style || 'none') as TrainingStyle,
+      focusArea: (body.focus_area || 'overall') as FocusArea,
     })
 
     const workoutPayload = {

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import WorkoutPlayer from '@/components/WorkoutPlayer'
-import { generateWorkout, type WorkoutProgram, type TrainingStyle } from '@/lib/workout'
+import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
 import { generateCardioSession } from '@/lib/cardio-session'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
@@ -71,9 +71,10 @@ export default async function WorkoutSession() {
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
     const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle
+    const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
     program = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex, track: trackOverride || program.track, level, goal,
-      daysPerWeek: Number(intake.days_per_week) || 3, weekNumber: 1, injuries, postpartum, trainingStyle,
+      daysPerWeek: Number(intake.days_per_week) || 3, weekNumber: 1, injuries, postpartum, trainingStyle, focusArea,
     })
   }
 

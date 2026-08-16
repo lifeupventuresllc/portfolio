@@ -19,6 +19,23 @@ import { compoundExercisesForLevel } from './compound-exercises'
 // regardless of this flag — this only changes what's built-in automatically.
 export type TrainingStyle = 'compound' | 'split' | 'cardio' | 'none'
 
+// Her intake "what do you want to feel proudest of" answer. Maps onto the
+// pre-existing target-muscle weighting in pickGym (it already sorted target
+// muscles first — this was fully built, just never fed by anything real).
+// 'core' has no entry in the Muscle union (abs run through the separate
+// pickAb system, not GYM_POOL), so it's handled as a bonus ab set instead —
+// see the coreFocus checks in generateGym/generateHome.
+export type FocusArea = 'core' | 'legs' | 'arms' | 'overall'
+const FOCUS_TARGETS: Record<FocusArea, Muscle[]> = {
+  legs: ['glutes', 'hamstrings', 'quads'],
+  arms: ['biceps', 'triceps', 'back'],
+  core: [],
+  overall: [],
+}
+const FOCUS_LABEL: Record<FocusArea, string> = {
+  core: 'Core & waistline', legs: 'Legs & glutes', arms: 'Arms & back', overall: 'All-over',
+}
+
 export interface WorkoutInputs {
   name?: string
   sex?: 'male' | 'female' | 'other'
@@ -29,6 +46,7 @@ export interface WorkoutInputs {
   weekNumber?: number
   injuries?: Injury[]
   targets?: Muscle[]
+  focusArea?: FocusArea
   postpartum?: boolean // surfaces postpartum-labeled ab work first, see pickAb
   trainingStyle?: TrainingStyle
   // Optional — only needed to surface a personalized calorie-burn estimate on the
@@ -56,7 +74,10 @@ export interface GymDay {
   dayNum: number; title: string; muscles: string[]; warmup: string[]
   supersets: Superset[]
   accessory: { name: string; reps: string; cue: string }[]
-  ab: { upper: AbExercise; lower: AbExercise; scheme: string }
+  // bonus: only set when she's chosen 'core' as her focus area — an extra ab
+  // set on top of the standard upper+lower, since core has no Muscle-union
+  // entry to weight through the normal target system.
+  ab: { upper: AbExercise; lower: AbExercise; scheme: string; bonus?: AbExercise }
   cardio: CardioFinisher
 }
 export interface HomeDay { dayNum: number; title: string; exercises: { name: string; duration: string; imageUrl?: string }[]; estCalories?: number }
@@ -230,7 +251,8 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
   const level = inp.level
   const week = inp.weekNumber || 1
   const injuries = inp.injuries || []
-  const targets = inp.targets || []
+  const targets = (inp.targets && inp.targets.length) ? inp.targets : FOCUS_TARGETS[inp.focusArea || 'overall']
+  const coreFocus = inp.focusArea === 'core'
   const split = splitFor(inp.sex, inp.daysPerWeek || 3)
 
   return split.map((spec, i) => {
@@ -257,7 +279,12 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
         { name: 'Standing Calf Raise', reps: level === 1 ? '2 × 15–20' : '3 × 15–20', cue: 'Rise onto toes, squeeze at the top, lower slow for a full stretch.' },
         { name: 'Single-Arm Tibialis Raise (wall)', reps: '2 × 15 each', cue: 'Back to wall, lift toes toward shins, squeeze the shin, lower slow.' },
       ],
-      ab: { upper: pickAb('upper', level, off, inp.postpartum, injuries), lower: pickAb('lower', level, off + 2, inp.postpartum, injuries), scheme: AB_SCHEME[level] },
+      ab: {
+        upper: pickAb('upper', level, off, inp.postpartum, injuries),
+        lower: pickAb('lower', level, off + 2, inp.postpartum, injuries),
+        scheme: AB_SCHEME[level],
+        ...(coreFocus ? { bonus: pickAb('upper', level, off + 5, inp.postpartum, injuries) } : {}),
+      },
       cardio: buildCardioFinisher(level, inp.goal, inp.trainingStyle, injuries, off),
     } as GymDay
   })
@@ -285,6 +312,7 @@ const HOME_AB_PRIORITY = AB_POOL.filter(a => a.priority && !a.weighted && !a.nam
 function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
   const level = inp.level
   const week = inp.weekNumber || 1
+  const coreFocus = inp.focusArea === 'core'
   const split = homeSplit(inp.daysPerWeek || 3, level)
 
   const injuries = inp.injuries || []
@@ -300,7 +328,7 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
       const corePool = inp.postpartum
         ? homeAbSafe.filter(a => a.postpartum).concat(homeAbSafe.filter(a => !a.postpartum))
         : homeAbSafe.filter(a => !a.postpartum)
-      picked = rotate(corePool, off).slice(0, Math.min(2, count)).map(a => ({ name: a.name, duration: '30 sec', imageUrl: a.imageUrl }))
+      picked = rotate(corePool, off).slice(0, Math.min(coreFocus ? 3 : 2, count)).map(a => ({ name: a.name, duration: '30 sec', imageUrl: a.imageUrl }))
     }
     // prefer moves at the client's exact level (progression), fall back to lower levels only if needed
     const remaining = count - picked.length
@@ -350,7 +378,11 @@ export function generateWorkout(inp: WorkoutInputs): WorkoutProgram {
     daysPerWeek: inp.daysPerWeek || 3,
   }
   base.injuryNotes = injuryNotes(inp.injuries || [])
-  if (inp.targets && inp.targets.length) base.targetNote = inp.targets.map(m => m[0].toUpperCase() + m.slice(1)).join(' · ')
+  if (inp.targets && inp.targets.length) {
+    base.targetNote = inp.targets.map(m => m[0].toUpperCase() + m.slice(1)).join(' · ')
+  } else if (inp.focusArea && inp.focusArea !== 'overall') {
+    base.targetNote = FOCUS_LABEL[inp.focusArea]
+  }
   if (inp.track === 'home') base.home = generateHome(inp)
   else base.gymDays = generateGym(inp)
   return base

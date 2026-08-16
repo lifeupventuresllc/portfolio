@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { byCategory, type Recipe, type MealCategory } from '@/lib/recipes'
 import { buildWeekFromSelections, PICK_GUIDE, type WeekPlan, type DayType } from '@/lib/meal-plan'
 import { costTier } from '@/lib/ingredients'
+import { excludeDisliked, rankByPreference } from '@/lib/food-match'
 import BudgetBar from '@/components/BudgetBar'
 import WeekPlanView from '@/components/WeekPlanView'
 import QuickFeedback from '@/components/QuickFeedback'
@@ -25,7 +26,7 @@ const PICK_COUNTS: Record<1 | 2 | 3, { mains: number; snacks: number; desserts: 
 }
 
 export default function MealBuilder({ initial }: {
-  initial: { name: string; workoutCal: number; restCal: number; protein: number; cookDays: 1 | 2 | 3; budget?: number; weightLbs?: number }
+  initial: { name: string; workoutCal: number; restCal: number; protein: number; cookDays: 1 | 2 | 3; budget?: number; weightLbs?: number; foodPreferences?: string; dislikesAllergies?: string }
 }) {
   const [cookDays, setCookDays] = useState<1 | 2 | 3>(initial.cookDays)
   const [dayTypes, setDayTypes] = useState<DayType[]>(['workout', 'workout', 'workout', 'rest', 'workout', 'rest'])
@@ -72,9 +73,12 @@ export default function MealBuilder({ initial }: {
     setError(''); setSaved(false)
     const c = PICK_COUNTS[cookDays]
     const pick = (cat: MealCategory, count: number, skip = 0) => {
-      let pool = byCategory(cat)
+      let pool = excludeDisliked(byCategory(cat), initial.dislikesAllergies)
       if (fitBudget) { const cheap = pool.filter((r) => costTier(r.name, r.budget) !== '$$$'); if (cheap.length >= count) pool = cheap }
-      const sorted = [...pool].sort((a, b) => b.protein - a.protein)
+      // Protein-sorted first (existing behavior), then her stated preferences
+      // pull their matches to the front — a stable sort keeps the protein
+      // order intact within both the "matches" and "doesn't match" tiers.
+      const sorted = rankByPreference([...pool].sort((a, b) => b.protein - a.protein), initial.foodPreferences)
       const out: Recipe[] = []
       for (let k = 0; out.length < count && k < sorted.length; k++) out.push(sorted[(skip + k) % sorted.length])
       return out
@@ -193,6 +197,13 @@ export default function MealBuilder({ initial }: {
       {/* Meal picker */}
       <div>
         <p className="text-white text-sm font-bold mb-2"><span className="text-gold">3.</span> Pick your meals <span className="text-ivory/45 font-normal text-xs">— breakfasts, lunches, dinners, snacks &amp; desserts</span></p>
+        {(initial.dislikesAllergies || initial.foodPreferences) && (
+          <p className="text-emerald-400/80 text-xs mb-3">
+            🎉 Filtered to what you told us at intake
+            {initial.dislikesAllergies && <> — nothing with {initial.dislikesAllergies}</>}
+            {initial.foodPreferences && <>, your picks ({initial.foodPreferences}) sorted first</>}.
+          </p>
+        )}
         <div className="flex gap-2 mb-3 flex-wrap">
           {SLOTS.map((s) => (
             <button key={s.key} onClick={() => setTab(s.key)} className={chip(tab === s.key)}>
@@ -208,7 +219,7 @@ export default function MealBuilder({ initial }: {
           <span className="text-ivory/50 text-xs whitespace-nowrap">{sel[tab].length} added</span>
         </div>
         <div className="grid sm:grid-cols-2 gap-3">
-          {byCategory(activeSlot.cat).map((r) => {
+          {rankByPreference(excludeDisliked(byCategory(activeSlot.cat), initial.dislikesAllergies), initial.foodPreferences).map((r) => {
             const on = has(tab, r)
             const tier = costTier(r.name, r.budget)
             if (fitBudget && tier === '$$$' && !on) return null  // seamless: hide pricey unless already picked

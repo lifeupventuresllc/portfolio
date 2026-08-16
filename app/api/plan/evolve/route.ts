@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { localDateISO } from '@/lib/localdate'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
-import { generateWorkout, type TrainingStyle, type WorkoutProgram } from '@/lib/workout'
+import { generateWorkout, type TrainingStyle, type WorkoutProgram, type FocusArea } from '@/lib/workout'
 import type { Level, Injury } from '@/lib/workout-exercises'
 
 async function resolve() {
@@ -75,9 +75,10 @@ export async function POST(request: NextRequest) {
     const injuries = (Array.isArray((intake.form_data as { injuries?: Injury[] } | null)?.injuries) ? (intake.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
     const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle
+    const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
     const newProgram = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex, track, level, goal,
-      daysPerWeek, weekNumber: 1, injuries, postpartum, trainingStyle,
+      daysPerWeek, weekNumber: 1, injuries, postpartum, trainingStyle, focusArea,
     })
     await svc.from('challenge_workout_plans').update({ plan: newProgram }).eq('enrollment_id', eid).eq('week_number', 1)
     await svc.from('challenge_intake').update({ days_per_week: daysPerWeek }).eq('enrollment_id', eid)

@@ -65,6 +65,8 @@ export default async function MealsPage() {
           cookDays,
           budget: Number(intake.weekly_food_budget) || undefined,
           weightLbs: Number(intake.weight_lbs) || undefined,
+          foodPreferences: intake.food_preferences || undefined,
+          dislikesAllergies: intake.dislikes_allergies || undefined,
         }} />
 
         <div className="mt-8">
