@@ -65,7 +65,14 @@ export default function FocusAreaPhoto({ active, children }: { active: Zone | nu
   const zones: Exclude<Zone, 'overall'>[] = ['arms', 'core', 'legs']
   return (
     <div className="relative w-full h-full rounded-2xl overflow-hidden bg-ink/5">
-      <Image src="/images/onboarding/focus-area.jpg" alt="" fill sizes="(max-width: 640px) 90vw, 420px" className="object-cover" priority />
+      {/* object-top, not the object-cover default (center) — when the parent's
+          max-h caps below the true 9:16 height on a shorter phone, a center
+          crop would trim equally off top AND bottom, shifting every
+          pixel-measured glow position. Every zone (deepest is the glute at
+          ~76% down) sits well above the crop line at realistic cap ratios,
+          so cropping ONLY from the bottom (unused lower-leg area) keeps all
+          of them accurate regardless of how much the cap actually trims. */}
+      <Image src="/images/onboarding/focus-area.jpg" alt="" fill sizes="(max-width: 640px) 90vw, 420px" className="object-cover object-top" priority />
       {zones.map((z) => ZONE_GLOW[z].map((dot, i) => (
         <Glow key={`${z}-${i}`} pos={dot} active={active === z || active === 'overall'} />
       )))}
