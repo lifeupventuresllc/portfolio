@@ -17,6 +17,16 @@ export default function VoiceButton({ onResult, onInterim, idleLabel = 'Speak wh
   const [listening, setListening] = useState(false)
   const recRef = useRef<any>(null)
   const accumRef = useRef('')
+  // Quick mode (continuous=false) should end right after she stops talking,
+  // but some browsers' own silence detection is unreliable (notably iOS
+  // Safari's webkitSpeechRecognition) and leave the mic visibly "on" well
+  // after she's actually done — a real reported bug, not expected behavior.
+  // This timer forces a stop after a short real pause with no new speech,
+  // instead of trusting the browser's own end-of-speech detection alone.
+  // Never applied in continuous mode — that one is SUPPOSED to keep
+  // listening across pauses until she taps stop.
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const clearSilenceTimer = () => { if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null } }
 
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -39,22 +49,25 @@ export default function VoiceButton({ onResult, onInterim, idleLabel = 'Speak wh
       } else {
         if (interim && onInterim) onInterim(interim)
         if (finalText) onResult(finalText.trim())
+        clearSilenceTimer()
+        silenceTimerRef.current = setTimeout(() => { try { rec.stop() } catch { /* noop */ } }, 1500)
       }
     }
     rec.onend = () => {
+      clearSilenceTimer()
       setListening(false)
       if (continuous && accumRef.current) { onResult(accumRef.current); accumRef.current = '' }
     }
-    rec.onerror = () => setListening(false)
+    rec.onerror = () => { clearSilenceTimer(); setListening(false) }
     recRef.current = rec
-    return () => { try { rec.abort() } catch { /* noop */ } }
+    return () => { clearSilenceTimer(); try { rec.abort() } catch { /* noop */ } }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [continuous])
 
   function toggle() {
     const rec = recRef.current
     if (!rec) return
-    if (listening) { try { rec.stop() } catch { /* noop */ } setListening(false); return }
+    if (listening) { clearSilenceTimer(); try { rec.stop() } catch { /* noop */ } setListening(false); return }
     accumRef.current = ''
     try { rec.start(); setListening(true) } catch { /* noop */ }
   }

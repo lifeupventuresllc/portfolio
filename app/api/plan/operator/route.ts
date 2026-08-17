@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { localDateISO, localHourNumber, localDayNumber, addDaysISO } from '@/lib/localdate'
+import { localDateISO, localHourNumber, localDayNumber, localMondayIndex, addDaysISO } from '@/lib/localdate'
+import type { WeekPlan } from '@/lib/meal-plan'
 import { recover, type LifeSignal, type RecoveryPlan } from '@/lib/fos/recovery'
 import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
@@ -156,6 +157,47 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // eat_out was replying with a platitude ("balance the rest of the day") and
+  // never actually looked at her real numbers or logged anything, even when
+  // she named a specific order — "I was eating out at Chipotle" got a generic
+  // reply instead of a real logged estimate + her actual remaining calories.
+  // Runs detectEatenFood() here too (not just the bare-food-mention path
+  // above, which only fires when signal is null and eat_out isn't) so a named
+  // order gets logged for real, then always states her real remaining
+  // calories either way — never a made-up "you're fine" without the number.
+  let eatOutContext = ''
+  if (signal?.kind === 'eat_out') {
+    const foods = await detectEatenFood(message)
+    let loggedSummary = ''
+    if (foods.length > 0) {
+      const hour = localHourNumber()
+      const meal = hour < 11 ? 'breakfast' : hour < 15 ? 'lunch' : hour < 21 ? 'dinner' : 'snack'
+      for (const f of foods) {
+        await svc.from('challenge_food_log').insert({
+          enrollment_id: eid, user_id: user.id, logged_on: today, meal, name: f.name,
+          brand: f.brand, servings: f.servings, serving_label: f.serving_label,
+          calories: f.calories, protein_g: f.protein_g, carbs_g: f.carbs_g, fats_g: f.fats_g,
+          source: 'estimated',
+        })
+      }
+      loggedSummary = foods.map((f) => `${f.name} (~${f.calories} cal)`).join(', ')
+    }
+    const [{ data: nutritionPlan }, { data: foodRows }] = await Promise.all([
+      svc.from('challenge_nutrition_plans').select('calories, meals').eq('enrollment_id', eid).eq('week_number', 1).maybeSingle(),
+      svc.from('challenge_food_log').select('calories').eq('enrollment_id', eid).eq('logged_on', today),
+    ])
+    const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals) ? (nutritionPlan.meals as WeekPlan) : null
+    const mealIdx = localMondayIndex()
+    const todayTarget = (weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx]?.target : null) || Number(nutritionPlan?.calories) || 0
+    const loggedToday = (foodRows || []).reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
+    const remainingCal = Math.max(0, todayTarget - loggedToday)
+    eatOutContext = loggedSummary
+      ? ` She just logged ${loggedSummary} from eating out. Real number: she has ${remainingCal} calories left for the rest of today — state this exact number.`
+      : todayTarget
+        ? ` She hasn't said exactly what she ordered yet. Real number: she has ${remainingCal} calories left for the rest of today — state this exact number, and ask what she's getting or point her to logging it.`
+        : ''
+  }
+
   let reply = plan ? plan.message
     : "I hear you. Tell me what today looks like — how much time you've got, your energy, or what changed — and I'll adjust your plan around it while protecting your goal."
 
@@ -170,10 +212,15 @@ export async function POST(request: NextRequest) {
       assessGoalDrift(eid, today),
     ])
     const [generated, extracted] = await Promise.all([
-      generateReply({ herMessage: message, decision: describeDecision(signal, plan), profile, events, goalContext: goalDrift?.note ?? null, name: (enrollment.name as string) || null }),
+      generateReply({ herMessage: message, decision: describeDecision(signal, plan) + eatOutContext, profile, events, goalContext: goalDrift?.note ?? null, name: (enrollment.name as string) || null }),
       extractProfileFacts(message, profile),
     ])
     if (generated) reply = generated
+    // Claude unavailable/failed — reply falls back to recovery.ts's fixed
+    // sentence, which never includes her name at all. She should still be
+    // addressed by name every reply, so prefix it here rather than send a
+    // name-less fallback.
+    else if (enrollment.name) reply = `${enrollment.name}, ${reply.charAt(0).toLowerCase()}${reply.slice(1)}`
     if (extracted) {
       const patch = mergeProfilePatch(profile, extracted)
       if (Object.keys(patch).length > 0) await upsertProfile(eid, user.id, patch)
