@@ -119,7 +119,7 @@ export default function CoachHero({ firstName }: { firstName: string }) {
   // instantly, no API round-trip needed since there's nothing to accept/reject.
   function stickWithPlan() {
     setPending(null)
-    setMessages((m) => [...m, { role: 'user', content: "I'll stick with my current plan." }, { role: 'operator', content: `Sounds good, ${firstName} — sticking with what's already working. No changes. 💪` }])
+    setMessages((m) => [...m, { role: 'user', content: "I'll stick with my current plan." }, { role: 'operator', content: `${firstName}, sounds good — sticking with what's already working. No changes. 💪` }])
   }
 
   async function decide(status: 'approved' | 'modified' | 'rejected') {
@@ -159,7 +159,7 @@ export default function CoachHero({ firstName }: { firstName: string }) {
           she's never forced to answer the check-in just to keep her existing plan. */}
       {!ctxDone && messages.length === 0 ? (
         <div className="mb-5 space-y-3">
-          <p className="text-ink text-lg leading-snug font-medium text-balance">How&apos;s today looking, {firstName}?</p>
+          <p className="text-ink text-lg leading-snug font-medium text-balance">{firstName}, how&apos;s today looking?</p>
 
           {!showCheckin ? (
             <>

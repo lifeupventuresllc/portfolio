@@ -79,10 +79,11 @@ export async function POST(request: NextRequest) {
       }
     }
     await svc.from('fos_events').insert({ enrollment_id: eid, user_id: user.id, occurred_on: today, kind: 'adjustment', summary: `Adjustment ${status}`, payload: { adjustmentId: body.adjustmentId, status } })
+    const withName = (lower: string) => enrollment.name ? `${enrollment.name}, ${lower}` : `${lower.charAt(0).toUpperCase()}${lower.slice(1)}`
     const reply = status === 'approved'
-      ? (injuryPersisted ? "Locked in — and I've noted it so every future workout stays safe for it automatically. You won't need to bring it up again. 💛" : "Locked in. I've got the rest — go be great. 💛")
-      : status === 'rejected' ? "No problem — we'll keep today as planned. You're always in control."
-      : "Got it — tell me what you'd rather do and I'll rework it around your goal."
+      ? withName(injuryPersisted ? "locked in — and I've noted it so every future workout stays safe for it automatically. You won't need to bring it up again. 💛" : "locked in. I've got the rest — go be great. 💛")
+      : status === 'rejected' ? withName("no problem — we'll keep today as planned. You're always in control.")
+      : withName("got it — tell me what you'd rather do and I'll rework it around your goal.")
     await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: reply })
     return NextResponse.json({ reply })
   }
