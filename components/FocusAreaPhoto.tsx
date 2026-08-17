@@ -7,22 +7,17 @@ import type { ReactNode } from 'react'
 // replacing the old hand-drawn BodyFocusIcon — matches the competitor pattern
 // Asa sent screenshots of (a shared body photo, the selected/hovered option
 // glows on the photo itself). The source photo (public/images/onboarding/
-// focus-area.jpg) is pre-cropped to a true 9:16.
+// focus-area.jpg) is pre-cropped to a true 9:16 — cropping the FILE itself
+// (not just the CSS box) keeps these percentages simple: no separate math
+// for how much of the original frame is showing.
 //
-// IMPORTANT: the caller must size this box to a FIXED 9/12.8 aspect ratio
-// (aspect-[9/12.8]), not the source's true 9/16 — a real device screenshot
-// showed the bottom pill row landing below the fold on a shorter phone when
-// sized at true 9:16. Tried capping height with a px max-height first, but
-// that crops a DIFFERENT fraction of the image on every device width (the
-// crop only kicks in once natural height exceeds the cap), which would've
-// shifted the pixel-measured glow positions by a different, unpredictable
-// amount per device. A fixed aspect RATIO crops the exact same 20% off the
-// bottom on every device — image is cropped from the bottom only
-// (object-top), never the top — so the percentages below could be
-// remapped ONCE (divide the original grid-measured top/height by 0.8) and
-// stay correct everywhere, instead of needing to be dynamic. The deepest
-// zone (glute, bottom edge ~76.5% of the original frame) still lands at
-// ~95.6% of the visible window — comfortable margin before the cut line.
+// The caller must size this box to the TRUE 9/16 ratio (aspect-[9/16]),
+// full width, uncropped — tried a shorter fixed crop ratio here to avoid
+// any scrolling, but Asa's explicit call after seeing it live: he'd rather
+// scroll a little (Continue is pinned to the viewport bottom regardless,
+// see app/plan/intake/page.tsx) than have her body visibly cropped in the
+// photo. The only real problem was ever the pill text getting clipped by a
+// padding bug, already fixed separately — not the photo's size or ratio.
 type Zone = 'core' | 'legs' | 'arms' | 'overall'
 type Dot = { top: string; left: string; width: string; height: string }
 
@@ -31,19 +26,18 @@ type Dot = { top: string; left: string; width: string; height: string }
 // shoulder before it fades into the background, and the outer arm. Dot 1
 // sits on that rear-shoulder edge (stands in for "back"), dot 2 lower on the
 // arm for triceps — confirmed correct by Asa against a live screenshot, only
-// dot 1 moved. All top/height values below are remapped for the 0.8-visible-
-// fraction crop (original-grid-measured value ÷ 0.8) — left/width are
-// horizontal, unaffected by a vertical crop, and stay as originally measured.
+// dot 1 moved. Percentages are measured directly against the true, uncropped
+// 9:16 source file (see the pixel-grid technique noted in project memory).
 const ZONE_GLOW: Record<Exclude<Zone, 'overall'>, Dot[]> = {
   arms: [
-    { top: '40.0%', left: '62%', width: '14%', height: '11.25%' }, // rear shoulder / back stand-in
-    { top: '55.0%', left: '53%', width: '15%', height: '13.75%' }, // triceps, lower on the arm
+    { top: '32%', left: '62%', width: '14%', height: '9%' }, // rear shoulder / back stand-in
+    { top: '44%', left: '53%', width: '15%', height: '11%' }, // triceps, lower on the arm
   ],
   core: [
-    { top: '68.75%', left: '35%', width: '15%', height: '16.25%' }, // the real exposed side/stomach strip between crop top and waistband
+    { top: '55%', left: '35%', width: '15%', height: '13%' }, // the real exposed side/stomach strip between crop top and waistband
   ],
   legs: [
-    { top: '83.75%', left: '65%', width: '22%', height: '23.75%' }, // glute, on the actual peak of the curve
+    { top: '67%', left: '65%', width: '22%', height: '19%' }, // glute, on the actual peak of the curve
   ],
 }
 
@@ -71,11 +65,7 @@ export default function FocusAreaPhoto({ active, children }: { active: Zone | nu
   const zones: Exclude<Zone, 'overall'>[] = ['arms', 'core', 'legs']
   return (
     <div className="relative w-full h-full rounded-2xl overflow-hidden bg-ink/5">
-      {/* object-top, not object-cover's default (center) — the caller's
-          fixed 9/12.8 box is shorter than this image's true 9:16, so
-          something has to give; top-alignment crops only from the bottom
-          (unused lower-leg area), matching the ZONE_GLOW remap above. */}
-      <Image src="/images/onboarding/focus-area.jpg" alt="" fill sizes="(max-width: 640px) 90vw, 420px" className="object-cover object-top" priority />
+      <Image src="/images/onboarding/focus-area.jpg" alt="" fill sizes="(max-width: 640px) 90vw, 420px" className="object-cover" priority />
       {zones.map((z) => ZONE_GLOW[z].map((dot, i) => (
         <Glow key={`${z}-${i}`} pos={dot} active={active === z || active === 'overall'} />
       )))}
