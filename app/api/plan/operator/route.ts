@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
   if (plan) {
     const profile = await getProfile(eid)
     const [events, goalDrift] = await Promise.all([
-      recentEvents(eid, addDaysISO(today, -18)),
+      recentEvents(eid, addDaysISO(today, -60)),
       assessGoalDrift(eid, today),
     ])
     const [generated, extracted] = await Promise.all([

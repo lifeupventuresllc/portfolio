@@ -26,6 +26,7 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [pending, setPending] = useState<Adjustment | null>(null)
+  const [justApproved, setJustApproved] = useState<Adjustment | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -60,12 +61,12 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
 
   // Only scroll when the message COUNT changes (a real new message), instantly — not
   // on every keystroke/render — so the page never jumps while you're typing.
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' }) }, [messages.length, pending])
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' }) }, [messages.length, pending, justApproved])
 
   async function send(text: string) {
     const msg = text.trim()
     if (!msg || sending) return
-    setInput(''); setPending(null); setSending(true)
+    setInput(''); setPending(null); setJustApproved(null); setSending(true)
     setMessages((m) => [...m, { role: 'user', content: msg }])
     try {
       const r = await fetch('/api/plan/operator', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) })
@@ -84,7 +85,10 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
       const r = await fetch('/api/plan/operator', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ adjustmentId: adj?.id ?? '', status }) })
       const d = await r.json()
       if (d?.reply) setMessages((m) => [...m, { role: 'operator', content: d.reply }])
-      if (status === 'approved') broadcastRefresh() // let the dashboard reflect the adjusted plan
+      if (status === 'approved') {
+        broadcastRefresh() // let the dashboard reflect the adjusted plan
+        setJustApproved(adj) // surfaces a "take me there" link below, see render
+      }
     } catch { /* ignore */ }
   }
 
@@ -133,6 +137,28 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
             {pending.nutritionChange?.eatingOut && (
               <Link href="/plan/eating-out" className="mt-2.5 flex items-center justify-center gap-1.5 bg-obsidian border border-blue-500/30 text-blue-300 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:border-blue-400/60 transition-colors">
                 🍔 Show me my options
+              </Link>
+            )}
+          </div>
+        )}
+
+        {/* After she approves, take her straight to whatever actually changed —
+            no reason to make her navigate there herself once she's already said
+            yes. Clears on her next message so it doesn't linger into an
+            unrelated later exchange. */}
+        {justApproved && (
+          <div className="luf-reveal luf-in flex flex-col gap-2">
+            {justApproved.workoutChange && (
+              <Link href="/plan/workout" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+                💪🏽 View my updated workout →
+              </Link>
+            )}
+            {justApproved.nutritionChange && (
+              <Link
+                href={justApproved.nutritionChange.eatingOut ? '/plan/eating-out' : '/plan/today'}
+                className="flex items-center justify-center gap-1.5 bg-obsidian border border-gold/40 text-gold px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:border-gold/70 transition-colors"
+              >
+                {justApproved.nutritionChange.eatingOut ? '🍔 Show me my options →' : '🍽️ View my updated plan →'}
               </Link>
             )}
           </div>

@@ -45,7 +45,7 @@ function describeProfile(profile: FosProfile | null): string {
 
 function describeEvents(events: FosEvent[]): string {
   if (!events.length) return 'No recent history.'
-  return events.slice(0, 20).map((e) => `- ${e.occurredOn}: ${e.kind}${e.summary ? ` — "${e.summary}"` : ''}`).join('\n')
+  return events.slice(0, 40).map((e) => `- ${e.occurredOn}: ${e.kind}${e.summary ? ` — "${e.summary}"` : ''}`).join('\n')
 }
 
 const EXTRACT_TOOL = {
