@@ -63,28 +63,29 @@ const EXTRACT_TOOL = {
       motivators: { type: 'array', items: { type: 'string' }, description: 'What keeps her going' },
       discouragers: { type: 'array', items: { type: 'string' }, description: 'What tends to knock her off track emotionally' },
       barriers: { type: 'array', items: { type: 'string' }, description: 'Recurring practical obstacles, e.g. "no gym access on weekends"' },
-      personal_notes: { type: 'array', items: { type: 'string' }, description: 'Durable family/home/personal-life facts that don\'t fit the fields above, e.g. "has two kids, ages 4 and 7" or "husband travels for work most weeks"' },
+      personal_notes: { type: 'array', items: { type: 'string' }, description: 'Durable family/home/personal-life facts that don\'t fit the fields above — names, ages, relationships, upcoming events, things she\'s proud of, past wins/setbacks she references. E.g. "has two kids, ages 4 and 7", "husband travels for work most weeks", "daughter Maya has a dance recital in October", "ran her first 5K last year and is proud of it"' },
     },
     required: [],
   },
 }
 
 function extractSystem(profile: FosProfile | null): string {
-  return `You read one message a woman sends her fitness coach and pull out only the durable facts about her real life worth remembering permanently — the kind a good human coach would silently jot in her file and recall next month, not just today's mood.
+  return `You read one message a woman sends her fitness coach and pull out the durable facts about her real life worth remembering permanently — the kind a good human coach who actually knows her would silently jot down and recall months later, not just today's mood. This IS the core of what makes this coach different from a generic tracker: knowing her as a real person, specifically. When in doubt, lean toward capturing it, not discarding it — a detail that turns out to matter later is worth far more than the cost of storing a small note.
 
-Extract a fact ONLY if it is:
-- A concrete, generalizable fact about her life, schedule, work, family, home life, food preferences, motivations, or recurring obstacles — stated as fact, not as a one-off feeling. Family/home details that don't obviously fit the fitness-specific fields (foods, motivators, barriers, etc.) still matter — use personal_notes for those, e.g. kids' ages, a partner's travel schedule, a move, anything that helps you actually know her as a person.
-- Something that would still be true and useful next week, not just how she feels right now.
+Extract anything that would still be true and worth knowing next month — cast a wide net:
+- Concrete facts about her schedule, work, family, home life, relationships, food preferences, motivations, or recurring obstacles.
+- Specific, personal details: names of people in her life (kids, partner, friends), ages, relationships, upcoming events she mentions (a trip, a recital, a wedding, a deadline), things she's proud of, past wins or setbacks she references, anything that makes her a specific person rather than a generic user. Use personal_notes for anything that doesn't fit the fitness-specific fields — that field exists precisely so nothing falls through just because it isn't about food or workouts.
+- Even a single passing mention is worth capturing if it's a real, specific detail about her life — it doesn't need to be repeated or heavily emphasized to matter.
 
 Do NOT extract:
-- Transient state — she's tired, stressed, sore, short on time, ate out TODAY. That's today's situation, already handled elsewhere. Do not extract "she's tired" just because she said "I'm exhausted today."
-- Anything you're inferring or guessing rather than something she actually said.
+- Pure transient state with no lasting detail attached — she's tired, stressed, sore, short on time, ate out TODAY, with nothing more specific behind it. ("I'm exhausted today" alone → nothing. "I'm exhausted, my daughter's been up sick all week" → the second half IS worth keeping.)
+- Anything you're inferring or guessing rather than something she actually stated.
 - Anything already covered by her existing known profile below, unless she's adding meaningfully new detail.
 
 Her existing known profile (do not repeat these — only add what's new):
 ${describeProfile(profile)}
 
-If nothing in her message rises to a durable, new fact, call the tool with no fields set — that's the common case; most messages add nothing. Never fabricate a fact she didn't actually state.`
+If truly nothing in her message adds a new detail, call the tool with no fields set. But don't default to that out of caution — a specific, real detail about her life is exactly what this is for. Never fabricate a fact she didn't actually state.`
 }
 
 export async function extractProfileFacts(text: string, profile: FosProfile | null): Promise<ExtractedFacts | null> {
