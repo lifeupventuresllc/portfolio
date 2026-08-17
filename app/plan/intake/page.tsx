@@ -341,17 +341,18 @@ function ConversationalIntakeInner() {
                   real constraint at phone widths. */}
               <h2 className="text-xl font-bold text-ink leading-snug mb-0.5 text-balance">What do you want to feel proudest of?</h2>
               <p className="text-ink/50 text-xs mb-2">Tap one — watch it light up.</p>
-              {/* w-[94%] not w-full — tried capping via max-h instead, but that
-                  crops the box (since it's shorter than a true 9:16 at full
-                  width), and the crop amount varies by device width, which
-                  would silently throw off the pixel-measured glow positions
-                  differently on every phone with no clean way to compensate.
-                  Reducing WIDTH instead keeps the true, uncropped aspect
-                  ratio at any size — smaller footprint with zero accuracy
-                  risk. On the shortest phones this may still need a small
-                  scroll to see the last pill row, but Continue is always
-                  reachable via the fixed bar below regardless. */}
-              <div className="relative w-[94%] mx-auto aspect-[9/16] mb-3">
+              {/* Full width, but aspect-[9/12.8] — NOT the source photo's true
+                  9/16. A real device screenshot showed the bottom pill row
+                  below the fold at true 9:16. A px max-h cap crops a
+                  different fraction on every device width, which would've
+                  shifted the glow positions unpredictably per-phone — a
+                  fixed RATIO instead crops exactly the same 20% off the
+                  bottom on every device, so FocusAreaPhoto's glow
+                  percentages were remapped ONCE to match and stay correct
+                  everywhere (see the comment there). This ratio is required,
+                  not just a suggestion — changing it without also
+                  remapping those percentages will misalign the highlights. */}
+              <div className="relative w-full aspect-[9/12.8] mb-3">
                 <FocusAreaPhoto active={(f.focus_area || null) as 'core' | 'legs' | 'arms' | 'overall' | null}>
                   <div className="absolute inset-x-0 bottom-0 h-[42%] pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(255,255,255,0.98) 30%, rgba(255,255,255,0) 100%)' }} />
                   <div className="absolute inset-x-2.5 bottom-2.5 grid grid-cols-2 gap-2">
