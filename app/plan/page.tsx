@@ -15,6 +15,7 @@ import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
 import { localDateISO, localMondayIndex, localDayNumber, addDaysISO } from '@/lib/localdate'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
+import { getEffectiveTodayWorkout, getEffectiveCalorieBudget } from '@/lib/fos/effective-plan'
 import type { WorkoutProgram } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
 
@@ -109,30 +110,13 @@ export default async function PlanDashboard() {
   // All day-boundaries use the user's LOCAL day (their timezone), not UTC.
   const mealIdx = localMondayIndex() // Mon=0 … Sat=5, Sun=6
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
-  let calBudget = (todayMeals?.target && todayMeals.target > 0) ? todayMeals.target : (Number(nutritionPlan?.calories) || 0)
-  // Coach Asa adjusted today's calories? Reflect it in the budget.
-  const calDelta = Number(todayAdjustment?.nutritionChange?.calorieDelta) || 0
-  if (calDelta) calBudget = Math.max(0, calBudget + calDelta)
+  const baseCalBudget = (todayMeals?.target && todayMeals.target > 0) ? todayMeals.target : (Number(nutritionPlan?.calories) || 0)
+  const calBudget = getEffectiveCalorieBudget(baseCalBudget, todayAdjustment)
   const todayDayType = todayMeals?.dayType ?? null
 
   const program = (workoutPlan?.plan as WorkoutProgram) || null
-  let todayWorkout: { title: string; muscles?: string[] } | null = null
-  if (program) {
-    const numDays = program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)
-    const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
-    const startDay = numDays > 0 ? completed % numDays : 0
-    if (program.track === 'home') {
-      const d = program.home?.days[startDay]
-      if (d) todayWorkout = { title: d.title }
-    } else {
-      const d = program.gymDays?.[startDay]
-      if (d) todayWorkout = { title: d.title, muscles: d.muscles }
-    }
-  }
-  // Approved cardio swap — show the title she'll actually get when she taps Start.
-  if (todayWorkout && todayAdjustment?.workoutChange?.contentSwap === 'cardio') {
-    todayWorkout = { title: 'Cardio & Conditioning' }
-  }
+  const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
+  const todayWorkout = getEffectiveTodayWorkout(program, completed, todayAdjustment)
   const affirmation = affirmationForDay(localDayNumber())
 
   // challenge_intake has no goal_weight_lbs column — it's always derived from

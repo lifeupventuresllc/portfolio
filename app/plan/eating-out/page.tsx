@@ -4,6 +4,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { weightClassFor, budgetTierFromWeekly, pickForNow, doordashSearchUrl, priceTierFor, type FastFoodMeal } from '@/lib/escape-plan'
 import { localDateISO, localHourNumber, localMondayIndex } from '@/lib/localdate'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
+import { getEffectiveCalorieBudget } from '@/lib/fos/effective-plan'
 import type { WeekPlan } from '@/lib/meal-plan'
 import EatingOutPicks from '@/components/EatingOutPicks'
 
@@ -53,9 +54,9 @@ export default async function EatingOutNow() {
     ? (nutritionPlan.meals as WeekPlan) : null
   const mealIdx = localMondayIndex()
   const todayTarget = (weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx]?.target : null) || Number(nutritionPlan?.calories) || 0
-  const calDelta = Number(todayAdjustment?.nutritionChange?.calorieDelta) || 0
+  const effectiveTarget = getEffectiveCalorieBudget(todayTarget, todayAdjustment)
   const loggedToday = (foodRows || []).reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
-  const remainingCal = Math.max(0, todayTarget + calDelta - loggedToday)
+  const remainingCal = Math.max(0, effectiveTarget - loggedToday)
 
   // Phase 4 (Layer 1): "pick one, right now" — narrowed to exactly 2 options for
   // whatever meal it actually is at this moment, filtered to what she can already

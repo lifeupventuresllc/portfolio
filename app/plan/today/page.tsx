@@ -12,6 +12,7 @@ import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
+import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday } from '@/lib/fos/effective-plan'
 import { shortVersionFor } from '@/lib/workout-short'
 import { LIVE_CALL } from '@/lib/live-call'
 import type { WorkoutProgram } from '@/lib/workout'
@@ -60,37 +61,22 @@ export default async function TodayView() {
   const planned: PlannedItem[] = (todayMeals?.meals || []).map((m) => ({ slot: m.slot, name: m.name, cal: m.cal, protein: m.protein, carbs: m.carbs, fat: m.fat }))
 
   // Coach Asa adjusted today's calories? Reflect it in the budget — same as /plan's dashboard.
-  const calDelta = Number(todayAdjustment?.nutritionChange?.calorieDelta) || 0
-  const calBudget = calDelta ? Math.max(0, (todayMeals?.target ?? 0) + calDelta) : (todayMeals?.target ?? null)
+  const calBudget = todayMeals?.target != null ? getEffectiveCalorieBudget(todayMeals.target, todayAdjustment) : null
 
   // She told Coach Asa she's eating out today (an ad-hoc chat approval, not a
   // pre-scheduled plan day) — the fixed meal list below is now irrelevant, she's
   // not cooking it. Same "Eat-out day" treatment as a plan day that was already
   // scheduled that way, so approving in chat has a real, visible effect here
   // instead of only living in the chat transcript.
-  const eatingOutToday = !!todayMeals?.eatOut || !!todayAdjustment?.nutritionChange?.eatingOut
+  const eatingOutToday = isEatingOutToday(todayMeals?.eatOut, todayAdjustment)
 
   // Today's workout — same rotation as the session player (by # workouts finished).
   const program = (workoutPlan?.plan as WorkoutProgram) || null
-  let todayWorkout: { title: string; muscles?: string[] } | null = null
-  let startDay = 0
-  if (program) {
-    const numDays = program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)
-    const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
-    startDay = numDays > 0 ? completed % numDays : 0
-    if (program.track === 'home') {
-      const d = program.home?.days[startDay]
-      if (d) todayWorkout = { title: d.title }
-    } else {
-      const d = program.gymDays?.[startDay]
-      if (d) todayWorkout = { title: d.title, muscles: d.muscles }
-    }
-  }
-  // Approved cardio swap — show the title she'll actually get when she taps Start,
-  // not her originally-scheduled day (the real content swap happens in /plan/workout).
-  if (todayWorkout && todayAdjustment?.workoutChange?.contentSwap === 'cardio') {
-    todayWorkout = { title: 'Cardio & Conditioning' }
-  }
+  const numDays = program ? (program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)) : 1
+  const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
+  const startDay = numDays > 0 ? completed % numDays : 0
+  // Approved cardio swap already reflected in the title — see effective-plan.ts.
+  const todayWorkout = getEffectiveTodayWorkout(program, completed, todayAdjustment)
 
   // Layer 1's primary feature, unified: reads across every behavioral signal
   // already being collected (workout, food logging, app-open silence,
