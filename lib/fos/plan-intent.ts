@@ -62,7 +62,7 @@ const PLAN_INTENT_TOOL = {
       days_per_week: { type: 'number' },
       training_location: { type: 'string', enum: ['home', 'gym'] },
       experience_level: { type: 'string', enum: ['beginner', 'intermediate', 'advanced'] },
-      focus_area: { type: 'string', enum: ['core', 'legs', 'arms', 'overall'], description: 'Only set if she named a specific body-part focus that maps to one of these; omit otherwise (do not force-fit "glutes" or "abs" — legs covers glutes, core covers abs).' },
+      focus_area: { type: 'string', enum: ['core', 'legs', 'arms', 'overall'], description: 'Set "core" or "legs"/"arms" if she named a specific body-part focus that maps to one of these (do not force-fit — "glutes" maps to legs, "abs" maps to core). Set "overall" if she explicitly said she has NO specific focus — "overall", "whole body", "everything", "no preference", "doesn\'t matter", "whatever you think" all count as an explicit "overall" answer and MUST be captured as focus_area: "overall", not omitted. Only omit this field entirely if she has never addressed the question of focus area at all.' },
       injuries_addressed: { type: 'boolean', description: 'True if she has said ANYTHING about injuries/pain/limitations anywhere in the conversation, even just "no injuries" or "I\'m fine." False only if it has genuinely never come up.' },
       injuries: { type: 'array', items: { type: 'string', enum: [...INJURY_VALUES] }, description: 'Specific body parts she named as injured/limited, if any.' },
     },
@@ -76,7 +76,9 @@ Read the WHOLE conversation given, not just the latest message — she may have 
 
 Only set is_plan_request true for a genuine "build/give me a plan" ask (e.g. "give me a workout to do", "what should I eat this week", "build me a meal plan", "I want a plan for the gym", "I just downloaded this, what should I do"). A vague "I want to get in shape" with no ask to be given something concrete is NOT a plan request on its own.
 
-Extract every concrete stat or preference she's actually stated anywhere in the conversation — age, sex, height, weight, goal (lose/gain/maintain), how many days a week she can train, home or gym, experience level, any specific focus (e.g. "glutes" -> legs, "abs" -> core), how much time she has right now, and anything about injuries or physical limitations (or her explicitly saying she has none). Convert units (kg to lbs, cm/ft-in to inches). Never fabricate or guess a number she didn't state.`
+Extract every concrete stat or preference she's actually stated anywhere in the conversation — age, sex, height, weight, goal (lose/gain/maintain), how many days a week she can train, home or gym, experience level, how much time she has right now, and anything about injuries or physical limitations (or her explicitly saying she has none). Convert units (kg to lbs, cm/ft-in to inches). Never fabricate or guess a number she didn't state.
+
+For focus area specifically: a named body part counts ("glutes" -> legs, "abs" -> core), but so does her explicitly saying she has no particular focus — "overall", "whole body", "everything", "no specific area", "doesn't matter" are all real answers and must be captured as focus_area: "overall". Do not treat "overall" as if it were the same as leaving the question unanswered — those are opposite things, and re-asking a question she already answered is a real failure.`
 
 export async function detectPlanIntent(conversationText: string): Promise<PlanIntent> {
   if (!anthropicConfigured() || !conversationText.trim()) return null
