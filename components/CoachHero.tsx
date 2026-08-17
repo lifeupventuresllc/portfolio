@@ -90,14 +90,16 @@ export default function CoachHero({ firstName }: { firstName: string }) {
   const perfectDay = workoutDone && nutritionDone
   const proteinLeft = nutri && nutri.target > 0 ? Math.max(0, nutri.target - nutri.protein) : null
 
+  // Leads with her name every time now (was worked in mid-sentence) — Asa's
+  // explicit call, same "always address her by name" standard as the chat.
   let greeting: string
-  if (perfectDay) greeting = `You've handled everything today, ${firstName}. Proud of you. 💛`
+  if (perfectDay) greeting = `${firstName}, you've handled everything today. Proud of you. 💛`
   else if (!workoutDone && !nutritionDone) greeting = proteinLeft != null
-    ? `How's your day looking, ${firstName}? You've still got your workout and ${proteinLeft}g of protein — tell me what's going on and I'll fit it in.`
-    : `How's your day looking, ${firstName}? Tell me what's going on and I'll build today around you.`
-  else if (!workoutDone && nutritionDone) greeting = `Nutrition's handled 🙌 — just your workout left, ${firstName}. Short on time? Tell me and I'll adjust it.`
-  else if (proteinLeft != null && proteinLeft > 0) greeting = `Workout's done 💪🏽 — ${proteinLeft}g of protein to go, ${firstName}. Want a quick idea? Just tell me.`
-  else greeting = `How are you feeling today, ${firstName}? Tell me what's going on and I'll keep you on track.`
+    ? `${firstName}, how's your day looking? You've still got your workout and ${proteinLeft}g of protein — tell me what's going on and I'll fit it in.`
+    : `${firstName}, how's your day looking? Tell me what's going on and I'll build today around you.`
+  else if (!workoutDone && nutritionDone) greeting = `${firstName}, nutrition's handled 🙌 — just your workout left. Short on time? Tell me and I'll adjust it.`
+  else if (proteinLeft != null && proteinLeft > 0) greeting = `${firstName}, workout's done 💪🏽 — ${proteinLeft}g of protein to go. Want a quick idea? Just tell me.`
+  else greeting = `${firstName}, how are you feeling today? Tell me what's going on — and how's the app been working for you so far?`
 
   async function send(text: string) {
     const msg = text.trim(); if (!msg || sending) return
@@ -142,7 +144,7 @@ export default function CoachHero({ firstName }: { firstName: string }) {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[2.25rem] border border-gold/40 bg-white shadow-[0_0_45px_-4px_rgba(255,255,255,0.55),0_0_120px_18px_rgba(201,168,76,0.4)] p-6">
+    <div className="relative overflow-hidden rounded-[2.25rem] border border-gold/40 bg-white shadow-sm p-6">
       {/* identity — a person, not a tool */}
       <div className="flex items-center gap-2.5 mb-4">
         <span className="h-9 w-9 rounded-full bg-gold text-obsidian font-bold flex items-center justify-center text-lg shadow-lg shadow-gold/20">A</span>

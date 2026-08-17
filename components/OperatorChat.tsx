@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { broadcastRefresh } from '@/lib/useLiveRefresh'
+import VoiceButton from '@/components/VoiceButton'
 
 // Phase 1 operator surface. She tells Coach Asa about her day; he replies with a
 // goal-protecting adjustment she can approve / modify / reject. "The goal never
@@ -185,6 +186,10 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
           className="flex-1 bg-charcoal border border-smoke rounded-2xl px-4 py-3 text-base text-white placeholder:text-ivory/30 focus:border-gold/60 focus:outline-none resize-none overflow-y-auto leading-snug"
           style={{ maxHeight: 144 }}
         />
+        {/* onInterim writes straight into the visible textarea as she talks —
+            same live-transcription pattern CoachHero's dashboard widget
+            already had; this full chat page had no voice input at all. */}
+        <VoiceButton idleLabel="Talk to Coach Asa" onInterim={setInput} onResult={(t) => { setInput(t); send(t) }} />
         <button type="submit" disabled={sending || !input.trim()} className="bg-gold text-obsidian px-5 py-3 font-bold text-sm rounded-2xl disabled:opacity-40 active:scale-95 transition-transform">{sending ? '…' : 'Send'}</button>
       </form>
     </div>
