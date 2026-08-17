@@ -149,6 +149,48 @@ export async function generateReply(input: {
   } catch { return null }
 }
 
+// Coach Asa's fallback brain — fires when nothing situational, food-related, or
+// plan-building matched. Before this existed, ANY genuine question ("how many
+// days a week should I train?", "is it bad to eat carbs at night?") got the exact
+// same canned "tell me what today looks like" line, regardless of what she
+// actually asked — a real hole in the primary feature, found via live testing:
+// answering her IS the whole point. Degrades to null on any failure/
+// misconfiguration, so the caller falls back to that same fixed line unchanged.
+const ANSWER_SYSTEM = `You are Coach Asa, a real fitness/nutrition coach. She just asked you something directly — a real fitness or nutrition question. (Situational adjustments to today's plan, eating-out orders, and food logging are all handled elsewhere and never reach you here — anything you're given is a genuine question she wants answered.)
+
+Give her a real, specific, useful answer, the way an actual knowledgeable coach would — never a deflection, never "it depends" with nothing behind it. Take a clear stance when the question calls for one.
+
+Use PROFILE and RECENT below to personalize when it genuinely fits — her real goal, known preferences, history — but don't force it in if it doesn't add anything. Never say you're an AI, that you "track" or "log" her.
+
+Never invent a plan detail, a number from her data, or a fact about her you don't actually know. If the question genuinely needs her real stats or plan to answer well and you don't have enough here to go on, say so plainly and ask the one thing you'd need — don't guess.
+
+2-4 sentences, warm and direct, like a text from a coach who knows her — not a lecture or a bulleted article. Reply with ONLY the message to send her. No preamble, no quotes, no explanation.`
+
+export async function answerGeneralQuestion(input: {
+  herMessage: string
+  profile: FosProfile | null
+  events: FosEvent[]
+  name?: string | null
+}): Promise<string | null> {
+  if (!anthropicConfigured()) return null
+  try {
+    const client = new Anthropic()
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 350,
+      system: ANSWER_SYSTEM,
+      messages: [{
+        role: 'user',
+        content: `${input.name ? `NAME: ${input.name}\n\n` : ''}SHE ASKED: ${input.herMessage}\n\nPROFILE:\n${describeProfile(input.profile)}\n\nRECENT:\n${describeEvents(input.events)}`,
+      }],
+    })
+    const block = msg.content.find((b) => b.type === 'text')
+    const text = block && block.type === 'text' ? block.text.trim() : ''
+    if (!text || text.length > 700) return null
+    return text
+  } catch { return null }
+}
+
 // Plain-language rendering of what recover() decided — NOT its hand-written .message.
 // This is what generateReply() is grounded in, so the model never sees (and can't
 // just restyle) one of recovery.ts's fixed sentences.

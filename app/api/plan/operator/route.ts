@@ -6,7 +6,7 @@ import { recover, type LifeSignal, type RecoveryPlan } from '@/lib/fos/recovery'
 import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
 import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
-import { extractProfileFacts, generateReply, describeDecision } from '@/lib/fos/memory'
+import { extractProfileFacts, generateReply, describeDecision, answerGeneralQuestion } from '@/lib/fos/memory'
 import { assessGoalDrift } from '@/lib/fos/goal-drift'
 import { detectPlanIntent } from '@/lib/fos/plan-intent'
 import { buildInitialPlans } from '@/lib/plan-builder'
@@ -335,6 +335,25 @@ export async function POST(request: NextRequest) {
     // sentence, which never includes her name at all. She should still be
     // addressed by name every reply, so prefix it here rather than send a
     // name-less fallback.
+    else if (enrollment.name) reply = `${enrollment.name}, ${reply.charAt(0).toLowerCase()}${reply.slice(1)}`
+    if (extracted) {
+      const patch = mergeProfilePatch(profile, extracted)
+      if (Object.keys(patch).length > 0) await upsertProfile(eid, user.id, patch)
+    }
+  } else {
+    // Nothing situational, food-related, or plan-building matched — she most
+    // likely just asked a real question ("how many days a week should I train?",
+    // "is it bad to eat carbs at night?"). Answer it directly instead of
+    // defaulting straight to the generic "tell me what today looks like" line,
+    // which used to fire on every genuine question with zero attempt to actually
+    // answer it — found via live testing, a real hole in the primary feature.
+    const profile = await getProfile(eid)
+    const events = await recentEvents(eid, addDaysISO(today, -60))
+    const [answered, extracted] = await Promise.all([
+      answerGeneralQuestion({ herMessage: message, profile, events, name: (enrollment.name as string) || null }),
+      extractProfileFacts(message, profile),
+    ])
+    if (answered) reply = answered
     else if (enrollment.name) reply = `${enrollment.name}, ${reply.charAt(0).toLowerCase()}${reply.slice(1)}`
     if (extracted) {
       const patch = mergeProfilePatch(profile, extracted)
