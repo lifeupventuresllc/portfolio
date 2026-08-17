@@ -21,9 +21,9 @@ async function resolve() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { user: null, enrollment: null, svc: null }
   const svc = createServiceClient()
-  let { data: enrollment } = await svc.from('challenge_enrollments').select('id').eq('user_id', user.id).order('created_at', { ascending: false }).maybeSingle()
+  let { data: enrollment } = await svc.from('challenge_enrollments').select('id, name').eq('user_id', user.id).order('created_at', { ascending: false }).maybeSingle()
   if (!enrollment && user.email) {
-    const { data: byEmail } = await svc.from('challenge_enrollments').select('id').eq('email', user.email).order('created_at', { ascending: false }).maybeSingle()
+    const { data: byEmail } = await svc.from('challenge_enrollments').select('id, name').eq('email', user.email).order('created_at', { ascending: false }).maybeSingle()
     enrollment = byEmail || null
   }
   return { user, enrollment, svc }
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
       assessGoalDrift(eid, today),
     ])
     const [generated, extracted] = await Promise.all([
-      generateReply({ herMessage: message, decision: describeDecision(signal, plan), profile, events, goalContext: goalDrift?.note ?? null }),
+      generateReply({ herMessage: message, decision: describeDecision(signal, plan), profile, events, goalContext: goalDrift?.note ?? null, name: (enrollment.name as string) || null }),
       extractProfileFacts(message, profile),
     ])
     if (generated) reply = generated
