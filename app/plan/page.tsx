@@ -185,13 +185,12 @@ export default async function PlanDashboard() {
         <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} compact />
       </div>
 
-      {/* Coach Asa — the dominant centerpiece, circular frame around the
-          unchanged chat interface (a hard circular clip would cut off real
-          text/buttons, so the "circle" reads through a glow ring + aspect-
-          square shape rather than clipping the rectangular content inside). */}
-      <div className="relative aspect-square rounded-full bg-white shadow-[0_0_60px_-6px_rgba(255,255,255,0.6),0_0_160px_24px_rgba(201,168,76,0.45)] ring-4 ring-gold/40 p-7 overflow-y-auto">
-        <CoachHero firstName={firstName} />
-      </div>
+      {/* Coach Asa — was forced into a circular glow frame (aspect-square +
+          rounded-full on this wrapper, separate from CoachHero's own
+          styling), which Asa asked to have removed. CoachHero already has
+          its own normal rounded-rectangle card styling — just render it
+          directly now. */}
+      <CoachHero firstName={firstName} />
 
       {/* Persistent feedback surface — always here, not just a popup */}
       <FeedbackCard />
