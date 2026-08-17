@@ -27,14 +27,17 @@ export default async function MealsPage() {
     ? await svc.from('challenge_intake').select('*').eq('enrollment_id', enrollment.id).maybeSingle()
     : { data: null }
 
-  // Needs intake to know her calorie targets
+  // Needs intake to know her calorie targets — no forced form though. Coach Asa can
+  // build a real meal plan straight from a chat message (see app/api/plan/operator/
+  // route.ts's cold-start build), so that's offered first.
   if (!enrollment || !intake) {
     return (
       <div className="min-h-[100dvh] bg-obsidian px-4 py-16">
         <div className="max-w-md mx-auto text-center">
           <h1 className="text-2xl font-bold text-white mb-2">Let&apos;s get your numbers first</h1>
-          <p className="text-ivory/60 text-sm mb-6">Complete your quick intake so we can portion your meals to your calories.</p>
-          <Link href="/plan/intake" className="inline-block bg-gold text-obsidian px-8 py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl">Do my intake</Link>
+          <p className="text-ivory/60 text-sm mb-6">Tell Coach Asa what you&apos;re looking for and she&apos;ll build it right there — or fill in your stats yourself.</p>
+          <Link href="/plan/coach" className="inline-block bg-gold text-obsidian px-8 py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl mb-3">Talk to Coach Asa</Link>
+          <Link href="/plan/intake" className="block text-ivory/50 text-sm underline underline-offset-4">Or build it myself</Link>
         </div>
       </div>
     )

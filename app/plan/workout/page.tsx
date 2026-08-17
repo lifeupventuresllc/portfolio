@@ -36,12 +36,16 @@ export default async function WorkoutSession() {
   ])
 
   if (!workoutPlan?.plan) {
+    // No forced form here either — Coach Asa can build a real session straight from
+    // a chat message (see app/api/plan/operator/route.ts's cold-start build), so
+    // that's offered first; the structured form stays as the alternative.
     return (
       <div className="min-h-[100dvh] bg-obsidian px-4 py-16">
         <div className="max-w-md mx-auto text-center">
           <h1 className="text-2xl font-bold text-white mb-2">No workout yet</h1>
-          <p className="text-ivory/60 text-sm mb-6">Finish your quick intake and I&apos;ll build your training.</p>
-          <Link href="/plan/intake" className="inline-block bg-gold text-obsidian px-8 py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl">Build my plan</Link>
+          <p className="text-ivory/60 text-sm mb-6">Tell Coach Asa what you&apos;re looking for and she&apos;ll build it right there — or fill in your stats yourself.</p>
+          <Link href="/plan/coach" className="inline-block bg-gold text-obsidian px-8 py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl mb-3">Talk to Coach Asa</Link>
+          <Link href="/plan/intake" className="block text-ivory/50 text-sm underline underline-offset-4">Or build it myself</Link>
         </div>
       </div>
     )
