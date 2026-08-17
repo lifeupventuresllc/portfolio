@@ -8,8 +8,33 @@ import { detectEatenFood } from '@/lib/food-estimate'
 import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
 import { extractProfileFacts, generateReply, describeDecision } from '@/lib/fos/memory'
 import { assessGoalDrift } from '@/lib/fos/goal-drift'
+import { detectPlanIntent } from '@/lib/fos/plan-intent'
+import { buildInitialPlans } from '@/lib/plan-builder'
 import type { FosEventKind, WorkoutChange } from '@/lib/fos/types'
 import type { Injury } from '@/lib/workout-exercises'
+import type { WorkoutProgram } from '@/lib/workout'
+
+// Names today's actual exercises out of a freshly generated program, for Coach
+// Asa's cold-start reply — she asked in chat, so she gets the real moves back in
+// chat, not just a "check your dashboard" pointer. If she named a time budget,
+// leads with only as many moves as roughly fit it (~6 min/exercise incl. rest);
+// the full session is still saved either way.
+function summarizeTodaysWorkout(program: WorkoutProgram, minutesAvailable?: number): string {
+  const exercises: string[] = []
+  if (program.track === 'gym' && program.gymDays?.length) {
+    const day = program.gymDays[0]
+    for (const s of day.supersets) { exercises.push(s.push.name, s.pull.name) }
+    for (const a of day.accessory) exercises.push(a.name)
+  } else if (program.home?.days.length) {
+    for (const e of program.home.days[0].exercises) exercises.push(e.name)
+  }
+  if (!exercises.length) return 'your first session is ready'
+  const cap = minutesAvailable ? Math.max(3, Math.min(exercises.length, Math.round(minutesAvailable / 6))) : exercises.length
+  const picked = exercises.slice(0, cap)
+  return picked.length < exercises.length
+    ? `${picked.join(', ')} — the rest of today's full session is saved on your dashboard for next time`
+    : picked.join(', ')
+}
 
 // The Fitness OS operator. She tells it about her day; it replies in Coach Asa's
 // voice with a goal-protecting adjustment she can approve / modify / reject.
@@ -92,6 +117,95 @@ export async function POST(request: NextRequest) {
   const message = (body.message || '').toString().trim().slice(0, 800)
   if (!message) return NextResponse.json({ error: 'Say something first.' }, { status: 400 })
   await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'user', content: message })
+
+  // Cold-start plan build: she has no plan on file yet (never did the structured
+  // intake) and is asking Coach Asa for one right here. Only runs at all before her
+  // first real intake — once challenge_intake exists, this is skipped forever and
+  // the normal adjustment-flow below behaves exactly as it always has.
+  const { data: existingIntakeForPlan } = await svc.from('challenge_intake').select('id').eq('enrollment_id', eid).maybeSingle()
+  if (!existingIntakeForPlan) {
+    const { data: history } = await svc
+      .from('fos_messages').select('role, content').eq('enrollment_id', eid)
+      .order('created_at', { ascending: true }).limit(30)
+
+    // She's answering a build-offer Coach Asa made a moment ago ("want me to build
+    // your personalized workout/meal plan?"). Now that she's opted in and receptive,
+    // send her into the real structured intake for accurate numbers, rather than
+    // the defaulted cold-start build below — that's the right tool for an explicit
+    // in-chat "give me a workout" ask, not for someone who just said yes to a form.
+    const lastOperatorMsg = [...(history || [])].reverse().find((h) => h.role === 'operator')
+    const justOffered = !!lastOperatorMsg && /personalized (workout|meal) plan/i.test(String(lastOperatorMsg.content))
+    const isAffirmative = /^(yes|yeah|yep|yup|sure|ok(ay)?|please|do it|let'?s do it|go for it|sounds good|i'?d love that)\b/i.test(message.trim())
+    if (justOffered && isAffirmative) {
+      const namePrefix = enrollment.name ? `${enrollment.name}, ` : ''
+      const reply = `${namePrefix}let's do it — head to your plan page and tap "Build my plan." Takes about a minute, and I'll have your real numbers locked in from there. 💛`
+      await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: reply })
+      return NextResponse.json({ reply, offerIntake: true })
+    }
+
+    const conversationText = (history || []).map((h) => `${h.role}: ${h.content}`).join('\n')
+    const intent = await detectPlanIntent(conversationText)
+
+    if (intent) {
+      // The only follow-up worth her time: injuries (a wrong guess can actually hurt
+      // her) and target area (a wrong guess just misses what she wanted). Only asked
+      // when she's asking for a workout AND genuinely hasn't addressed it anywhere in
+      // the conversation yet — never re-asked once either is answered. Everything
+      // else (weight, goal, days/week, experience) gets a silent, disclosed default
+      // instead of another question.
+      const needsInjuryAsk = intent.wantsWorkout && !intent.injuriesAddressed
+      const needsFocusAsk = intent.wantsWorkout && !intent.focus_area
+      if (needsInjuryAsk || needsFocusAsk) {
+        const q = needsInjuryAsk && needsFocusAsk
+          ? "Quick one before I build this — any injuries or areas I should work around, and is there a specific area you want to focus on, or just overall?"
+          : needsInjuryAsk
+            ? "Quick one — any injuries or areas I should work around today?"
+            : "Quick one — a specific area you want to focus on, or just overall?"
+        await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: q })
+        return NextResponse.json({ reply: q })
+      }
+
+      // Defaults are only disclosed when they're actually relevant to what she asked
+      // for — mentioning a "weight estimate" alongside a pure workout reply that
+      // never states a calorie number would just be confusing noise.
+      const usedDefaults: string[] = []
+      const weight_lbs = intent.weight_lbs ?? (intent.wantsNutrition && usedDefaults.push('weight'), 165)
+      const goal = intent.goal ?? (intent.wantsNutrition && usedDefaults.push('goal'), 'lose')
+      const age = intent.age ?? 30
+      const sex = intent.sex ?? 'female'
+      const height_in = intent.height_in ?? 64
+      const days_per_week = intent.days_per_week ?? 3
+      const training_location = intent.training_location ?? 'gym'
+      const experience_level = intent.experience_level ?? 'beginner'
+      const focus_area = intent.focus_area || 'overall'
+
+      const { targets, program } = await buildInitialPlans({
+        enrollmentId: eid, userId: user.id, name: enrollment.name || 'Your',
+        age, sex, height_in, weight_lbs, goal, target_lbs: 10,
+        activity_level: 'moderate', experience_level, training_location,
+        days_per_week, workout_days_per_week: days_per_week, cook_days_per_week: 2,
+        injuries: intent.injuries, postpartum: false, training_style: 'none', focus_area,
+        autoFillMeals: true,
+      })
+
+      const namePrefix = enrollment.name ? `${enrollment.name}, ` : ''
+      let reply: string
+      if (intent.scope === 'today' && intent.wantsWorkout) {
+        reply = `${namePrefix}here's what to do: ${summarizeTodaysWorkout(program, intent.minutesAvailable)}.`
+        if (intent.wantsNutrition) reply += ` Calorie target's ${targets.calories}/day (${targets.protein_g}g protein) — full week's on your dashboard.`
+      } else if (intent.wantsNutrition && !intent.wantsWorkout) {
+        reply = `${namePrefix}built your week — target's ${targets.calories} cal/day (${targets.protein_g}g protein), meals are laid out on your dashboard.`
+      } else {
+        reply = `${namePrefix}built it — your ${days_per_week}x/week ${training_location} program is ready${intent.wantsNutrition ? `, target's ${targets.calories} cal/day (${targets.protein_g}g protein)` : ''}. Full breakdown's on your dashboard.`
+      }
+      if (usedDefaults.length) {
+        const label = usedDefaults.join(' and ')
+        reply += ` I used a starting ${label} estimate since you hadn't told me yet — give me your real ${label} anytime and I'll dial it in.`
+      }
+      await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: reply })
+      return NextResponse.json({ reply, planBuilt: true })
+    }
+  }
 
   const aiResult = await parseSignalAI(message)
   const signal = aiResult.ok ? aiResult.signal : parseSignal(message)
@@ -225,6 +339,34 @@ export async function POST(request: NextRequest) {
     if (extracted) {
       const patch = mergeProfilePatch(profile, extracted)
       if (Object.keys(patch).length > 0) await upsertProfile(eid, user.id, patch)
+    }
+  }
+
+  // Post-answer nudges — only for someone with no real plan on file yet, never
+  // stacked with each other in the same reply, and each only ever offered once.
+  // She gets the substantive answer she actually asked for first; this is
+  // appended, not a replacement for it.
+  if (!existingIntakeForPlan) {
+    const isNutritionMoment = signal?.kind === 'eat_out' || eatOutContext !== ''
+    const isWorkoutMoment = !isNutritionMoment && (!!workoutStyle || !!location || !!signal)
+    const nudgeProfile = await getProfile(eid)
+    const prefs = (nudgeProfile?.preferences ?? {}) as Record<string, unknown>
+
+    if (isNutritionMoment) {
+      // Allergies/restrictions are the nutrition-side equivalent of injuries on the
+      // fitness side — the one wrong guess that can actually hurt her, worth asking
+      // once, up front, before she's asked twice about a real plan.
+      const dietaryAddressed = !!nudgeProfile?.foodsAvoided.length || !!prefs.dietary_addressed
+      if (!dietaryAddressed) {
+        reply += ' Quick one for next time — any allergies or foods you avoid?'
+        await upsertProfile(eid, user.id, { preferences: { ...prefs, dietary_addressed: true } })
+      } else if (!prefs.meal_plan_offered) {
+        reply += ' By the way — want me to build your personalized meal plan? Real numbers every time instead of estimates.'
+        await upsertProfile(eid, user.id, { preferences: { ...prefs, meal_plan_offered: true } })
+      }
+    } else if (isWorkoutMoment && !prefs.workout_plan_offered) {
+      reply += " By the way — want me to build your personalized workout plan? A real program to follow instead of me winging it each time."
+      await upsertProfile(eid, user.id, { preferences: { ...prefs, workout_plan_offered: true } })
     }
   }
 

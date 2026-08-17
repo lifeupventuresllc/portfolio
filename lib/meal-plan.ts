@@ -112,6 +112,26 @@ export function buildWeeklyPlan(inp: MealPlanInputs): WeeklyMealPlan {
   }
 }
 
+// Auto-pick a real, varied set of recipes per slot — for callers with no UI moment
+// for her to pick meals herself (Coach Asa building a plan live in chat). Same
+// rotation idea as buildWeeklyPlan above, just shaped as SelectedMeals so it can
+// feed straight into buildWeekFromSelections below and produce a real WeekPlan.
+export function autoSelectMeals(weekNumber = 1, budget = false): SelectedMeals {
+  const breakfasts = rot(byCategory('breakfast'), weekNumber).slice(0, 3)
+  let mains = byCategory('main')
+  if (budget) mains = [...mains].sort((a, b) => (a.budget === b.budget ? 0 : a.budget ? -1 : 1))
+  mains = rot(mains, weekNumber)
+  const lunches = mains.filter((_, i) => i % 2 === 0).slice(0, 3)
+  const dinners = mains.filter((_, i) => i % 2 === 1).slice(0, 3)
+  return {
+    breakfasts,
+    lunches: lunches.length ? lunches : mains.slice(0, 3),
+    dinners: dinners.length ? dinners : mains.slice(0, 3),
+    snacks: rot(byCategory('snack'), weekNumber).slice(0, 3),
+    desserts: rot(byCategory('dessert'), weekNumber).slice(0, 2),
+  }
+}
+
 // ============================================================
 // USER-SELECTED weekly plan (The Menu Blueprint rules)
 // Week = 6 days Mon–Sat (Sun = cook day). 5 slots/day: BF, LN, SN, DN, DS.

@@ -81,13 +81,17 @@ export default async function PlanDashboard() {
     )
   }
 
-  // Enrolled but hasn't done intake
+  // Enrolled but hasn't done intake — no forced form. Coach Asa can build a real
+  // plan straight from a chat message (see app/api/plan/operator/route.ts's
+  // cold-start build), so that's offered first; the structured form stays as the
+  // alternative for anyone who'd rather just fill in stats directly.
   if (!enrollment.intake_completed) {
     return shell(
       <div className="bg-charcoal border border-gold/30 rounded-3xl p-8 text-center">
-        <p className="text-white font-semibold mb-2">One step to unlock your plan</p>
-        <p className="text-ivory/50 text-sm mb-6">Tell us your stats and goals — we&apos;ll generate your custom workout and calorie-matched meal plan in seconds.</p>
-        <Link href="/plan/intake" className="inline-block bg-gold text-obsidian px-8 py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl">Build my plan</Link>
+        <p className="text-white font-semibold mb-2">Let&apos;s get your plan built</p>
+        <p className="text-ivory/50 text-sm mb-6">Tell Coach Asa what you&apos;re looking for and she&apos;ll build it right there — or fill in your stats yourself.</p>
+        <Link href="/plan/coach" className="inline-block bg-gold text-obsidian px-8 py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl mb-3">Talk to Coach Asa</Link>
+        <Link href="/plan/intake" className="block text-ivory/50 text-sm underline underline-offset-4">Or build it myself</Link>
       </div>
     )
   }

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { calcNutritionTargets } from '@/lib/nutrition'
-import { generateWorkout, type TrainingStyle, type FocusArea } from '@/lib/workout'
-import type { Level, Injury } from '@/lib/workout-exercises'
+import { buildInitialPlans } from '@/lib/plan-builder'
+import type { Injury } from '@/lib/workout-exercises'
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,155 +40,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No challenge enrollment found for your account.' }, { status: 404 })
     }
 
-    // Upsert intake (one per enrollment)
-    const { data: existingIntake } = await svc
-      .from('challenge_intake')
-      .select('id, experience_level, form_data')
-      .eq('enrollment_id', enrollment.id)
-      .maybeSingle()
-
-    // She may have only done the required tier (name/goal/focus/body) so far — once
-    // she completes the optional second pass, this flag flips and stays flipped,
-    // so the dashboard's "finish your profile" nudge knows to stop showing.
-    const priorFormData = (existingIntake?.form_data || {}) as Record<string, unknown>
-    const optionalCompleted = !!body.refining || !!priorFormData.optional_completed
-
-    const intakePayload = {
-      enrollment_id: enrollment.id,
-      user_id: user.id,
-      age: body.age,
-      sex: body.sex || 'female',
-      height_in: body.height_in,
-      weight_lbs: body.weight_lbs,
+    const { targets } = await buildInitialPlans({
+      enrollmentId: enrollment.id,
+      userId: user.id,
+      name: enrollment.name || body.name || 'Your',
+      age: Number(body.age),
+      sex: (body.sex === 'male' ? 'male' : body.sex === 'other' ? 'other' : 'female'),
+      height_in: Number(body.height_in),
+      weight_lbs: Number(body.weight_lbs),
       goal: body.goal,
-      target_lbs: body.target_lbs,
+      target_lbs: Number(body.target_lbs) || 10,
       activity_level: body.activity_level,
       experience_level: body.experience_level,
       training_location: body.training_location,
-      days_per_week: body.days_per_week,
+      days_per_week: Number(body.days_per_week) || 3,
       weekly_food_budget: body.weekly_food_budget,
       food_preferences: body.food_preferences,
       dislikes_allergies: body.dislikes_allergies,
       injuries_limitations: body.injuries_limitations,
-      // catch-all: cook days drive the meal plan (how many times/week she batch-cooks);
-      // structured injuries persist so exercise swaps stay injury-aware
-      form_data: {
-        cook_days_per_week: Number(body.cook_days_per_week) || 2,
-        injuries: (Array.isArray(body.injuries) ? body.injuries : []) as Injury[],
-        postpartum: !!body.postpartum,
-        training_style: body.training_style || 'none',
-        other_info: body.other_info || '',
-        focus_area: body.focus_area || 'overall',
-        optional_completed: optionalCompleted,
-      },
-    }
-
-    if (existingIntake) {
-      // Only reset level_started_at when the level ITSELF changed — an unrelated
-      // intake edit (food preferences, budget, etc.) shouldn't restart her clock.
-      const levelChanged = existingIntake.experience_level !== body.experience_level
-      await svc
-        .from('challenge_intake')
-        .update({ ...intakePayload, updated_at: new Date().toISOString(), ...(levelChanged ? { level_started_at: new Date().toISOString() } : {}) })
-        .eq('id', existingIntake.id)
-    } else {
-      await svc.from('challenge_intake').insert(intakePayload)
-    }
-
-    // Auto-calculate her calorie + macro targets. Protein is meant to target her GOAL
-    // weight, not current — she saw a specific goal-weight number on the "target" step
-    // of intake (defaults to a 10lb shift when she skips it, same as that step's own
-    // preview math), but it was never actually reaching this calculation, so protein
-    // was silently using current weight instead — a real bug, not a different formula.
-    const weightLbs = Number(body.weight_lbs)
-    const deltaLbs = Number(body.target_lbs) || 10
-    const goalWeightLbs = body.goal === 'gain' ? weightLbs + deltaLbs : weightLbs - deltaLbs
-
-    const targets = calcNutritionTargets({
-      age: Number(body.age),
-      sex: body.sex || 'female',
-      height_in: Number(body.height_in),
-      weight_lbs: weightLbs,
-      activity_level: body.activity_level,
-      goal: body.goal,
-      goal_weight_lbs: goalWeightLbs,
-    })
-
-    // Create/refresh a draft Week 1 nutrition plan (macros auto; coach fills meals from The Menu)
-    const planPayload = {
-      enrollment_id: enrollment.id,
-      user_id: user.id,
-      week_number: 1,
-      calories: targets.calories,
-      protein_g: targets.protein_g,
-      carbs_g: targets.carbs_g,
-      fats_g: targets.fats_g,
-      status: 'draft',
-    }
-    const { data: existingPlan } = await svc
-      .from('challenge_nutrition_plans')
-      .select('id')
-      .eq('enrollment_id', enrollment.id)
-      .eq('week_number', 1)
-      .maybeSingle()
-
-    if (existingPlan) {
-      await svc
-        .from('challenge_nutrition_plans')
-        .update({ ...planPayload, updated_at: new Date().toISOString() })
-        .eq('id', existingPlan.id)
-    } else {
-      await svc.from('challenge_nutrition_plans').insert(planPayload)
-    }
-
-    // Auto-generate her Week 1 workout program from her setup + goals, and publish it.
-    const level = (body.experience_level === 'advanced' ? 3 : body.experience_level === 'intermediate' ? 2 : 1) as Level
-    const track: 'gym' | 'home' = body.training_location === 'home' ? 'home' : 'gym'
-    const workoutGoal = (body.goal === 'gain' || body.goal === 'maintain' ? body.goal : 'lose') as 'lose' | 'gain' | 'maintain'
-    const program = generateWorkout({
-      name: enrollment.name || body.name || 'Your',
-      sex: (body.sex === 'male' ? 'male' : body.sex === 'other' ? 'other' : 'female'),
-      track,
-      level,
-      goal: workoutGoal,
-      daysPerWeek: Number(body.days_per_week) || 3,
-      weekNumber: 1,
+      cook_days_per_week: Number(body.cook_days_per_week) || 2,
       injuries: (Array.isArray(body.injuries) ? body.injuries : []) as Injury[],
       postpartum: !!body.postpartum,
-      trainingStyle: (body.training_style || 'none') as TrainingStyle,
-      focusArea: (body.focus_area || 'overall') as FocusArea,
+      training_style: body.training_style || 'none',
+      other_info: body.other_info || '',
+      focus_area: body.focus_area || 'overall',
+      // She may have only done the required tier (name/goal/focus/body) so far — once
+      // she completes the optional second pass, this flag flips and stays flipped,
+      // so the dashboard's "finish your profile" nudge knows to stop showing.
+      optional_completed: !!body.refining,
     })
-
-    const workoutPayload = {
-      enrollment_id: enrollment.id,
-      user_id: user.id,
-      week_number: 1,
-      location: body.training_location || 'gym',
-      difficulty: body.experience_level || 'beginner',
-      plan: program,
-      status: 'published',
-    }
-    const { data: existingWorkout } = await svc
-      .from('challenge_workout_plans')
-      .select('id')
-      .eq('enrollment_id', enrollment.id)
-      .eq('week_number', 1)
-      .maybeSingle()
-
-    if (existingWorkout) {
-      await svc
-        .from('challenge_workout_plans')
-        .update({ ...workoutPayload, updated_at: new Date().toISOString() })
-        .eq('id', existingWorkout.id)
-    } else {
-      await svc.from('challenge_workout_plans').insert(workoutPayload)
-    }
-
-    // Mark intake complete + set goal on the enrollment
-    await svc
-      .from('challenge_enrollments')
-      .update({ intake_completed: true, goal: body.goal, updated_at: new Date().toISOString() })
-      .eq('id', enrollment.id)
 
     return NextResponse.json({ success: true, targets })
   } catch (error) {
