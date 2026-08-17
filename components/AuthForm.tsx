@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation'
 import { mapAuthError } from '@/lib/auth-errors'
 
 type AuthFormProps = {
-  mode: 'login' | 'signup' | 'reset'
+  mode: 'login' | 'signup' | 'reset' | 'claim'
 }
 
 export default function AuthForm({ mode }: AuthFormProps) {
@@ -89,6 +89,24 @@ export default function AuthForm({ mode }: AuthFormProps) {
           return
         }
         setMessage('Check your email to confirm your account.')
+      } else if (mode === 'claim') {
+        // Anonymous-access, Phase 1: turns her EXISTING signInAnonymously()
+        // session into a real account via updateUser(), not signUp() — the
+        // same user.id carries over, so every row already linked to it
+        // (challenge_intake, workout/nutrition plans, fos_messages) stays
+        // correctly attached automatically. No email confirmation gate here
+        // by design: she's already been using the app for real, unlike a
+        // brand-new signup.
+        if (password.length < 6) {
+          throw new Error('Password must be at least 6 characters')
+        }
+        if (!accepted) {
+          throw new Error('Please accept the Terms of Service and EULA to save your progress.')
+        }
+        const { error } = await supabase.auth.updateUser({ email, password })
+        if (error) throw error
+        await fetch('/api/auth/signup-complete', { method: 'POST' })
+        window.location.href = '/plan'
       } else if (mode === 'reset') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password?step=update`,
@@ -132,6 +150,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
     login: 'Log In',
     signup: 'Create Account',
     reset: 'Reset Password',
+    claim: 'Save Your Progress',
   }
 
   // Anchored to a fixed top offset, not vertically centered — centering inside
@@ -212,7 +231,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
             </div>
           )}
 
-          {mode === 'signup' && (
+          {(mode === 'signup' || mode === 'claim') && (
             <label className="flex items-start gap-3 text-sm text-ivory/60 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -231,14 +250,17 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
           <button
             type="submit"
-            disabled={loading || (mode === 'signup' && !accepted)}
+            disabled={loading || ((mode === 'signup' || mode === 'claim') && !accepted)}
             className="w-full bg-gold text-obsidian py-3 rounded-xl font-bold uppercase tracking-wider hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? 'Loading...' : titles[mode]}
           </button>
         </form>
 
-        {mode !== 'reset' && (
+        {/* Google claim (linkIdentity) has a different redirect shape than
+            signInWithOAuth() that needs its own verification — explicitly
+            deferred, not offered here yet. */}
+        {mode !== 'reset' && mode !== 'claim' && (
           <>
             <div className="flex items-center gap-3 my-5">
               <div className="h-px bg-smoke flex-1" />
@@ -285,6 +307,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
           {mode === 'reset' && (
             <p>
               <Link href="/login" className="text-gold hover:text-gold/70 transition-colors">Back to login</Link>
+            </p>
+          )}
+          {mode === 'claim' && (
+            <p>
+              <Link href="/plan" className="text-gold hover:text-gold/70 transition-colors">Not now — keep browsing</Link>
             </p>
           )}
         </div>

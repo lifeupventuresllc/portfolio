@@ -6,15 +6,15 @@ import HeroVideoBG from '@/components/HeroVideoBG'
 import VideoTileRow from '@/components/VideoTileRow'
 
 const INCLUDED = [
-  { title: 'Your Custom Sculpt Plan', desc: 'Workouts built for you — home or gym, matched to your level (beginner → advanced) and your goal.' },
-  { title: 'The Eat-What-You-Love Meal Plan', desc: 'Your meals planned every week for your goal (lose or gain), plus a grocery list built around your budget and the foods you love.' },
-  { title: 'Coach Asa, Built In', desc: 'Tell it about your day — voice or text — and it adjusts your plan around your real life, right there with you.' },
-  { title: 'The Curve Collective', desc: 'A private community of women walking it out with you.' },
-  { title: 'The Transformation Tracker', desc: 'See your progress beyond the scale — weight, measurements, and photos over time.' },
-  { title: 'The Menu Cookbook', desc: 'Cravable, macro-friendly recipes — real food you actually want to eat.' },
-  { title: 'The 7-Day Jump Start', desc: 'A quick win in your very first week so you feel the momentum fast.' },
-  { title: 'The Eat-Out Cheat Sheet', desc: 'Stay on track at restaurants and social events without the guilt.' },
-  { title: 'The 21-Day Habit Reset', desc: 'The system that makes your results actually stick.' },
+  { title: 'Your Custom Sculpt Plan', desc: 'Workouts built for you — home or gym, matched to your level (beginner → advanced) and your goal.', to: '/plan/workout' },
+  { title: 'The Eat-What-You-Love Meal Plan', desc: 'Your meals planned every week for your goal (lose or gain), plus a grocery list built around your budget and the foods you love.', to: '/plan/meals' },
+  { title: 'Coach Asa, Built In', desc: 'Tell it about your day — voice or text — and it adjusts your plan around your real life, right there with you.', to: '/plan/coach' },
+  { title: 'The Curve Collective', desc: 'A private community of women walking it out with you.', to: '/plan/community' },
+  { title: 'The Transformation Tracker', desc: 'See your progress beyond the scale — weight, measurements, and photos over time.', to: '/plan/checkin' },
+  { title: 'The Menu Cookbook', desc: 'Cravable, macro-friendly recipes — real food you actually want to eat.', to: '/plan/library' },
+  { title: 'The 7-Day Jump Start', desc: 'A quick win in your very first week so you feel the momentum fast.', to: '/plan/jumpstart' },
+  { title: 'The Eat-Out Cheat Sheet', desc: 'Stay on track at restaurants and social events without the guilt.', to: '/plan/eating-out' },
+  { title: 'The 21-Day Habit Reset', desc: 'The system that makes your results actually stick.', to: '/plan/reset' },
 ]
 
 const FAQ = [
@@ -50,22 +50,22 @@ function ChallengeContent() {
           </p>
           <div className="grid sm:grid-cols-2 gap-3 mb-10 text-left max-w-xl mx-auto">
             {[
-              { t: 'Sculpt Sessions', d: 'Custom workouts — home or gym, matched to your level' },
-              { t: 'Fuel, Figured Out', d: 'Auto-generated meals — one tap builds your week' },
-              { t: 'Fast-Food Fix', d: 'Away-from-home escape plan — instant order, no decision' },
-              { t: 'Coach On Call', d: 'Talk to your coach — voice memo it, it hears you, it responds' },
-              { t: 'Macros, Mapped Out', d: 'Calorie & macro tracking — see where you stand today' },
-              { t: 'Budget, Bagged', d: 'Grocery list, budget-aware — nearby stores mapped out' },
-              { t: 'The Menu — Free Forever', d: '25+ cookbook recipes, full macros + cost per serving' },
+              { t: 'Sculpt Sessions', d: 'Custom workouts — home or gym, matched to your level', to: '/plan/workout' },
+              { t: 'Fuel, Figured Out', d: 'Auto-generated meals — one tap builds your week', to: '/plan/meals' },
+              { t: 'Fast-Food Fix', d: 'Away-from-home escape plan — instant order, no decision', to: '/plan/eating-out' },
+              { t: 'Coach On Call', d: 'Talk to your coach — voice memo it, it hears you, it responds', to: '/plan/coach' },
+              { t: 'Macros, Mapped Out', d: 'Calorie & macro tracking — see where you stand today', to: '/plan/today' },
+              { t: 'Budget, Bagged', d: 'Grocery list, budget-aware — nearby stores mapped out', to: '/plan/meals' },
+              { t: 'The Menu — Free Forever', d: '25+ cookbook recipes, full macros + cost per serving', to: '/plan/library' },
             ].map((f) => (
-              <div key={f.t} className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3">
+              <a key={f.t} href={`/try?to=${f.to}`} className="block bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 hover:border-gold/40 transition-colors">
                 <p className="text-white font-semibold text-sm">{f.t}</p>
                 <p className="text-ivory/50 text-xs mt-0.5">{f.d}</p>
-              </div>
+              </a>
             ))}
           </div>
           <a
-            href="/signup?redirect=/plan/intake"
+            href="/try?to=/plan/intake"
             className="inline-block bg-gold text-obsidian px-10 py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)] cursor-pointer"
           >
             Get started — 100% free
@@ -84,7 +84,7 @@ function ChallengeContent() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {INCLUDED.map((item, i) => (
-              <div key={i} className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:border-gold/40 transition-colors">
+              <a key={i} href={`/try?to=${item.to}`} className="block bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:border-gold/40 transition-colors">
                 <div className="flex items-center gap-3 mb-3">
                   <svg className="w-5 h-5 text-gold flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <polyline points="20 6 9 17 4 12" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -92,7 +92,7 @@ function ChallengeContent() {
                   <h3 className="text-white font-semibold text-sm">{item.title}</h3>
                 </div>
                 <p className="text-ivory/50 text-sm leading-relaxed">{item.desc}</p>
-              </div>
+              </a>
             ))}
           </div>
         </div>
@@ -133,7 +133,7 @@ function ChallengeContent() {
             <p className="text-5xl font-bold text-emerald-400 mb-2">Free</p>
             <p className="text-ivory/50 text-sm mb-8">No trial to track. No card to enter. No plan to cancel later.</p>
             <a
-              href="/signup?redirect=/plan/intake"
+              href="/try?to=/plan/intake"
               className="inline-block w-full sm:w-auto bg-gold text-obsidian px-10 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
             >
               Create your free account

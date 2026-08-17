@@ -34,15 +34,14 @@ export default function LandingPage() {
               </span>
             </p>
             <div className="flex flex-wrap items-center gap-5">
-              {/* Straight to signup, not /challenge — that page is a near-duplicate
-                  of this same pitch (same headline, same "100% free" copy), so
-                  routing homepage traffic through it first was a real redundant
-                  hop: read the pitch, click Get Started, read almost the same
-                  pitch again, click Get Started again, THEN finally reach the
-                  form. /challenge still exists for other traffic (ads, social
-                  links) that hasn't seen this pitch yet. */}
+              {/* /try, not straight to /signup — she gets into the real intake
+                  and dashboard immediately, no account wall, matching the
+                  Instagram/TikTok pattern Asa asked for. Account creation is
+                  offered later, once she's actually seen her real plan (see
+                  the "Save your progress" flow in app/plan/intake/page.tsx
+                  and app/plan/page.tsx), not required up front. */}
               <Link
-                href="/signup?redirect=/plan/intake"
+                href="/try?to=/plan/intake"
                 className="group relative inline-block bg-gold text-obsidian px-10 py-4 text-base font-bold tracking-wider uppercase rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
                 style={{ perspective: '600px', transformStyle: 'preserve-3d' }}
               >
@@ -57,23 +56,27 @@ export default function LandingPage() {
             <div className="relative rounded-2xl overflow-hidden mb-4 aspect-[4/3]">
               <Image src="/images/fitness-photo-1.jpg" alt="Client mid-challenge, staying strong" fill className="object-cover" sizes="(max-width: 768px) 100vw, 400px" priority />
             </div>
+            {/* Each card is a real doorway into that exact feature now (via
+                /try, same no-account entry as the main CTA), not static
+                marketing copy — tap "Coach On Call" and land in the real
+                Coach Asa chat, not a description of it. */}
             <div className="grid grid-cols-2 gap-4" style={{ perspective: '800px' }}>
-            <div className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
+            <Link href="/try?to=/plan/workout" className="block bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
               <p className="text-gold text-lg font-bold mb-1">Sculpt Sessions</p>
               <p className="text-ivory/40 text-sm">Custom workouts, home or gym, matched to your level</p>
-            </div>
-            <div className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
+            </Link>
+            <Link href="/try?to=/plan/meals" className="block bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
               <p className="text-gold text-lg font-bold mb-1">Fuel, Figured Out</p>
               <p className="text-ivory/40 text-sm">Auto-generated meals — one tap builds your week</p>
-            </div>
-            <div className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
+            </Link>
+            <Link href="/try?to=/plan/eating-out" className="block bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
               <p className="text-gold text-lg font-bold mb-1">Fast-Food Fix</p>
               <p className="text-ivory/40 text-sm">Away-from-home escape plan — instant order, no decision</p>
-            </div>
-            <div className="bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
+            </Link>
+            <Link href="/try?to=/plan/coach" className="block bg-charcoal/70 backdrop-blur-md border border-white/10 rounded-2xl p-8 transition-all duration-500 hover:border-gold/50 hover:-translate-y-3 hover:scale-105 hover:shadow-[0_25px_50px_rgba(201,168,76,0.15)] hover:rotate-x-[-2deg]" style={{ transformStyle: 'preserve-3d' }}>
               <p className="text-gold text-lg font-bold mb-1">Coach On Call</p>
               <p className="text-ivory/40 text-sm">Voice memo me, I hear it, I respond</p>
-            </div>
+            </Link>
             </div>
           </div>
         </div>

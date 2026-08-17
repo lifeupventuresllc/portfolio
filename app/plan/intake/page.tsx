@@ -74,6 +74,17 @@ function ConversationalIntakeInner() {
   const searchParams = useSearchParams()
   const startInOptional = searchParams.get('tier') === 'optional'
 
+  // Anonymous-access, Phase 1: an anonymous session has no password to log
+  // back in with, so the existing unconditional "Sign out" button would
+  // permanently discard her only path back to unsaved progress if tapped
+  // mid-flow. Defaults false so a real logged-in user sees it immediately,
+  // same as before — only hides once we've actually confirmed she's
+  // anonymous.
+  const [isAnonymous, setIsAnonymous] = useState(false)
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => setIsAnonymous(!!data.user?.is_anonymous))
+  }, [])
+
   async function handleSignOut() {
     await createClient().auth.signOut()
     router.push('/')
@@ -248,6 +259,15 @@ function ConversationalIntakeInner() {
           <button onClick={startOptionalTier} className="w-full mt-3 text-ink/50 text-sm font-semibold hover:text-gold transition-colors">
             Fine-tune it for you — 60 seconds →
           </button>
+          {/* Offered here, not forced — the exact "look, it worked" moment
+              she has real proof (her own numbers) in front of her, matching
+              the Instagram/TikTok pattern: ask to keep it only once she's
+              actually seen it work. */}
+          {isAnonymous && (
+            <button onClick={() => router.push('/plan/save')} className="w-full mt-3 text-gold text-sm font-semibold hover:text-gold/80 transition-colors">
+              💾 Save your progress →
+            </button>
+          )}
           <p className="text-gold text-sm font-semibold mt-5">— Coach Asa</p>
         </div>
       </div>
@@ -277,7 +297,7 @@ function ConversationalIntakeInner() {
               <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
             </div>
             <span className="text-ink/30 text-xs tabular-nums">{step + 1}/{total}</span>
-            <button onClick={handleSignOut} className="text-ink/30 hover:text-gold text-xs whitespace-nowrap">Sign out</button>
+            {!isAnonymous && <button onClick={handleSignOut} className="text-ink/30 hover:text-gold text-xs whitespace-nowrap">Sign out</button>}
           </div>
         </div>
 
@@ -454,7 +474,7 @@ function ConversationalIntakeInner() {
             <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
           <span className="text-ivory/50 text-xs tabular-nums">{step + 1}/{total}</span>
-          <button onClick={handleSignOut} className="text-ivory/40 hover:text-gold text-xs whitespace-nowrap">Sign out</button>
+          {!isAnonymous && <button onClick={handleSignOut} className="text-ivory/40 hover:text-gold text-xs whitespace-nowrap">Sign out</button>}
         </div>
       </div>
 
