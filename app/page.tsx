@@ -18,17 +18,19 @@ export default function LandingPage() {
         <div className="luf-reveal relative max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div className="bg-paper/70 backdrop-blur-md rounded-3xl p-8 sm:p-10 shadow-xl">
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Life-Up Fitness App</p>
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-6 leading-[1.1]">
-              This app knows when you&apos;re about to quit — before you do.
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-6 leading-[1.1] uppercase">
+              Willpower&apos;s not the point. Catching you is.
             </h1>
             <p className="text-gold text-lg sm:text-xl font-semibold mb-6">
-              It catches the slip and keeps rebuilding your plan around your real life — so you never need willpower to stay on track.
+              You&apos;re not lacking discipline — you&apos;re carrying a job, a household, and everyone
+              else&apos;s needs before your own.
             </p>
             <p className="text-ink/60 text-lg leading-relaxed mb-6">
-              Real workouts. Real meals built around the foods you actually love. All the
-              decisions made for you. But that&apos;s not what keeps you going — it&apos;s that this
-              app notices when you&apos;re falling off before you say a word, and answers like a
-              coach who knows you, not a broken streak counter.
+              That&apos;s the real reason fitness apps stop working for you — not that you didn&apos;t
+              want it enough, just that nobody built one that actually noticed when you started
+              slipping. This one does. It catches the moment before you quit and rebuilds your
+              plan around the life you&apos;re actually living, not the one a generic program
+              assumes you have.
             </p>
             <p className="text-sm mb-8">
               <span className="inline-block bg-gold/10 border border-gold/30 text-gold font-semibold px-3 py-1.5 rounded-xl">
