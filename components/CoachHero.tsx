@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Celebration from '@/components/Celebration'
 import VoiceButton from '@/components/VoiceButton'
 import { useLiveRefresh, localTodayISO, broadcastRefresh } from '@/lib/useLiveRefresh'
@@ -25,6 +26,7 @@ const WHERE = [{ v: 'home', l: '🏠 Home' }, { v: 'gym', l: '🏋️ Gym' }, { 
 const GOAL = [{ v: 'push', l: '🔥 Push hard' }, { v: 'showup', l: '💪 Just show up' }, { v: 'recover', l: '🌿 Recover' }]
 
 export default function CoachHero({ firstName }: { firstName: string }) {
+  const router = useRouter()
   const [workoutDone, setWorkoutDone] = useState(false)
   const [nutri, setNutri] = useState<{ protein: number; target: number } | null>(null)
   const [messages, setMessages] = useState<Msg[]>([])
@@ -110,6 +112,12 @@ export default function CoachHero({ firstName }: { firstName: string }) {
       const d = await r.json().catch(() => ({}))
       setMessages((m) => [...m, { role: 'operator', content: d?.reply || "Tell me a little more about your day and I'll adjust your plan." }])
       if (d?.adjustment) setPending(d.adjustment as Adjustment)
+      // A cold-start build just flipped intake_completed server-side — that decides
+      // which whole branch /plan/page.tsx renders (the "no plan yet" card vs. the
+      // real dashboard), which broadcastRefresh() alone can't reach since that's a
+      // server decision, not a client-fetched value. Found live: without this, she'd
+      // have to manually reload to see her own just-built plan show up at all.
+      if (d?.planBuilt) { router.refresh(); broadcastRefresh() }
     } catch { setMessages((m) => [...m, { role: 'operator', content: "I couldn't reach your plan just now — try that again in a sec." }]) }
     setSending(false)
   }
