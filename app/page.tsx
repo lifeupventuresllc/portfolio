@@ -19,29 +19,34 @@ export default function LandingPage() {
           <div className="bg-paper/70 backdrop-blur-md rounded-3xl p-8 sm:p-10 shadow-xl">
             <p className="text-gold text-sm font-semibold tracking-[0.3em] uppercase mb-5">Life-Up Fitness App</p>
             <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-ink mb-6 leading-[1.1]">
-              Two things get in your way. This app removes both.
+              This app knows when you&apos;re about to quit — before you do.
             </h1>
             <p className="text-gold text-lg sm:text-xl font-semibold mb-6">
-              No time to figure it out. No willpower left when cravings hit.
+              It catches the slip and keeps rebuilding your plan around your real life — so you never need willpower to stay on track.
             </p>
             <p className="text-ink/60 text-lg leading-relaxed mb-6">
-              Custom workouts, meals built around the foods you actually love, all the
-              decisions made for you — the full app, 100% free.
+              Real workouts. Real meals built around the foods you actually love. All the
+              decisions made for you. But that&apos;s not what keeps you going — it&apos;s that this
+              app notices when you&apos;re falling off before you say a word, and answers like a
+              coach who knows you, not a broken streak counter.
             </p>
             <p className="text-sm mb-8">
               <span className="inline-block bg-gold/10 border border-gold/30 text-gold font-semibold px-3 py-1.5 rounded-xl">
-                No trial. No card. Just create your account.
+                No signup. No card. Just start.
               </span>
             </p>
             <div className="flex flex-wrap items-center gap-5">
-              {/* /try, not straight to /signup — she gets into the real intake
-                  and dashboard immediately, no account wall, matching the
-                  Instagram/TikTok pattern Asa asked for. Account creation is
-                  offered later, once she's actually seen her real plan (see
-                  the "Save your progress" flow in app/plan/intake/page.tsx
-                  and app/plan/page.tsx), not required up front. */}
+              {/* /try, not straight to /signup — she gets into the real dashboard
+                  immediately, no account wall, matching the Instagram/TikTok
+                  pattern Asa asked for. Points at /plan (not /plan/intake) —
+                  she should never be routed straight into the structured form;
+                  Coach Asa can build a real plan for her conversationally with
+                  no intake at all (see app/api/plan/operator/route.ts's
+                  cold-start build). Account creation is offered later, once
+                  she's actually seen her real plan (see the "Save your
+                  progress" flow in app/plan/page.tsx), not required up front. */}
               <Link
-                href="/try?to=/plan/intake"
+                href="/try?to=/plan"
                 className="group relative inline-block bg-gold text-obsidian px-10 py-4 text-base font-bold tracking-wider uppercase rounded-2xl transition-all duration-500 hover:scale-110 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
                 style={{ perspective: '600px', transformStyle: 'preserve-3d' }}
               >
