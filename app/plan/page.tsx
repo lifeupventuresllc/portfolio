@@ -12,6 +12,7 @@ import WeeklyCheckinPrompt from '@/components/WeeklyCheckinPrompt'
 import VerifyEmailBanner from '@/components/VerifyEmailBanner'
 import AnonymousSessionBanner from '@/components/AnonymousSessionBanner'
 import TimezoneSync from '@/components/TimezoneSync'
+import QuickstartWorkout from '@/components/QuickstartWorkout'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
 import { localDateISO, localMondayIndex, localDayNumber, addDaysISO } from '@/lib/localdate'
@@ -81,19 +82,12 @@ export default async function PlanDashboard() {
     )
   }
 
-  // Enrolled but hasn't done intake — no forced form. Coach Asa can build a real
-  // plan straight from a chat message (see app/api/plan/operator/route.ts's
-  // cold-start build), so that's offered first; the structured form stays as the
-  // alternative for anyone who'd rather just fill in stats directly.
+  // Enrolled but hasn't done intake — no wall, no chat prompt, no form. Same
+  // zero-friction pattern as Sculpt Sessions: one question (home or gym),
+  // straight into a real plan. Landing on the dashboard for the first time
+  // should feel like landing in the app, not hitting an onboarding screen.
   if (!enrollment.intake_completed) {
-    return shell(
-      <div className="bg-charcoal border border-gold/30 rounded-3xl p-8 text-center">
-        <p className="text-white font-semibold mb-2">Let&apos;s get your plan built</p>
-        <p className="text-ivory/50 text-sm mb-6">Tell Coach Asa what you&apos;re looking for and she&apos;ll build it right there — or fill in your stats yourself.</p>
-        <Link href="/plan/coach" className="inline-block bg-gold text-obsidian px-8 py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl mb-3">Talk to Coach Asa</Link>
-        <Link href="/plan/intake" className="block text-ivory/50 text-sm underline underline-offset-4">Or build it myself</Link>
-      </div>
-    )
+    return <QuickstartWorkout />
   }
 
   const todayIso = localDateISO()
