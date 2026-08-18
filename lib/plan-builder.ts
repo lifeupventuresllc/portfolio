@@ -123,7 +123,11 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     workout_length: '45_60_both',
     goal_weight_lbs: goalWeightLbs,
   })
-  const targets = {
+  // Mutable — when autoFillMeals recomputes real numbers off the actual portioned
+  // meals below, this gets updated to match exactly what gets saved to the DB, so
+  // whatever a caller reports back to her (e.g. Coach Asa's chat reply) is never
+  // out of sync with what the dashboard actually shows.
+  let targets = {
     calories: Math.round(bp.current.weeklyEat / 7),
     protein_g: bp.current.workout.macros.protein_g,
     carbs_g: bp.current.workout.macros.carbs_g,
@@ -177,6 +181,9 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
       meals: weekPlan,
       status: 'published',
     }
+    // Real portioned meals rarely land exactly on the raw blueprint target — keep
+    // targets in lockstep with what's actually saved, not the pre-portioning number.
+    targets = { ...targets, calories: weekPlan.avgCal, protein_g: weekPlan.avgProtein }
   }
 
   const { data: existingPlan } = await svc

@@ -14,6 +14,26 @@ import type { FosEventKind, WorkoutChange } from '@/lib/fos/types'
 import type { Injury } from '@/lib/workout-exercises'
 import type { WorkoutProgram } from '@/lib/workout'
 
+// Names the week's actual training days for the "built your whole plan" reply —
+// without this, a week-scope build only ever said "your Nx/week program is
+// ready" with zero real content, unlike the today-scope reply which names actual
+// exercises. Found live-testing: she should see a taste of what she got, not a
+// pure pointer to the dashboard.
+function summarizeWeekProgram(program: WorkoutProgram): string {
+  const titles = program.track === 'gym' && program.gymDays?.length
+    ? program.gymDays.map((d) => d.title)
+    : program.home?.days.length ? program.home.days.map((d) => d.title) : []
+  return titles.length ? titles.join(', ') : `your ${program.daysPerWeek}x/week ${program.track} program`
+}
+
+// Same idea for meals — names a real day's actual meals instead of only stating
+// the calorie number.
+function summarizeWeekMeals(weekPlan: WeekPlan): string {
+  const day = weekPlan.days.find((d) => !d.eatOut) || weekPlan.days[0]
+  const names = (day?.meals ?? []).map((m) => m.name)
+  return names.slice(0, 3).join(', ')
+}
+
 // Names today's actual exercises out of a freshly generated program, for Coach
 // Asa's cold-start reply — she asked in chat, so she gets the real moves back in
 // chat, not just a "check your dashboard" pointer. If she named a time budget,
@@ -179,7 +199,7 @@ export async function POST(request: NextRequest) {
       const experience_level = intent.experience_level ?? 'beginner'
       const focus_area = intent.focus_area || 'overall'
 
-      const { targets, program } = await buildInitialPlans({
+      const { targets, program, weekPlan } = await buildInitialPlans({
         enrollmentId: eid, userId: user.id, name: enrollment.name || 'Your',
         age, sex, height_in, weight_lbs, goal, target_lbs: 10,
         activity_level: 'moderate', experience_level, training_location,
@@ -189,14 +209,15 @@ export async function POST(request: NextRequest) {
       })
 
       const namePrefix = enrollment.name ? `${enrollment.name}, ` : ''
+      const mealSample = weekPlan ? summarizeWeekMeals(weekPlan) : ''
       let reply: string
       if (intent.scope === 'today' && intent.wantsWorkout) {
         reply = `${namePrefix}here's what to do: ${summarizeTodaysWorkout(program, intent.minutesAvailable)}.`
-        if (intent.wantsNutrition) reply += ` Calorie target's ${targets.calories}/day (${targets.protein_g}g protein) — full week's on your dashboard.`
+        if (intent.wantsNutrition) reply += ` Calorie target's ${targets.calories}/day (${targets.protein_g}g protein)${mealSample ? ` — try ${mealSample}` : ''}. Full week's on your dashboard.`
       } else if (intent.wantsNutrition && !intent.wantsWorkout) {
-        reply = `${namePrefix}built your week — target's ${targets.calories} cal/day (${targets.protein_g}g protein), meals are laid out on your dashboard.`
+        reply = `${namePrefix}built your week — target's ${targets.calories} cal/day (${targets.protein_g}g protein)${mealSample ? `. First up: ${mealSample}` : ''}. Full week's on your dashboard.`
       } else {
-        reply = `${namePrefix}built it — your ${days_per_week}x/week ${training_location} program is ready${intent.wantsNutrition ? `, target's ${targets.calories} cal/day (${targets.protein_g}g protein)` : ''}. Full breakdown's on your dashboard.`
+        reply = `${namePrefix}built it — ${summarizeWeekProgram(program)}${intent.wantsNutrition ? `, target's ${targets.calories} cal/day (${targets.protein_g}g protein)` : ''}. Full breakdown's on your dashboard.`
       }
       if (usedDefaults.length) {
         const label = usedDefaults.join(' and ')
