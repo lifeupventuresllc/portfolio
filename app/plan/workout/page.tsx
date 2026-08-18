@@ -101,6 +101,18 @@ export default async function WorkoutSession() {
   return (
     <div className="min-h-[100dvh] bg-obsidian px-4 py-8">
       <WorkoutPlayer program={program} firstName={firstName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} />
+      {/* The quickstart flow (QuickstartWorkout) only ever shows its home/gym
+          picker once, on the very first build — real behavior, not a bug, since
+          re-showing it every visit would defeat the "no wall" point. But she
+          still needs a real, visible way to switch after that first choice —
+          this reuses the same trackOverride mechanism Coach Asa's chat already
+          uses (see the trackOverride block above), rather than building a
+          second, separate switching path. */}
+      <div className="max-w-lg mx-auto text-center mt-6">
+        <a href="/plan/coach" className="text-ivory/40 text-sm underline underline-offset-4">
+          Training somewhere different today? Tell Coach Asa
+        </a>
+      </div>
     </div>
   )
 }

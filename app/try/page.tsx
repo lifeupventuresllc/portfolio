@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 // The single anonymous-entry choke point every marketing CTA and homepage
@@ -14,7 +14,6 @@ import { createClient } from '@/lib/supabase/client'
 // then sends her straight to the real feature she clicked. No account, no
 // login wall — see the anonymous-access plan for the full "why."
 function TryInner() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [error, setError] = useState(false)
   const supabase = useMemo(() => createClient(), [])
@@ -32,7 +31,15 @@ function TryInner() {
         }
         const res = await fetch('/api/anon/start', { method: 'POST' })
         if (!res.ok) throw new Error('anon/start failed')
-        if (!cancelled) router.replace(to)
+        // A real, intermittent bug: router.replace() is a Next.js client-side soft
+        // navigation, which occasionally reached the destination page's middleware
+        // before the just-created session cookie was reliably included on that
+        // request — bouncing her to /login right after signInAnonymously() had
+        // already succeeded. A full navigation guarantees the browser sends its
+        // current, complete cookie jar with the request, closing that race for
+        // good — worth the small cost of a full page load for the single most
+        // important entry point in the funnel.
+        if (!cancelled) window.location.href = to
       } catch {
         if (!cancelled) setError(true)
       }
