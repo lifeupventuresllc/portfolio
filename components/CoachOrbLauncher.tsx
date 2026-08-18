@@ -10,7 +10,7 @@ import CoachHero from '@/components/CoachHero'
 // prefers-reduced-motion, see app/globals.css) instead of new CSS. Tapping it
 // crossfades into the real, fully-functional CoachHero — same component, same
 // live chat, just revealed instead of always-open.
-export default function CoachOrbLauncher({ firstName }: { firstName: string }) {
+export default function CoachOrbLauncher({ firstName, hasPlan }: { firstName: string; hasPlan: boolean }) {
   const [open, setOpen] = useState(false)
   const [visible, setVisible] = useState(true)
 
@@ -26,7 +26,7 @@ export default function CoachOrbLauncher({ firstName }: { firstName: string }) {
     <div style={{ transition: 'opacity 0.26s ease, filter 0.26s ease', opacity: visible ? 1 : 0, filter: visible ? 'blur(0px)' : 'blur(6px)' }}>
       {open ? (
         <div>
-          <CoachHero firstName={firstName} />
+          <CoachHero firstName={firstName} hasPlan={hasPlan} />
           <button onClick={() => reveal(false)} className="block mx-auto text-white/30 hover:text-white/50 text-xs mt-3 transition-colors">
             ← back
           </button>
@@ -48,6 +48,13 @@ export default function CoachOrbLauncher({ firstName }: { firstName: string }) {
             </span>
           </button>
           <p className="text-white/30 text-xs mt-5">tap to talk to Coach Asa</p>
+
+          {!hasPlan && (
+            <div className="bg-charcoal border border-gold/30 rounded-2xl p-5 text-center mt-6 w-full">
+              <p className="text-white font-semibold text-sm mb-1">No plan built yet</p>
+              <p className="text-ivory/50 text-xs">Tell Coach Asa what you&apos;re looking for above, or pick a feature above — your numbers show up here the moment you do.</p>
+            </div>
+          )}
         </div>
       )}
     </div>

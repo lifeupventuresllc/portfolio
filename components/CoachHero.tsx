@@ -25,7 +25,7 @@ const TIME = [{ v: 'short', l: '⏱️ 15-20 min' }, { v: 'normal', l: '🕐 Abo
 const WHERE = [{ v: 'home', l: '🏠 Home' }, { v: 'gym', l: '🏋️ Gym' }, { v: 'traveling', l: '✈️ Traveling' }]
 const GOAL = [{ v: 'push', l: '🔥 Push hard' }, { v: 'showup', l: '💪 Just show up' }, { v: 'recover', l: '🌿 Recover' }]
 
-export default function CoachHero({ firstName }: { firstName: string }) {
+export default function CoachHero({ firstName, hasPlan = true }: { firstName: string; hasPlan?: boolean }) {
   const router = useRouter()
   const [workoutDone, setWorkoutDone] = useState(false)
   const [nutri, setNutri] = useState<{ protein: number; target: number } | null>(null)
@@ -247,10 +247,15 @@ export default function CoachHero({ firstName }: { firstName: string }) {
       )}
 
       {recordingMemo && (
-        <p className="luf-flame text-red-400 text-[10px] uppercase tracking-wider font-bold mb-1.5">● Recording your memo — tap 🎙️ again when you&apos;re done</p>
+        <p className="luf-flame text-red-400 text-[10px] uppercase tracking-wider font-bold mb-1.5">● Recording your memo — tap 📝 again when you&apos;re done</p>
       )}
 
-      {!pending && (
+      {/* Only makes sense once she actually has a plan to stick with — for a
+          plan-less user (cold-start build in progress), this used to show
+          unconditionally, which read as actively wrong advice at exactly the
+          moment she's answering a build question. Found via a first-time-
+          user pass over a live screenshot. */}
+      {!pending && hasPlan && (
         <button onClick={stickWithPlan} disabled={sending}
           className="w-full text-center bg-charcoal/5 border border-smoke/30 text-ink/50 hover:text-gold hover:border-gold/40 px-4 py-2 rounded-xl text-xs font-semibold mb-2 transition-colors disabled:opacity-40">
           ✅ Stick with my current plan
@@ -265,15 +270,18 @@ export default function CoachHero({ firstName }: { firstName: string }) {
           autoComplete="off" autoCorrect="on" enterKeyHint="send" inputMode="text"
           className="flex-1 bg-charcoal/5 border border-smoke/30 rounded-2xl px-4 py-3 text-base text-ink placeholder:text-ink/35 focus:border-gold/60 focus:outline-none"
         />
+        {/* Two near-identical mic emoji (🎤 vs 🎙️) read as the same button at a
+            glance — swapped the long-memo one for 📝 so the two are actually
+            distinguishable without reading the caption underneath. */}
         <VoiceButton idleLabel="Talk to Coach Asa" onInterim={setInput} onResult={(t) => { setInput(t); send(t) }} />
         <VoiceButton
-          icon="🎙️" idleLabel="Record a longer memo" continuous
+          icon="📝" idleLabel="Record a longer memo" continuous
           onInterim={(t) => { setRecordingMemo(true); setInput(t) }}
           onResult={(t) => { setRecordingMemo(false); setInput(t); send(t) }}
         />
         <button type="submit" disabled={sending || !input.trim()} className="h-12 w-12 shrink-0 rounded-full bg-gold text-obsidian font-bold text-lg flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform">{sending ? '…' : '➤'}</button>
       </form>
-      <p className="text-ink/30 text-[10px] mt-1.5">🎤 quick chat · 🎙️ record a longer memo — thoughts, questions, or your daily check-in</p>
+      <p className="text-ink/25 text-[10px] mt-1.5">🎤 talk · 📝 longer memo</p>
 
       <Celebration trigger={perfectDay} message={winAffirmation('allDone')} dedupeKey={`perfectday-${today}`} />
     </div>

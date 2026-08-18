@@ -180,10 +180,10 @@ export default async function PlanDashboard() {
       </div>
 
       <div className="py-2">
-        <CoachOrbLauncher firstName={firstName} />
+        <CoachOrbLauncher firstName={firstName} hasPlan={hasPlan} />
       </div>
 
-      {hasPlan ? (
+      {hasPlan && (
         <>
           <GoalProgressBar startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} workoutConsistencyPct={workoutConsistencyPct} nutritionConsistencyPct={nutritionConsistencyPct} />
 
@@ -193,17 +193,13 @@ export default async function PlanDashboard() {
             <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} compact />
           </div>
         </>
-      ) : (
-        // No real numbers to show yet — nothing below this is locked or gated,
-        // she just hasn't built a plan yet. Coach Asa (right above) can build
-        // one from a single chat message; this card is honest about that
-        // instead of showing fabricated zeros in the real progress/calorie/
-        // workout cards.
-        <div className="bg-charcoal border border-gold/30 rounded-2xl p-5 text-center">
-          <p className="text-white font-semibold text-sm mb-1">No plan built yet</p>
-          <p className="text-ivory/50 text-xs">Tell Coach Asa what you&apos;re looking for above, or pick a feature above — your numbers show up here the moment you do.</p>
-        </div>
       )}
+      {/* The "no plan yet" companion message now lives inside CoachOrbLauncher
+          itself (shown only while the chat is closed) — having it as a
+          separate always-visible card here meant it kept insisting "no plan
+          built yet" directly underneath an active, in-progress build
+          conversation, which read as the app not noticing what it just asked
+          her. Found via a first-time-user pass over a live screenshot. */}
 
       {/* Persistent feedback surface — always here, not just a popup */}
       <FeedbackCard />
