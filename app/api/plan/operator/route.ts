@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     await svc.from('fos_events').insert({ enrollment_id: eid, user_id: user.id, occurred_on: today, kind: 'adjustment', summary: `Adjustment ${status}`, payload: { adjustmentId: body.adjustmentId, status } })
     const withName = (lower: string) => enrollment.name ? `${enrollment.name}, ${lower}` : `${lower.charAt(0).toUpperCase()}${lower.slice(1)}`
     const reply = status === 'approved'
-      ? withName(injuryPersisted ? "locked in — and I've noted it so every future workout stays safe for it automatically. You won't need to bring it up again. 💛" : "locked in. I've got the rest — go be great. 💛")
+      ? withName(injuryPersisted ? "locked in — and I've noted it so every future workout stays safe for it automatically. You won't need to bring it up again." : "locked in. I've got the rest — go be great.")
       : status === 'rejected' ? withName("no problem — we'll keep today as planned. You're always in control.")
       : withName("got it — tell me what you'd rather do and I'll rework it around your goal.")
     await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: reply })
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
     const isAffirmative = /^(yes|yeah|yep|yup|sure|ok(ay)?|please|do it|let'?s do it|go for it|sounds good|i'?d love that)\b/i.test(message.trim())
     if (justOffered && isAffirmative) {
       const namePrefix = enrollment.name ? `${enrollment.name}, ` : ''
-      const reply = `${namePrefix}let's do it — head to your plan page and tap "Build my plan." Takes about a minute, and I'll have your real numbers locked in from there. 💛`
+      const reply = `${namePrefix}let's do it — head to your plan page and tap "Build my plan." Takes about a minute, and I'll have your real numbers locked in from there.`
       await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: reply })
       return NextResponse.json({ reply, offerIntake: true })
     }
@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
         })
       }
       const summary = foods.map((f) => `${f.name} (~${f.calories} cal)`).join(', ')
-      const reply = `Logged it: ${summary}. Estimated, not exact — but it's counted toward today already. 💛`
+      const reply = `Logged it: ${summary}. Estimated, not exact — but it's counted toward today already.`
       await svc.from('fos_events').insert({ enrollment_id: eid, user_id: user.id, occurred_on: today, kind: 'message', summary: message, payload: { loggedFood: true, foods } })
       await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: reply })
       return NextResponse.json({ reply, loggedFood: true })

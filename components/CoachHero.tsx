@@ -20,10 +20,28 @@ type Adjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionC
 // which plans DIRECTLY from the structured fields (not a synthesized sentence run
 // through regex matching) — that's what actually swaps today's workout to a home/gym
 // track based on where she says she is, instead of just producing a cosmetic label.
-const FEELING = [{ v: 'great', l: '😊 Great' }, { v: 'okay', l: '😐 Okay' }, { v: 'tired', l: '😴 Tired' }, { v: 'stressed', l: '😣 Stressed' }]
-const TIME = [{ v: 'short', l: '⏱️ 15-20 min' }, { v: 'normal', l: '🕐 About 45 min' }, { v: 'plenty', l: '🕒 Plenty of time' }]
-const WHERE = [{ v: 'home', l: '🏠 Home' }, { v: 'gym', l: '🏋️ Gym' }, { v: 'traveling', l: '✈️ Traveling' }]
-const GOAL = [{ v: 'push', l: '🔥 Push hard' }, { v: 'showup', l: '💪 Just show up' }, { v: 'recover', l: '🌿 Recover' }]
+const FEELING = [{ v: 'great', l: 'Great' }, { v: 'okay', l: 'Okay' }, { v: 'tired', l: 'Tired' }, { v: 'stressed', l: 'Stressed' }]
+const TIME = [{ v: 'short', l: '15-20 min' }, { v: 'normal', l: 'About 45 min' }, { v: 'plenty', l: 'Plenty of time' }]
+const WHERE = [{ v: 'home', l: 'Home' }, { v: 'gym', l: 'Gym' }, { v: 'traveling', l: 'Traveling' }]
+const GOAL = [{ v: 'push', l: 'Push hard' }, { v: 'showup', l: 'Just show up' }, { v: 'recover', l: 'Recover' }]
+
+function NoteIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 20h4l10.5-10.5a2.121 2.121 0 0 0-3-3L5 17v3z" />
+      <path d="M13.5 6.5l3 3" />
+    </svg>
+  )
+}
+
+function SendIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="19" x2="12" y2="5" />
+      <polyline points="5 12 12 5 19 12" />
+    </svg>
+  )
+}
 
 export default function CoachHero({ firstName, hasPlan = true }: { firstName: string; hasPlan?: boolean }) {
   const router = useRouter()
@@ -95,12 +113,12 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
   // Leads with her name every time now (was worked in mid-sentence) — Asa's
   // explicit call, same "always address her by name" standard as the chat.
   let greeting: string
-  if (perfectDay) greeting = `${firstName}, you've handled everything today. Proud of you. 💛`
+  if (perfectDay) greeting = `${firstName}, you've handled everything today. Proud of you.`
   else if (!workoutDone && !nutritionDone) greeting = proteinLeft != null
     ? `${firstName}, how's your day looking? You've still got your workout and ${proteinLeft}g of protein — tell me what's going on and I'll fit it in.`
     : `${firstName}, how's your day looking? Tell me what's going on and I'll build today around you.`
-  else if (!workoutDone && nutritionDone) greeting = `${firstName}, nutrition's handled 🙌 — just your workout left. Short on time? Tell me and I'll adjust it.`
-  else if (proteinLeft != null && proteinLeft > 0) greeting = `${firstName}, workout's done 💪🏽 — ${proteinLeft}g of protein to go. Want a quick idea? Just tell me.`
+  else if (!workoutDone && nutritionDone) greeting = `${firstName}, nutrition's handled — just your workout left. Short on time? Tell me and I'll adjust it.`
+  else if (proteinLeft != null && proteinLeft > 0) greeting = `${firstName}, workout's done — ${proteinLeft}g of protein to go. Want a quick idea? Just tell me.`
   else greeting = `${firstName}, how are you feeling today? Tell me what's going on — and how's the app been working for you so far?`
 
   async function send(text: string) {
@@ -127,7 +145,7 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
   // instantly, no API round-trip needed since there's nothing to accept/reject.
   function stickWithPlan() {
     setPending(null)
-    setMessages((m) => [...m, { role: 'user', content: "I'll stick with my current plan." }, { role: 'operator', content: `${firstName}, sounds good — sticking with what's already working. No changes. 💪` }])
+    setMessages((m) => [...m, { role: 'user', content: "I'll stick with my current plan." }, { role: 'operator', content: `${firstName}, sounds good — sticking with what's already working. No changes.` }])
   }
 
   async function decide(status: 'approved' | 'modified' | 'rejected') {
@@ -173,7 +191,7 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
             <>
               <button onClick={stickWithWorkout}
                 className="w-full bg-gold text-obsidian px-6 py-3.5 font-bold text-xs uppercase tracking-wider rounded-2xl active:scale-95 transition-transform">
-                ✅ Stick with today&apos;s workout
+                Stick with today&apos;s workout
               </button>
               <button onClick={() => setShowCheckin(true)} className="w-full text-center text-ink/50 text-xs hover:text-gold transition-colors">How&apos;s your day going? Tell me →</button>
             </>
@@ -247,7 +265,7 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
       )}
 
       {recordingMemo && (
-        <p className="luf-flame text-red-400 text-[10px] uppercase tracking-wider font-bold mb-1.5">● Recording your memo — tap 📝 again when you&apos;re done</p>
+        <p className="luf-flame text-red-400 text-[10px] uppercase tracking-wider font-bold mb-1.5">● Recording your memo — tap the note button again when you&apos;re done</p>
       )}
 
       {/* Only makes sense once she actually has a plan to stick with — for a
@@ -258,7 +276,7 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
       {!pending && hasPlan && (
         <button onClick={stickWithPlan} disabled={sending}
           className="w-full text-center bg-charcoal/5 border border-smoke/30 text-ink/50 hover:text-gold hover:border-gold/40 px-4 py-2 rounded-xl text-xs font-semibold mb-2 transition-colors disabled:opacity-40">
-          ✅ Stick with my current plan
+          Stick with my current plan
         </button>
       )}
 
@@ -270,18 +288,15 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
           autoComplete="off" autoCorrect="on" enterKeyHint="send" inputMode="text"
           className="flex-1 bg-charcoal/5 border border-smoke/30 rounded-2xl px-4 py-3 text-base text-ink placeholder:text-ink/35 focus:border-gold/60 focus:outline-none"
         />
-        {/* Two near-identical mic emoji (🎤 vs 🎙️) read as the same button at a
-            glance — swapped the long-memo one for 📝 so the two are actually
-            distinguishable without reading the caption underneath. */}
         <VoiceButton idleLabel="Talk to Coach Asa" onInterim={setInput} onResult={(t) => { setInput(t); send(t) }} />
         <VoiceButton
-          icon="📝" idleLabel="Record a longer memo" continuous
+          icon={<NoteIcon />} idleLabel="Record a longer memo" continuous
           onInterim={(t) => { setRecordingMemo(true); setInput(t) }}
           onResult={(t) => { setRecordingMemo(false); setInput(t); send(t) }}
         />
-        <button type="submit" disabled={sending || !input.trim()} className="h-12 w-12 shrink-0 rounded-full bg-gold text-obsidian font-bold text-lg flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform">{sending ? '…' : '➤'}</button>
+        <button type="submit" disabled={sending || !input.trim()} className="h-12 w-12 shrink-0 rounded-full bg-gold text-obsidian flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform">{sending ? <span className="text-lg font-bold">…</span> : <SendIcon />}</button>
       </form>
-      <p className="text-ink/25 text-[10px] mt-1.5">🎤 talk · 📝 longer memo</p>
+      <p className="text-ink/25 text-[10px] mt-1.5">tap to talk · tap for a longer voice memo</p>
 
       <Celebration trigger={perfectDay} message={winAffirmation('allDone')} dedupeKey={`perfectday-${today}`} />
     </div>

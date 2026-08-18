@@ -4,6 +4,24 @@ import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { deviceLabel, markFeedbackSent, FEEDBACK_SEVERITIES, type FeedbackCategory, type FeedbackSeverity } from '@/lib/feedback-context'
 
+function ThumbsUpIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 10v12" />
+      <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H7a2 2 0 0 1-2-2v-8a2 2 0 0 1 .59-1.41L11 5a1.5 1.5 0 0 1 2.09.02L15 5.88Z" />
+    </svg>
+  )
+}
+
+function ThumbsDownIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 14V2" />
+      <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H17a2 2 0 0 1 2 2v8a2 2 0 0 1-.59 1.41L13 19a1.5 1.5 0 0 1-2.09-.02L9 18.12Z" />
+    </svg>
+  )
+}
+
 // Tiny inline feedback moment dropped at the exact point she just finished something
 // (a workout, a saved meal week, a check-in) — not a page she has to remember to visit.
 // Layered by design (Asa's explicit call): a quick 👍/👎 tap first, then one optional
@@ -47,7 +65,7 @@ export default function QuickFeedback({ category, context, dark = false, reviewG
   }
 
   if (phase === 'sent') {
-    return <p className={`${dark ? 'text-ivory/50' : 'text-ink/40'} text-xs mt-3`}>Thanks — noted 🙏🏽</p>
+    return <p className={`${dark ? 'text-ivory/50' : 'text-ink/40'} text-xs mt-3`}>Thanks — noted.</p>
   }
 
   // This detail box always has its own dark background, so its text stays ivory
@@ -81,7 +99,7 @@ export default function QuickFeedback({ category, context, dark = false, reviewG
     const storeUrl = process.env.NEXT_PUBLIC_APP_STORE_URL
     return (
       <div className="mt-3 bg-obsidian/90 border border-smoke rounded-2xl p-4 text-center">
-        <p className="text-ivory/70 text-sm font-semibold mb-3">🙏🏽 So glad it&apos;s working! Mind leaving a quick review?</p>
+        <p className="text-ivory/70 text-sm font-semibold mb-3">So glad it&apos;s working! Mind leaving a quick review?</p>
         <div className="flex flex-col gap-2">
           <a
             href={storeUrl || '#'}
@@ -105,7 +123,7 @@ export default function QuickFeedback({ category, context, dark = false, reviewG
   if (phase === 'up') {
     return (
       <div className="mt-3 bg-obsidian/90 border border-smoke rounded-2xl p-4 text-left">
-        <p className="text-ivory/70 text-sm font-semibold mb-2">🙏🏽 Glad it&apos;s working. Anything that would make this even better for you?</p>
+        <p className="text-ivory/70 text-sm font-semibold mb-2">Glad it&apos;s working. Anything that would make this even better for you?</p>
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2}
           placeholder="Optional — totally fine to skip"
           className="w-full px-3 py-2 bg-obsidian border border-smoke rounded-xl text-white text-sm focus:outline-none focus:border-gold transition-colors resize-none mb-3" />
@@ -122,8 +140,8 @@ export default function QuickFeedback({ category, context, dark = false, reviewG
   return (
     <div className="flex items-center justify-center gap-3 mt-3">
       <span className={`${dark ? 'text-ivory/50' : 'text-ink/40'} text-xs`}>{reviewGate ? 'Enjoying Life-Up Fitness so far?' : 'How was this?'}</span>
-      <button onClick={tapUp} disabled={sending} className="text-xl active:scale-90 transition-transform disabled:opacity-40" aria-label="Working well">👍</button>
-      <button onClick={() => setPhase('down')} disabled={sending} className="text-xl active:scale-90 transition-transform disabled:opacity-40" aria-label="Something's off">👎</button>
+      <button onClick={tapUp} disabled={sending} className={`${dark ? 'text-ivory/50 hover:text-gold' : 'text-ink/40 hover:text-gold'} active:scale-90 transition-transform disabled:opacity-40`} aria-label="Working well"><ThumbsUpIcon /></button>
+      <button onClick={() => setPhase('down')} disabled={sending} className={`${dark ? 'text-ivory/50 hover:text-gold' : 'text-ink/40 hover:text-gold'} active:scale-90 transition-transform disabled:opacity-40`} aria-label="Something's off"><ThumbsDownIcon /></button>
     </div>
   )
 }

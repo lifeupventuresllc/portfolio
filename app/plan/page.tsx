@@ -52,19 +52,34 @@ export default async function PlanDashboard() {
 
   const firstName = (enrollment?.name || user.email?.split('@')[0] || 'there').split(' ')[0]
 
-  const shell = (children: React.ReactNode, menu: React.ReactNode = null) => (
-    <div className="min-h-[100dvh] bg-obsidian px-4 py-12">
+  const shell = (children: React.ReactNode, menu: React.ReactNode = null, selfTalk?: string) => (
+    <div className="min-h-[100dvh] px-4 py-6" style={{ background: '#021F16' }}>
       <TimezoneSync />
       <div className="max-w-3xl mx-auto">
         {user.is_anonymous ? <AnonymousSessionBanner /> : (!user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />)}
-        <div className="flex items-start justify-between mb-3 px-1 pt-2">
-          <div>
-            <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-2">Life-Up Fitness</p>
-            <h1 className="font-bold text-white leading-[1.02] tracking-tight" style={{ fontFamily: 'Georgia, "Times New Roman", ui-serif, serif', fontSize: 'clamp(2.5rem, 9vw, 3.25rem)' }}>Hey {firstName}</h1>
-            <div className="mt-2"><StreakChip /></div>
-          </div>
+        <div className="flex items-center justify-between mb-4 px-1 pt-2">
+          <p className="text-[#E5A93C] text-xs font-semibold tracking-[0.25em] uppercase">Life-Up Fitness</p>
           {menu}
         </div>
+
+        <div
+          className="rounded-3xl p-5 mb-5"
+          style={{
+            background: 'linear-gradient(135deg, #0d3a2a, #044A34 60%, #08281d)',
+            border: '1.5px solid #E5A93C',
+            boxShadow: '0 0 20px -6px rgba(229,169,60,0.35)',
+          }}
+        >
+          <h1 className="font-bold text-white leading-[1.02] tracking-tight mb-1" style={{ fontFamily: 'Georgia, "Times New Roman", ui-serif, serif', fontSize: 'clamp(2rem, 7vw, 2.5rem)' }}>Hey {firstName}</h1>
+          <div className="mb-2"><StreakChip /></div>
+          {selfTalk && (
+            <>
+              <p className="text-[#E5A93C] text-[9px] uppercase tracking-[0.22em] font-bold mb-1">Today&apos;s self-talk</p>
+              <p className="text-white text-[15px] leading-snug italic text-balance">&ldquo;{selfTalk}&rdquo;</p>
+            </>
+          )}
+        </div>
+
         {children}
       </div>
     </div>
@@ -163,34 +178,28 @@ export default async function PlanDashboard() {
   const checkinDue = hasPlan && daysSinceCheckin >= 7
 
   return shell(
-    <div className="space-y-5">
-      {/* Seamless, chat-first layout: self-talk sits right under her name (in
-          the header above), then real breathing room, then Coach Asa as the
-          one dominant focus (CoachOrbLauncher — a breathing glow that
-          dissolves into the real, fully-functional CoachHero on tap, nothing
-          fake about it). Self-talk/progress/calories/workout are all still
-          here per Asa's explicit ask, just secondary — compact, below the
-          orb, not competing with it for attention. */}
+    <div className="space-y-4">
+      {/* Real photography — a person, not just numbers, right under her name
+          and self-talk. Coach Asa's launcher sits directly below it as the
+          one dominant focus, everything else secondary. */}
 
       {checkinDue && <WeeklyCheckinPrompt firstName={firstName} todayIso={todayIso} />}
 
-      <div className="luf-breathe rounded-2xl border border-emerald-400/25 bg-charcoal/90 backdrop-blur-md bg-gradient-to-br from-emerald-500/10 via-charcoal to-obsidian px-5 py-3.5 text-center shadow-[0_0_28px_-10px_rgba(52,211,153,0.45)]">
-        <p className="text-emerald-300/70 text-[9px] uppercase tracking-[0.25em] font-semibold mb-1">Today’s self-talk</p>
-        <p className="text-white text-[15px] sm:text-base leading-snug font-medium text-balance">“{affirmation}”</p>
+      <div className="relative rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(229,169,60,0.22)', height: 220 }}>
+        <img src="/images/brand/sculpt-session-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'saturate(1.05) contrast(1.03)' }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,0) 40%, rgba(2,31,22,0.75) 100%)' }} />
       </div>
 
-      <div className="py-2">
-        <CoachOrbLauncher firstName={firstName} hasPlan={hasPlan} />
-      </div>
+      <CoachOrbLauncher firstName={firstName} hasPlan={hasPlan} />
 
       {hasPlan && (
         <>
           <GoalProgressBar startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} workoutConsistencyPct={workoutConsistencyPct} nutritionConsistencyPct={nutritionConsistencyPct} />
 
-          {/* Supporting, side by side — calories (left) · workout (right) */}
+          {/* Supporting, side by side — workout (left) · nutrition (right) */}
           <div className="grid grid-cols-2 gap-3.5">
-            <CaloriesTodayCard budget={calBudget} dayType={todayDayType} compact />
             <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} compact />
+            <CaloriesTodayCard budget={calBudget} dayType={todayDayType} compact />
           </div>
         </>
       )}
@@ -204,6 +213,7 @@ export default async function PlanDashboard() {
       {/* Persistent feedback surface — always here, not just a popup */}
       <FeedbackCard />
     </div>,
-    <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
+    <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />,
+    affirmation
   )
 }

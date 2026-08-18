@@ -28,7 +28,7 @@ export default function CaloriesTodayCard({ budget, dayType, compact }: { budget
   const left = spent == null ? budget : Math.max(0, budget - spent)
   const over = spent != null && spent > budget
   const pct = budget > 0 && spent != null ? Math.min(100, Math.round((spent / budget) * 100)) : 0
-  const ringColor = over ? '#f59e0b' : '#c9a84c'
+  const ringColor = over ? '#f59e0b' : '#E5A93C'
   const today = localTodayISO()
 
   // Win = fueled enough to hit the protein target while staying at/under budget.
@@ -38,18 +38,18 @@ export default function CaloriesTodayCard({ budget, dayType, compact }: { budget
   // Compact (stacked) variant — used side-by-side with the workout card on the home screen.
   if (compact) {
     return (
-      <Link href="/plan/today" className="group flex flex-col items-center text-center bg-gradient-to-br from-gold/10 to-obsidian/90 backdrop-blur-md border border-gold/25 rounded-[1.75rem] p-4 shadow-[0_0_26px_-6px_rgba(201,168,76,0.5)] hover:border-gold/60 hover:shadow-[0_0_32px_-4px_rgba(201,168,76,0.65)] transition-all">
-        <p className="text-gold text-[9px] uppercase tracking-wider font-semibold mb-2.5">Your calories 💵</p>
-        <Ring pct={over ? 100 : pct} size={84} stroke={8} color={ringColor}>
+      <Link href="/plan/today" className="group flex flex-col items-center text-center rounded-[1.5rem] p-3.5 transition-all" style={{ background: '#083023', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <p className="text-white/40 text-[9px] uppercase tracking-wider font-bold mb-2">Nutrition</p>
+        <Ring pct={over ? 100 : pct} size={62} stroke={7} color={ringColor}>
           <div className="text-center leading-none">
-            <p className={`font-bold text-base ${over ? 'text-amber-400' : 'text-gold'}`}>{over ? '-' : ''}${over ? (spent! - budget) : left}</p>
-            <p className="text-ivory/40 text-[8px] uppercase tracking-[0.15em] mt-0.5">{over ? 'over' : 'left'}</p>
+            <p className={`font-bold text-[13px] ${over ? 'text-amber-400' : 'text-white'}`}>{over ? '-' : ''}${over ? (spent! - budget) : left}</p>
           </div>
         </Ring>
+        <p className="text-white/40 text-[9px] mt-2 font-semibold">{over ? 'cal over today' : 'cal left today'}</p>
         {data && data.proteinTarget > 0 && (
-          <p className="text-ivory/50 text-[11px] mt-2.5">Protein {data.protein}/{data.proteinTarget}g {proteinHit ? '✓' : ''}</p>
+          <p className="text-white/40 text-[10px] mt-1.5">Protein {data.protein}/{data.proteinTarget}g{proteinHit ? ' · hit' : ''}</p>
         )}
-        <p className="text-gold/70 text-[10px] mt-2 group-hover:text-gold transition-colors">＋ Log food</p>
+        <p className="text-[#E5A93C]/70 text-[10px] mt-2 group-hover:text-[#E5A93C] transition-colors">+ Log food</p>
         <Celebration trigger={win} message={winAffirmation('calories')} dedupeKey={`calories-${today}`} />
       </Link>
     )
@@ -66,8 +66,8 @@ export default function CaloriesTodayCard({ budget, dayType, compact }: { budget
         </Ring>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-1">
-            <p className="text-gold text-[10px] uppercase tracking-wider font-semibold">Calories left today 💵</p>
-            {dayType && <span className={`shrink-0 text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold ${dayType === 'workout' ? 'bg-gold/15 text-gold' : 'bg-white/8 text-ivory/60'}`}>{dayType === 'workout' ? '💪🏽 Workout' : '🌿 Rest'}</span>}
+            <p className="text-gold text-[10px] uppercase tracking-wider font-semibold">Calories left today</p>
+            {dayType && <span className={`shrink-0 text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold ${dayType === 'workout' ? 'bg-gold/15 text-gold' : 'bg-white/8 text-ivory/60'}`}>{dayType === 'workout' ? 'Workout' : 'Rest'}</span>}
           </div>
           <p className="text-white text-sm font-medium">
             {spent == null ? `$${budget} to spend today` : over ? 'Over budget — fresh start tomorrow' : `$${spent} spent · $${left} left`}

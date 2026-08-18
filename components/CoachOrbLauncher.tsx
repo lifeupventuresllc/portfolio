@@ -3,11 +3,8 @@
 import { useState } from 'react'
 import CoachHero from '@/components/CoachHero'
 
-// The dashboard's new primary focus, replacing the old always-visible chat card:
-// a soft breathing glow (gold+rose, matching the confirmed direction — no literal
-// icon, reads as "something is here with you" rather than "bring more effort").
-// Reuses the app's existing .luf-float animation (already respects
-// prefers-reduced-motion, see app/globals.css) instead of new CSS. Tapping it
+// The dashboard's primary focus: a compact glowing pill (emerald/mustard —
+// the Jewel-Box palette), sitting right under the hero photo. Tapping it
 // crossfades into the real, fully-functional CoachHero — same component, same
 // live chat, just revealed instead of always-open.
 export default function CoachOrbLauncher({ firstName, hasPlan }: { firstName: string; hasPlan: boolean }) {
@@ -32,27 +29,27 @@ export default function CoachOrbLauncher({ firstName, hasPlan }: { firstName: st
           </button>
         </div>
       ) : (
-        <div className="flex flex-col items-center py-6">
+        <div className="flex flex-col items-center">
           <button
             onClick={() => reveal(true)}
-            className="luf-float flex items-center justify-center rounded-full border-0 cursor-pointer"
-            style={{
-              width: 210,
-              height: 210,
-              background: 'radial-gradient(circle at 38% 32%, rgba(255,255,255,0.5), rgba(234,92,135,0.55) 28%, rgba(201,168,76,0.55) 62%, rgba(10,10,15,0) 78%)',
-              boxShadow: '0 0 70px 10px rgba(234,92,135,0.35), 0 0 110px 20px rgba(201,168,76,0.22)',
-            }}
+            className="w-full flex items-center gap-3 rounded-full border-0 cursor-pointer px-4"
+            style={{ height: 52, background: '#0d3a2a', border: '1px solid rgba(229,169,60,0.4)', boxShadow: '0 4px 14px -6px rgba(0,0,0,0.4)' }}
           >
-            <span className="text-white text-sm font-semibold text-center" style={{ width: 130, textShadow: '0 1px 8px rgba(0,0,0,0.35)' }}>
-              Talk to Coach Asa…
-            </span>
+            <span
+              className="luf-float rounded-full shrink-0"
+              style={{
+                width: 28, height: 28,
+                background: 'radial-gradient(circle at 38% 32%, rgba(255,255,255,0.9), rgba(255,255,255,0.35) 30%, rgba(4,74,52,0.6) 70%, rgba(2,31,22,0) 100%)',
+                boxShadow: '0 0 10px 2px rgba(229,169,60,0.5)',
+              }}
+            />
+            <span className="text-white text-sm font-bold">Talk to Coach Asa…</span>
           </button>
-          <p className="text-white/30 text-xs mt-5">tap to talk to Coach Asa</p>
 
           {!hasPlan && (
-            <div className="bg-charcoal border border-gold/30 rounded-2xl p-5 text-center mt-6 w-full">
+            <div className="bg-[#0d3a2a] border border-[#E5A93C]/30 rounded-2xl p-5 text-center mt-4 w-full">
               <p className="text-white font-semibold text-sm mb-1">No plan built yet</p>
-              <p className="text-ivory/50 text-xs">Tell Coach Asa what you&apos;re looking for above, or pick a feature above — your numbers show up here the moment you do.</p>
+              <p className="text-[#EDE7DA]/60 text-xs">Tell Coach Asa what you&apos;re looking for above, or pick a feature above — your numbers show up here the moment you do.</p>
             </div>
           )}
         </div>

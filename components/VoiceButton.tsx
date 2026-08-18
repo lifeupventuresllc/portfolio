@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 // Voice → text using the browser's built-in Speech Recognition (free, on-device,
 // works on phone Chrome/Safari). Degrades gracefully (hidden) on browsers without
@@ -11,8 +11,18 @@ import { useEffect, useRef, useState } from 'react'
 //     a longer, multi-sentence thought; onResult only fires once she taps stop,
 //     with the FULL accumulated transcript.
 
+function MicIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 1a4 4 0 0 0-4 4v6a4 4 0 0 0 8 0V5a4 4 0 0 0-4-4z" />
+      <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
+      <line x1="12" y1="18" x2="12" y2="22" />
+    </svg>
+  )
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export default function VoiceButton({ onResult, onInterim, idleLabel = 'Speak what you ate', continuous = false, icon = '🎤' }: { onResult: (text: string) => void; onInterim?: (text: string) => void; idleLabel?: string; continuous?: boolean; icon?: string }) {
+export default function VoiceButton({ onResult, onInterim, idleLabel = 'Speak what you ate', continuous = false, icon }: { onResult: (text: string) => void; onInterim?: (text: string) => void; idleLabel?: string; continuous?: boolean; icon?: ReactNode }) {
   const [supported, setSupported] = useState(false)
   const [listening, setListening] = useState(false)
   const recRef = useRef<any>(null)
@@ -84,7 +94,7 @@ export default function VoiceButton({ onResult, onInterim, idleLabel = 'Speak wh
       {listening ? (
         <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" /><span className="relative inline-flex rounded-full h-3 w-3 bg-white" /></span>
       ) : (
-        <span className="text-lg">{icon}</span>
+        icon ?? <MicIcon />
       )}
     </button>
   )

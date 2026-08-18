@@ -11,8 +11,8 @@ function ConsistencyChip({ workoutPct, nutritionPct }: { workoutPct: number; nut
   return (
     <div className="flex items-center gap-3 mt-3 pt-3 border-t border-smoke/60 text-[11px] text-ivory/40">
       <span className="uppercase tracking-wider font-semibold text-ivory/30">Consistency · 14d</span>
-      <span>🏋🏽 {workoutPct}%</span>
-      <span>🍽️ {nutritionPct}%</span>
+      <span>Workout {workoutPct}%</span>
+      <span>Nutrition {nutritionPct}%</span>
     </div>
   )
 }
@@ -29,10 +29,10 @@ export default function GoalProgressBar({
 }) {
   if (goal === 'maintain') {
     return (
-      <div className="bg-charcoal border border-rose/30 rounded-[2rem] p-5">
-        <p className="text-rose text-[10px] uppercase tracking-wider font-semibold mb-1">Your progress</p>
-        <p className="text-white font-bold text-lg">Holding steady at {Math.round(currentWeight)} lbs 💪🏽</p>
-        <p className="text-ivory/50 text-sm mt-0.5">Right around your goal of {Math.round(goalWeight)} lbs — consistency is the whole game now.</p>
+      <div className="rounded-[2rem] p-5" style={{ background: '#083023', border: '1px solid rgba(229,169,60,0.3)' }}>
+        <p className="text-[#E5A93C] text-[10px] uppercase tracking-wider font-semibold mb-1">Your progress</p>
+        <p className="text-white font-bold text-lg">Holding steady at {Math.round(currentWeight)} lbs</p>
+        <p className="text-white/50 text-sm mt-0.5">Right around your goal of {Math.round(goalWeight)} lbs — consistency is the whole game now.</p>
         <ConsistencyChip workoutPct={workoutConsistencyPct} nutritionPct={nutritionConsistencyPct} />
       </div>
     )
@@ -46,22 +46,22 @@ export default function GoalProgressBar({
   const verb = goal === 'lose' ? 'down' : 'up'
 
   return (
-    <div className="bg-charcoal border border-rose/30 rounded-[2rem] p-5">
-      <p className="text-rose text-[10px] uppercase tracking-wider font-semibold mb-1">Your progress</p>
+    <div className="rounded-[2rem] p-5" style={{ background: '#083023', border: '1px solid rgba(229,169,60,0.3)' }}>
+      <p className="text-[#E5A93C] text-[10px] uppercase tracking-wider font-semibold mb-1">Your progress</p>
       <p className="text-white font-bold text-lg mb-4">
-        {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} to go` : moved > 0 ? ' · goal reached 🎉' : ''}
+        {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} to go` : moved > 0 ? ' · goal reached' : ''}
       </p>
 
-      <div className="relative h-3 rounded-full bg-obsidian border border-smoke overflow-visible mb-2">
-        <div className="h-full rounded-full bg-rose transition-all duration-700" style={{ width: `${pct}%`, boxShadow: '0 0 16px 1px rgba(234,92,135,0.55)' }} />
+      <div className="relative h-3 rounded-full overflow-visible mb-2" style={{ background: '#021F16', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #044A34, #0f7a53)', boxShadow: '0 0 16px 1px rgba(229,169,60,0.4)' }} />
         {TICKS.map((t) => (
-          <div key={t} className="absolute top-0 bottom-0 w-px bg-obsidian/60" style={{ left: `${t}%` }} />
+          <div key={t} className="absolute top-0 bottom-0 w-px" style={{ left: `${t}%`, background: 'rgba(2,31,22,0.6)' }} />
         ))}
       </div>
 
-      <div className="flex items-center justify-between text-[11px] text-ivory/40">
+      <div className="flex items-center justify-between text-[11px] text-white/40">
         <span>{Math.round(startWeight)} lbs</span>
-        <span className="text-rose font-semibold">{pct}%</span>
+        <span className="text-[#E5A93C] font-semibold">{pct}%</span>
         <span>{Math.round(goalWeight)} lbs goal</span>
       </div>
       <ConsistencyChip workoutPct={workoutConsistencyPct} nutritionPct={nutritionConsistencyPct} />
