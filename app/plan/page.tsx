@@ -12,7 +12,6 @@ import WeeklyCheckinPrompt from '@/components/WeeklyCheckinPrompt'
 import VerifyEmailBanner from '@/components/VerifyEmailBanner'
 import AnonymousSessionBanner from '@/components/AnonymousSessionBanner'
 import TimezoneSync from '@/components/TimezoneSync'
-import QuickstartWorkout from '@/components/QuickstartWorkout'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
 import { localDateISO, localMondayIndex, localDayNumber, addDaysISO } from '@/lib/localdate'
@@ -82,25 +81,28 @@ export default async function PlanDashboard() {
     )
   }
 
-  // Enrolled but hasn't done intake — no wall, no chat prompt, no form. Same
-  // zero-friction pattern as Sculpt Sessions: one question (home or gym),
-  // straight into a real plan. Landing on the dashboard for the first time
-  // should feel like landing in the app, not hitting an onboarding screen.
-  if (!enrollment.intake_completed) {
-    return <QuickstartWorkout />
-  }
+  // Enrolled but hasn't done intake — the real dashboard renders anyway, fully
+  // unlocked (Coach Asa, feedback, the menu — everything works, nothing is
+  // gated behind a wall or a question). Only the cards that genuinely need real
+  // plan numbers show a build-prompt in their place instead of fabricated
+  // zeros; see hasPlan below. She can start from any feature — clicking Coach
+  // Asa or a feature card builds the real plan via the cold-start flow, and
+  // this same page then renders normally on her next visit.
+  const hasPlan = !!enrollment.intake_completed
 
   const todayIso = localDateISO()
   const consistencyWindowStart = addDaysISO(todayIso, -13) // 14 days incl. today, ~2 weeks
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }, { data: latestCheckin }, { data: foodLogRows }] = await Promise.all([
-    svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
-    svc.from('challenge_nutrition_plans').select('calories, meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
-    svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
-    getApprovedTodayAdjustment(enrollment.id as string, todayIso),
-    svc.from('challenge_intake').select('weight_lbs, target_lbs, goal, days_per_week').eq('enrollment_id', enrollment.id).maybeSingle(),
-    svc.from('challenge_checkins').select('weight_lbs, submitted_at').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('submitted_at', { ascending: false }).limit(1).maybeSingle(),
-    svc.from('challenge_food_log').select('logged_on').eq('enrollment_id', enrollment.id).gte('logged_on', consistencyWindowStart),
-  ])
+  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }, { data: latestCheckin }, { data: foodLogRows }] = hasPlan
+    ? await Promise.all([
+        svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
+        svc.from('challenge_nutrition_plans').select('calories, meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
+        svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
+        getApprovedTodayAdjustment(enrollment.id as string, todayIso),
+        svc.from('challenge_intake').select('weight_lbs, target_lbs, goal, days_per_week').eq('enrollment_id', enrollment.id).maybeSingle(),
+        svc.from('challenge_checkins').select('weight_lbs, submitted_at').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('submitted_at', { ascending: false }).limit(1).maybeSingle(),
+        svc.from('challenge_food_log').select('logged_on').eq('enrollment_id', enrollment.id).gte('logged_on', consistencyWindowStart),
+      ])
+    : [{ data: null }, { data: null }, { data: null }, null, { data: null }, { data: null }, { data: null }] as const
 
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
     ? (nutritionPlan.meals as WeekPlan) : null
@@ -158,7 +160,7 @@ export default async function PlanDashboard() {
   // own "check in with me every week" copy, not a new cadence invented here.
   const lastCheckinAt = (latestCheckin?.submitted_at as string | undefined) || (enrollment.started_at as string | undefined)
   const daysSinceCheckin = lastCheckinAt ? Math.floor((Date.parse(todayIso) - Date.parse(lastCheckinAt)) / 86400000) : 0
-  const checkinDue = daysSinceCheckin >= 7
+  const checkinDue = hasPlan && daysSinceCheckin >= 7
 
   return shell(
     <div className="space-y-5">
@@ -176,13 +178,27 @@ export default async function PlanDashboard() {
         <p className="text-white text-[15px] sm:text-base leading-snug font-medium text-balance">“{affirmation}”</p>
       </div>
 
-      <GoalProgressBar startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} workoutConsistencyPct={workoutConsistencyPct} nutritionConsistencyPct={nutritionConsistencyPct} />
+      {hasPlan ? (
+        <>
+          <GoalProgressBar startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} workoutConsistencyPct={workoutConsistencyPct} nutritionConsistencyPct={nutritionConsistencyPct} />
 
-      {/* Supporting, side by side — calories (left) · workout (right) */}
-      <div className="grid grid-cols-2 gap-3.5">
-        <CaloriesTodayCard budget={calBudget} dayType={todayDayType} compact />
-        <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} compact />
-      </div>
+          {/* Supporting, side by side — calories (left) · workout (right) */}
+          <div className="grid grid-cols-2 gap-3.5">
+            <CaloriesTodayCard budget={calBudget} dayType={todayDayType} compact />
+            <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} compact />
+          </div>
+        </>
+      ) : (
+        // No real numbers to show yet — nothing below this is locked or gated,
+        // she just hasn't built a plan yet. Coach Asa (right below) can build
+        // one from a single chat message; this card is honest about that
+        // instead of showing fabricated zeros in the real progress/calorie/
+        // workout cards.
+        <div className="bg-charcoal border border-gold/30 rounded-2xl p-5 text-center">
+          <p className="text-white font-semibold text-sm mb-1">No plan built yet</p>
+          <p className="text-ivory/50 text-xs">Tell Coach Asa what you&apos;re looking for below, or pick a feature above — your numbers show up here the moment you do.</p>
+        </div>
+      )}
 
       {/* Coach Asa — was forced into a circular glow frame (aspect-square +
           rounded-full on this wrapper, separate from CoachHero's own
