@@ -6,7 +6,7 @@ import { addDaysISO } from '@/lib/localdate'
 // ============================================================
 // The unified life-pattern engine — Layer 1's real "already knows you"
 // mechanism. Everything below it (workout dip, food dip, silence, calendar,
-// eating-out frequency, chat-reported stress) used to be five SEPARATE,
+// eating-out frequency, chat-reported stress, travel) used to be separate,
 // siloed checks, each blind to the others. A real bad week rarely shows up
 // as one clean signal crossing one threshold — it shows up as a
 // COMBINATION (still logging food, but more takeout; opening the app
@@ -18,7 +18,7 @@ import { addDaysISO } from '@/lib/localdate'
 // input-principle).
 // ============================================================
 
-export type PatternSignal = 'workout_dip' | 'food_dip' | 'silent' | 'eating_out_spike' | 'recent_stress' | 'packed_schedule'
+export type PatternSignal = 'workout_dip' | 'food_dip' | 'silent' | 'eating_out_spike' | 'recent_stress' | 'traveling' | 'packed_schedule'
 export type RiskBand = 'low' | 'medium' | 'high'
 
 export type LifePatternAssessment = {
@@ -38,8 +38,12 @@ export type LifePatternAssessment = {
 //    peak, per detectDip) — already-observed behavior change, not a prediction.
 //    Workout weighted slightly above food since it's the higher-friction habit —
 //    losing it is typically the earlier domino.
-//  - eating_out_spike (20) / recent_stress (20): real but indirect — she's still
-//    engaging (still logging food; still talking to the operator), just differently.
+//  - eating_out_spike (20) / recent_stress (20) / traveling (20): real but
+//    indirect — she's still engaging (still logging food; still talking to
+//    the operator), just differently. traveling sits at the same weight as
+//    recent_stress even though it only needs ONE mention, not two — it's a
+//    stated fact from her, not an inferred keyword match, so it doesn't
+//    carry the same one-off-noise risk stress language does.
 //  - packed_schedule (15): weakest single indicator, and structurally can only
 //    ever fire ALONE (see the signals.length===0 gate below) — calendar-inferred
 //    risk, not a behavior that's already happened.
@@ -49,6 +53,7 @@ const SIGNAL_WEIGHT: Record<PatternSignal, number> = {
   food_dip: 30,
   eating_out_spike: 20,
   recent_stress: 20,
+  traveling: 20,
   packed_schedule: 15,
 }
 
@@ -136,6 +141,13 @@ export async function assessLifePattern(enrollmentId: string, todayISO: string):
   const stressDays = new Set((eventRows || []).filter((e) => STRESS_EVENT_KINDS.has(e.kind as string)).map((e) => e.occurred_on as string))
   if (stressDays.size >= STRESS_MIN_DAYS) signals.push('recent_stress')
 
+  // Same window/query as the stress check above (no extra fetch needed) — a
+  // single 'travel' event is enough (see the weight comment: this is a
+  // stated fact, not an inferred keyword). Previously captured via
+  // app/api/plan/daily-context and app/api/plan/operator's location override
+  // but never read by anything — dead data. Fixed 2026-08-19.
+  if ((eventRows || []).some((e) => e.kind === 'travel')) signals.push('traveling')
+
   // Only hit the Calendar API when nothing cheaper already fired — same
   // cost-conscious ordering the daily-nudge cron already used.
   if (signals.length === 0 && calendarConfigured && (await isPackedSchedule(enrollmentId))) {
@@ -171,6 +183,9 @@ export function messageForPattern(a: LifePatternAssessment): { title: string; bo
   }
   if (a.signals.includes('recent_stress')) {
     return { title: "I hear you 💛", body: "It sounds like it's been a lot lately, and I'm not just checking a box here — today doesn't have to be perfect, just something, and I'll count that with you." }
+  }
+  if (a.signals.includes('traveling')) {
+    return { title: "I know you're traveling 💛", body: "No gym, no real kitchen, no problem — I can swap today to a bodyweight session and have exactly what to order lined up wherever you are. Just say the word." }
   }
   if (a.signals.includes('packed_schedule')) {
     return { title: 'I see how stacked your week looks 💛', body: "Before it catches up with you — let's make today a smaller ask, together." }
