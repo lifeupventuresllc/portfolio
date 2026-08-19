@@ -25,17 +25,25 @@ const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const
 const MEAL_LABEL: Record<string, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks' }
 const SLOT_TO_MEAL: Record<string, string> = { BF: 'breakfast', LN: 'lunch', DN: 'dinner', SN: 'snack', DS: 'snack' }
 
-function MacroBar({ label, val, target, color }: { label: string; val: number; target: number; color: string }) {
+const ACCENT = '#044A34'
+const INK = '#021F16'
+const MUTED = 'rgba(2,31,22,0.55)'
+
+// Just protein — carbs/fat bars used to sit here too, but three number-vs-target
+// bars next to a calorie ring read as a math problem. Protein is the one macro
+// the app actually coaches toward ("hit your protein and cravings get quieter"),
+// so it's the one macro shown by default.
+function MacroBar({ label, val, target }: { label: string; val: number; target: number }) {
   const pct = target > 0 ? Math.min(100, Math.round((val / target) * 100)) : 0
   const over = target > 0 && val > target
   return (
     <div>
       <div className="flex justify-between text-[11px] mb-1">
-        <span className="text-ivory/50">{label}</span>
-        <span className={over ? 'text-amber-400 font-semibold' : 'text-ivory/70'}>{val}<span className="text-ivory/30"> / {target}g</span></span>
+        <span style={{ color: MUTED }}>{label}</span>
+        <span style={{ color: over ? '#b45309' : INK, fontWeight: over ? 600 : 500 }}>{val}<span style={{ color: MUTED }}> / {target}g</span></span>
       </div>
-      <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: over ? '#f59e0b' : color }} />
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(2,31,22,0.08)' }}>
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: over ? '#f59e0b' : ACCENT }} />
       </div>
     </div>
   )
@@ -169,55 +177,53 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
   const calOver = remaining < 0
 
   return (
-    <div className="bg-charcoal border border-gold/30 rounded-2xl p-5">
+    <div className="bg-white rounded-2xl p-5" style={{ border: `1px solid ${ACCENT}33` }}>
       {expired && <div className="mb-4"><SessionExpiredNotice /></div>}
       <div className="flex items-center justify-between mb-1">
         <div>
-          <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-0.5">Today&apos;s budget 💵</p>
-          <p className="text-white font-semibold text-sm">Calories are your money — spend them well</p>
+          <p className="text-[10px] uppercase tracking-wider font-semibold mb-0.5" style={{ color: ACCENT }}>Today&apos;s budget</p>
+          <p className="font-semibold text-sm" style={{ color: INK }}>Calories are your money — spend them well</p>
         </div>
-        <button onClick={() => setOpen((o) => !o)} className="bg-gold text-obsidian px-3.5 py-2 font-bold text-[11px] uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform">{open ? 'Close' : '+ Log food'}</button>
+        <button onClick={() => setOpen((o) => !o)} className="text-white px-3.5 py-2 font-bold text-[11px] uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform" style={{ background: ACCENT }}>{open ? 'Close' : '+ Log food'}</button>
       </div>
       {dayType && (
-        <p className="text-ivory/45 text-[11px] mb-4">
-          <span className={`inline-block px-2 py-0.5 rounded-full font-semibold ${dayType === 'workout' ? 'bg-gold/15 text-gold' : 'bg-white/8 text-ivory/60'}`}>{dayType === 'workout' ? '💪🏽 Workout day' : '🌿 Rest day'}</span>
+        <p className="text-[11px] mb-4" style={{ color: MUTED }}>
+          <span className="inline-block px-2 py-0.5 rounded-full font-semibold" style={{ background: `${ACCENT}1A`, color: ACCENT }}>{dayType === 'workout' ? 'Workout day' : 'Rest day'}</span>
           <span className="ml-2">bigger budget on training days, leaner on rest.</span>
         </p>
       )}
 
-      {/* Money ring (calories = dollars) + macro bars vs target */}
+      {/* Money ring (calories = dollars) + the one macro bar that matters */}
       <div className="flex items-center gap-5 mb-4">
         <div className={pop ? 'luf-pop' : ''}>
-          <Ring pct={calPct} size={104} stroke={9} color={calOver ? '#f59e0b' : '#c9a84c'}>
+          <Ring pct={calPct} size={104} stroke={9} color={calOver ? '#f59e0b' : ACCENT}>
             <div className="text-center leading-none">
-              <p className="text-ivory/40 text-[8px] uppercase tracking-wider mb-0.5">{calOver ? 'over' : 'left'}</p>
-              <p className={`font-bold text-xl ${calOver ? 'text-amber-400' : 'text-gold'}`}>{calOver ? '-' : ''}${Math.abs(remaining)}</p>
-              <p className="text-ivory/40 text-[9px] tracking-wider mt-0.5">of ${calBudget}</p>
+              <p className="text-[8px] uppercase tracking-wider mb-0.5" style={{ color: MUTED }}>{calOver ? 'over' : 'left'}</p>
+              <p className="font-bold text-xl" style={{ color: calOver ? '#b45309' : ACCENT }}>{calOver ? '-' : ''}${Math.abs(remaining)}</p>
+              <p className="text-[9px] tracking-wider mt-0.5" style={{ color: MUTED }}>of ${calBudget}</p>
             </div>
           </Ring>
         </div>
         <div className="flex-1 space-y-2.5">
-          <MacroBar label="Protein" val={t.protein_g} target={tar.protein_g} color="#46c46f" />
-          <MacroBar label="Carbs" val={t.carbs_g} target={tar.carbs_g} color="#60a5fa" />
-          <MacroBar label="Fats" val={t.fats_g} target={tar.fats_g} color="#e5b567" />
-          <p className="text-ivory/35 text-[10px]">Hit your protein and cravings get quieter — that&apos;s the goal, not just the number.</p>
+          <MacroBar label="Protein" val={t.protein_g} target={tar.protein_g} />
+          <p className="text-[10px]" style={{ color: MUTED }}>Hit your protein and cravings get quieter — that&apos;s the goal, not just the number.</p>
         </div>
       </div>
-      <div className={`luf-glow mb-4 rounded-2xl border px-4 py-3 text-center ${calOver ? 'border-amber-400/40 bg-amber-400/10' : 'border-gold/40 bg-gold/10'}`}>
-        <p className={`text-base font-bold ${calOver ? 'text-amber-400' : 'text-gold'}`}>
-          {loading ? 'Loading your day…' : calOver ? `$${Math.abs(remaining)} over budget — no guilt, fresh budget tomorrow.` : `Spent $${t.calories} · $${remaining} left${t.calories === 0 ? ' — log your first meal below 👇' : ''}`}
+      <div className="mb-4 rounded-2xl border px-4 py-3 text-center" style={{ borderColor: calOver ? '#f59e0b66' : `${ACCENT}66`, background: calOver ? '#f59e0b1A' : `${ACCENT}1A` }}>
+        <p className="text-base font-bold" style={{ color: calOver ? '#b45309' : ACCENT }}>
+          {loading ? 'Loading your day…' : calOver ? `$${Math.abs(remaining)} over budget — no guilt, fresh budget tomorrow.` : `Spent $${t.calories} · $${remaining} left${t.calories === 0 ? ' — log your first meal below' : ''}`}
         </p>
       </div>
 
       {/* One-tap: log a meal straight from today's plan */}
       {planned.length > 0 && (
         <div className="mb-4">
-          <p className="text-ivory/40 text-[10px] uppercase tracking-wider mb-2">From today&apos;s plan — tap to log</p>
+          <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: MUTED }}>From today&apos;s plan — tap to log</p>
           <div className="flex flex-wrap gap-2">
             {planned.map((p, i) => (
-              <button key={i} onClick={() => logPlanned(p)} disabled={saving} className="text-left bg-obsidian/60 border border-smoke rounded-xl px-3 py-2 hover:border-gold/50 transition-colors disabled:opacity-50">
-                <span className="text-white text-xs font-medium block leading-tight">{p.name}</span>
-                <span className="text-ivory/40 text-[10px]">{p.cal} cal · {p.protein}g P</span>
+              <button key={i} onClick={() => logPlanned(p)} disabled={saving} className="text-left rounded-xl px-3 py-2 transition-colors disabled:opacity-50" style={{ background: 'rgba(2,31,22,0.05)', border: `1px solid ${ACCENT}33` }}>
+                <span className="text-xs font-medium block leading-tight" style={{ color: INK }}>{p.name}</span>
+                <span className="text-[10px]" style={{ color: MUTED }}>{p.cal} cal · {p.protein}g P</span>
               </button>
             ))}
           </div>
@@ -312,25 +318,27 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
         </div>
       )}
 
-      {/* Logged entries, grouped by meal */}
+      {/* Logged entries, grouped by meal — cal + protein only, matching the
+          single-macro simplification above (carbs/fat targets aren't shown
+          by default anymore, so showing them per-entry would be inconsistent). */}
       {MEALS.filter((m) => grouped[m]?.length).map((m) => (
         <div key={m} className="mb-3 last:mb-0">
-          <p className="text-ivory/40 text-[10px] uppercase tracking-wider mb-1.5">{MEAL_LABEL[m]}</p>
+          <p className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: MUTED }}>{MEAL_LABEL[m]}</p>
           <div className="space-y-1.5">
             {grouped[m].map((e) => (
-              <div key={e.id} className="flex items-center gap-2 bg-obsidian/40 rounded-lg px-3 py-2 group">
+              <div key={e.id} className="flex items-center gap-2 rounded-lg px-3 py-2 group" style={{ background: 'rgba(2,31,22,0.05)' }}>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white text-xs font-medium truncate">{e.name}{e.servings !== 1 ? <span className="text-ivory/40"> ×{e.servings}</span> : null}</p>
-                  <p className="text-ivory/40 text-[10px]">{e.calories} cal · {e.protein_g}P · {e.carbs_g}C · {e.fats_g}F</p>
+                  <p className="text-xs font-medium truncate" style={{ color: INK }}>{e.name}{e.servings !== 1 ? <span style={{ color: MUTED }}> ×{e.servings}</span> : null}</p>
+                  <p className="text-[10px]" style={{ color: MUTED }}>{e.calories} cal · {e.protein_g}g protein</p>
                 </div>
-                <button onClick={() => remove(e.id)} aria-label="Remove" className="text-ivory/30 hover:text-red-400 text-lg leading-none px-1 opacity-60 group-hover:opacity-100 transition-opacity">×</button>
+                <button onClick={() => remove(e.id)} aria-label="Remove" className="text-lg leading-none px-1 opacity-60 group-hover:opacity-100 transition-opacity hover:text-red-500" style={{ color: MUTED }}>×</button>
               </div>
             ))}
           </div>
         </div>
       ))}
       {!loading && (data?.entries.length || 0) === 0 && !open && (
-        <p className="text-ivory/30 text-xs text-center py-2">Nothing logged yet. Tap a plan meal above or <button onClick={() => setOpen(true)} className="text-gold underline">add food</button>.</p>
+        <p className="text-xs text-center py-2" style={{ color: MUTED }}>Nothing logged yet. Tap a plan meal above or <button onClick={() => setOpen(true)} className="underline" style={{ color: ACCENT }}>add food</button>.</p>
       )}
     </div>
   )

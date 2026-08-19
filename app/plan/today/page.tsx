@@ -20,8 +20,6 @@ import type { WeekPlan } from '@/lib/meal-plan'
 
 export const dynamic = 'force-dynamic'
 
-const SLOT_LABEL: Record<string, string> = { BF: 'Breakfast', LN: 'Lunch', SN: 'Snack', DN: 'Dinner', DS: 'Dessert' }
-
 export default async function TodayView() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -95,15 +93,22 @@ export default async function TodayView() {
   const structuralAssessment = await assessStructuralPattern(enrollment.id as string, localDateISO(tz))
   const structuralMessage = messageForStructural(structuralAssessment)
 
+  // For You page — deliberately the reverse of the main dashboard's palette:
+  // dashboard is a dark-emerald field with mustard accents, this is a mustard
+  // field with emerald accents. Asa's direct request, not a mockup pass.
+  const ACCENT = '#044A34'
+  const INK = '#021F16'
+  const MUTED = 'rgba(2,31,22,0.55)'
+
   return (
-    <div className="min-h-[100dvh] bg-obsidian px-4 py-12">
+    <div className="min-h-[100dvh] px-4 py-6" style={{ background: '#E5A93C' }}>
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between gap-3 mb-4">
-          <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all">← My full plan</Link>
+          <Link href="/plan" className="inline-flex items-center gap-1.5 bg-white text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all" style={{ border: `1px solid ${ACCENT}`, color: ACCENT }}>← Home</Link>
           <ClientMenu firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
         </div>
-        <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">{weekdayLabel}</p>
-        <h1 className="text-3xl font-bold text-white mb-6">Today, {firstName}</h1>
+        <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1" style={{ color: ACCENT }}>{weekdayLabel}</p>
+        <h1 className="font-bold mb-6" style={{ color: INK, fontFamily: 'Georgia, "Times New Roman", ui-serif, serif', fontSize: 'clamp(1.75rem, 6vw, 2.25rem)' }}>Today, {firstName}</h1>
 
         <div className="space-y-6">
           {/* The primary feature, live: one unified read across everything she does,
@@ -125,12 +130,12 @@ export default async function TodayView() {
               today's already flagged as an eat-out day (the meal section below
               becomes this exact same link) so she isn't shown the same CTA twice. */}
           {!eatingOutToday && (
-            <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-charcoal bg-gradient-to-br from-blue-500/15 to-charcoal border border-blue-500/30 rounded-2xl px-5 py-4 hover:border-blue-400/60 transition-colors">
+            <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-white rounded-2xl px-5 py-4 transition-colors" style={{ border: `1px solid ${ACCENT}33` }}>
               <div>
-                <p className="text-white font-semibold text-sm">🍔 Away from home right now?</p>
-                <p className="text-ivory/60 text-xs mt-0.5">Tap for exactly what to order — no thinking, no searching.</p>
+                <p className="font-semibold text-sm" style={{ color: INK }}>Away from home right now?</p>
+                <p className="text-xs mt-0.5" style={{ color: MUTED }}>Tap for exactly what to order — no thinking, no searching.</p>
               </div>
-              <span className="text-blue-300 text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
+              <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: ACCENT }}>→</span>
             </Link>
           )}
 
@@ -138,66 +143,56 @@ export default async function TodayView() {
               (workout days higher, rest days lower); the app already knows which day this is. */}
           <FoodLog planned={planned} budget={calBudget} dayType={todayMeals?.dayType ?? null} />
 
-          {/* Today's planned meals */}
+          {/* Today's planned meals — kept to one line + an edit link, not a
+              second itemized list. FoodLog above already shows every planned
+              meal (tap to log), so repeating name/cal/protein for each one
+              again here was the same numbers twice in a row. */}
           <section>
-            <h2 className="text-white font-bold text-lg mb-3">What&apos;s on your plan today</h2>
             {eatingOutToday ? (
-              <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-charcoal bg-gradient-to-br from-blue-500/15 to-charcoal border border-blue-500/30 rounded-2xl p-5 hover:border-blue-400/60 transition-colors">
+              <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-white rounded-2xl p-5 transition-colors" style={{ border: `1px solid ${ACCENT}33` }}>
                 <div>
-                  <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold bg-blue-500/15 text-blue-300 mb-2">Eat-out day</span>
-                  <p className="text-white font-semibold text-sm">🍔 See exactly what to order</p>
-                  <p className="text-ivory/60 text-xs mt-0.5">No thinking, no searching — picked for you, budget-matched.</p>
+                  <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold mb-2" style={{ background: `${ACCENT}1A`, color: ACCENT }}>Eat-out day</span>
+                  <p className="font-semibold text-sm" style={{ color: INK }}>See exactly what to order</p>
+                  <p className="text-xs mt-0.5" style={{ color: MUTED }}>No thinking, no searching — picked for you, budget-matched.</p>
                 </div>
-                <span className="text-blue-300 text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
+                <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: ACCENT }}>→</span>
               </Link>
             ) : todayMeals ? (
-              <div className="bg-charcoal border border-smoke rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold ${todayMeals.dayType === 'workout' ? 'bg-gold/15 text-gold' : 'bg-white/8 text-ivory/60'}`}>
+              <div className="bg-white rounded-2xl p-5 flex items-center justify-between gap-3" style={{ border: `1px solid ${ACCENT}33` }}>
+                <div>
+                  <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold mb-1.5" style={{ background: `${ACCENT}1A`, color: ACCENT }}>
                     {todayMeals.dayType === 'workout' ? 'Workout day' : 'Rest day'}
                   </span>
-                  <span className="text-ivory/40 text-xs">Target {todayMeals.target} cal · {todayMeals.totalProtein}g protein planned</span>
+                  <p className="text-sm" style={{ color: MUTED }}>Target {todayMeals.target} cal · {todayMeals.totalProtein}g protein planned</p>
                 </div>
-                <div className="space-y-2">
-                  {todayMeals.meals.map((m, i) => (
-                    <div key={i} className="flex items-center justify-between border-b border-smoke/50 last:border-0 pb-2 last:pb-0">
-                      <div>
-                        <p className="text-ivory/40 text-[10px] uppercase tracking-wider">{SLOT_LABEL[m.slot]}</p>
-                        <p className="text-white text-sm font-medium">{m.name}</p>
-                      </div>
-                      <p className="text-ivory/50 text-xs whitespace-nowrap">{m.cal} cal · {m.protein}g P</p>
-                    </div>
-                  ))}
-                </div>
-                <Link href="/plan/meals" className="text-ivory/40 text-xs hover:text-gold mt-3 inline-block">Edit my meals →</Link>
+                <Link href="/plan/meals" className="text-xs font-semibold shrink-0" style={{ color: ACCENT }}>Edit my meals →</Link>
               </div>
             ) : (
-              <div className="bg-charcoal border border-smoke rounded-2xl p-6 text-center">
-                <p className="text-white font-semibold mb-1">{mealIdx > 5 ? 'Sunday — recovery & reset 🌿' : 'No meal plan yet'}</p>
-                <p className="text-ivory/50 text-sm mb-3">{mealIdx > 5 ? 'No cook plan today. Eat mindful, hit your protein, and log whatever you have above.' : 'Build this week’s meals and they’ll show up here each day.'}</p>
-                {mealIdx <= 5 && <Link href="/plan/meals" className="inline-block bg-gold text-obsidian px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl">Build my meals</Link>}
+              <div className="bg-white rounded-2xl p-6 text-center" style={{ border: `1px solid ${ACCENT}33` }}>
+                <p className="font-semibold mb-1" style={{ color: INK }}>{mealIdx > 5 ? 'Sunday — recovery & reset' : 'No meal plan yet'}</p>
+                <p className="text-sm mb-3" style={{ color: MUTED }}>{mealIdx > 5 ? 'No cook plan today. Eat mindful, hit your protein, and log whatever you have above.' : 'Build this week’s meals and they’ll show up here each day.'}</p>
+                {mealIdx <= 5 && <Link href="/plan/meals" className="inline-block px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl text-white" style={{ background: ACCENT }}>Build my meals</Link>}
               </div>
             )}
           </section>
 
           {/* Today's workout */}
           <section>
-            <h2 className="text-white font-bold text-lg mb-3">Today&apos;s training</h2>
             {todayWorkout ? (
-              <div className="bg-charcoal border border-gold/30 rounded-2xl p-5 flex items-center justify-between gap-4">
+              <div className="bg-white rounded-2xl p-5 flex items-center justify-between gap-4" style={{ border: `1px solid ${ACCENT}33` }}>
                 <div>
-                  <p className="text-white font-semibold text-sm">{todayWorkout.title}</p>
-                  {todayWorkout.muscles?.length ? <p className="text-ivory/50 text-xs mt-0.5">{todayWorkout.muscles.join(' · ')}</p> : null}
+                  <p className="font-semibold text-sm" style={{ color: INK }}>{todayWorkout.title}</p>
+                  {todayWorkout.muscles?.length ? <p className="text-xs mt-0.5" style={{ color: MUTED }}>{todayWorkout.muscles.join(' · ')}</p> : null}
                   {todayAdjustment?.workoutChange && (
-                    <p className="text-gold text-[11px] mt-1 font-semibold">✨ Adjusted: {todayAdjustment.workoutChange.toMinutes ? `${todayAdjustment.workoutChange.toMinutes}-min ` : ''}{todayAdjustment.workoutChange.swapTo || 'adapted for today'}</p>
+                    <p className="text-[11px] mt-1 font-semibold" style={{ color: ACCENT }}>Adjusted: {todayAdjustment.workoutChange.toMinutes ? `${todayAdjustment.workoutChange.toMinutes}-min ` : ''}{todayAdjustment.workoutChange.swapTo || 'adapted for today'}</p>
                   )}
                 </div>
-                <Link href="/plan/workout" className="luf-pulse shrink-0 inline-flex items-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform">▶ Start</Link>
+                <Link href="/plan/workout" className="luf-pulse shrink-0 inline-flex items-center gap-1.5 text-white px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform" style={{ background: ACCENT }}>▶ Start</Link>
               </div>
             ) : (
-              <div className="bg-charcoal border border-smoke rounded-2xl p-5 text-center">
-                <p className="text-white font-semibold mb-1">We hit a snag building your workout</p>
-                <p className="text-ivory/50 text-sm mb-3">Shouldn&apos;t take more than a second to fix.</p>
+              <div className="bg-white rounded-2xl p-5 text-center" style={{ border: `1px solid ${ACCENT}33` }}>
+                <p className="font-semibold mb-1" style={{ color: INK }}>We hit a snag building your workout</p>
+                <p className="text-sm mb-3" style={{ color: MUTED }}>Shouldn&apos;t take more than a second to fix.</p>
                 <RebuildPlanButton />
               </div>
             )}
@@ -205,12 +200,12 @@ export default async function TodayView() {
 
           {/* Coach access lives here now instead of its own tab — she should
               never feel like reaching Asa takes more than one tap from Today. */}
-          <Link href="/plan/coach" className="flex items-center justify-between gap-3 bg-charcoal border border-gold/30 rounded-2xl px-5 py-4 hover:border-gold/60 transition-colors">
+          <Link href="/plan/coach" className="flex items-center justify-between gap-3 bg-white rounded-2xl px-5 py-4 transition-colors" style={{ border: `1px solid ${ACCENT}33` }}>
             <div>
-              <p className="text-white font-semibold text-sm">🧠 Talk to Coach Asa</p>
-              <p className="text-ivory/60 text-xs mt-0.5">Tell me about your day, ask a question, book a call.</p>
+              <p className="font-semibold text-sm" style={{ color: INK }}>Talk to Coach Asa</p>
+              <p className="text-xs mt-0.5" style={{ color: MUTED }}>Tell me about your day, ask a question, book a call.</p>
             </div>
-            <span className="text-gold text-sm shrink-0">→</span>
+            <span className="text-sm shrink-0" style={{ color: ACCENT }}>→</span>
           </Link>
 
           {/* Moved here from /plan's dashboard (2026-08-12 redesign) — infrequent,
@@ -220,12 +215,12 @@ export default async function TodayView() {
           {/* Moved here from /plan's dashboard (2026-08-12 redesign) — one-time
               invite, disappears for good once she finishes the optional pass. */}
           {profileNeedsFinishing && (
-            <Link href="/plan/intake?tier=optional" className="group flex items-center justify-between gap-3 bg-charcoal border border-smoke rounded-2xl px-5 py-3.5 hover:border-gold/40 transition-colors">
+            <Link href="/plan/intake?tier=optional" className="group flex items-center justify-between gap-3 bg-white rounded-2xl px-5 py-3.5 transition-colors" style={{ border: `1px solid ${ACCENT}33` }}>
               <div>
-                <p className="text-white font-semibold text-sm">Fine-tune your plan — 60 seconds</p>
-                <p className="text-ivory/50 text-xs mt-0.5">A few more details (schedule, food likes, injuries) makes it fit even better.</p>
+                <p className="font-semibold text-sm" style={{ color: INK }}>Fine-tune your plan — 60 seconds</p>
+                <p className="text-xs mt-0.5" style={{ color: MUTED }}>A few more details (schedule, food likes, injuries) makes it fit even better.</p>
               </div>
-              <span className="text-gold text-sm group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
+              <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: ACCENT }}>→</span>
             </Link>
           )}
         </div>
