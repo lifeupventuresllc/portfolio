@@ -12,8 +12,18 @@ export default function LandingPage() {
       <JsonLd data={localBusinessSchema} />
       <RevealScript />
 
+      {/* ── Top-of-page app link — the fixed Navbar only offers Login/My Plan,
+          never the free no-signup entry point, so a visitor who already knows
+          what this is has no way in until they've scrolled past the whole
+          hero. Same /try destination as the hero CTA below. ── */}
+      <div className="pt-20 pb-2 px-6 text-center">
+        <Link href="/try?to=/plan" className="inline-block text-gold text-xs sm:text-sm font-semibold tracking-wide uppercase hover:text-gold/70 transition-colors underline underline-offset-4">
+          Already convinced? Jump straight into the app →
+        </Link>
+      </div>
+
       {/* ── FITNESS — the lead. Everything else on this domain is secondary. ── */}
-      <section id="fitness" className="relative pt-32 pb-24 sm:pb-32 px-6 overflow-hidden">
+      <section id="fitness" className="relative pt-12 pb-24 sm:pb-32 px-6 overflow-hidden">
         <HeroVideoBG srcs={['/videos/hero-fitness-5.mp4', '/videos/hero-fitness-2.mp4', '/videos/hero-fitness-1.mp4', '/videos/hero-fitness-3.mp4', '/videos/hero-fitness-4.mp4']} />
         <div className="luf-reveal relative max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div className="bg-paper/70 backdrop-blur-md rounded-3xl p-8 sm:p-10 shadow-xl">
@@ -110,6 +120,18 @@ export default function LandingPage() {
             </a>
           </div>
         </div>
+      </section>
+
+      {/* ── Bottom-of-page app link — the last real CTA before the page ends,
+          for anyone who scrolled all the way through and needs one more
+          chance to actually start. ── */}
+      <section className="pb-16 px-6 text-center">
+        <Link
+          href="/try?to=/plan"
+          className="inline-block bg-gold text-obsidian px-10 py-4 text-base font-bold tracking-wider uppercase rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
+        >
+          Get started — 100% free
+        </Link>
       </section>
 
       {/* ── Small, out-of-the-way mention — this is a fitness site now ── */}
