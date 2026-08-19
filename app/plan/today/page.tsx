@@ -93,12 +93,20 @@ export default async function TodayView() {
   const structuralAssessment = await assessStructuralPattern(enrollment.id as string, localDateISO(tz))
   const structuralMessage = messageForStructural(structuralAssessment)
 
-  // For You page — deliberately the reverse of the main dashboard's palette:
-  // dashboard is a dark-emerald field with mustard accents, this is a mustard
-  // field with emerald accents. Asa's direct request, not a mockup pass.
+  // For You page — the field (page background) is the dashboard's mustard
+  // accent, reversed. The boxes themselves are emerald, same as the
+  // dashboard's own cards, with a mustard border + glow for contrast against
+  // the mustard field — so text/accents on a card flip to mustard/white,
+  // while the few things sitting directly on the mustard field (heading,
+  // back button) stay dark-green-on-mustard. Asa's direct request.
   const ACCENT = '#044A34'
   const INK = '#021F16'
-  const MUTED = 'rgba(2,31,22,0.55)'
+  const CARD_BG = 'linear-gradient(135deg, #0d3a2a, #044A34 60%, #08281d)'
+  const CARD_BORDER = '1px solid rgba(229,169,60,0.4)'
+  const CARD_GLOW = '0 0 16px -4px rgba(229,169,60,0.4)'
+  const CARD_TEXT = '#ffffff'
+  const CARD_MUTED = 'rgba(237,231,218,0.65)'
+  const CARD_ACCENT = '#E5A93C'
 
   return (
     <div className="min-h-[100dvh] px-4 py-6" style={{ background: '#E5A93C' }}>
@@ -130,12 +138,12 @@ export default async function TodayView() {
               today's already flagged as an eat-out day (the meal section below
               becomes this exact same link) so she isn't shown the same CTA twice. */}
           {!eatingOutToday && (
-            <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-white rounded-2xl px-5 py-4 transition-colors" style={{ border: `1px solid ${ACCENT}33` }}>
+            <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-colors" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
               <div>
-                <p className="font-semibold text-sm" style={{ color: INK }}>Away from home right now?</p>
-                <p className="text-xs mt-0.5" style={{ color: MUTED }}>Tap for exactly what to order — no thinking, no searching.</p>
+                <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>Away from home right now?</p>
+                <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>Tap for exactly what to order — no thinking, no searching.</p>
               </div>
-              <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: ACCENT }}>→</span>
+              <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: CARD_ACCENT }}>→</span>
             </Link>
           )}
 
@@ -149,29 +157,29 @@ export default async function TodayView() {
               again here was the same numbers twice in a row. */}
           <section>
             {eatingOutToday ? (
-              <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 bg-white rounded-2xl p-5 transition-colors" style={{ border: `1px solid ${ACCENT}33` }}>
+              <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 rounded-2xl p-5 transition-colors" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
                 <div>
-                  <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold mb-2" style={{ background: `${ACCENT}1A`, color: ACCENT }}>Eat-out day</span>
-                  <p className="font-semibold text-sm" style={{ color: INK }}>See exactly what to order</p>
-                  <p className="text-xs mt-0.5" style={{ color: MUTED }}>No thinking, no searching — picked for you, budget-matched.</p>
+                  <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold mb-2" style={{ background: 'rgba(229,169,60,0.15)', color: CARD_ACCENT }}>Eat-out day</span>
+                  <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>See exactly what to order</p>
+                  <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>No thinking, no searching — picked for you, budget-matched.</p>
                 </div>
-                <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: ACCENT }}>→</span>
+                <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: CARD_ACCENT }}>→</span>
               </Link>
             ) : todayMeals ? (
-              <div className="bg-white rounded-2xl p-5 flex items-center justify-between gap-3" style={{ border: `1px solid ${ACCENT}33` }}>
+              <div className="rounded-2xl p-5 flex items-center justify-between gap-3" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
                 <div>
-                  <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold mb-1.5" style={{ background: `${ACCENT}1A`, color: ACCENT }}>
+                  <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold mb-1.5" style={{ background: 'rgba(229,169,60,0.15)', color: CARD_ACCENT }}>
                     {todayMeals.dayType === 'workout' ? 'Workout day' : 'Rest day'}
                   </span>
-                  <p className="text-sm" style={{ color: MUTED }}>Target {todayMeals.target} cal · {todayMeals.totalProtein}g protein planned</p>
+                  <p className="text-sm" style={{ color: CARD_MUTED }}>Target {todayMeals.target} cal · {todayMeals.totalProtein}g protein planned</p>
                 </div>
-                <Link href="/plan/meals" className="text-xs font-semibold shrink-0" style={{ color: ACCENT }}>Edit my meals →</Link>
+                <Link href="/plan/meals" className="text-xs font-semibold shrink-0" style={{ color: CARD_ACCENT }}>Edit my meals →</Link>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl p-6 text-center" style={{ border: `1px solid ${ACCENT}33` }}>
-                <p className="font-semibold mb-1" style={{ color: INK }}>{mealIdx > 5 ? 'Sunday — recovery & reset' : 'No meal plan yet'}</p>
-                <p className="text-sm mb-3" style={{ color: MUTED }}>{mealIdx > 5 ? 'No cook plan today. Eat mindful, hit your protein, and log whatever you have above.' : 'Build this week’s meals and they’ll show up here each day.'}</p>
-                {mealIdx <= 5 && <Link href="/plan/meals" className="inline-block px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl text-white" style={{ background: ACCENT }}>Build my meals</Link>}
+              <div className="rounded-2xl p-6 text-center" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
+                <p className="font-semibold mb-1" style={{ color: CARD_TEXT }}>{mealIdx > 5 ? 'Sunday — recovery & reset' : 'No meal plan yet'}</p>
+                <p className="text-sm mb-3" style={{ color: CARD_MUTED }}>{mealIdx > 5 ? 'No cook plan today. Eat mindful, hit your protein, and log whatever you have above.' : 'Build this week’s meals and they’ll show up here each day.'}</p>
+                {mealIdx <= 5 && <Link href="/plan/meals" className="inline-block px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl" style={{ background: CARD_ACCENT, color: INK }}>Build my meals</Link>}
               </div>
             )}
           </section>
@@ -179,20 +187,20 @@ export default async function TodayView() {
           {/* Today's workout */}
           <section>
             {todayWorkout ? (
-              <div className="bg-white rounded-2xl p-5 flex items-center justify-between gap-4" style={{ border: `1px solid ${ACCENT}33` }}>
+              <div className="rounded-2xl p-5 flex items-center justify-between gap-4" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
                 <div>
-                  <p className="font-semibold text-sm" style={{ color: INK }}>{todayWorkout.title}</p>
-                  {todayWorkout.muscles?.length ? <p className="text-xs mt-0.5" style={{ color: MUTED }}>{todayWorkout.muscles.join(' · ')}</p> : null}
+                  <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>{todayWorkout.title}</p>
+                  {todayWorkout.muscles?.length ? <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>{todayWorkout.muscles.join(' · ')}</p> : null}
                   {todayAdjustment?.workoutChange && (
-                    <p className="text-[11px] mt-1 font-semibold" style={{ color: ACCENT }}>Adjusted: {todayAdjustment.workoutChange.toMinutes ? `${todayAdjustment.workoutChange.toMinutes}-min ` : ''}{todayAdjustment.workoutChange.swapTo || 'adapted for today'}</p>
+                    <p className="text-[11px] mt-1 font-semibold" style={{ color: CARD_ACCENT }}>Adjusted: {todayAdjustment.workoutChange.toMinutes ? `${todayAdjustment.workoutChange.toMinutes}-min ` : ''}{todayAdjustment.workoutChange.swapTo || 'adapted for today'}</p>
                   )}
                 </div>
-                <Link href="/plan/workout" className="luf-pulse shrink-0 inline-flex items-center gap-1.5 text-white px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform" style={{ background: ACCENT }}>▶ Start</Link>
+                <Link href="/plan/workout" className="luf-pulse shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform" style={{ background: CARD_ACCENT, color: INK }}>▶ Start</Link>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl p-5 text-center" style={{ border: `1px solid ${ACCENT}33` }}>
-                <p className="font-semibold mb-1" style={{ color: INK }}>We hit a snag building your workout</p>
-                <p className="text-sm mb-3" style={{ color: MUTED }}>Shouldn&apos;t take more than a second to fix.</p>
+              <div className="rounded-2xl p-5 text-center" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
+                <p className="font-semibold mb-1" style={{ color: CARD_TEXT }}>We hit a snag building your workout</p>
+                <p className="text-sm mb-3" style={{ color: CARD_MUTED }}>Shouldn&apos;t take more than a second to fix.</p>
                 <RebuildPlanButton />
               </div>
             )}
@@ -200,12 +208,12 @@ export default async function TodayView() {
 
           {/* Coach access lives here now instead of its own tab — she should
               never feel like reaching Asa takes more than one tap from Today. */}
-          <Link href="/plan/coach" className="flex items-center justify-between gap-3 bg-white rounded-2xl px-5 py-4 transition-colors" style={{ border: `1px solid ${ACCENT}33` }}>
+          <Link href="/plan/coach" className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-colors" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
             <div>
-              <p className="font-semibold text-sm" style={{ color: INK }}>Talk to Coach Asa</p>
-              <p className="text-xs mt-0.5" style={{ color: MUTED }}>Tell me about your day, ask a question, book a call.</p>
+              <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>Talk to Coach Asa</p>
+              <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>Tell me about your day, ask a question, book a call.</p>
             </div>
-            <span className="text-sm shrink-0" style={{ color: ACCENT }}>→</span>
+            <span className="text-sm shrink-0" style={{ color: CARD_ACCENT }}>→</span>
           </Link>
 
           {/* Moved here from /plan's dashboard (2026-08-12 redesign) — infrequent,
@@ -215,12 +223,12 @@ export default async function TodayView() {
           {/* Moved here from /plan's dashboard (2026-08-12 redesign) — one-time
               invite, disappears for good once she finishes the optional pass. */}
           {profileNeedsFinishing && (
-            <Link href="/plan/intake?tier=optional" className="group flex items-center justify-between gap-3 bg-white rounded-2xl px-5 py-3.5 transition-colors" style={{ border: `1px solid ${ACCENT}33` }}>
+            <Link href="/plan/intake?tier=optional" className="group flex items-center justify-between gap-3 rounded-2xl px-5 py-3.5 transition-colors" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
               <div>
-                <p className="font-semibold text-sm" style={{ color: INK }}>Fine-tune your plan — 60 seconds</p>
-                <p className="text-xs mt-0.5" style={{ color: MUTED }}>A few more details (schedule, food likes, injuries) makes it fit even better.</p>
+                <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>Fine-tune your plan — 60 seconds</p>
+                <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>A few more details (schedule, food likes, injuries) makes it fit even better.</p>
               </div>
-              <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: ACCENT }}>→</span>
+              <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: CARD_ACCENT }}>→</span>
             </Link>
           )}
         </div>

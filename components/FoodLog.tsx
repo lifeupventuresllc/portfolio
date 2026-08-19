@@ -25,9 +25,16 @@ const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const
 const MEAL_LABEL: Record<string, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks' }
 const SLOT_TO_MEAL: Record<string, string> = { BF: 'breakfast', LN: 'lunch', DN: 'dinner', SN: 'snack', DS: 'snack' }
 
-const ACCENT = '#044A34'
-const INK = '#021F16'
-const MUTED = 'rgba(2,31,22,0.55)'
+// This card is emerald (dashboard's own card color), sitting on the For You
+// page's mustard field — so its accent/text roles flip to what reads on a
+// dark card: mustard accent, white primary text, translucent-ivory muted text.
+const ACCENT = '#E5A93C'
+const INK = '#ffffff'
+const MUTED = 'rgba(237,231,218,0.65)'
+const CARD_BG = 'linear-gradient(135deg, #0d3a2a, #044A34 60%, #08281d)'
+const CARD_BORDER = '1px solid rgba(229,169,60,0.4)'
+const CARD_GLOW = '0 0 16px -4px rgba(229,169,60,0.4)'
+const OVER_TEXT = '#fbbf24'
 
 // Just protein — carbs/fat bars used to sit here too, but three number-vs-target
 // bars next to a calorie ring read as a math problem. Protein is the one macro
@@ -40,9 +47,9 @@ function MacroBar({ label, val, target }: { label: string; val: number; target: 
     <div>
       <div className="flex justify-between text-[11px] mb-1">
         <span style={{ color: MUTED }}>{label}</span>
-        <span style={{ color: over ? '#b45309' : INK, fontWeight: over ? 600 : 500 }}>{val}<span style={{ color: MUTED }}> / {target}g</span></span>
+        <span style={{ color: over ? OVER_TEXT : INK, fontWeight: over ? 600 : 500 }}>{val}<span style={{ color: MUTED }}> / {target}g</span></span>
       </div>
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(2,31,22,0.08)' }}>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.14)' }}>
         <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: over ? '#f59e0b' : ACCENT }} />
       </div>
     </div>
@@ -177,7 +184,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
   const calOver = remaining < 0
 
   return (
-    <div className="bg-white rounded-2xl p-5" style={{ border: `1px solid ${ACCENT}33` }}>
+    <div className="rounded-2xl p-5" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
       {expired && <div className="mb-4"><SessionExpiredNotice /></div>}
       <div className="flex items-center justify-between mb-1">
         <div>
@@ -199,7 +206,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
           <Ring pct={calPct} size={104} stroke={9} color={calOver ? '#f59e0b' : ACCENT}>
             <div className="text-center leading-none">
               <p className="text-[8px] uppercase tracking-wider mb-0.5" style={{ color: MUTED }}>{calOver ? 'over' : 'left'}</p>
-              <p className="font-bold text-xl" style={{ color: calOver ? '#b45309' : ACCENT }}>{calOver ? '-' : ''}${Math.abs(remaining)}</p>
+              <p className="font-bold text-xl" style={{ color: calOver ? OVER_TEXT : ACCENT }}>{calOver ? '-' : ''}${Math.abs(remaining)}</p>
               <p className="text-[9px] tracking-wider mt-0.5" style={{ color: MUTED }}>of ${calBudget}</p>
             </div>
           </Ring>
@@ -210,7 +217,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
         </div>
       </div>
       <div className="mb-4 rounded-2xl border px-4 py-3 text-center" style={{ borderColor: calOver ? '#f59e0b66' : `${ACCENT}66`, background: calOver ? '#f59e0b1A' : `${ACCENT}1A` }}>
-        <p className="text-base font-bold" style={{ color: calOver ? '#b45309' : ACCENT }}>
+        <p className="text-base font-bold" style={{ color: calOver ? OVER_TEXT : ACCENT }}>
           {loading ? 'Loading your day…' : calOver ? `$${Math.abs(remaining)} over budget — no guilt, fresh budget tomorrow.` : `Spent $${t.calories} · $${remaining} left${t.calories === 0 ? ' — log your first meal below' : ''}`}
         </p>
       </div>
@@ -221,7 +228,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
           <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: MUTED }}>From today&apos;s plan — tap to log</p>
           <div className="flex flex-wrap gap-2">
             {planned.map((p, i) => (
-              <button key={i} onClick={() => logPlanned(p)} disabled={saving} className="text-left rounded-xl px-3 py-2 transition-colors disabled:opacity-50" style={{ background: 'rgba(2,31,22,0.05)', border: `1px solid ${ACCENT}33` }}>
+              <button key={i} onClick={() => logPlanned(p)} disabled={saving} className="text-left rounded-xl px-3 py-2 transition-colors disabled:opacity-50" style={{ background: 'rgba(255,255,255,0.08)', border: `1px solid ${ACCENT}33` }}>
                 <span className="text-xs font-medium block leading-tight" style={{ color: INK }}>{p.name}</span>
                 <span className="text-[10px]" style={{ color: MUTED }}>{p.cal} cal · {p.protein}g P</span>
               </button>
@@ -326,7 +333,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
           <p className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: MUTED }}>{MEAL_LABEL[m]}</p>
           <div className="space-y-1.5">
             {grouped[m].map((e) => (
-              <div key={e.id} className="flex items-center gap-2 rounded-lg px-3 py-2 group" style={{ background: 'rgba(2,31,22,0.05)' }}>
+              <div key={e.id} className="flex items-center gap-2 rounded-lg px-3 py-2 group" style={{ background: 'rgba(255,255,255,0.08)' }}>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate" style={{ color: INK }}>{e.name}{e.servings !== 1 ? <span style={{ color: MUTED }}> ×{e.servings}</span> : null}</p>
                   <p className="text-[10px]" style={{ color: MUTED }}>{e.calories} cal · {e.protein_g}g protein</p>
