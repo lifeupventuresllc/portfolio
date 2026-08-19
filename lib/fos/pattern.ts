@@ -277,9 +277,14 @@ export async function assessLifePattern(enrollmentId: string, todayISO: string):
 
   // Same window/query as the stress check above (no extra fetch needed) — a
   // single 'travel' event is enough (see the weight comment: this is a
-  // stated fact, not an inferred keyword). Previously captured via
-  // app/api/plan/daily-context and app/api/plan/operator's location override
-  // but never read by anything — dead data. Fixed 2026-08-19.
+  // stated fact, not an inferred keyword). This read side was previously dead
+  // (nothing wrote kind='travel' at all) — fixed 2026-08-19 on both ends: the
+  // structured daily-context check-in already had a 'where' answer to log it
+  // from, and app/api/plan/operator's free-text location parse drove the
+  // trackOverride reply correctly but never persisted the fos_events row this
+  // reads, so mentioning travel in ordinary chat (the far more common path
+  // than the structured check-in) silently never counted as a life-context
+  // disruption. Both write sides fixed the same day.
   if ((eventRows || []).some((e) => e.kind === 'travel')) signals.push('traveling')
 
   // Only hit the Calendar API when nothing cheaper already fired — same

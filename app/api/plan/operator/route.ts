@@ -256,6 +256,13 @@ export async function POST(request: NextRequest) {
       const summary = foods.map((f) => `${f.name} (~${f.calories} cal)`).join(', ')
       const reply = `Logged it: ${summary}. Estimated, not exact — but it's counted toward today already.`
       await svc.from('fos_events').insert({ enrollment_id: eid, user_id: user.id, occurred_on: today, kind: 'message', summary: message, payload: { loggedFood: true, foods } })
+      // Same travel-goes-missing gap as the main insert further down (see its comment)
+      // — this early return has its own fos_events insert, so it needs its own copy of
+      // the fix: "traveling, grabbed an airport sandwich" has no other signal, so it
+      // hits this branch and used to drop the travel context entirely.
+      if (location === 'traveling') {
+        await svc.from('fos_events').insert({ enrollment_id: eid, user_id: user.id, occurred_on: today, kind: 'travel', summary: message, payload: { location } })
+      }
       await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: reply })
       return NextResponse.json({ reply, loggedFood: true })
     }
@@ -411,6 +418,20 @@ export async function POST(request: NextRequest) {
   }
 
   await svc.from('fos_events').insert({ enrollment_id: eid, user_id: user.id, occurred_on: today, kind: signal ? eventKindFor(signal) : 'message', summary: message, payload: signal ? { signal } : {} })
+  // location (parsed above, independent of signal — see parse.ts) never made it into
+  // fos_events at all: this insert only ever looked at `signal`'s kind. That meant a
+  // client who just said "I'm traveling this week, no gym access" — no other signal —
+  // got the trackOverride swap in her reply (the `if (location)` block above), but the
+  // event log recorded kind='message', so lib/fos/pattern.ts's `traveling` check (which
+  // scans fos_events for kind==='travel') never saw it — only the structured
+  // daily-context check-in ever wrote that kind. Real gap: the natural, most-common way
+  // she'd mention travel (just saying it in chat) silently never registered. Written as
+  // its own row, not folded into the primary kind above, so a message that's both e.g.
+  // "stressed" AND "traveling" still records both signals rather than one clobbering
+  // the other. Found + fixed 2026-08-19.
+  if (location === 'traveling') {
+    await svc.from('fos_events').insert({ enrollment_id: eid, user_id: user.id, occurred_on: today, kind: 'travel', summary: message, payload: { location } })
+  }
 
   let adjustmentId: string | null = null
   if (plan) {
