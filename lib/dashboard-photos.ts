@@ -4,6 +4,13 @@
 // stays up before advancing (2 = every other day; bump to 7+ for weekly).
 export const DASHBOARD_PHOTOS: string[] = [
   '/images/brand/sculpt-session-hero.jpg',
+  '/images/brand/kettlebell-deadlift.jpg',
+  '/images/brand/bicep-curl-focus.jpg',
+  '/images/brand/kettlebell-squat.jpg',
+  '/images/brand/studio-stretch.jpg',
+  '/images/brand/jump-rope-session.jpg',
+  '/images/brand/mindful-moment.jpg',
+  '/images/brand/side-plank-smile.jpg',
 ]
 
 export const CYCLE_DAYS = 2

@@ -189,6 +189,12 @@ export default async function PlanDashboard() {
       <Link href="/plan/workout" className="relative block rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(229,169,60,0.22)', height: 300 }}>
         <img src={pickDashboardPhoto()} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'saturate(1.05) contrast(1.03)' }} />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,0) 40%, rgba(2,31,22,0.75) 100%)' }} />
+        {hasPlan && todayWorkout?.title && (
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <p className="text-[#E5A93C] text-[10px] uppercase tracking-wider font-semibold mb-0.5">Today&apos;s workout</p>
+            <p className="text-white font-bold text-lg leading-tight">{todayWorkout.title}</p>
+          </div>
+        )}
       </Link>
 
       <CoachOrbLauncher firstName={firstName} hasPlan={hasPlan} />
