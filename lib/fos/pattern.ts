@@ -18,7 +18,7 @@ import { addDaysISO } from '@/lib/localdate'
 // input-principle).
 // ============================================================
 
-export type PatternSignal = 'workout_dip' | 'food_dip' | 'silent' | 'eating_out_spike' | 'recent_stress' | 'traveling' | 'packed_schedule'
+export type PatternSignal = 'workout_dip' | 'food_dip' | 'effort_dip' | 'silent' | 'eating_out_spike' | 'recent_stress' | 'traveling' | 'packed_schedule'
 export type RiskBand = 'low' | 'medium' | 'high'
 
 export type LifePatternAssessment = {
@@ -38,6 +38,12 @@ export type LifePatternAssessment = {
 //    peak, per detectDip) — already-observed behavior change, not a prediction.
 //    Workout weighted slightly above food since it's the higher-friction habit —
 //    losing it is typically the earlier domino.
+//  - effort_dip (25): a real behavior-QUALITY change, not just completion —
+//    she's still showing up (workout_dip hasn't fired), but her own recent
+//    sessions read as quietly easier than her own baseline. Weighted below
+//    the binary dips since it's a subjective self-report, not a clean
+//    logged-or-not fact, but above the indirect tier since it's explicit
+//    per-session data she chose to give, not an inferred keyword.
 //  - eating_out_spike (20) / recent_stress (20) / traveling (20): real but
 //    indirect — she's still engaging (still logging food; still talking to
 //    the operator), just differently. traveling sits at the same weight as
@@ -51,6 +57,7 @@ const SIGNAL_WEIGHT: Record<PatternSignal, number> = {
   silent: 40,
   workout_dip: 35,
   food_dip: 30,
+  effort_dip: 25,
   eating_out_spike: 20,
   recent_stress: 20,
   traveling: 20,
@@ -116,10 +123,33 @@ function isEatingOutSpike(eatOutDates: string[], todayISO: string): boolean {
   return recentWeeklyRate >= Math.max(3, baselineWeeklyRate * 1.8)
 }
 
+// The intensity half of "completion & intensity trend" — detectDip only ever
+// caught did-she-show-up. effort is 1 (easier than her usual) / 2 (normal) /
+// 3 (tougher than usual), tapped once on the workout-completion screen (see
+// components/EffortTap.tsx) — relative to HER OWN normal, never an absolute
+// scale, same philosophy as isEatingOutSpike above. Same recent-vs-baseline
+// shape deliberately: a quiet decline only counts against her own history,
+// and only once there's enough data on both sides to trust the read.
+const EFFORT_RECENT_WINDOW_DAYS = 7
+const EFFORT_BASELINE_WINDOW_DAYS = 21
+const EFFORT_MIN_RECENT_COUNT = 3
+const EFFORT_MIN_BASELINE_COUNT = 3
+const EFFORT_DECLINE_THRESHOLD = 0.5 // recent avg <= baseline avg - this, on the 1-3 scale
+
+function isEffortDeclining(entries: { date: string; effort: number }[], todayISO: string): boolean {
+  const recentCutoff = addDaysISO(todayISO, -(EFFORT_RECENT_WINDOW_DAYS - 1))
+  const baselineCutoff = addDaysISO(recentCutoff, -EFFORT_BASELINE_WINDOW_DAYS)
+  const recent = entries.filter((e) => e.date >= recentCutoff && e.date <= todayISO)
+  const baseline = entries.filter((e) => e.date >= baselineCutoff && e.date < recentCutoff)
+  if (recent.length < EFFORT_MIN_RECENT_COUNT || baseline.length < EFFORT_MIN_BASELINE_COUNT) return false
+  const avg = (arr: { effort: number }[]) => arr.reduce((s, e) => s + e.effort, 0) / arr.length
+  return avg(recent) <= avg(baseline) - EFFORT_DECLINE_THRESHOLD
+}
+
 export async function assessLifePattern(enrollmentId: string, todayISO: string): Promise<LifePatternAssessment> {
   const svc = createServiceClient()
   const [{ data: progressRows }, { data: foodRows }, { data: enrollment }, { data: eventRows }] = await Promise.all([
-    svc.from('challenge_progress').select('logged_on').eq('enrollment_id', enrollmentId).eq('note', '__daily__'),
+    svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollmentId).eq('note', '__daily__'),
     svc.from('challenge_food_log').select('logged_on, source').eq('enrollment_id', enrollmentId),
     svc.from('challenge_enrollments').select('last_active_at').eq('id', enrollmentId).maybeSingle(),
     svc.from('fos_events').select('kind, occurred_on').eq('enrollment_id', enrollmentId).gte('occurred_on', addDaysISO(todayISO, -(STRESS_WINDOW_DAYS - 1))),
@@ -132,6 +162,11 @@ export async function assessLifePattern(enrollmentId: string, todayISO: string):
 
   const foodDates = new Set((foodRows || []).map((r) => r.logged_on as string))
   if (detectDip(foodDates, todayISO).isDip) signals.push('food_dip')
+
+  const effortEntries = (progressRows || [])
+    .map((r) => ({ date: r.logged_on as string, effort: (r.measurements as { effort?: number } | null)?.effort }))
+    .filter((e): e is { date: string; effort: number } => typeof e.effort === 'number')
+  if (isEffortDeclining(effortEntries, todayISO)) signals.push('effort_dip')
 
   if (isSilentDip((enrollment?.last_active_at as string | null) ?? null)) signals.push('silent')
 
@@ -174,6 +209,9 @@ export function messageForPattern(a: LifePatternAssessment): { title: string; bo
   }
   if (a.signals.includes('workout_dip')) {
     return { title: "You've been carrying a lot 💛", body: "No pressure to bounce back to full speed. I'm right here — just this today still counts." }
+  }
+  if (a.signals.includes('effort_dip')) {
+    return { title: "Your sessions have felt lighter than usual 💛", body: "That's worth naming, not ignoring — if something's making it harder to push right now, tell me and I'll actually adjust today's session down, not just say the words." }
   }
   if (a.signals.includes('food_dip')) {
     return { title: "Today doesn't have to be perfect 💛", body: "Let's not worry about the full plan today — just protein and water, that's the whole goal. I'll pick it back up with you tomorrow either way." }

@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Ring from '@/components/Ring'
 import Confetti from '@/components/Confetti'
 import QuickFeedback from '@/components/QuickFeedback'
+import EffortTap from '@/components/EffortTap'
 import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { buildSteps, dayLabels, estimateWorkoutMinutes, trimStepsToTarget, type WorkoutStep } from '@/lib/workout-steps'
 import type { WorkoutProgram } from '@/lib/workout'
@@ -106,7 +107,8 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
         <p className="text-6xl mb-4">🔥</p>
         <h1 className="text-3xl font-bold text-white mb-2">That&apos;s done, {firstName}.</h1>
         <p className="text-ivory/60 text-sm mb-8">You showed up and you finished. That&apos;s the whole game. I logged it for your streak.</p>
-        <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} className="luf-glow w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl">Back to my week</button>
+        <EffortTap />
+        <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} className="luf-glow w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl mt-6">Back to my week</button>
         <p className="text-gold text-sm font-semibold mt-4">— Coach Asa</p>
         <QuickFeedback category="workout" context={`${labels[dayIdx]} · day ${dayIdx + 1}`} dark reviewGate />
       </div>

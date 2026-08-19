@@ -49,7 +49,13 @@ export async function POST(request: NextRequest) {
   const { user, enrollment, svc } = await resolve()
   if (!user || !enrollment || !svc) return NextResponse.json({ error: 'Not enrolled.' }, { status: 401 })
   const body = await request.json()
-  const measurements = { workout: !!body.workout, nutrition: !!body.nutrition }
+  // effort is optional and 1-3 (1=easier than her usual, 2=normal, 3=tougher than
+  // usual) — relative to HER OWN normal, not an absolute difficulty scale, same
+  // baseline-relative philosophy as everything else in lib/fos/pattern.ts. Omitted
+  // entirely (not defaulted) when she doesn't tap one, so "no data" stays distinct
+  // from "logged as normal."
+  const effort = Number.isFinite(Number(body.effort)) && [1, 2, 3].includes(Number(body.effort)) ? Number(body.effort) : undefined
+  const measurements = { workout: !!body.workout, nutrition: !!body.nutrition, ...(effort !== undefined ? { effort } : {}) }
   const today = localDateISO()
 
   const { data: existing } = await svc.from('challenge_progress')
