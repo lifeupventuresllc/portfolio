@@ -5,9 +5,9 @@ import { addDaysISO } from '@/lib/localdate'
 
 // ============================================================
 // The unified life-pattern engine — Layer 1's real "already knows you"
-// mechanism. Everything below it (workout dip, food dip, silence, calendar,
-// eating-out frequency, chat-reported stress, travel) used to be separate,
-// siloed checks, each blind to the others. A real bad week rarely shows up
+// mechanism. Everything below it (workout dip, food dip, effort, silence,
+// calendar, eating-out frequency, chat-reported stress, travel, chat reply
+// latency/tone) used to be separate, siloed checks, each blind to the others. A real bad week rarely shows up
 // as one clean signal crossing one threshold — it shows up as a
 // COMBINATION (still logging food, but more takeout; opening the app
 // later; mentioned being tired in chat). This reads all of it together and
@@ -18,7 +18,7 @@ import { addDaysISO } from '@/lib/localdate'
 // input-principle).
 // ============================================================
 
-export type PatternSignal = 'workout_dip' | 'food_dip' | 'effort_dip' | 'silent' | 'eating_out_spike' | 'recent_stress' | 'traveling' | 'packed_schedule'
+export type PatternSignal = 'workout_dip' | 'food_dip' | 'effort_dip' | 'chat_pullback' | 'silent' | 'eating_out_spike' | 'recent_stress' | 'traveling' | 'packed_schedule'
 export type RiskBand = 'low' | 'medium' | 'high'
 
 export type LifePatternAssessment = {
@@ -38,12 +38,16 @@ export type LifePatternAssessment = {
 //    peak, per detectDip) — already-observed behavior change, not a prediction.
 //    Workout weighted slightly above food since it's the higher-friction habit —
 //    losing it is typically the earlier domino.
-//  - effort_dip (25): a real behavior-QUALITY change, not just completion —
-//    she's still showing up (workout_dip hasn't fired), but her own recent
-//    sessions read as quietly easier than her own baseline. Weighted below
-//    the binary dips since it's a subjective self-report, not a clean
-//    logged-or-not fact, but above the indirect tier since it's explicit
-//    per-session data she chose to give, not an inferred keyword.
+//  - effort_dip (25) / chat_pullback (25): real behavior-QUALITY changes, not
+//    just completion — she's still showing up (workout_dip hasn't fired) and
+//    still talking to the operator (silent hasn't fired), but HOW she's
+//    doing both is quietly shifting: sessions reading as easier than her
+//    baseline, or her replies getting slower/shorter than her baseline.
+//    Weighted below the binary dips since both are continuous trends against
+//    subjective/inferred data, not a clean logged-or-not fact — but above the
+//    indirect tier since effort is explicit per-session data she chose to
+//    give, and chat_pullback is measured straight off her own real messages,
+//    not a keyword guess.
 //  - eating_out_spike (20) / recent_stress (20) / traveling (20): real but
 //    indirect — she's still engaging (still logging food; still talking to
 //    the operator), just differently. traveling sits at the same weight as
@@ -58,6 +62,7 @@ const SIGNAL_WEIGHT: Record<PatternSignal, number> = {
   workout_dip: 35,
   food_dip: 30,
   effort_dip: 25,
+  chat_pullback: 25,
   eating_out_spike: 20,
   recent_stress: 20,
   traveling: 20,
@@ -146,13 +151,105 @@ function isEffortDeclining(entries: { date: string; effort: number }[], todayISO
   return avg(recent) <= avg(baseline) - EFFORT_DECLINE_THRESHOLD
 }
 
+// "Response latency & tone" — the one input from Asa's original 5 with no
+// existing infra to extend. fos_messages already logs every real chat turn
+// (role + content + created_at, written by app/api/plan/operator/route.ts on
+// every message) — nothing new asked of her, same as everything else here.
+// Two sub-signals, either one alone is enough to fire (this stays ONE
+// PatternSignal, matching how Asa named it as one combined item):
+//   - reply latency: the gap between an operator message and her next real
+//     reply, trending longer than her own baseline.
+//   - message length: her own word count trending shorter than her baseline.
+// Both compared to HER OWN history, never a fixed rule — same philosophy as
+// every other signal in this file.
+type ChatMessage = { role: string; content: string; created_at: string }
+
+// The structured daily-context check-in (app/api/plan/daily-context/route.ts)
+// writes synthetic user/operator rows ("Daily check-in: feeling tired...")
+// back-to-back in the same request — not a real conversational turn, and
+// its near-zero latency would fake a "fast reply" data point, and its fixed
+// template would fake a "message length" data point. Excluded from both.
+const DAILY_CHECKIN_PREFIX = 'Daily check-in:'
+function isRealUserMessage(m: ChatMessage): boolean {
+  return m.role === 'user' && !m.content.startsWith(DAILY_CHECKIN_PREFIX)
+}
+
+const CHAT_RECENT_WINDOW_DAYS = 7
+const CHAT_BASELINE_WINDOW_DAYS = 21
+const CHAT_MIN_RECENT_COUNT = 3
+const CHAT_MIN_BASELINE_COUNT = 3
+// A gap longer than this reads as "she stepped away," not "this specific
+// reply was slow" — that's isSilentDip's job, not this one. Excluded, not
+// capped, so one multi-day gap can't single-handedly wreck the average.
+const REPLY_GAP_MAX_MINUTES = 12 * 60
+// Proportional (like isEatingOutSpike's 1.8x) with a floor so a baseline of
+// "replies in 2 minutes" doesn't flag over a swing to 4 minutes — real noise,
+// not a real pattern.
+const LATENCY_SLOWDOWN_MULTIPLIER = 1.8
+const LATENCY_MIN_ABSOLUTE_INCREASE_MINUTES = 20
+// Word count dropping to 60% of her own normal or below.
+const LENGTH_DECLINE_RATIO = 0.6
+const LENGTH_MIN_BASELINE_WORDS = 4 // someone who was already terse can't "decline" further
+
+function wordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length
+}
+
+function windowed<T extends { date: string }>(entries: T[], todayISO: string) {
+  const recentCutoff = addDaysISO(todayISO, -(CHAT_RECENT_WINDOW_DAYS - 1))
+  const baselineCutoff = addDaysISO(recentCutoff, -CHAT_BASELINE_WINDOW_DAYS)
+  return {
+    recent: entries.filter((e) => e.date >= recentCutoff && e.date <= todayISO),
+    baseline: entries.filter((e) => e.date >= baselineCutoff && e.date < recentCutoff),
+  }
+}
+
+function isChatPullingBack(messages: ChatMessage[], todayISO: string): boolean {
+  const ordered = [...messages].sort((a, b) => a.created_at.localeCompare(b.created_at))
+
+  const latencies: { date: string; minutes: number }[] = []
+  for (let i = 0; i < ordered.length - 1; i++) {
+    const cur = ordered[i]
+    const next = ordered[i + 1]
+    if (cur.role !== 'operator' || !isRealUserMessage(next)) continue
+    const minutes = (new Date(next.created_at).getTime() - new Date(cur.created_at).getTime()) / 60000
+    if (minutes >= 0 && minutes <= REPLY_GAP_MAX_MINUTES) latencies.push({ date: next.created_at.slice(0, 10), minutes })
+  }
+  const lengths = ordered
+    .filter(isRealUserMessage)
+    .map((m) => ({ date: m.created_at.slice(0, 10), words: wordCount(m.content) }))
+
+  const avg = (arr: number[]) => arr.reduce((s, v) => s + v, 0) / arr.length
+
+  const { recent: recentLatency, baseline: baselineLatency } = windowed(latencies, todayISO)
+  const slower = recentLatency.length >= CHAT_MIN_RECENT_COUNT && baselineLatency.length >= CHAT_MIN_BASELINE_COUNT
+    && (() => {
+      const r = avg(recentLatency.map((e) => e.minutes))
+      const b = avg(baselineLatency.map((e) => e.minutes))
+      return r >= Math.max(b * LATENCY_SLOWDOWN_MULTIPLIER, b + LATENCY_MIN_ABSOLUTE_INCREASE_MINUTES)
+    })()
+
+  const { recent: recentLength, baseline: baselineLength } = windowed(lengths, todayISO)
+  const shorter = recentLength.length >= CHAT_MIN_RECENT_COUNT && baselineLength.length >= CHAT_MIN_BASELINE_COUNT
+    && (() => {
+      const r = avg(recentLength.map((e) => e.words))
+      const b = avg(baselineLength.map((e) => e.words))
+      return b >= LENGTH_MIN_BASELINE_WORDS && r <= b * LENGTH_DECLINE_RATIO
+    })()
+
+  return slower || shorter
+}
+
 export async function assessLifePattern(enrollmentId: string, todayISO: string): Promise<LifePatternAssessment> {
   const svc = createServiceClient()
-  const [{ data: progressRows }, { data: foodRows }, { data: enrollment }, { data: eventRows }] = await Promise.all([
+  const [{ data: progressRows }, { data: foodRows }, { data: enrollment }, { data: eventRows }, { data: messageRows }] = await Promise.all([
     svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollmentId).eq('note', '__daily__'),
     svc.from('challenge_food_log').select('logged_on, source').eq('enrollment_id', enrollmentId),
     svc.from('challenge_enrollments').select('last_active_at').eq('id', enrollmentId).maybeSingle(),
     svc.from('fos_events').select('kind, occurred_on').eq('enrollment_id', enrollmentId).gte('occurred_on', addDaysISO(todayISO, -(STRESS_WINDOW_DAYS - 1))),
+    svc.from('fos_messages').select('role, content, created_at').eq('enrollment_id', enrollmentId)
+      .gte('created_at', `${addDaysISO(todayISO, -(CHAT_RECENT_WINDOW_DAYS + CHAT_BASELINE_WINDOW_DAYS - 1))}T00:00:00Z`)
+      .order('created_at', { ascending: true }),
   ])
 
   const signals: PatternSignal[] = []
@@ -167,6 +264,8 @@ export async function assessLifePattern(enrollmentId: string, todayISO: string):
     .map((r) => ({ date: r.logged_on as string, effort: (r.measurements as { effort?: number } | null)?.effort }))
     .filter((e): e is { date: string; effort: number } => typeof e.effort === 'number')
   if (isEffortDeclining(effortEntries, todayISO)) signals.push('effort_dip')
+
+  if (isChatPullingBack((messageRows || []) as ChatMessage[], todayISO)) signals.push('chat_pullback')
 
   if (isSilentDip((enrollment?.last_active_at as string | null) ?? null)) signals.push('silent')
 
@@ -212,6 +311,9 @@ export function messageForPattern(a: LifePatternAssessment): { title: string; bo
   }
   if (a.signals.includes('effort_dip')) {
     return { title: "Your sessions have felt lighter than usual 💛", body: "That's worth naming, not ignoring — if something's making it harder to push right now, tell me and I'll actually adjust today's session down, not just say the words." }
+  }
+  if (a.signals.includes('chat_pullback')) {
+    return { title: "I've noticed a shift in our chats 💛", body: "You don't have to explain it or sound upbeat for me — I just want you to know I noticed, and I'm not going anywhere. Whenever you're ready to actually talk, I'm right here." }
   }
   if (a.signals.includes('food_dip')) {
     return { title: "Today doesn't have to be perfect 💛", body: "Let's not worry about the full plan today — just protein and water, that's the whole goal. I'll pick it back up with you tomorrow either way." }
