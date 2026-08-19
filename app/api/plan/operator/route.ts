@@ -296,6 +296,17 @@ export async function POST(request: NextRequest) {
   // one; it has no dedicated track of its own (see app/plan/workout/page.tsx's
   // trackOverride, which only understands 'home' | 'gym'). If nothing else matched
   // above, her just naming her location is still enough on its own to act on.
+  // Held separately from plan.message and appended to `reply` further down, after
+  // generateReply() has had its chance to run — NOT baked into plan.message here.
+  // Real gap found on review: describeDecision() (what generateReply()'s DECISION
+  // context is built from) only ever reads plan.workoutChange/nutritionChange, never
+  // plan.message. Whenever Claude successfully personalizes the reply, `reply =
+  // generated` throws plan.message away completely — so text appended to it here
+  // (like this travel line used to be) silently never reached her the moment the AI
+  // path was actually working, which is the common case, not the fallback. Confirmed
+  // via describeDecision() output on 2026-08-19: it never mentions "travel" for this
+  // merge case even though the fallback plan.message did.
+  let travelMergeAck = ''
   if (location) {
     const trackOverride: 'home' | 'gym' = location === 'gym' ? 'gym' : 'home'
     if (plan) {
@@ -308,11 +319,8 @@ export async function POST(request: NextRequest) {
       // workoutChange. She'd get a bodyweight session with zero acknowledgment
       // she'd said she was traveling. Every detected context element gets
       // named in the reply, not just the loudest one.
-      plan = {
-        ...plan,
-        workoutChange: { ...(plan.workoutChange || {}), trackOverride },
-        message: location === 'traveling' ? `${plan.message} Hope the trip's going well, by the way.` : plan.message,
-      }
+      plan = { ...plan, workoutChange: { ...(plan.workoutChange || {}), trackOverride } }
+      if (location === 'traveling') travelMergeAck = " Hope the trip's going well, by the way."
     } else {
       plan = {
         message: location === 'traveling'
@@ -321,19 +329,6 @@ export async function POST(request: NextRequest) {
         workoutChange: { trackOverride, reason: location === 'traveling' ? 'traveling — no equipment' : `training at ${location}` },
       }
     }
-  }
-
-  // Injury-safe confirmation — required every time a workout is actually
-  // surfaced/confirmed in chat (recover()'s adjustment, a bare location swap,
-  // or a cardio-style request), not just the moment she first reports the
-  // injury. The 'injury' signal branch (recovery.ts) already has its own
-  // complete sentence naming the body part — skip here so the same reply
-  // doesn't say it twice. Real filtering already happened wherever the
-  // exercises were actually chosen (lib/workout.ts, lib/cardio-session.ts);
-  // this is just saying so, not doing the safety work itself.
-  if (plan?.workoutChange && signal?.kind !== 'injury') {
-    const clause = injurySafetyClause(recordedInjuries)
-    if (clause) plan = { ...plan, message: plan.message + clause }
   }
 
   // eat_out was replying with a platitude ("balance the rest of the day") and
@@ -423,6 +418,25 @@ export async function POST(request: NextRequest) {
       const patch = mergeProfilePatch(profile, extracted)
       if (Object.keys(patch).length > 0) await upsertProfile(eid, user.id, patch)
     }
+  }
+
+  // Deterministic, applied AFTER generateReply() above has already had its shot —
+  // not folded into plan.message beforehand. Both of these are required to be true
+  // every single time regardless of whether Claude personalized the reply or the
+  // rule-based fallback fired, and describeDecision() (Claude's only window into
+  // what happened) never carries either one: it reads plan.workoutChange/
+  // nutritionChange only, so text baked only into plan.message before the
+  // generateReply() call above was silently discarded the moment Claude succeeded.
+  // Appending here — after reply is already whatever it's going to be — guarantees
+  // both survive regardless of which path produced `reply`. The 'injury' signal
+  // branch (recovery.ts) already has its own complete sentence naming the body
+  // part — skip here so the same reply doesn't say it twice. Real filtering already
+  // happened wherever the exercises were actually chosen (lib/workout.ts,
+  // lib/cardio-session.ts); this is just saying so, not doing the safety work itself.
+  if (travelMergeAck) reply += travelMergeAck
+  if (plan?.workoutChange && signal?.kind !== 'injury') {
+    const clause = injurySafetyClause(recordedInjuries)
+    if (clause) reply += clause
   }
 
   // Post-answer nudges — only for someone with no real plan on file yet, never
