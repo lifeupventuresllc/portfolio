@@ -12,20 +12,21 @@ export default function LandingPage() {
       <JsonLd data={localBusinessSchema} />
       <RevealScript />
 
-      {/* ── Top-of-page app banner — same free-entry CTA and copy as the hero
-          and footer ones, but boxed and the largest of the three since it's
-          the very first thing a visitor sees, before the fixed Navbar's
-          Login/My Plan links (which never offer this free no-signup entry
-          point) or the whole hero below it. ── */}
-      <div className="pt-20 pb-8 px-6 text-center">
-        <div className="inline-block bg-gold/10 border-2 border-gold rounded-3xl px-8 py-8 sm:px-14 sm:py-10">
-          <Link
-            href="/try?to=/plan"
-            className="inline-block bg-gold text-obsidian px-14 py-6 text-xl sm:text-2xl font-bold tracking-wider uppercase rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_20px_40px_rgba(201,168,76,0.35)]"
-          >
-            Get started — 100% free
-          </Link>
-        </div>
+      {/* ── Top-of-page app CTA — same free-entry link and copy as the hero
+          and footer ones, largest of the three since it's the very first
+          thing a visitor sees (before the fixed Navbar's Login/My Plan
+          links, which never offer this free no-signup entry point, or the
+          whole hero below it) — but no heavy border/color-block around it;
+          just a clean, larger version of the same gold button + a soft
+          shadow, matching the understated glass-card look everywhere else
+          on this page instead of reading as a loud banner. ── */}
+      <div className="pt-24 pb-10 px-6 text-center">
+        <Link
+          href="/try?to=/plan"
+          className="inline-block bg-gold text-obsidian px-12 py-5 text-lg sm:text-xl font-bold tracking-wider uppercase rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
+        >
+          Get started — 100% free
+        </Link>
       </div>
 
       {/* ── FITNESS — the lead. Everything else on this domain is secondary. ── */}
