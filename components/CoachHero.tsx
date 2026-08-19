@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import Celebration from '@/components/Celebration'
 import VoiceButton from '@/components/VoiceButton'
 import { useLiveRefresh, localTodayISO, broadcastRefresh } from '@/lib/useLiveRefresh'
@@ -12,7 +13,7 @@ import { winAffirmation } from '@/lib/affirmations'
 // inline conversation. Approving a change refreshes the supporting cards on the spot.
 type Msg = { role: 'user' | 'operator'; content: string }
 type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home'; injuryBodyPart?: string }
-type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string }
+type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string; eatingOut?: boolean }
 type Adjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionChange?: NutritionChange }
 
 // The 4 proactive daily-context questions — Coach Asa asks these FIRST, every
@@ -51,6 +52,12 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [pending, setPending] = useState<Adjustment | null>(null)
+  // In-chat actionable cards, not dead-end text — after she approves a change,
+  // or Coach Asa builds her a plan from scratch, take her straight to whatever
+  // actually changed instead of making her navigate there herself. Clears on
+  // her next message so it doesn't linger into an unrelated later exchange.
+  const [justApproved, setJustApproved] = useState<Adjustment | null>(null)
+  const [justBuilt, setJustBuilt] = useState(false)
   const [recordingMemo, setRecordingMemo] = useState(false)
   const today = localTodayISO()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -137,7 +144,7 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
 
   async function send(text: string) {
     const msg = text.trim(); if (!msg || sending) return
-    setInput(''); setPending(null); setSending(true)
+    setInput(''); setPending(null); setJustApproved(null); setJustBuilt(false); setSending(true)
     setMessages((m) => [...m, { role: 'user', content: msg }])
     try {
       const r = await fetch('/api/plan/operator', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) })
@@ -149,7 +156,9 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
       // real dashboard), which broadcastRefresh() alone can't reach since that's a
       // server decision, not a client-fetched value. Found live: without this, she'd
       // have to manually reload to see her own just-built plan show up at all.
-      if (d?.planBuilt) { router.refresh(); broadcastRefresh() }
+      // justBuilt surfaces a real "go see it" card below (in-chat action, not a
+      // dead-end reply) instead of only saying "it's on your dashboard" in text.
+      if (d?.planBuilt) { router.refresh(); broadcastRefresh(); setJustBuilt(true) }
     } catch { setMessages((m) => [...m, { role: 'operator', content: "I couldn't reach your plan just now — try that again in a sec." }]) }
     setSending(false)
   }
@@ -168,7 +177,10 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
       const r = await fetch('/api/plan/operator', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ adjustmentId: adj?.id ?? '', status }) })
       const d = await r.json().catch(() => ({}))
       if (d?.reply) setMessages((m) => [...m, { role: 'operator', content: d.reply }])
-      if (status === 'approved') broadcastRefresh() // supporting cards reflect the change instantly
+      if (status === 'approved') {
+        broadcastRefresh() // supporting cards reflect the change instantly
+        setJustApproved(adj) // surfaces a real "take me there" card below, not just text
+      }
     } catch { /* ignore */ }
   }
 
@@ -287,6 +299,35 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
             <button onClick={() => decide('rejected')} className="bg-charcoal border border-smoke text-ivory/60 px-3 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Not now</button>
           </div>
         </div>
+      )}
+
+      {/* In-chat actionable cards — after she approves a change, take her
+          straight to whatever actually changed instead of a dead-end text
+          reply. Mirrors components/OperatorChat.tsx's approval cards. */}
+      {justApproved && (
+        <div className="luf-reveal luf-in flex flex-col gap-2 mb-4">
+          {justApproved.workoutChange && (
+            <Link href="/plan/workout" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+              View my updated workout →
+            </Link>
+          )}
+          {justApproved.nutritionChange && (
+            <Link
+              href={justApproved.nutritionChange.eatingOut ? '/plan/eating-out' : '/plan/today'}
+              className="flex items-center justify-center gap-1.5 bg-charcoal border border-gold/40 text-gold px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:border-gold/70 transition-colors"
+            >
+              {justApproved.nutritionChange.eatingOut ? 'Show me my options →' : 'View my updated plan →'}
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* Cold-start build — no reason to make her find her own way to the
+          dashboard once Coach Asa just built it live in this conversation. */}
+      {justBuilt && (
+        <Link href="/plan" className="luf-reveal luf-in flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform mb-4">
+          View my new plan →
+        </Link>
       )}
 
       {recordingMemo && (

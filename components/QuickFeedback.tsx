@@ -36,8 +36,13 @@ function ThumbsDownIcon() {
 // of the usual "what would make this better" follow-up; an unhappy tap still routes
 // into the normal private severity/text flow below, never to the App Store. This
 // protects the rating: only people already glad it's working get asked to rate it.
-export default function QuickFeedback({ category, context, dark = false, reviewGate = false, onSent }: {
-  category: FeedbackCategory; context?: string; dark?: boolean; reviewGate?: boolean; onSent?: () => void
+export default function QuickFeedback({ category, context, dark = false, reviewGate = false, emphasize = false, onSent }: {
+  category: FeedbackCategory; context?: string; dark?: boolean; reviewGate?: boolean
+  // Gold + bolder idle prompt, only where the moment itself calls for the
+  // extra pull on the eye (currently just post-workout) — every other
+  // QuickFeedback in the app stays at its normal, easy-to-ignore weight.
+  emphasize?: boolean
+  onSent?: () => void
 }) {
   const pathname = usePathname()
   const [phase, setPhase] = useState<'idle' | 'up' | 'down' | 'review' | 'sent'>('idle')
@@ -139,9 +144,9 @@ export default function QuickFeedback({ category, context, dark = false, reviewG
 
   return (
     <div className="flex items-center justify-center gap-3 mt-3">
-      <span className={`${dark ? 'text-ivory/50' : 'text-ink/40'} text-xs`}>{reviewGate ? 'Enjoying Life-Up Fitness so far?' : 'How was this?'}</span>
-      <button onClick={tapUp} disabled={sending} className={`${dark ? 'text-ivory/50 hover:text-gold' : 'text-ink/40 hover:text-gold'} active:scale-90 transition-transform disabled:opacity-40`} aria-label="Working well"><ThumbsUpIcon /></button>
-      <button onClick={() => setPhase('down')} disabled={sending} className={`${dark ? 'text-ivory/50 hover:text-gold' : 'text-ink/40 hover:text-gold'} active:scale-90 transition-transform disabled:opacity-40`} aria-label="Something's off"><ThumbsDownIcon /></button>
+      <span className={`${emphasize ? 'text-gold font-semibold text-sm' : dark ? 'text-ivory/50 text-xs' : 'text-ink/40 text-xs'}`}>{reviewGate ? 'Enjoying Life-Up Fitness so far?' : 'How was this?'}</span>
+      <button onClick={tapUp} disabled={sending} className={`${emphasize ? 'text-gold' : dark ? 'text-ivory/50 hover:text-gold' : 'text-ink/40 hover:text-gold'} active:scale-90 transition-transform disabled:opacity-40`} aria-label="Working well"><ThumbsUpIcon /></button>
+      <button onClick={() => setPhase('down')} disabled={sending} className={`${emphasize ? 'text-gold' : dark ? 'text-ivory/50 hover:text-gold' : 'text-ink/40 hover:text-gold'} active:scale-90 transition-transform disabled:opacity-40`} aria-label="Something's off"><ThumbsDownIcon /></button>
     </div>
   )
 }

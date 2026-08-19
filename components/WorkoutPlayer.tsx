@@ -110,7 +110,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
         <EffortTap />
         <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} className="luf-glow w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl mt-6">Back to my week</button>
         <p className="text-gold text-sm font-semibold mt-4">— Coach Asa</p>
-        <QuickFeedback category="workout" context={`${labels[dayIdx]} · day ${dayIdx + 1}`} dark reviewGate />
+        <QuickFeedback category="workout" context={`${labels[dayIdx]} · day ${dayIdx + 1}`} dark reviewGate emphasize />
       </div>
     )
   }

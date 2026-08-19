@@ -36,6 +36,23 @@ export type RecoveryPlan = {
   nutritionChange?: NutritionChange
 }
 
+// Requirement: whenever a workout is confirmed/surfaced in chat and she has
+// recorded injuries, the reply must say so in plain language — EVERY time a
+// workout is surfaced, not just when the injury was just reported. A shared
+// helper so every workout-surfacing reply gets this appended in one place
+// (app/api/plan/operator/route.ts, right after a plan's workoutChange is
+// finalized) instead of each case having to remember it. The 'injury' signal
+// case above already has its own complete, bespoke sentence — callers should
+// skip this clause there rather than repeat themselves in the same reply.
+export function injurySafetyClause(injuries: Injury[]): string {
+  if (!injuries.length) return ''
+  const parts = injuries.map((i) => i.replace(/_/g, ' '))
+  const list = parts.length === 1 ? parts[0]
+    : parts.length === 2 ? `${parts[0]} and ${parts[1]}`
+    : `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`
+  return ` Made sure this stays clear of your ${list}.`
+}
+
 // Given a life signal + her normal workout length, return a forward-looking,
 // goal-protecting adjustment. Never guilt. Always the path forward.
 // workoutStyle is independent of signal.kind (see lib/fos/parse.ts's workout_style

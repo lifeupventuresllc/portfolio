@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { localDateISO, localHourNumber, localDayNumber, localMondayIndex, addDaysISO } from '@/lib/localdate'
 import type { WeekPlan } from '@/lib/meal-plan'
-import { recover, type LifeSignal, type RecoveryPlan } from '@/lib/fos/recovery'
+import { recover, injurySafetyClause, type LifeSignal, type RecoveryPlan } from '@/lib/fos/recovery'
 import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
 import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
@@ -142,7 +142,11 @@ export async function POST(request: NextRequest) {
   // intake) and is asking Coach Asa for one right here. Only runs at all before her
   // first real intake — once challenge_intake exists, this is skipped forever and
   // the normal adjustment-flow below behaves exactly as it always has.
-  const { data: existingIntakeForPlan } = await svc.from('challenge_intake').select('id').eq('enrollment_id', eid).maybeSingle()
+  // Widened to form_data (not just id) so the injury-safety clause below can
+  // reuse this same fetch for post-intake users instead of a second round trip.
+  const { data: existingIntakeForPlan } = await svc.from('challenge_intake').select('id, form_data').eq('enrollment_id', eid).maybeSingle()
+  const recordedInjuries: Injury[] = Array.isArray((existingIntakeForPlan?.form_data as Record<string, unknown> | null)?.injuries)
+    ? ((existingIntakeForPlan!.form_data as { injuries: Injury[] }).injuries) : []
   if (!existingIntakeForPlan) {
     const { data: history } = await svc
       .from('fos_messages').select('role, content').eq('enrollment_id', eid)
@@ -219,6 +223,12 @@ export async function POST(request: NextRequest) {
       } else {
         reply = `${namePrefix}built it — ${summarizeWeekProgram(program)}${intent.wantsNutrition ? `, target's ${targets.calories} cal/day (${targets.protein_g}g protein)` : ''}. Full breakdown's on your dashboard.`
       }
+      // Injury-safe confirmation — she may have just told us about an injury
+      // via the ask above (needsInjuryAsk), and buildInitialPlans already
+      // filtered every exercise against it (lib/workout.ts's isContraindicated
+      // call sites) — this just says so in the reply, every time a workout is
+      // part of what got built, not only the first time she mentions it.
+      if (intent.wantsWorkout) reply += injurySafetyClause(intent.injuries || [])
       if (usedDefaults.length) {
         const label = usedDefaults.join(' and ')
         reply += ` I used a starting ${label} estimate since you hadn't told me yet — give me your real ${label} anytime and I'll dial it in.`
@@ -289,15 +299,41 @@ export async function POST(request: NextRequest) {
   if (location) {
     const trackOverride: 'home' | 'gym' = location === 'gym' ? 'gym' : 'home'
     if (plan) {
-      plan = { ...plan, workoutChange: { ...(plan.workoutChange || {}), trackOverride } }
+      // Real gap, found live-testing: when she names a situation AND a
+      // location in the same message ("only have 20 min, I'm traveling"),
+      // this branch already correctly merged trackOverride into
+      // workoutChange — the swap itself was always real — but silently
+      // dropped location from the REPLY TEXT, since recover()'s message for
+      // the other signal was already set and this only ever touched
+      // workoutChange. She'd get a bodyweight session with zero acknowledgment
+      // she'd said she was traveling. Every detected context element gets
+      // named in the reply, not just the loudest one.
+      plan = {
+        ...plan,
+        workoutChange: { ...(plan.workoutChange || {}), trackOverride },
+        message: location === 'traveling' ? `${plan.message} Hope the trip's going well, by the way.` : plan.message,
+      }
     } else {
       plan = {
         message: location === 'traveling'
-          ? "Got it — no equipment where you are, so I'll keep today's session bodyweight-only. Want me to lock that in?"
+          ? "Hope the trip's going well — no equipment where you are, so I'll keep today's session bodyweight-only. Want me to lock that in?"
           : `Got it — switching today to your ${trackOverride} session. Want me to lock that in?`,
         workoutChange: { trackOverride, reason: location === 'traveling' ? 'traveling — no equipment' : `training at ${location}` },
       }
     }
+  }
+
+  // Injury-safe confirmation — required every time a workout is actually
+  // surfaced/confirmed in chat (recover()'s adjustment, a bare location swap,
+  // or a cardio-style request), not just the moment she first reports the
+  // injury. The 'injury' signal branch (recovery.ts) already has its own
+  // complete sentence naming the body part — skip here so the same reply
+  // doesn't say it twice. Real filtering already happened wherever the
+  // exercises were actually chosen (lib/workout.ts, lib/cardio-session.ts);
+  // this is just saying so, not doing the safety work itself.
+  if (plan?.workoutChange && signal?.kind !== 'injury') {
+    const clause = injurySafetyClause(recordedInjuries)
+    if (clause) plan = { ...plan, message: plan.message + clause }
   }
 
   // eat_out was replying with a platitude ("balance the rest of the day") and
