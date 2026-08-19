@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Celebration from '@/components/Celebration'
 import VoiceButton from '@/components/VoiceButton'
@@ -53,6 +53,20 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
   const [pending, setPending] = useState<Adjustment | null>(null)
   const [recordingMemo, setRecordingMemo] = useState(false)
   const today = localTodayISO()
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Teleprompter growth — grows line by line with what she's typed/said, up to
+  // a max height, then scrolls internally instead of pushing the modal around.
+  // Standard technique: reset to 'auto' first so shrinking (delete/backspace)
+  // is measured correctly, then set to the real scrollHeight, capped.
+  const TEXTAREA_MAX_HEIGHT = 160
+  function autoGrow() {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT)}px`
+  }
+  useEffect(() => { autoGrow() }, [input])
 
   // Daily context quiz — shown once per day until she's answered (or already talked today).
   // Pre-selected with the most common answer for each so "Build my day" is tappable
@@ -170,7 +184,13 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[2.25rem] border border-gold/40 bg-white shadow-sm p-6">
+    <div className="relative h-full flex flex-col overflow-hidden rounded-[2.25rem] border border-gold/40 bg-white shadow-sm p-6">
+      {/* Everything that can grow (identity + the quiz/greeting/message thread)
+          lives in the scrollable top region; the input stays pinned at the
+          bottom, same shape as any standard chat UI — see the footer region
+          below. Negative margin + matching padding lets this region scroll
+          edge-to-edge without the parent's own p-6 clipping its scrollbar. */}
+      <div className="flex-1 overflow-y-auto -mx-6 px-6">
       {/* identity — a person, not a tool */}
       <div className="flex items-center gap-2.5 mb-4">
         <span className="h-9 w-9 rounded-full bg-gold text-obsidian font-bold flex items-center justify-center text-lg shadow-lg shadow-gold/20">A</span>
@@ -240,7 +260,7 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
       ) : messages.length === 0 ? (
         <p className="text-ink text-lg leading-snug font-medium text-balance mb-5">{greeting}</p>
       ) : (
-        <div className="space-y-2 mb-4 max-h-64 overflow-y-auto pr-1">
+        <div className="space-y-2 pr-1">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[86%] rounded-2xl px-3.5 py-2 text-sm leading-snug ${m.role === 'user' ? 'bg-gold text-obsidian font-medium rounded-br-sm' : 'bg-charcoal/90 border border-smoke text-ivory/90 rounded-bl-sm'}`}>{m.content}</div>
@@ -248,7 +268,12 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
           ))}
         </div>
       )}
+      </div>
 
+      {/* Pinned footer — the adjustment prompt, memo-recording notice, "stick
+          with my plan" bypass, and the input itself never scroll away with
+          the message thread. */}
+      <div className="shrink-0 pt-3">
       {/* an adjustment she can accept — right here */}
       {pending && (
         <div className="luf-reveal luf-in bg-charcoal/90 border border-gold/40 rounded-2xl p-3.5 mb-4">
@@ -281,12 +306,22 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
       )}
 
       {/* talk right here — no page jump */}
-      <form onSubmit={(e) => { e.preventDefault(); send(input) }} className="flex gap-2">
-        <input
-          value={input} onChange={(e) => setInput(e.target.value)} disabled={sending}
+      <form onSubmit={(e) => { e.preventDefault(); send(input) }} className="flex gap-2 items-end">
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            // Enter sends, Shift+Enter (or any IME composition) inserts a real
+            // newline — same convention as Claude's or any standard chat input.
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(input) }
+          }}
+          disabled={sending}
           placeholder="Talk to me about your day…"
           autoComplete="off" autoCorrect="on" enterKeyHint="send" inputMode="text"
-          className="flex-1 bg-charcoal/5 border border-smoke/30 rounded-2xl px-4 py-3 text-base text-ink placeholder:text-ink/35 focus:border-gold/60 focus:outline-none"
+          style={{ maxHeight: TEXTAREA_MAX_HEIGHT }}
+          className="flex-1 resize-none bg-charcoal/5 border border-smoke/30 rounded-2xl px-4 py-3 text-base text-ink placeholder:text-ink/35 focus:border-gold/60 focus:outline-none overflow-y-auto"
         />
         <VoiceButton idleLabel="Talk to Coach Asa" onInterim={setInput} onResult={(t) => { setInput(t); send(t) }} />
         <VoiceButton
@@ -297,6 +332,7 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
         <button type="submit" disabled={sending || !input.trim()} className="h-12 w-12 shrink-0 rounded-full bg-gold text-obsidian flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform">{sending ? <span className="text-lg font-bold">…</span> : <SendIcon />}</button>
       </form>
       <p className="text-ink/25 text-[10px] mt-1.5">tap to talk · tap for a longer voice memo</p>
+      </div>
 
       <Celebration trigger={perfectDay} message={winAffirmation('allDone')} dedupeKey={`perfectday-${today}`} />
     </div>
