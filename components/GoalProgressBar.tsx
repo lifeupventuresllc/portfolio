@@ -1,7 +1,11 @@
+import Link from 'next/link'
+
 // A real ruler, not a rounded pill — small tick marks at regular intervals, a
 // filled segment in the app's warm-rose accent, start/current/goal labels at
 // each end. The headline number is the motivating one (lbs down / to go), the
 // bar itself is the visual "how far along" read Asa asked to be prominent.
+// The whole card links to /plan/checkin (the fuller progress/check-in page) —
+// every dashboard card should have somewhere to go, not just be a static stat.
 const TICKS = Array.from({ length: 11 }, (_, i) => i * 10) // 0,10,...,100
 
 // Small, separate consistency chip — deliberately NOT part of the bar's fill
@@ -29,12 +33,12 @@ export default function GoalProgressBar({
 }) {
   if (goal === 'maintain') {
     return (
-      <div className="rounded-[2rem] p-5" style={{ background: '#083023', border: '1px solid rgba(229,169,60,0.3)' }}>
+      <Link href="/plan/checkin" className="block rounded-[2rem] p-5" style={{ background: '#083023', border: '1px solid rgba(229,169,60,0.3)' }}>
         <p className="text-[#E5A93C] text-[10px] uppercase tracking-wider font-semibold mb-1">Your progress</p>
         <p className="text-white font-bold text-lg">Holding steady at {Math.round(currentWeight)} lbs</p>
         <p className="text-white/50 text-sm mt-0.5">Right around your goal of {Math.round(goalWeight)} lbs — consistency is the whole game now.</p>
         <ConsistencyChip workoutPct={workoutConsistencyPct} nutritionPct={nutritionConsistencyPct} />
-      </div>
+      </Link>
     )
   }
 
@@ -46,7 +50,7 @@ export default function GoalProgressBar({
   const verb = goal === 'lose' ? 'down' : 'up'
 
   return (
-    <div className="rounded-[2rem] p-5" style={{ background: '#083023', border: '1px solid rgba(229,169,60,0.3)' }}>
+    <Link href="/plan/checkin" className="block rounded-[2rem] p-5" style={{ background: '#083023', border: '1px solid rgba(229,169,60,0.3)' }}>
       <p className="text-[#E5A93C] text-[10px] uppercase tracking-wider font-semibold mb-1">Your progress</p>
       <p className="text-white font-bold text-lg mb-4">
         {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} to go` : moved > 0 ? ' · goal reached' : ''}
@@ -65,6 +69,6 @@ export default function GoalProgressBar({
         <span>{Math.round(goalWeight)} lbs goal</span>
       </div>
       <ConsistencyChip workoutPct={workoutConsistencyPct} nutritionPct={nutritionConsistencyPct} />
-    </div>
+    </Link>
   )
 }

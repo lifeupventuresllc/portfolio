@@ -17,6 +17,7 @@ import { affirmationForDay } from '@/lib/affirmations'
 import { localDateISO, localMondayIndex, localDayNumber, addDaysISO } from '@/lib/localdate'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { getEffectiveTodayWorkout, getEffectiveCalorieBudget } from '@/lib/fos/effective-plan'
+import { pickDashboardPhoto } from '@/lib/dashboard-photos'
 import type { WorkoutProgram } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
 
@@ -185,10 +186,10 @@ export default async function PlanDashboard() {
 
       {checkinDue && <WeeklyCheckinPrompt firstName={firstName} todayIso={todayIso} />}
 
-      <div className="relative rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(229,169,60,0.22)', height: 220 }}>
-        <img src="/images/brand/sculpt-session-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'saturate(1.05) contrast(1.03)' }} />
+      <Link href="/plan/workout" className="relative block rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(229,169,60,0.22)', height: 300 }}>
+        <img src={pickDashboardPhoto()} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'saturate(1.05) contrast(1.03)' }} />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,0) 40%, rgba(2,31,22,0.75) 100%)' }} />
-      </div>
+      </Link>
 
       <CoachOrbLauncher firstName={firstName} hasPlan={hasPlan} />
 
