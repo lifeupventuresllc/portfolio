@@ -99,6 +99,19 @@ export default async function WorkoutSession() {
   // track/injury overrides above already do implicitly by regenerating
   // `program` itself.
   if (focusOverride) startDay = pickFocusDayIndex(program, focusOverride)
+  // Real gap found live: a Coach Asa COLD-START build (no account/profile yet,
+  // built right in chat) has no fos_adjustment at all, so focusOverride above
+  // is never set — "build me a chest and arm workout" got the right content
+  // in the chat summary, but tapping through to this actual page still opened
+  // on her plain rotation day (day 0 for a fresh plan), not the day matching
+  // what she'd just asked for. Only applies before she's completed anything —
+  // once she's actually progressing through her week, real rotation takes
+  // over same as always; this is purely about her first landing matching
+  // what the chat she just came from told her.
+  else if (completed === 0) {
+    const storedFocusArea = (intake?.form_data as { focus_area?: FocusArea } | null)?.focus_area
+    if (storedFocusArea && storedFocusArea !== 'overall') startDay = pickFocusDayIndex(program, storedFocusArea)
+  }
 
   // Coach Asa approved a real cardio/HIIT swap (not just a shorter version of
   // whatever was scheduled) — splice today's slot only, request-scoped, her stored
