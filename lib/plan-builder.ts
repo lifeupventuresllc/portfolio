@@ -131,8 +131,20 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
   // Protein anchors to current weight on a cut, goal weight otherwise — same rule
   // calcNutritionTargets used to apply; replicated here via buildBlueprint directly
   // so we can also read the workout/rest day-type split for auto-filled meals.
-  const goalWeightLbs = inp.goal === 'gain' ? inp.weight_lbs + inp.target_lbs : inp.weight_lbs - inp.target_lbs
-  const bp = buildBlueprint({
+  //
+  // Real bug found+fixed: this used to run unconditionally for EVERY caller,
+  // including the Quickstart fast lane (app/api/plan/quickstart-workout/route.ts),
+  // which passes entirely hardcoded stats (age 30, female, 165lb, 'lose',
+  // 'moderate' — nothing she ever actually told us). Every Quickstart user got
+  // the identical calorie/macro number, computed from a fake profile, displayed
+  // on the dashboard as if it were personalized the moment intake_completed
+  // flipped true a few lines below. Gated on requiredTierCompleted (the same
+  // "was this genuinely asked, not defaulted" signal already used for goal —
+  // see the field comment above) so a real target only ever gets computed and
+  // saved once she's actually been through the real body-stats/goal questions,
+  // either via the structured form or Coach Asa's chat build (both already pass
+  // this flag correctly) — never via Quickstart, which never passes it.
+  const bp = requiredTierCompleted ? buildBlueprint({
     age: inp.age,
     sex: inp.sex === 'male' ? 'male' : 'female',
     height_in: inp.height_in,
@@ -143,18 +155,20 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     // always computing off a 4-day split when this isn't explicitly passed.
     workout_days_per_week: inp.workout_days_per_week ?? 4,
     workout_length: '45_60_both',
-    goal_weight_lbs: goalWeightLbs,
-  })
+    goal_weight_lbs: inp.goal === 'gain' ? inp.weight_lbs + inp.target_lbs : inp.weight_lbs - inp.target_lbs,
+  }) : null
   // Mutable — when autoFillMeals recomputes real numbers off the actual portioned
   // meals below, this gets updated to match exactly what gets saved to the DB, so
   // whatever a caller reports back to her (e.g. Coach Asa's chat reply) is never
-  // out of sync with what the dashboard actually shows.
-  let targets = {
+  // out of sync with what the dashboard actually shows. Zeroed out (not a fake
+  // number) when bp is null — callers report these back to her, so a Quickstart
+  // return value must read as "nothing calculated yet," not a fabricated target.
+  let targets = bp ? {
     calories: Math.round(bp.current.weeklyEat / 7),
     protein_g: bp.current.workout.macros.protein_g,
     carbs_g: bp.current.workout.macros.carbs_g,
     fats_g: bp.current.workout.macros.fats_g,
-  }
+  } : { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 }
 
   const level = (inp.experience_level === 'advanced' ? 3 : inp.experience_level === 'intermediate' ? 2 : 1) as Level
   const track: 'gym' | 'home' = inp.training_location === 'home' ? 'home' : 'gym'
@@ -184,7 +198,7 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     fats_g: targets.fats_g,
     status: 'draft',
   }
-  if (inp.autoFillMeals) {
+  if (inp.autoFillMeals && bp) {
     const cookDays = ([1, 2, 3].includes(inp.cook_days_per_week || 0) ? inp.cook_days_per_week : 2) as 1 | 2 | 3
     weekPlan = buildWeekFromSelections({
       name: inp.name,
@@ -208,16 +222,23 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     targets = { ...targets, calories: weekPlan.avgCal, protein_g: weekPlan.avgProtein }
   }
 
-  const { data: existingPlan } = await svc
-    .from('challenge_nutrition_plans')
-    .select('id')
-    .eq('enrollment_id', inp.enrollmentId)
-    .eq('week_number', 1)
-    .maybeSingle()
-  if (existingPlan) {
-    await svc.from('challenge_nutrition_plans').update({ ...nutritionPayload, updated_at: new Date().toISOString() }).eq('id', existingPlan.id)
-  } else {
-    await svc.from('challenge_nutrition_plans').insert(nutritionPayload)
+  // No row at all when bp is null — a missing nutrition plan reads as a
+  // genuine "nothing calculated yet" everywhere downstream (CaloriesTodayCard,
+  // FoodLog, /plan/today's "No meal plan yet" card all already handle this
+  // correctly), which is more honest than writing one full of zeros pretending
+  // a calculation happened.
+  if (bp) {
+    const { data: existingPlan } = await svc
+      .from('challenge_nutrition_plans')
+      .select('id')
+      .eq('enrollment_id', inp.enrollmentId)
+      .eq('week_number', 1)
+      .maybeSingle()
+    if (existingPlan) {
+      await svc.from('challenge_nutrition_plans').update({ ...nutritionPayload, updated_at: new Date().toISOString() }).eq('id', existingPlan.id)
+    } else {
+      await svc.from('challenge_nutrition_plans').insert(nutritionPayload)
+    }
   }
 
   const workoutPayload = {
