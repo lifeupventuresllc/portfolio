@@ -262,9 +262,19 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     await svc.from('challenge_workout_plans').insert(workoutPayload)
   }
 
+  // Real gap found live: she typed her real name on the intake form's first
+  // screen, it flowed all the way through this function (used for reply/PDF
+  // text), and was never actually saved to challenge_enrollments.name — the
+  // one column the dashboard's greeting (`firstName`) actually reads. Every
+  // caller falls back to the literal placeholder 'Your' when it has no real
+  // name (cold-start chat, Quickstart), so only write it when it's a genuine
+  // one, never overwriting a real saved name with that placeholder.
   await svc
     .from('challenge_enrollments')
-    .update({ intake_completed: true, goal: inp.goal, updated_at: new Date().toISOString() })
+    .update({
+      intake_completed: true, goal: inp.goal, updated_at: new Date().toISOString(),
+      ...(inp.name && inp.name !== 'Your' ? { name: inp.name } : {}),
+    })
     .eq('id', inp.enrollmentId)
 
   return { targets, program, weekPlan }

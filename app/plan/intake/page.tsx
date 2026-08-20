@@ -260,7 +260,7 @@ function ConversationalIntakeInner() {
       await new Promise((r) => setTimeout(r, wait))
       if (data.success) {
         setTargets(data.targets)
-        if (refining) router.push('/plan')
+        if (refining) { router.refresh(); router.push('/plan') }
         else setPhase('done')
       } else { setError(data.error || 'Something went wrong.'); setPhase('quiz') }
     } catch { setError('Something went wrong. Try again.'); setPhase('quiz') }
@@ -324,7 +324,14 @@ function ConversationalIntakeInner() {
               </div>
             ))}
           </div>
-          <button onClick={() => router.push('/plan')} className={lPrimaryBtn}>See my plan</button>
+          {/* Real gap found live: she'd almost always visited /plan right
+              before landing here (that's how she reaches intake), so
+              router.push alone could serve Next's cached pre-intake RSC
+              payload for /plan instead of refetching — showing her old name/
+              "add your weight" prompt even though the build above just
+              genuinely completed. router.refresh() invalidates that cache
+              so the next /plan render is guaranteed fresh. */}
+          <button onClick={() => { router.refresh(); router.push('/plan') }} className={lPrimaryBtn}>See my plan</button>
           <button onClick={startOptionalTier} className="w-full mt-3 text-ink/50 text-sm font-semibold hover:text-gold transition-colors">
             Fine-tune it for you — 60 seconds →
           </button>
