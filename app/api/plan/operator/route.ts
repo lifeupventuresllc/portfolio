@@ -184,12 +184,17 @@ export async function POST(request: NextRequest) {
       // instead of another question.
       const needsInjuryAsk = intent.wantsWorkout && !intent.injuriesAddressed
       const needsFocusAsk = intent.wantsWorkout && !intent.focus_area
-      if (needsInjuryAsk || needsFocusAsk) {
-        const q = needsInjuryAsk && needsFocusAsk
-          ? "Quick one before I build this — any injuries or areas I should work around, and is there a specific area you want to focus on, or just overall?"
-          : needsInjuryAsk
-            ? "Quick one — any injuries or areas I should work around today?"
-            : "Quick one — a specific area you want to focus on, or just overall?"
+      // A wrong guess here isn't unsafe like injuries, but it silently determines
+      // rep/set schemes and day structure (see lib/workout.ts's level-aware split
+      // and repScheme) — worth one real question instead of a silent 'beginner'
+      // default with no disclosure, unlike weight/goal which stay silent defaults.
+      const needsLevelAsk = intent.wantsWorkout && !intent.experience_level
+      if (needsInjuryAsk || needsFocusAsk || needsLevelAsk) {
+        const asks: string[] = []
+        if (needsLevelAsk) asks.push("what experience level you're at — new to this, some experience, or advanced")
+        if (needsFocusAsk) asks.push('a specific area you want to focus on, or just overall')
+        if (needsInjuryAsk) asks.push('any injuries or areas I should work around today')
+        const q = asks.length === 1 ? `Quick one — ${asks[0]}?` : `Quick ones before I build this — ${asks.join(', ')}?`
         await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: q })
         return NextResponse.json({ reply: q })
       }
@@ -205,6 +210,10 @@ export async function POST(request: NextRequest) {
       const height_in = intent.height_in ?? 64
       const days_per_week = intent.days_per_week ?? 3
       const training_location = intent.training_location ?? 'gym'
+      // Gated above by needsLevelAsk same as injuries/focus — by the time we reach
+      // here she's either just answered it or the conversation already covered it,
+      // so this is a genuine value, not a silent guess. The ?? 'beginner' is just a
+      // type-safety fallback, not expected to actually fire in practice.
       const experience_level = intent.experience_level ?? 'beginner'
       const focus_area = intent.focus_area || 'overall'
 
@@ -243,7 +252,11 @@ export async function POST(request: NextRequest) {
         reply += ` I used a starting ${label} estimate since you hadn't told me yet — give me your real ${label} anytime and I'll dial it in.`
       }
       await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: reply })
-      return NextResponse.json({ reply, planBuilt: true })
+      // Lets the client route her straight to the specific thing built — the
+      // workout page, the nutrition/today page, or the dashboard when both —
+      // instead of always dropping her on the generic dashboard regardless of
+      // what she actually asked for.
+      return NextResponse.json({ reply, planBuilt: true, builtWorkout: !!intent.wantsWorkout, builtNutrition: !!intent.wantsNutrition })
     }
   }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { broadcastRefresh } from '@/lib/useLiveRefresh'
 import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
 
@@ -23,11 +24,13 @@ const CHIPS = [
 ]
 
 export default function OperatorChat({ firstName }: { firstName: string }) {
+  const router = useRouter()
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [pending, setPending] = useState<Adjustment | null>(null)
   const [justApproved, setJustApproved] = useState<Adjustment | null>(null)
+  const [justBuilt, setJustBuilt] = useState<{ workout: boolean; nutrition: boolean } | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -62,12 +65,12 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
 
   // Only scroll when the message COUNT changes (a real new message), instantly — not
   // on every keystroke/render — so the page never jumps while you're typing.
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' }) }, [messages.length, pending, justApproved])
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' }) }, [messages.length, pending, justApproved, justBuilt])
 
   async function send(text: string) {
     const msg = text.trim()
     if (!msg || sending) return
-    setInput(''); setPending(null); setJustApproved(null); setSending(true)
+    setInput(''); setPending(null); setJustApproved(null); setJustBuilt(null); setSending(true)
     setMessages((m) => [...m, { role: 'user', content: msg }])
     try {
       const r = await fetch('/api/plan/operator', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) })
@@ -75,6 +78,11 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
       if (d?.reply) setMessages((m) => [...m, { role: 'operator', content: d.reply }])
       else setMessages((m) => [...m, { role: 'operator', content: "I didn't quite catch that — tell me about your time, energy, or what changed today and I'll adjust your plan." }])
       if (d?.adjustment) setPending(d.adjustment as Adjustment)
+      // A cold-start build just flipped intake_completed server-side (same gap
+      // fixed in CoachHero.tsx) — refresh so the rest of the app picks it up,
+      // and surface a real "go see it" card below routed to the specific thing
+      // built, instead of a dead-end reply.
+      if (d?.planBuilt) { router.refresh(); broadcastRefresh(); setJustBuilt({ workout: !!d.builtWorkout, nutrition: !!d.builtNutrition }) }
     } catch { setMessages((m) => [...m, { role: 'operator', content: "I couldn't reach the plan just now — try that again in a sec." }]) }
     setSending(false)
   }
@@ -163,6 +171,32 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
                 className="flex items-center justify-center gap-1.5 bg-obsidian border border-gold/40 text-gold px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:border-gold/70 transition-colors"
               >
                 {justApproved.nutritionChange.eatingOut ? '🍔 Show me my options →' : '🍽️ View my updated plan →'}
+              </Link>
+            )}
+          </div>
+        )}
+
+        {/* Cold-start build — she asked Coach Asa to build her a plan right
+            here in chat; take her straight to the specific thing built
+            (workout/today), same pattern as justApproved above. Only lands
+            on the dashboard when both were built (no single page shows both). */}
+        {justBuilt && (
+          <div className="luf-reveal luf-in flex flex-col gap-2">
+            {justBuilt.workout && justBuilt.nutrition ? (
+              <Link href="/plan" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+                View my new plan →
+              </Link>
+            ) : justBuilt.workout ? (
+              <Link href="/plan/workout" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+                💪🏽 View my new workout →
+              </Link>
+            ) : justBuilt.nutrition ? (
+              <Link href="/plan/today" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+                🍽️ View my new nutrition plan →
+              </Link>
+            ) : (
+              <Link href="/plan" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+                View my new plan →
               </Link>
             )}
           </div>

@@ -105,6 +105,48 @@ function ConversationalIntakeInner() {
   const [targets, setTargets] = useState<Targets | null>(null)
   const [error, setError] = useState('')
   const [carriedFromBlueprint, setCarriedFromBlueprint] = useState(false)
+  // Manual fallback for when her app-signup email doesn't match the one she used
+  // for the free Blueprint — the automatic lookup below can't catch that case
+  // since it only ever checks her logged-in session email.
+  const [blueprintEmail, setBlueprintEmail] = useState('')
+  const [blueprintLookupStatus, setBlueprintLookupStatus] = useState<'idle' | 'loading' | 'notfound'>('idle')
+  const [showBlueprintLookup, setShowBlueprintLookup] = useState(false)
+
+  function applyBlueprint(b: Record<string, unknown>) {
+    const ACTIVITY_MAP: Record<string, string> = { none: 'sedentary', sedentary: 'sedentary', light: 'light', moderate: 'moderate', active: 'active', very_active: 'active' }
+    setF((s) => ({
+      ...s,
+      name: (b.name as string) || s.name,
+      age: b.age ? String(b.age) : s.age,
+      sex: (b.sex as string) || s.sex,
+      heightFt: b.height_in ? String(Math.floor((b.height_in as number) / 12)) : s.heightFt,
+      heightIn: b.height_in ? String((b.height_in as number) % 12) : s.heightIn,
+      weight_lbs: b.weight_lbs ? String(b.weight_lbs) : s.weight_lbs,
+      target_lbs: b.goal_weight_lbs ? String(b.goal_weight_lbs) : s.target_lbs,
+      goal: (b.goal as string) || s.goal,
+      activity_level: ACTIVITY_MAP[b.activity as string] || s.activity_level,
+      days_per_week: b.workout_days ? String(b.workout_days) : s.days_per_week,
+    }))
+    setCarriedFromBlueprint(true)
+  }
+
+  async function lookupBlueprintByEmail() {
+    if (!blueprintEmail.trim()) return
+    setBlueprintLookupStatus('loading')
+    try {
+      const r = await fetch(`/api/plan/blueprint-lookup?email=${encodeURIComponent(blueprintEmail.trim())}`)
+      const d = await r.json()
+      if (d?.found && d.blueprint) {
+        applyBlueprint(d.blueprint)
+        setShowBlueprintLookup(false)
+        setBlueprintLookupStatus('idle')
+      } else {
+        setBlueprintLookupStatus('notfound')
+      }
+    } catch {
+      setBlueprintLookupStatus('notfound')
+    }
+  }
 
   // Seamless blueprint→app conversion — if she already did the free Calorie Blueprint,
   // pull her answers forward instead of making her retype her name/age/height/weight/goal.
@@ -112,22 +154,7 @@ function ConversationalIntakeInner() {
     if (startInOptional) return // she already has a plan — the effect below handles this case instead
     fetch('/api/plan/blueprint-lookup').then((r) => r.json()).then((d) => {
       if (!d?.found || !d.blueprint) return
-      const b = d.blueprint
-      const ACTIVITY_MAP: Record<string, string> = { none: 'sedentary', sedentary: 'sedentary', light: 'light', moderate: 'moderate', active: 'active', very_active: 'active' }
-      setF((s) => ({
-        ...s,
-        name: b.name || s.name,
-        age: b.age ? String(b.age) : s.age,
-        sex: b.sex || s.sex,
-        heightFt: b.height_in ? String(Math.floor(b.height_in / 12)) : s.heightFt,
-        heightIn: b.height_in ? String(b.height_in % 12) : s.heightIn,
-        weight_lbs: b.weight_lbs ? String(b.weight_lbs) : s.weight_lbs,
-        target_lbs: b.goal_weight_lbs ? String(b.goal_weight_lbs) : s.target_lbs,
-        goal: b.goal || s.goal,
-        activity_level: ACTIVITY_MAP[b.activity] || s.activity_level,
-        days_per_week: b.workout_days ? String(b.workout_days) : s.days_per_week,
-      }))
-      setCarriedFromBlueprint(true)
+      applyBlueprint(d.blueprint)
     }).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -363,6 +390,40 @@ function ConversationalIntakeInner() {
                   autoCorrect="off" autoCapitalize="words" spellCheck={false}
                   onKeyDown={(e) => e.key === 'Enter' && f.name.trim() && next()} />
                 <button onClick={next} disabled={!f.name.trim()} className={`${lPrimaryBtn} mt-8`}>Let&apos;s go →</button>
+
+                {/* Manual fallback: only offered when the automatic same-email match
+                    didn't fire — covers signing up with a different email than the
+                    one used for the free Blueprint. */}
+                {!carriedFromBlueprint && (
+                  <div className="mt-6">
+                    {!showBlueprintLookup ? (
+                      <button type="button" onClick={() => setShowBlueprintLookup(true)} className="text-ink/40 text-xs underline">
+                        Already got your free Calorie Blueprint? Pull in your info
+                      </button>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        <p className="text-ink/50 text-xs">Email you used for your free Calorie Blueprint:</p>
+                        <div className="flex gap-2">
+                          <input
+                            value={blueprintEmail}
+                            onChange={(e) => { setBlueprintEmail(e.target.value); setBlueprintLookupStatus('idle') }}
+                            placeholder="you@email.com"
+                            type="email"
+                            className={`${linput} !text-sm`}
+                            onKeyDown={(e) => e.key === 'Enter' && lookupBlueprintByEmail()}
+                          />
+                          <button type="button" onClick={lookupBlueprintByEmail} disabled={!blueprintEmail.trim() || blueprintLookupStatus === 'loading'}
+                            className="px-4 rounded-xl bg-gold text-ink text-sm font-semibold whitespace-nowrap disabled:opacity-40">
+                            {blueprintLookupStatus === 'loading' ? '...' : 'Pull it in'}
+                          </button>
+                        </div>
+                        {blueprintLookupStatus === 'notfound' && (
+                          <p className="text-red-500 text-xs">No Blueprint found for that email — no worries, just fill it out below.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </>)}
 

@@ -57,7 +57,7 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
   // actually changed instead of making her navigate there herself. Clears on
   // her next message so it doesn't linger into an unrelated later exchange.
   const [justApproved, setJustApproved] = useState<Adjustment | null>(null)
-  const [justBuilt, setJustBuilt] = useState(false)
+  const [justBuilt, setJustBuilt] = useState<{ workout: boolean; nutrition: boolean } | null>(null)
   const [recordingMemo, setRecordingMemo] = useState(false)
   const today = localTodayISO()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -144,7 +144,7 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
 
   async function send(text: string) {
     const msg = text.trim(); if (!msg || sending) return
-    setInput(''); setPending(null); setJustApproved(null); setJustBuilt(false); setSending(true)
+    setInput(''); setPending(null); setJustApproved(null); setJustBuilt(null); setSending(true)
     setMessages((m) => [...m, { role: 'user', content: msg }])
     try {
       const r = await fetch('/api/plan/operator', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) })
@@ -157,8 +157,10 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
       // server decision, not a client-fetched value. Found live: without this, she'd
       // have to manually reload to see her own just-built plan show up at all.
       // justBuilt surfaces a real "go see it" card below (in-chat action, not a
-      // dead-end reply) instead of only saying "it's on your dashboard" in text.
-      if (d?.planBuilt) { router.refresh(); broadcastRefresh(); setJustBuilt(true) }
+      // dead-end reply) instead of only saying "it's on your dashboard" in text —
+      // routed to the specific thing built (workout/today), same pattern as
+      // justApproved below, not always the generic dashboard.
+      if (d?.planBuilt) { router.refresh(); broadcastRefresh(); setJustBuilt({ workout: !!d.builtWorkout, nutrition: !!d.builtNutrition }) }
     } catch { setMessages((m) => [...m, { role: 'operator', content: "I couldn't reach your plan just now — try that again in a sec." }]) }
     setSending(false)
   }
@@ -348,11 +350,30 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
       )}
 
       {/* Cold-start build — no reason to make her find her own way to the
-          dashboard once Coach Asa just built it live in this conversation. */}
+          dashboard once Coach Asa just built it live in this conversation.
+          Routed to the specific thing built, not always the generic
+          dashboard — only lands there when both workout and nutrition were
+          built (no single page shows both). */}
       {justBuilt && (
-        <Link href="/plan" className="luf-reveal luf-in flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform mb-4">
-          View my new plan →
-        </Link>
+        <div className="luf-reveal luf-in flex flex-col gap-2 mb-4">
+          {justBuilt.workout && justBuilt.nutrition ? (
+            <Link href="/plan" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+              View my new plan →
+            </Link>
+          ) : justBuilt.workout ? (
+            <Link href="/plan/workout" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+              View my new workout →
+            </Link>
+          ) : justBuilt.nutrition ? (
+            <Link href="/plan/today" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+              View my new nutrition plan →
+            </Link>
+          ) : (
+            <Link href="/plan" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+              View my new plan →
+            </Link>
+          )}
+        </div>
       )}
 
       {recordingMemo && (
