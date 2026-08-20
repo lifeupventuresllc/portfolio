@@ -229,7 +229,7 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
           footer content follows, while still letting the region shrink
           below its full content height so it isn't the old unbounded-growth
           bug in a different form. */}
-      <div className="flex-1 min-h-[110px] overflow-y-auto -mx-6 px-6">
+      <div className="flex-1 min-h-[110px] overflow-y-auto -mx-6 px-6 pb-3">
       {/* identity — a person, not a tool */}
       <div className="flex items-center gap-2.5 mb-4">
         <span className="h-9 w-9 rounded-full bg-gold text-obsidian font-bold flex items-center justify-center text-lg shadow-lg shadow-gold/20">A</span>

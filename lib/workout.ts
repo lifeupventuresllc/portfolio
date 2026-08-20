@@ -26,14 +26,19 @@ export type TrainingStyle = 'compound' | 'split' | 'cardio' | 'none'
 // pickAb system, not GYM_POOL), so it's handled as a bonus ab set instead —
 // see the coreFocus checks in generateGym/generateHome.
 export type FocusArea = 'core' | 'legs' | 'arms' | 'overall'
+// 'arms' is the app's only upper-body focus bucket — there's no separate "chest"
+// value anywhere in the intake UI or chat classifiers, so a "chest and arms" ask
+// (a real, common request) needs to land here too. Includes 'chest' so a request
+// like that actually scores M_PUSH_ARMS/F_UPPER (chest+triceps+biceps-heavy days)
+// highest in pickFocusDayIndex below, instead of a day with zero chest work.
 const FOCUS_TARGETS: Record<FocusArea, Muscle[]> = {
   legs: ['glutes', 'hamstrings', 'quads'],
-  arms: ['biceps', 'triceps', 'back'],
+  arms: ['biceps', 'triceps', 'back', 'chest'],
   core: [],
   overall: [],
 }
 const FOCUS_LABEL: Record<FocusArea, string> = {
-  core: 'Core & waistline', legs: 'Legs & glutes', arms: 'Arms & back', overall: 'All-over',
+  core: 'Core & waistline', legs: 'Legs & glutes', arms: 'Arms, chest & back', overall: 'All-over',
 }
 
 export interface WorkoutInputs {

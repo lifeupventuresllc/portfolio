@@ -232,9 +232,15 @@ export async function POST(request: NextRequest) {
 
       const namePrefix = enrollment.name ? `${enrollment.name}, ` : ''
       const mealSample = weekPlan ? summarizeWeekMeals(weekPlan) : ''
+      // Real gap found live: this reply always showed day 0 of the freshly-built
+      // program regardless of focus_area — a "chest and arms" ask could land on a
+      // leg-forward day just because it happened to be first. The other chat path
+      // (workoutChange/focusOverride below) already gets this right via
+      // pickFocusDayIndex; the cold-start build never called it at all.
+      const dayIndex = pickFocusDayIndex(program, focus_area)
       let reply: string
       if (intent.scope === 'today' && intent.wantsWorkout) {
-        reply = `${namePrefix}here's what to do: ${summarizeTodaysWorkout(program, intent.minutesAvailable)}.`
+        reply = `${namePrefix}here's what to do: ${summarizeTodaysWorkout(program, intent.minutesAvailable, dayIndex)}.`
         if (intent.wantsNutrition) reply += ` Calorie target's ${targets.calories}/day (${targets.protein_g}g protein)${mealSample ? ` — try ${mealSample}` : ''}. Full week's on your dashboard.`
       } else if (intent.wantsNutrition && !intent.wantsWorkout) {
         reply = `${namePrefix}built your week — target's ${targets.calories} cal/day (${targets.protein_g}g protein)${mealSample ? `. First up: ${mealSample}` : ''}. Full week's on your dashboard.`

@@ -22,7 +22,7 @@ const CLASSIFY_TOOL = {
       body_part: { type: 'string', enum: [...INJURY_BODY_PARTS], description: 'injury only: which body part, using lower_back for any back pain' },
       workout_style: { type: 'string', enum: ['cardio'], description: 'Set ONLY if she explicitly asks for cardio/HIIT/a different type of workout than her usual one today — independent of kind, can accompany any category.' },
       location: { type: 'string', enum: ['home', 'gym', 'traveling'], description: 'Set ONLY if she explicitly states where she is or will be working out today (e.g. "I\'m home", "at the gym", "traveling for work", "no equipment here") — independent of kind, can accompany any category. Do not guess from context.' },
-      focus_area: { type: 'string', enum: ['core', 'legs', 'arms'], description: 'Set ONLY if she explicitly asks to target a specific body area for today\'s workout (e.g. "give me an arm workout", "focus on legs today", "core workout please") — independent of kind, can accompany any category. Do not guess from context or set this for her permanent/default focus, only a request for TODAY.' },
+      focus_area: { type: 'string', enum: ['core', 'legs', 'arms'], description: 'Set ONLY if she explicitly asks to target a specific body area for today\'s workout (e.g. "give me an arm workout", "focus on legs today", "core workout please"). The app has no separate "chest" bucket — chest, pecs, shoulders, and back all map to "arms" too (e.g. "chest and arm workout" -> arms). Independent of kind, can accompany any category. Do not guess from context or set this for her permanent/default focus, only a request for TODAY.' },
     },
     required: ['kind'],
   },
@@ -46,7 +46,7 @@ Separately, if she explicitly asks for cardio/HIIT/a different type of workout t
 
 Separately again, if she explicitly says where she is or will be training today (home, gym, traveling, "no equipment", a hotel, etc.), also set location — this can accompany any kind too. Never infer it from what she's asking for; only set it when she actually states it.
 
-Separately again, if she explicitly asks to target a specific body area for TODAY's workout (arms, legs, core), also set focus_area — this can accompany any kind too, e.g. "I'm at a hotel, give me an arm workout" is kind=none, location=traveling, focus_area=arms. Only her permanent/default focus area lives elsewhere (her profile) — this field is only for an explicit one-off request stated in this message.`
+Separately again, if she explicitly asks to target a specific body area for TODAY's workout (arms, legs, core), also set focus_area — this can accompany any kind too, e.g. "I'm at a hotel, give me an arm workout" is kind=none, location=traveling, focus_area=arms. There's no separate "chest" option — chest, pecs, shoulders, and back requests all set focus_area=arms too, e.g. "build me a chest and arm workout" is focus_area=arms. Only her permanent/default focus area lives elsewhere (her profile) — this field is only for an explicit one-off request stated in this message.`
 
 // A confident "none" from Claude (nothing situational here) and "the call never
 // happened" (unconfigured / failed) are different outcomes — the first should NOT
@@ -162,7 +162,10 @@ export function detectLocation(text: string): 'home' | 'gym' | 'traveling' | und
 // one-off "give me an arm workout today" request, not her permanent default.
 export function detectFocusArea(text: string): FocusAreaRequest | undefined {
   const t = ` ${text.toLowerCase()} `
-  if (/\barms?\b|\bbiceps?\b|\btriceps?\b/.test(t)) return 'arms'
+  // 'arms' is the app's only upper-body focus bucket (no separate "chest" concept
+  // in the workout engine — see FOCUS_TARGETS in lib/workout.ts) so chest/pecs/
+  // shoulders requests route here too, not left unmatched.
+  if (/\barms?\b|\bbiceps?\b|\btriceps?\b|\bchest\b|\bpecs?\b|\bshoulders?\b/.test(t)) return 'arms'
   if (/\blegs?\b|\bglutes?\b|\bquads?\b|\bhamstrings?\b/.test(t)) return 'legs'
   if (/\bcore\b|\babs?\b|\bwaistline\b/.test(t)) return 'core'
   return undefined
