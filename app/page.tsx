@@ -80,6 +80,26 @@ export default function LandingPage() {
             <div className="relative rounded-2xl overflow-hidden mb-4 aspect-[4/3]">
               <Image src="/images/fitness-photo-1.jpg" alt="Client mid-challenge, staying strong" fill className="object-cover" sizes="(max-width: 768px) 100vw, 400px" priority />
             </div>
+            {/* Leads the feature list, ahead of the 2x2 grid below — Asa's
+                explicit placement call. Label deliberately doesn't claim this
+                IS "the one thing the app does" (it does a lot — workouts,
+                meals, the coach) — it states the VALUE this delivers for
+                her instead, same real-doorway convention as the grid below.
+                Gold border + a small label sets it apart as the lead-in, not
+                just a 5th equal tile — see luf-the-one-thing-pitch. Routes to
+                Coach Asa (/plan/coach), not /plan/today: the pattern card on
+                /plan/today only renders once a real dip is detected, so a
+                brand-new visitor with zero history would land on a plain
+                nutrition page and feel nothing — Coach Asa can actually
+                demonstrate "already knows you" immediately, cold, through a
+                real conversation, which is the whole point of this card.
+                Asa's own correction after the first version linked here. */}
+            <Link href="/try?to=/plan/coach" className="group block mb-4 bg-charcoal/70 backdrop-blur-md border border-gold/40 rounded-2xl p-8 transition-all duration-500 hover:border-gold hover:-translate-y-1 hover:shadow-[0_25px_50px_rgba(201,168,76,0.2)]">
+              <p className="text-gold/70 text-[10px] uppercase tracking-[0.2em] font-semibold mb-2">Why this actually works for you</p>
+              <p className="text-gold text-lg font-bold mb-1">Already Knows You</p>
+              <p className="text-ivory/40 text-sm">Notices when you&apos;re about to quit, before you even say so — and quietly rebuilds your plan around your real life instead of shaming a broken streak</p>
+            </Link>
+
             {/* Each card is a real doorway into that exact feature now (via
                 /try, same no-account entry as the main CTA), not static
                 marketing copy — tap "Coach On Call" and land in the real
@@ -102,21 +122,6 @@ export default function LandingPage() {
               <p className="text-ivory/40 text-sm">Voice memo me, I hear it, I respond</p>
             </Link>
             </div>
-
-            {/* The one thing this app actually does that nothing else does —
-                everything above is real, necessary delivery (workouts, meals,
-                the coach), but this is the actual differentiator: it notices
-                her real patterns and rebuilds her plan around them before she
-                quits, not a one-time static plan. Deliberately set apart from
-                the 2x2 grid above (gold border + a small label), not just a
-                5th equal tile, since it's the headline, not another feature —
-                see luf-the-one-thing-pitch. Routes to /plan/today, the "For
-                You" tab where the pattern-detection cards actually surface. */}
-            <Link href="/try?to=/plan/today" className="group block mt-4 bg-charcoal/70 backdrop-blur-md border border-gold/40 rounded-2xl p-8 transition-all duration-500 hover:border-gold hover:-translate-y-1 hover:shadow-[0_25px_50px_rgba(201,168,76,0.2)]">
-              <p className="text-gold/70 text-[10px] uppercase tracking-[0.2em] font-semibold mb-2">The one thing this app actually does</p>
-              <p className="text-gold text-lg font-bold mb-1">Already Knows You</p>
-              <p className="text-ivory/40 text-sm">Notices when you&apos;re about to quit, before you even say so — and quietly rebuilds your plan around your real life instead of shaming a broken streak</p>
-            </Link>
           </div>
         </div>
       </section>
