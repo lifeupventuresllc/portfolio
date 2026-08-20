@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import WorkoutPlayer from '@/components/WorkoutPlayer'
 import QuickstartWorkout from '@/components/QuickstartWorkout'
-import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
+import { generateWorkout, pickFocusDayIndex, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
 import { generateCardioSession } from '@/lib/cardio-session'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
@@ -87,7 +87,18 @@ export default async function WorkoutSession() {
   const permanentPlan = workoutPlan.plan as WorkoutProgram
   const numDays = permanentPlan.track === 'home' ? (permanentPlan.home?.days.length || 1) : (permanentPlan.gymDays?.length || 1)
   const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
-  const startDay = numDays > 0 ? completed % numDays : 0
+  let startDay = numDays > 0 ? completed % numDays : 0
+  // Real bug found live: focusOverride alone never changes which day comes
+  // first in her weekly rotation — a chat-approved "build me an arm
+  // workout" saved a real workoutChange and regenerated `program` correctly
+  // above, but this page still opened her on her ROTATION-based day
+  // (whichever leg/upper/whatever day she was naturally due for), not the
+  // day that actually matches what she asked for. "View my updated
+  // workout" clicked through fine; what it landed on just wasn't an arm
+  // day. Route to the focus-matching day today specifically, same as the
+  // track/injury overrides above already do implicitly by regenerating
+  // `program` itself.
+  if (focusOverride) startDay = pickFocusDayIndex(program, focusOverride)
 
   // Coach Asa approved a real cardio/HIIT swap (not just a shorter version of
   // whatever was scheduled) — splice today's slot only, request-scoped, her stored

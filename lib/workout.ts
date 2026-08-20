@@ -469,3 +469,43 @@ export function generateWorkout(inp: WorkoutInputs): WorkoutProgram {
   else base.gymDays = generateGym(inp)
   return base
 }
+
+// Real bug found live: a chat-triggered "build me an arm workout" (or any
+// bare focus-area request) generated a real program with focusArea='arms'
+// wired in — but every caller then read day index 0 for the preview/today's
+// session, and focusArea NEVER changes which day comes first in her weekly
+// rotation (see pickFocusAccessory's comment above — it only appends ONE
+// bonus accessory exercise per day, it doesn't reorder days). So "arm
+// workout" showed her regular Day 1 — often a leg day — with a single bonus
+// arm exercise buried in the accessory list, both in the chat preview text
+// and on the real /plan/workout page after approving. This picks the day
+// that ACTUALLY matches the requested focus (scored by how many superset
+// slots hit the target muscles on gym, or by the home split's own Leg/Upper
+// label), so "today" genuinely means an arm-heavy day, not just Day 1 with
+// an asterisk. Returns 0 (today's natural day) for 'core'/'overall'/no
+// focus, since core already gets a same-day bonus ab set everywhere and
+// there's no single "core day" to route to.
+export function pickFocusDayIndex(program: WorkoutProgram, focusArea?: FocusArea): number {
+  if (!focusArea || focusArea === 'core' || focusArea === 'overall') return 0
+  if (program.track === 'gym' && program.gymDays?.length) {
+    const targets = FOCUS_TARGETS[focusArea]
+    let bestIdx = 0, bestScore = -1
+    program.gymDays.forEach((day, i) => {
+      let score = 0
+      for (const s of day.supersets) {
+        if (targets.includes(s.push.muscle)) score++
+        if (targets.includes(s.pull.muscle)) score++
+      }
+      if (score > bestScore) { bestScore = score; bestIdx = i }
+    })
+    return bestIdx
+  }
+  if (program.track === 'home' && program.home?.days.length) {
+    const wantType = focusArea === 'arms' ? 'Upper' : focusArea === 'legs' ? 'Leg' : null
+    if (wantType) {
+      const idx = program.home.days.findIndex(d => d.title.includes(wantType))
+      if (idx >= 0) return idx
+    }
+  }
+  return 0
+}

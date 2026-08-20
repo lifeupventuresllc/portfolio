@@ -12,7 +12,7 @@ import { detectPlanIntent } from '@/lib/fos/plan-intent'
 import { buildInitialPlans } from '@/lib/plan-builder'
 import type { FosEventKind, WorkoutChange } from '@/lib/fos/types'
 import type { Injury, Level } from '@/lib/workout-exercises'
-import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
+import { generateWorkout, pickFocusDayIndex, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
 
 // Names the week's actual training days for the "built your whole plan" reply —
 // without this, a week-scope build only ever said "your Nx/week program is
@@ -39,14 +39,14 @@ function summarizeWeekMeals(weekPlan: WeekPlan): string {
 // chat, not just a "check your dashboard" pointer. If she named a time budget,
 // leads with only as many moves as roughly fit it (~6 min/exercise incl. rest);
 // the full session is still saved either way.
-function summarizeTodaysWorkout(program: WorkoutProgram, minutesAvailable?: number): string {
+function summarizeTodaysWorkout(program: WorkoutProgram, minutesAvailable?: number, dayIndex = 0): string {
   const exercises: string[] = []
   if (program.track === 'gym' && program.gymDays?.length) {
-    const day = program.gymDays[0]
+    const day = program.gymDays[dayIndex] || program.gymDays[0]
     for (const s of day.supersets) { exercises.push(s.push.name, s.pull.name) }
     for (const a of day.accessory) exercises.push(a.name)
   } else if (program.home?.days.length) {
-    for (const e of program.home.days[0].exercises) exercises.push(e.name)
+    for (const e of (program.home.days[dayIndex] || program.home.days[0]).exercises) exercises.push(e.name)
   }
   if (!exercises.length) return 'your first session is ready'
   const cap = minutesAvailable ? Math.max(3, Math.min(exercises.length, Math.round(minutesAvailable / 6))) : exercises.length
@@ -393,7 +393,14 @@ export async function POST(request: NextRequest) {
       trainingStyle: (fd.training_style as TrainingStyle) || 'none',
       focusArea: finalFocusOverride || (fd.focus_area as FocusArea) || 'overall',
     })
-    workoutPreview = ` Today: ${summarizeTodaysWorkout(previewProgram)}.`
+    // Real bug found live: focusOverride alone never changes which day comes
+    // first in her weekly rotation (it only adds one bonus exercise to
+    // whatever day already was first) — "build me an arm workout" was
+    // naming her regular Day 1, often a leg day, with one arm exercise
+    // buried in the accessory list. Route to whichever day actually matches
+    // the requested focus instead of blindly reading day 0.
+    const previewDayIndex = pickFocusDayIndex(previewProgram, finalFocusOverride)
+    workoutPreview = ` Today: ${summarizeTodaysWorkout(previewProgram, undefined, previewDayIndex)}.`
   }
 
   // First chat-triggered workout swap for someone whose injuries were never
