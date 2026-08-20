@@ -109,7 +109,7 @@ function ConversationalIntakeInner() {
   // Seamless blueprint→app conversion — if she already did the free Calorie Blueprint,
   // pull her answers forward instead of making her retype her name/age/height/weight/goal.
   useEffect(() => {
-    if (startInOptional) return // she already has a plan — nothing to prefill
+    if (startInOptional) return // she already has a plan — the effect below handles this case instead
     fetch('/api/plan/blueprint-lookup').then((r) => r.json()).then((d) => {
       if (!d?.found || !d.blueprint) return
       const b = d.blueprint
@@ -128,6 +128,48 @@ function ConversationalIntakeInner() {
         days_per_week: b.workout_days ? String(b.workout_days) : s.days_per_week,
       }))
       setCarriedFromBlueprint(true)
+    }).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Real bug found+fixed: the optional-tier deep link (/plan/today's "Fine-tune
+  // your plan" nudge → here with ?tier=optional) is a fresh page load, so `f`
+  // starts entirely empty — the optional tier's own questions (target/experience/
+  // training_style/days/cook/postpartum/other) never ask age/weight/goal/etc, but
+  // build()'s `if (!f.age || !f.weight_lbs)` guard still fires on submit with no
+  // field anywhere on screen to satisfy it. Live-verified dead end: fill out all 7
+  // optional questions, tap "Update my plan," get stuck on "I just need your age
+  // and weight to get your numbers right" forever. Worse, even without that guard,
+  // submitting would've silently overwritten her real stored stats/goal/food
+  // answers with blanks (buildInitialPlans does a full-row update, not a partial
+  // merge). Pull her real existing intake row forward here, same pattern as the
+  // blueprint carryover above, so an optional-tier submission only ever changes
+  // what she's actually asked on these screens.
+  useEffect(() => {
+    if (!startInOptional) return
+    fetch('/api/plan/intake-lookup').then((r) => r.json()).then((d) => {
+      if (!d?.found || !d.intake) return
+      const i = d.intake
+      setF((s) => ({
+        ...s,
+        name: d.name || s.name,
+        age: i.age != null ? String(i.age) : s.age,
+        sex: i.sex || s.sex,
+        heightFt: i.height_in ? String(Math.floor(i.height_in / 12)) : s.heightFt,
+        heightIn: i.height_in ? String(i.height_in % 12) : s.heightIn,
+        weight_lbs: i.weight_lbs != null ? String(i.weight_lbs) : s.weight_lbs,
+        goal: i.goal || s.goal,
+        target_lbs: i.target_lbs != null ? String(i.target_lbs) : s.target_lbs,
+        activity_level: i.activity_level || s.activity_level,
+        experience_level: i.experience_level || s.experience_level,
+        training_location: i.training_location || s.training_location,
+        days_per_week: i.days_per_week ? String(i.days_per_week) : s.days_per_week,
+        weekly_food_budget: i.weekly_food_budget != null ? String(i.weekly_food_budget) : s.weekly_food_budget,
+        food_preferences: i.food_preferences || s.food_preferences,
+        dislikes_allergies: i.dislikes_allergies || s.dislikes_allergies,
+        focus_area: i.focus_area || s.focus_area,
+      }))
+      if (Array.isArray(i.injuries)) setInjuries(i.injuries)
     }).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
