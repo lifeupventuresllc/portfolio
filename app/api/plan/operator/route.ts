@@ -45,6 +45,12 @@ function summarizeTodaysWorkout(program: WorkoutProgram, minutesAvailable?: numb
     const day = program.gymDays[dayIndex] || program.gymDays[0]
     for (const s of day.supersets) { exercises.push(s.push.name, s.pull.name) }
     for (const a of day.accessory) exercises.push(a.name)
+    // Real gap found live: ab/core work lives in its own `day.ab` field (not
+    // `accessory`), so it never showed up in a gym-track chat summary at
+    // all — a "focus on my core" request could correctly generate a bonus
+    // ab set server-side (see coreFocus in generateGym) and still read as
+    // "zero core exercises" in the reply she actually sees.
+    if (day.ab) { exercises.push(day.ab.upper.name, day.ab.lower.name); if (day.ab.bonus) exercises.push(day.ab.bonus.name) }
   } else if (program.home?.days.length) {
     for (const e of (program.home.days[dayIndex] || program.home.days[0]).exercises) exercises.push(e.name)
   }
@@ -195,8 +201,17 @@ export async function POST(request: NextRequest) {
         if (needsFocusAsk) asks.push('a specific area you want to focus on, or just overall')
         if (needsInjuryAsk) asks.push('any injuries or areas I should work around today')
         const q = asks.length === 1 ? `Quick one — ${asks[0]}?` : `Quick ones before I build this — ${asks.join(', ')}?`
+        // Real tappable answers instead of making her type a free-text reply —
+        // only offered when exactly one thing is being asked (a combined
+        // question can't be answered with a single tap, so those stay free-text
+        // same as before). Tapping one sends its exact text through the normal
+        // send() path, same as if she'd typed it herself.
+        const quickReplies = asks.length !== 1 ? undefined
+          : needsLevelAsk ? ['New to this', 'Some experience', 'Advanced']
+          : needsFocusAsk ? ['Core', 'Legs', 'Arms', 'Overall']
+          : needsInjuryAsk ? ['No injuries'] : undefined
         await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: q })
-        return NextResponse.json({ reply: q })
+        return NextResponse.json({ reply: q, quickReplies })
       }
 
       // Defaults are only disclosed when they're actually relevant to what she asked

@@ -58,6 +58,7 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
   // her next message so it doesn't linger into an unrelated later exchange.
   const [justApproved, setJustApproved] = useState<Adjustment | null>(null)
   const [justBuilt, setJustBuilt] = useState<{ workout: boolean; nutrition: boolean } | null>(null)
+  const [quickReplies, setQuickReplies] = useState<string[] | null>(null)
   const [recordingMemo, setRecordingMemo] = useState(false)
   const today = localTodayISO()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -144,13 +145,18 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
 
   async function send(text: string) {
     const msg = text.trim(); if (!msg || sending) return
-    setInput(''); setPending(null); setJustApproved(null); setJustBuilt(null); setSending(true)
+    setInput(''); setPending(null); setJustApproved(null); setJustBuilt(null); setQuickReplies(null); setSending(true)
     setMessages((m) => [...m, { role: 'user', content: msg }])
     try {
       const r = await fetch('/api/plan/operator', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) })
       const d = await r.json().catch(() => ({}))
       setMessages((m) => [...m, { role: 'operator', content: d?.reply || "Tell me a little more about your day and I'll adjust your plan." }])
       if (d?.adjustment) setPending(d.adjustment as Adjustment)
+      // Real tappable options for a single, bounded-answer question (her level,
+      // focus area, or "no injuries") instead of making her type it — found live:
+      // she had to retype something she'd effectively already have to guess the
+      // exact phrasing of. Tapping just calls send() with that exact text.
+      if (d?.quickReplies) setQuickReplies(d.quickReplies as string[])
       // A cold-start build just flipped intake_completed server-side — that decides
       // which whole branch /plan/page.tsx renders (the "no plan yet" card vs. the
       // real dashboard), which broadcastRefresh() alone can't reach since that's a
@@ -313,6 +319,18 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
           with my plan" bypass, and the input itself never scroll away with
           the message thread. */}
       <div className="shrink-0 pt-3">
+      {/* Tappable answers to Coach Asa's own gate question (level/focus/injuries)
+          — one tap sends the exact text, same as typing it. */}
+      {quickReplies && (
+        <div className="luf-reveal luf-in flex flex-wrap gap-2 mb-4">
+          {quickReplies.map((o) => (
+            <button key={o} onClick={() => send(o)} disabled={sending}
+              className="bg-charcoal border border-gold/40 text-gold px-4 py-2 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform disabled:opacity-40">
+              {o}
+            </button>
+          ))}
+        </div>
+      )}
       {/* an adjustment she can accept — right here */}
       {pending && (
         <div className="luf-reveal luf-in bg-charcoal/90 border border-gold/40 rounded-2xl p-3.5 mb-4">
