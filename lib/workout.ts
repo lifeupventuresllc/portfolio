@@ -487,12 +487,24 @@ export function generateWorkout(inp: WorkoutInputs): WorkoutProgram {
 // that ACTUALLY matches the requested focus (scored by how many superset
 // slots hit the target muscles on gym, or by the home split's own Leg/Upper
 // label), so "today" genuinely means an arm-heavy day, not just Day 1 with
-// an asterisk. Returns 0 (today's natural day) for 'core'/'overall'/no
-// focus, since core already gets a same-day bonus ab set everywhere and
-// there's no single "core day" to route to.
+// an asterisk.
 export function pickFocusDayIndex(program: WorkoutProgram, focusArea?: FocusArea): number {
-  if (!focusArea || focusArea === 'core' || focusArea === 'overall') return 0
+  if (!focusArea || focusArea === 'overall') return 0
   if (program.track === 'gym' && program.gymDays?.length) {
+    // Real gap found live: 'core' used to short-circuit straight to day 0 on
+    // the theory that ab/core work is a same-day bonus added everywhere
+    // anyway, so which day gets shown "didn't matter." It matters a lot to
+    // her: asking for "just my core" and landing on a day literally titled
+    // "Legs + Lower" reads as completely ignoring her, even though the bonus
+    // ab work really is in there. There's no true "core day" in the split
+    // (abs aren't a GYM_POOL muscle, see FOCUS_TARGETS above), so the best
+    // real signal available is to avoid a leg/full-body-titled day in favor
+    // of whichever day is least leg-dominant — not a perfect "core day," but
+    // never contradicts what she just asked for.
+    if (focusArea === 'core') {
+      const idx = program.gymDays.findIndex(d => !/leg|lower|full body/i.test(d.title))
+      return idx >= 0 ? idx : 0
+    }
     const targets = FOCUS_TARGETS[focusArea]
     let bestIdx = 0, bestScore = -1
     program.gymDays.forEach((day, i) => {
@@ -506,7 +518,10 @@ export function pickFocusDayIndex(program: WorkoutProgram, focusArea?: FocusArea
     return bestIdx
   }
   if (program.track === 'home' && program.home?.days.length) {
-    const wantType = focusArea === 'arms' ? 'Upper' : focusArea === 'legs' ? 'Leg' : null
+    // Home's split has a real day titled "Upper Body & Core" — an actual,
+    // literal match, not a heuristic — so core routes there directly instead
+    // of falling through to day 0.
+    const wantType = focusArea === 'arms' ? 'Upper' : focusArea === 'legs' ? 'Leg' : focusArea === 'core' ? 'Core' : null
     if (wantType) {
       const idx = program.home.days.findIndex(d => d.title.includes(wantType))
       if (idx >= 0) return idx

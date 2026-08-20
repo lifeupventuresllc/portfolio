@@ -15,7 +15,7 @@ import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday } from '@/lib/fos/effective-plan'
 import { shortVersionFor } from '@/lib/workout-short'
 import { LIVE_CALL } from '@/lib/live-call'
-import type { WorkoutProgram } from '@/lib/workout'
+import type { WorkoutProgram, FocusArea } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
 
 export const dynamic = 'force-dynamic'
@@ -56,7 +56,7 @@ export default async function TodayView() {
   // first (see lib/plan-builder.ts) and routes to the actual required form when that's
   // what's missing, matching the goal-tailoring fix (see lib/workout.ts's repScheme) —
   // a silently-defaulted goal matters more now than it used to.
-  const intakeFormData = (intakeRow?.form_data as { optional_completed?: boolean; required_tier_completed?: boolean } | null)
+  const intakeFormData = (intakeRow?.form_data as { optional_completed?: boolean; required_tier_completed?: boolean; focus_area?: FocusArea } | null)
   const needsRequiredTier = !intakeFormData?.required_tier_completed
   const needsOptionalTier = !needsRequiredTier && !intakeFormData?.optional_completed
 
@@ -84,8 +84,16 @@ export default async function TodayView() {
   const numDays = program ? (program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)) : 1
   const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
   const startDay = numDays > 0 ? completed % numDays : 0
+  // Real gap found live: this card (the one the bottom-tab nav actually lands
+  // on) had zero focus-area awareness, same class of bug as /plan's dashboard
+  // card and /plan/workout — a chat-approved or cold-start-built "focus on
+  // my X" request never showed up here either. Same resolved-focus logic as
+  // those two surfaces: an approved override wins, else (only before her
+  // first completed workout) her freshly-stored focus preference.
+  const effectiveFocusArea = todayAdjustment?.workoutChange?.focusOverride
+    || (completed === 0 && intakeFormData?.focus_area && intakeFormData.focus_area !== 'overall' ? intakeFormData.focus_area : undefined)
   // Approved cardio swap already reflected in the title — see effective-plan.ts.
-  const todayWorkout = getEffectiveTodayWorkout(program, completed, todayAdjustment)
+  const todayWorkout = getEffectiveTodayWorkout(program, completed, todayAdjustment, effectiveFocusArea)
 
   // Layer 1's primary feature, unified: reads across every behavioral signal
   // already being collected (workout, food logging, app-open silence,

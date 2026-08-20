@@ -18,7 +18,7 @@ import { localDateISO, localMondayIndex, localDayNumber, addDaysISO } from '@/li
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { getEffectiveTodayWorkout, getEffectiveCalorieBudget } from '@/lib/fos/effective-plan'
 import { pickDashboardPhoto } from '@/lib/dashboard-photos'
-import type { WorkoutProgram } from '@/lib/workout'
+import type { WorkoutProgram, FocusArea } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
 
 export const dynamic = 'force-dynamic'
@@ -133,7 +133,14 @@ export default async function PlanDashboard() {
 
   const program = (workoutPlan?.plan as WorkoutProgram) || null
   const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
-  const todayWorkout = getEffectiveTodayWorkout(program, completed, todayAdjustment)
+  // Same resolved-focus logic as app/plan/workout/page.tsx: an approved chat
+  // override wins, otherwise (only before her first completed workout) her
+  // freshly-stored focus preference — so this card matches what Coach Asa
+  // just told her, not a plain unrelated rotation day.
+  const storedFocusArea = (intakeRow?.form_data as { focus_area?: FocusArea } | null)?.focus_area
+  const effectiveFocusArea = todayAdjustment?.workoutChange?.focusOverride
+    || (completed === 0 && storedFocusArea && storedFocusArea !== 'overall' ? storedFocusArea : undefined)
+  const todayWorkout = getEffectiveTodayWorkout(program, completed, todayAdjustment, effectiveFocusArea)
   const affirmation = affirmationForDay(localDayNumber())
 
   // Real gap found+fixed same session as the calorie-target one: Quickstart

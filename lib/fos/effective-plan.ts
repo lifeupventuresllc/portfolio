@@ -1,4 +1,4 @@
-import type { WorkoutProgram } from '@/lib/workout'
+import { pickFocusDayIndex, type WorkoutProgram, type FocusArea } from '@/lib/workout'
 import type { WorkoutChange, NutritionChange } from './types'
 
 // The one shared place that knows how to combine a stored plan with an
@@ -17,10 +17,20 @@ export type EffectiveWorkout = { title: string; muscles?: string[] } | null
 // Today's workout by rotation (same # workouts finished % day count logic
 // every consumer already used), with the cardio-swap override already
 // applied — the title she'll actually get, not her originally-scheduled day.
-export function getEffectiveTodayWorkout(program: WorkoutProgram | null, completedCount: number, todayAdjustment: TodayAdjustment): EffectiveWorkout {
+// Real gap found live: this was a THIRD independent copy of day-selection
+// logic (alongside app/plan/workout/page.tsx and the chat reply's own
+// summarizeTodaysWorkout), with zero focus-area awareness — a chat-approved
+// or cold-start-built "focus on my core" request would show correctly in
+// chat and on /plan/workout, but the dashboard's own "Today's Workout" card
+// (and /plan/today, which shares this same function) would still silently
+// show her plain rotation day, unrelated to what she'd just asked for.
+// `focusArea` mirrors the same resolved value the other two surfaces use —
+// an approved one-off override, or (only before she's completed anything,
+// same reasoning as /plan/workout) her freshly-stored focus preference.
+export function getEffectiveTodayWorkout(program: WorkoutProgram | null, completedCount: number, todayAdjustment: TodayAdjustment, focusArea?: FocusArea): EffectiveWorkout {
   if (!program) return null
   const numDays = program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)
-  const startDay = numDays > 0 ? completedCount % numDays : 0
+  const startDay = focusArea ? pickFocusDayIndex(program, focusArea) : (numDays > 0 ? completedCount % numDays : 0)
   let workout: EffectiveWorkout = null
   if (program.track === 'home') {
     const d = program.home?.days[startDay]
