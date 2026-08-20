@@ -102,6 +102,21 @@ export default function LandingPage() {
               <p className="text-ivory/40 text-sm">Voice memo me, I hear it, I respond</p>
             </Link>
             </div>
+
+            {/* The one thing this app actually does that nothing else does —
+                everything above is real, necessary delivery (workouts, meals,
+                the coach), but this is the actual differentiator: it notices
+                her real patterns and rebuilds her plan around them before she
+                quits, not a one-time static plan. Deliberately set apart from
+                the 2x2 grid above (gold border + a small label), not just a
+                5th equal tile, since it's the headline, not another feature —
+                see luf-the-one-thing-pitch. Routes to /plan/today, the "For
+                You" tab where the pattern-detection cards actually surface. */}
+            <Link href="/try?to=/plan/today" className="group block mt-4 bg-charcoal/70 backdrop-blur-md border border-gold/40 rounded-2xl p-8 transition-all duration-500 hover:border-gold hover:-translate-y-1 hover:shadow-[0_25px_50px_rgba(201,168,76,0.2)]">
+              <p className="text-gold/70 text-[10px] uppercase tracking-[0.2em] font-semibold mb-2">The one thing this app actually does</p>
+              <p className="text-gold text-lg font-bold mb-1">Already Knows You</p>
+              <p className="text-ivory/40 text-sm">Notices when you&apos;re about to quit, before you even say so — and quietly rebuilds your plan around your real life instead of shaming a broken streak</p>
+            </Link>
           </div>
         </div>
       </section>
