@@ -181,8 +181,16 @@ const F_LOWER_PP: DaySpec = {
 const clampDays = (d: number) => Math.min(Math.max(Math.round(d) || 3, 1), 6)
 
 // Male: legs their own day; 4th+ days are Full Body (per coach spec).
-function maleSplit(days: number): DaySpec[] {
+// Real gap found+fixed: a true beginner and an advanced lifter training the
+// same days/week used to get the IDENTICAL day-template split — only the
+// eligible exercises and rep scheme changed. The home track already varied
+// its day STRUCTURE by level (full-body-only for beginners, alternating
+// split for intermediate+); gym never did. A beginner training 3+ days/week
+// now gets Full Body every day too, same as home's approach, instead of an
+// isolating push/pull/legs split her first weeks in.
+function maleSplit(days: number, level: Level): DaySpec[] {
   const n = clampDays(days)
+  if (level === 1) return Array(n).fill(FULL_BODY)
   if (n === 1) return [FULL_BODY]
   if (n === 2) return [M_UPPER, M_LEGS]
   const base = [M_PUSH_ARMS, M_LEGS, M_PUSH_DELTS]
@@ -191,8 +199,13 @@ function maleSplit(days: number): DaySpec[] {
 }
 
 // Female: legs 2–3×/week; one leg day is also push-pull (F_LOWER_PP).
-function femaleSplit(days: number): DaySpec[] {
+// Beginner-level fix mirrors maleSplit above, but keeps the deliberate
+// glute-forward design (F_LOWER_PP already combines legs + shoulders +
+// chest in one day — the female equivalent of "full body" here — rather
+// than forcing the male FULL_BODY template's exact muscle mix onto her).
+function femaleSplit(days: number, level: Level): DaySpec[] {
   const n = clampDays(days)
+  if (level === 1) return Array(n).fill(F_LOWER_PP)
   const plans: Record<number, DaySpec[]> = {
     1: [F_LOWER_PP],
     2: [F_LOWER, F_LOWER_PP],
@@ -204,8 +217,8 @@ function femaleSplit(days: number): DaySpec[] {
   return plans[n]
 }
 
-function splitFor(sex: WorkoutInputs['sex'], days: number): DaySpec[] {
-  return sex === 'male' ? maleSplit(days) : femaleSplit(days) // 'other'/undefined → female (avatar)
+function splitFor(sex: WorkoutInputs['sex'], days: number, level: Level): DaySpec[] {
+  return sex === 'male' ? maleSplit(days, level) : femaleSplit(days, level) // 'other'/undefined → female (avatar)
 }
 
 export function rotate<T>(arr: T[], n: number): T[] {
@@ -290,7 +303,7 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
   const injuries = inp.injuries || []
   const targets = (inp.targets && inp.targets.length) ? inp.targets : FOCUS_TARGETS[inp.focusArea || 'overall']
   const coreFocus = inp.focusArea === 'core'
-  const split = splitFor(inp.sex, inp.daysPerWeek || 3)
+  const split = splitFor(inp.sex, inp.daysPerWeek || 3, level)
 
   return split.map((spec, i) => {
     const dayNum = i + 1
