@@ -196,20 +196,19 @@ export async function POST(request: NextRequest) {
       // default with no disclosure, unlike weight/goal which stay silent defaults.
       const needsLevelAsk = intent.wantsWorkout && !intent.experience_level
       if (needsInjuryAsk || needsFocusAsk || needsLevelAsk) {
-        const asks: string[] = []
-        if (needsLevelAsk) asks.push("what experience level you're at — new to this, some experience, or advanced")
-        if (needsFocusAsk) asks.push('a specific area you want to focus on, or just overall')
-        if (needsInjuryAsk) asks.push('any injuries or areas I should work around today')
-        const q = asks.length === 1 ? `Quick one — ${asks[0]}?` : `Quick ones before I build this — ${asks.join(', ')}?`
-        // Real tappable answers instead of making her type a free-text reply —
-        // only offered when exactly one thing is being asked (a combined
-        // question can't be answered with a single tap, so those stay free-text
-        // same as before). Tapping one sends its exact text through the normal
-        // send() path, same as if she'd typed it herself.
-        const quickReplies = asks.length !== 1 ? undefined
-          : needsLevelAsk ? ['New to this', 'Some experience', 'Advanced']
+        // Real gap found live: a brand-new cold-start chat almost always has
+        // BOTH level and injuries unknown at once (the common case, not the
+        // rare one), which used to combine into one multi-part sentence with
+        // no tappable buttons at all — exactly the case she hit. Ask ONE
+        // thing at a time instead, each always paired with real buttons, so
+        // tapping through 2-3 quick questions replaces typing a combined
+        // answer. One extra round trip in the worst case, never a dead end.
+        const q = needsLevelAsk ? "Quick one — what experience level you're at?"
+          : needsFocusAsk ? 'Quick one — a specific area you want to focus on, or just overall?'
+          : 'Quick one — any injuries or areas I should work around today?'
+        const quickReplies = needsLevelAsk ? ['New to this', 'Some experience', 'Advanced']
           : needsFocusAsk ? ['Core', 'Legs', 'Arms', 'Overall']
-          : needsInjuryAsk ? ['No injuries'] : undefined
+          : ['No injuries']
         await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: q })
         return NextResponse.json({ reply: q, quickReplies })
       }
