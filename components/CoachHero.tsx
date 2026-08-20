@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Celebration from '@/components/Celebration'
-import VoiceButton from '@/components/VoiceButton'
+import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
 import { useLiveRefresh, localTodayISO, broadcastRefresh } from '@/lib/useLiveRefresh'
 import { winAffirmation } from '@/lib/affirmations'
 
@@ -364,11 +364,16 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
           style={{ maxHeight: TEXTAREA_MAX_HEIGHT }}
           className="flex-1 resize-none bg-charcoal/5 border border-smoke/30 rounded-2xl px-4 py-3 text-base text-ink placeholder:text-ink/35 focus:border-gold/60 focus:outline-none overflow-y-auto"
         />
-        <VoiceButton idleLabel="Talk to Coach Asa" onInterim={setInput} onResult={(t) => { setInput(t); send(t) }} />
-        <VoiceButton
-          icon={<NoteIcon />} idleLabel="Record a longer memo" continuous
+        {/* Deepgram Nova-3, not the browser's built-in recognition — see
+            components/DeepgramVoiceInput.tsx. Deliberately no auto-send:
+            she reviews/edits the transcript like anything she typed, which
+            matters now that a low-confidence read gets flagged instead of
+            silently sent as-is. */}
+        <DeepgramVoiceInput source="coach_hero" idleLabel="Talk to Coach Asa" onInterim={setInput} onResult={setInput} />
+        <DeepgramVoiceInput
+          source="coach_hero" icon={<NoteIcon />} idleLabel="Record a longer memo"
           onInterim={(t) => { setRecordingMemo(true); setInput(t) }}
-          onResult={(t) => { setRecordingMemo(false); setInput(t); send(t) }}
+          onResult={(t) => { setRecordingMemo(false); setInput(t) }}
         />
         <button type="submit" disabled={sending || !input.trim()} className="h-12 w-12 shrink-0 rounded-full bg-gold text-obsidian flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform">{sending ? <span className="text-lg font-bold">…</span> : <SendIcon />}</button>
       </form>
