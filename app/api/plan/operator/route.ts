@@ -3,7 +3,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { localDateISO, localHourNumber, localDayNumber, localMondayIndex, addDaysISO } from '@/lib/localdate'
 import type { WeekPlan } from '@/lib/meal-plan'
 import { recover, injurySafetyClause, type LifeSignal, type RecoveryPlan } from '@/lib/fos/recovery'
-import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation } from '@/lib/fos/parse'
+import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation, detectFocusArea } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
 import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
 import { extractProfileFacts, generateReply, describeDecision, answerGeneralQuestion } from '@/lib/fos/memory'
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
   // the normal adjustment-flow below behaves exactly as it always has.
   // Widened to form_data (not just id) so the injury-safety clause below can
   // reuse this same fetch for post-intake users instead of a second round trip.
-  const { data: existingIntakeForPlan } = await svc.from('challenge_intake').select('id, experience_level, goal, sex, days_per_week, form_data').eq('enrollment_id', eid).maybeSingle()
+  const { data: existingIntakeForPlan } = await svc.from('challenge_intake').select('id, experience_level, goal, sex, days_per_week, training_location, form_data').eq('enrollment_id', eid).maybeSingle()
   const recordedInjuries: Injury[] = Array.isArray((existingIntakeForPlan?.form_data as Record<string, unknown> | null)?.injuries)
     ? ((existingIntakeForPlan!.form_data as { injuries: Injury[] }).injuries) : []
   // True only if she was genuinely asked (the structured intake form's required
@@ -252,6 +252,15 @@ export async function POST(request: NextRequest) {
   const signalSource: 'ai' | 'rule' = aiResult.ok ? 'ai' : 'rule'
   const workoutStyle = aiResult.ok ? aiResult.workoutStyle : detectWorkoutStyle(message)
   const location = aiResult.ok ? aiResult.location : detectLocation(message)
+  // Real gap found live: "build me an arm workout" (no location, no other
+  // signal) matched NOTHING above, so it fell all the way through to
+  // answerGeneralQuestion() further down — which treated a build REQUEST as a
+  // QUESTION and had Claude freely invent a plausible-sounding workout in
+  // prose (real example: push-ups/pike push-ups/tricep dips it made up on the
+  // spot), with no real adjustment card, nothing sourced from the actual
+  // exercise engine, and no way to approve it into her real plan. Detecting
+  // focus_area here routes it into the real plan/workoutChange path below instead.
+  const focusArea = aiResult.ok ? aiResult.focusArea : detectFocusArea(message)
 
   // Nothing situational matched — check whether she's actually just telling us
   // what she ate ("I had a slice of pizza"). Real Claude detection (see
@@ -300,6 +309,17 @@ export async function POST(request: NextRequest) {
       }
     : null
 
+  // A one-off "focus on X today" request — merges onto whatever plan already
+  // exists (e.g. "exhausted, but just arms today"), or creates one on its own
+  // (bare "build me an arm workout") so it gets a real adjustment card and
+  // real engine-sourced content instead of falling through to the generic
+  // Q&A path below.
+  if (focusArea) {
+    plan = plan
+      ? { ...plan, workoutChange: { ...(plan.workoutChange || {}), focusOverride: focusArea } }
+      : { message: `Got it — ${focusArea} today. Want me to lock that in?`, workoutChange: { focusOverride: focusArea, reason: `requested ${focusArea} focus` } }
+  }
+
   // She told us where she's training today — never ask when she's already said it.
   // 'traveling' maps to the home/bodyweight track since that's the equipment-free
   // one; it has no dedicated track of its own (see app/plan/workout/page.tsx's
@@ -338,27 +358,6 @@ export async function POST(request: NextRequest) {
       plan = { ...plan, workoutChange: { ...(plan.workoutChange || {}), trackOverride } }
       if (location === 'traveling') travelMergeAck = " Hope the trip's going well, by the way."
     } else {
-      // Real content, not a promise — build TODAY's actual session on the new
-      // track right here so the reply names real exercises. Real gap found
-      // live: without this, approving just pointed her at whatever the
-      // "Sculpt Sessions" dashboard card already had saved (her regular gym
-      // program), not a session genuinely built for where she said she was
-      // (e.g. "I'm in a hotel"). Best-effort — a preview failure still leaves
-      // a real, approvable trackOverride swap, just without the exercise list.
-      if (existingIntakeForPlan) {
-        const level = (existingIntakeForPlan.experience_level === 'advanced' ? 3 : existingIntakeForPlan.experience_level === 'intermediate' ? 2 : 1) as Level
-        const previewGoal = (existingIntakeForPlan.goal === 'gain' || existingIntakeForPlan.goal === 'maintain' ? existingIntakeForPlan.goal : 'lose') as 'lose' | 'gain' | 'maintain'
-        const sex = (existingIntakeForPlan.sex === 'male' ? 'male' : existingIntakeForPlan.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
-        const fd = (existingIntakeForPlan.form_data || {}) as Record<string, unknown>
-        const previewProgram = generateWorkout({
-          name: enrollment.name || 'Your', sex, track: trackOverride, level, goal: previewGoal,
-          daysPerWeek: Number(existingIntakeForPlan.days_per_week) || 3, weekNumber: 1,
-          injuries: recordedInjuries, postpartum: !!fd.postpartum,
-          trainingStyle: (fd.training_style as TrainingStyle) || 'none',
-          focusArea: (fd.focus_area as FocusArea) || 'overall',
-        })
-        workoutPreview = ` Today: ${summarizeTodaysWorkout(previewProgram)}.`
-      }
       plan = {
         message: (location === 'traveling'
           ? "Hope the trip's going well — no equipment where you are, so I'll keep today's session bodyweight-only."
@@ -366,6 +365,35 @@ export async function POST(request: NextRequest) {
         workoutChange: { trackOverride, reason: location === 'traveling' ? 'traveling — no equipment' : `training at ${location}` },
       }
     }
+  }
+
+  // Real content, not a promise — build TODAY's actual session (on whichever
+  // track/focus the merges above landed on) right here so the reply names
+  // real exercises. Real gap found live: without this, approving just
+  // pointed her at whatever the dashboard already had saved (her regular
+  // program), not a session genuinely built for what she asked for — a bare
+  // "build me an arm workout" showed no real content at all (see the
+  // focusArea comment above), and "I'm in a hotel" showed her unchanged gym
+  // program. Runs once, after every signal/location/focus merge above has
+  // fully resolved, so it always reflects the FINAL workoutChange, not
+  // whichever branch happened to touch it first. Best-effort — a preview
+  // failure still leaves a real, approvable swap, just without the list.
+  const finalTrackOverride = plan?.workoutChange?.trackOverride
+  const finalFocusOverride = plan?.workoutChange?.focusOverride
+  if ((finalTrackOverride || finalFocusOverride) && existingIntakeForPlan) {
+    const level = (existingIntakeForPlan.experience_level === 'advanced' ? 3 : existingIntakeForPlan.experience_level === 'intermediate' ? 2 : 1) as Level
+    const previewGoal = (existingIntakeForPlan.goal === 'gain' || existingIntakeForPlan.goal === 'maintain' ? existingIntakeForPlan.goal : 'lose') as 'lose' | 'gain' | 'maintain'
+    const sex = (existingIntakeForPlan.sex === 'male' ? 'male' : existingIntakeForPlan.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
+    const fd = (existingIntakeForPlan.form_data || {}) as Record<string, unknown>
+    const previewProgram = generateWorkout({
+      name: enrollment.name || 'Your', sex, level, goal: previewGoal,
+      track: finalTrackOverride || (existingIntakeForPlan.training_location === 'home' ? 'home' : 'gym'),
+      daysPerWeek: Number(existingIntakeForPlan.days_per_week) || 3, weekNumber: 1,
+      injuries: recordedInjuries, postpartum: !!fd.postpartum,
+      trainingStyle: (fd.training_style as TrainingStyle) || 'none',
+      focusArea: finalFocusOverride || (fd.focus_area as FocusArea) || 'overall',
+    })
+    workoutPreview = ` Today: ${summarizeTodaysWorkout(previewProgram)}.`
   }
 
   // First chat-triggered workout swap for someone whose injuries were never

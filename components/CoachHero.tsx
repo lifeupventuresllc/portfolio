@@ -12,7 +12,7 @@ import { winAffirmation } from '@/lib/affirmations'
 // page jump. Warm, minimal, alive: a gold "A" avatar, a personal greeting, and an
 // inline conversation. Approving a change refreshes the supporting cards on the spot.
 type Msg = { role: 'user' | 'operator'; content: string }
-type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home'; injuryBodyPart?: string }
+type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home'; injuryBodyPart?: string; focusOverride?: 'core' | 'legs' | 'arms' }
 type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string; eatingOut?: boolean }
 type Adjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionChange?: NutritionChange }
 
@@ -188,8 +188,13 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
     const out: string[] = []; const w = a.workoutChange, n = a.nutritionChange
     if (w?.injuryBodyPart) out.push(`Workout → swapped to protect your ${w.injuryBodyPart.replace('_', ' ')}, from now on`)
     else if (w?.trackOverride) out.push(`Workout → swapped to a ${w.trackOverride === 'home' ? 'bodyweight home' : 'gym'} session${w.toMinutes ? `, ${w.toMinutes} min` : ''}`)
+    else if (w?.focusOverride) out.push(`Workout → focused on ${w.focusOverride} today`)
     else if (w?.toMinutes) out.push(`Workout → ${w.toMinutes}-min ${w.swapTo || 'session'}`)
     else if (w?.reason) out.push('Workout → re-slotted for today')
+    // Additive, not exclusive — a track swap AND a focus request can land in
+    // the same message ("I'm at a hotel, give me an arm workout"), and both
+    // deserve their own line rather than only the first-matched one above.
+    if (w?.focusOverride && w?.trackOverride) out.push(`Focus → ${w.focusOverride} today`)
     if (n?.dinnerSuggestion) out.push(`Nutrition → ${n.dinnerSuggestion}`)
     if (n?.calorieDelta) out.push(`Calories → ${n.calorieDelta > 0 ? '+' : ''}${n.calorieDelta}`)
     return out
@@ -201,8 +206,28 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
           lives in the scrollable top region; the input stays pinned at the
           bottom, same shape as any standard chat UI — see the footer region
           below. Negative margin + matching padding lets this region scroll
-          edge-to-edge without the parent's own p-6 clipping its scrollbar. */}
-      <div className="flex-1 overflow-y-auto -mx-6 px-6">
+          edge-to-edge without the parent's own p-6 clipping its scrollbar.
+          min-h-0 is required, not decorative — a flex item's default
+          min-height is `auto` (won't shrink below its content), so once the
+          shorter 50vh panel (see components/CoachOrbLauncher.tsx) plus a real
+          recommendation card in the shrink-0 footer below together exceed the
+          available height, this region would refuse to shrink and get
+          silently clipped by the parent's overflow-hidden instead — the
+          message thread would render but be invisible. Found live: sending
+          "build me an arm workout" produced a real reply + a real
+          recommendation card, but the chat bubble showing that reply was
+          fully clipped, not just scrolled off-screen. A bare min-h-0 alone
+          technically fixes the clipping (nothing overflows the rounded card
+          anymore) but can still squeeze this region down to ~0px whenever
+          the footer's recommendation card is tall relative to the 50vh
+          panel — which defeats the actual point of a real, named-exercise
+          reply if she can never see the sentence it's written in. The
+          explicit min-height below guarantees at least a couple of lines of
+          the latest exchange stay visible/scrollable no matter how much
+          footer content follows, while still letting the region shrink
+          below its full content height so it isn't the old unbounded-growth
+          bug in a different form. */}
+      <div className="flex-1 min-h-[110px] overflow-y-auto -mx-6 px-6">
       {/* identity — a person, not a tool */}
       <div className="flex items-center gap-2.5 mb-4">
         <span className="h-9 w-9 rounded-full bg-gold text-obsidian font-bold flex items-center justify-center text-lg shadow-lg shadow-gold/20">A</span>

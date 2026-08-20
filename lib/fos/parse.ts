@@ -22,6 +22,7 @@ const CLASSIFY_TOOL = {
       body_part: { type: 'string', enum: [...INJURY_BODY_PARTS], description: 'injury only: which body part, using lower_back for any back pain' },
       workout_style: { type: 'string', enum: ['cardio'], description: 'Set ONLY if she explicitly asks for cardio/HIIT/a different type of workout than her usual one today — independent of kind, can accompany any category.' },
       location: { type: 'string', enum: ['home', 'gym', 'traveling'], description: 'Set ONLY if she explicitly states where she is or will be working out today (e.g. "I\'m home", "at the gym", "traveling for work", "no equipment here") — independent of kind, can accompany any category. Do not guess from context.' },
+      focus_area: { type: 'string', enum: ['core', 'legs', 'arms'], description: 'Set ONLY if she explicitly asks to target a specific body area for today\'s workout (e.g. "give me an arm workout", "focus on legs today", "core workout please") — independent of kind, can accompany any category. Do not guess from context or set this for her permanent/default focus, only a request for TODAY.' },
     },
     required: ['kind'],
   },
@@ -43,14 +44,17 @@ Pick the single best match. If more than one could apply (other than injury, whi
 
 Separately, if she explicitly asks for cardio/HIIT/a different type of workout than usual (not just describing how she feels), also set workout_style — this can accompany any kind, e.g. "only have 20 min, want cardio" is still kind=time_crunch with workout_style=cardio.
 
-Separately again, if she explicitly says where she is or will be training today (home, gym, traveling, "no equipment", a hotel, etc.), also set location — this can accompany any kind too. Never infer it from what she's asking for; only set it when she actually states it.`
+Separately again, if she explicitly says where she is or will be training today (home, gym, traveling, "no equipment", a hotel, etc.), also set location — this can accompany any kind too. Never infer it from what she's asking for; only set it when she actually states it.
+
+Separately again, if she explicitly asks to target a specific body area for TODAY's workout (arms, legs, core), also set focus_area — this can accompany any kind too, e.g. "I'm at a hotel, give me an arm workout" is kind=none, location=traveling, focus_area=arms. Only her permanent/default focus area lives elsewhere (her profile) — this field is only for an explicit one-off request stated in this message.`
 
 // A confident "none" from Claude (nothing situational here) and "the call never
 // happened" (unconfigured / failed) are different outcomes — the first should NOT
 // fall through to the regex matcher (which can misfire on unrelated words, e.g.
 // "my daughter's stressed about her exam" hitting the stressed pattern), only the
 // second should. `ok: false` means the caller should try parseSignal() instead.
-type AIClassifyResult = { ok: true; signal: LifeSignal | null; workoutStyle?: 'cardio'; location?: 'home' | 'gym' | 'traveling' } | { ok: false }
+export type FocusAreaRequest = 'core' | 'legs' | 'arms'
+type AIClassifyResult = { ok: true; signal: LifeSignal | null; workoutStyle?: 'cardio'; location?: 'home' | 'gym' | 'traveling'; focusArea?: FocusAreaRequest } | { ok: false }
 
 // Claude-based intent classifier — replaces the regex matcher below as the primary
 // path now that the key is live. Falls back to the rule-based parser (still
@@ -71,24 +75,27 @@ export async function parseSignalAI(text: string): Promise<AIClassifyResult> {
     })
     const block = msg.content.find((b) => b.type === 'tool_use')
     if (!block || block.type !== 'tool_use') return { ok: false }
-    const input = block.input as { kind: string; minutes?: number; days?: number; free_at?: string; body_part?: string; workout_style?: string; location?: string }
+    const input = block.input as { kind: string; minutes?: number; days?: number; free_at?: string; body_part?: string; workout_style?: string; location?: string; focus_area?: string }
     const workoutStyle: 'cardio' | undefined = input.workout_style === 'cardio' ? 'cardio' : undefined
     const location: 'home' | 'gym' | 'traveling' | undefined =
       input.location === 'home' || input.location === 'gym' || input.location === 'traveling' ? input.location : undefined
+    const focusArea: FocusAreaRequest | undefined =
+      input.focus_area === 'core' || input.focus_area === 'legs' || input.focus_area === 'arms' ? input.focus_area : undefined
+    const extras = { workoutStyle, location, focusArea }
     switch (input.kind) {
-      case 'time_crunch': return { ok: true, signal: { kind: 'time_crunch', minutes: input.minutes ?? 20 }, workoutStyle, location }
-      case 'exhausted': return { ok: true, signal: { kind: 'exhausted' }, workoutStyle, location }
-      case 'poor_sleep': return { ok: true, signal: { kind: 'poor_sleep' }, workoutStyle, location }
-      case 'schedule_change': return { ok: true, signal: { kind: 'schedule_change', freeAt: input.free_at || undefined }, workoutStyle, location }
-      case 'eat_out': return { ok: true, signal: { kind: 'eat_out' }, workoutStyle, location }
-      case 'missed': return { ok: true, signal: { kind: 'missed', days: input.days ?? 2 }, workoutStyle, location }
-      case 'craving': return { ok: true, signal: { kind: 'craving' }, workoutStyle, location }
-      case 'stressed': return { ok: true, signal: { kind: 'stressed' }, workoutStyle, location }
+      case 'time_crunch': return { ok: true, signal: { kind: 'time_crunch', minutes: input.minutes ?? 20 }, ...extras }
+      case 'exhausted': return { ok: true, signal: { kind: 'exhausted' }, ...extras }
+      case 'poor_sleep': return { ok: true, signal: { kind: 'poor_sleep' }, ...extras }
+      case 'schedule_change': return { ok: true, signal: { kind: 'schedule_change', freeAt: input.free_at || undefined }, ...extras }
+      case 'eat_out': return { ok: true, signal: { kind: 'eat_out' }, ...extras }
+      case 'missed': return { ok: true, signal: { kind: 'missed', days: input.days ?? 2 }, ...extras }
+      case 'craving': return { ok: true, signal: { kind: 'craving' }, ...extras }
+      case 'stressed': return { ok: true, signal: { kind: 'stressed' }, ...extras }
       case 'injury': {
         const part = (INJURY_BODY_PARTS as readonly string[]).includes(input.body_part || '') ? (input.body_part as Injury) : null
-        return part ? { ok: true, signal: { kind: 'injury', bodyPart: part }, workoutStyle, location } : { ok: false }
+        return part ? { ok: true, signal: { kind: 'injury', bodyPart: part }, ...extras } : { ok: false }
       }
-      case 'none': return { ok: true, signal: null, workoutStyle, location }
+      case 'none': return { ok: true, signal: null, ...extras }
       default: return { ok: false }
     }
   } catch { return { ok: false } }
@@ -148,5 +155,15 @@ export function detectLocation(text: string): 'home' | 'gym' | 'traveling' | und
   if (/traveling|travelling|on the road|\bhotel\b|no equipment|no gym access/.test(t)) return 'traveling'
   if (/\b(at |from |i'?m )?home\b/.test(t)) return 'home'
   if (/\bgym\b/.test(t)) return 'gym'
+  return undefined
+}
+
+// Regex-fallback counterpart to CLASSIFY_TOOL's focus_area field — an explicit
+// one-off "give me an arm workout today" request, not her permanent default.
+export function detectFocusArea(text: string): FocusAreaRequest | undefined {
+  const t = ` ${text.toLowerCase()} `
+  if (/\barms?\b|\bbiceps?\b|\btriceps?\b/.test(t)) return 'arms'
+  if (/\blegs?\b|\bglutes?\b|\bquads?\b|\bhamstrings?\b/.test(t)) return 'legs'
+  if (/\bcore\b|\babs?\b|\bwaistline\b/.test(t)) return 'core'
   return undefined
 }

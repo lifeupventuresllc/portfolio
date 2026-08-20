@@ -61,12 +61,19 @@ export default async function WorkoutSession() {
 
   const trackOverride = todayAdjustment?.workoutChange?.trackOverride
   const injuryOverride = todayAdjustment?.workoutChange?.injuryBodyPart
-  if (((trackOverride && trackOverride !== program.track) || injuryOverride) && intake) {
+  // A chat-approved "focus on arms/legs/core today" request — same TODAY-ONLY
+  // regeneration mechanism as trackOverride/injuryOverride, not a permanent
+  // plan change. Real gap found live: this used to only ever be read from her
+  // PERMANENT intake.form_data.focus_area default, so approving a one-off
+  // "build me an arm workout" in chat never actually showed an arm-focused
+  // session here — the dashboard kept rendering her regular saved program.
+  const focusOverride = todayAdjustment?.workoutChange?.focusOverride
+  if (((trackOverride && trackOverride !== program.track) || injuryOverride || focusOverride) && intake) {
     const goal = (intake.goal === 'gain' || intake.goal === 'maintain' ? intake.goal : 'lose') as 'lose' | 'gain' | 'maintain'
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
     const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle
-    const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
+    const focusArea = (focusOverride || (intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
     program = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex, track: trackOverride || program.track, level, goal,
       daysPerWeek: Number(intake.days_per_week) || 3, weekNumber: 1, injuries, postpartum, trainingStyle, focusArea,
