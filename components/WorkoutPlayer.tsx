@@ -9,7 +9,7 @@ import QuickFeedback from '@/components/QuickFeedback'
 import EffortTap from '@/components/EffortTap'
 import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { buildSteps, dayLabels, estimateWorkoutMinutes, trimStepsToTarget, type WorkoutStep } from '@/lib/workout-steps'
-import type { WorkoutProgram } from '@/lib/workout'
+import { GOAL_LABEL, type WorkoutProgram } from '@/lib/workout'
 import { hapticTap } from '@/lib/haptics'
 
 // Guided in-workout player. Opens straight into TODAY'S session (no picker
@@ -127,6 +127,10 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
         <button onClick={() => setSwitching((s) => !s)} className="text-center">
           <p className="text-gold text-[10px] font-semibold tracking-[0.2em] uppercase">
             {targetMinutes ? '⚡ Shortened for today' : "Today's session"} · about {estimateWorkoutMinutes(steps)} min
+            {/* Real, not cosmetic — reps/sets and cardio duration are now
+                actually built for this goal (see lib/workout.ts's
+                repScheme()), not just labeled with it. */}
+            {(GOAL_LABEL as Record<string, string>)[program.goal] && ` · ${(GOAL_LABEL as Record<string, string>)[program.goal]}`}
           </p>
           <p className="text-white text-sm font-bold leading-tight">{labels[dayIdx]} <span className="text-ivory/40">▾</span></p>
         </button>

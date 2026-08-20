@@ -91,8 +91,28 @@ export interface WorkoutProgram {
 }
 
 const LEVEL_LABEL: Record<Level, string> = { 1: 'Beginner', 2: 'Intermediate', 3: 'Advanced' }
-const REP_SCHEME: Record<Level, string> = { 1: '2 × 10–12', 2: '3 × 15 / 12 / 10', 3: '3 × 20 / 15 / 12' }
+export const GOAL_LABEL: Record<WorkoutInputs['goal'], string> = { lose: 'Fat Loss', gain: 'Muscle Gain', maintain: 'Maintain' }
 const AB_SCHEME: Record<Level, string> = { 1: '2 sets × 8–12', 2: '2–3 sets × 12–15', 3: '3–4 sets × 15+ (add weight)' }
+
+// Real goal-based programming, not just a label. Standard, well-established
+// exercise-science distinction: fat loss favors higher reps + shorter rest
+// for metabolic density; muscle gain favors more sets at a moderate rep
+// range for volume; maintain keeps the original baseline scheme untouched
+// (minimizes behavior change for anyone already on that goal). Found+fixed:
+// `goal` was captured in intake, stored, even passed into this function, and
+// then structurally IGNORED — it only ever changed one sentence of cardio
+// note text (see cardioFinisher in workout-exercises.ts), never the actual
+// sets/reps/volume. Confirmed by reading every call site before this fix —
+// two people with identical level/track/days/focus but different stated
+// goals got byte-for-byte the same program.
+const REP_SCHEME: Record<Level, Record<WorkoutInputs['goal'], string>> = {
+  1: { lose: '3 × 12–15 (short rest)', gain: '3 × 8–10', maintain: '2 × 10–12' },
+  2: { lose: '3 × 18 / 15 / 12 (short rest)', gain: '4 × 10 / 8 / 8', maintain: '3 × 15 / 12 / 10' },
+  3: { lose: '4 × 20 / 15 / 12 / 12 (short rest)', gain: '4 × 10 / 8 / 6 / 6', maintain: '3 × 20 / 15 / 12' },
+}
+function repScheme(level: Level, goal: WorkoutInputs['goal']): string {
+  return REP_SCHEME[level][goal] || REP_SCHEME[level].maintain
+}
 
 // Personalized calorie estimate: METs scaled off the client's own Mifflin-St Jeor BMR
 // (weight+height+age+sex) rather than the generic population-average "1 MET = 1
@@ -219,11 +239,11 @@ function pickGym(movement: Movement, muscles: string[], level: Level, weekOffset
 // muscles, appended to the day's existing accessory work (same place the
 // calf-raise/tibialis pair already lives) — same shape as the 'core' bonus
 // ab exercise below, so all three focus areas behave consistently.
-function pickFocusAccessory(muscles: Muscle[], level: Level, offset: number, injuries: Injury[], usedNames: Set<string>): { name: string; reps: string; cue: string } | null {
+function pickFocusAccessory(muscles: Muscle[], level: Level, goal: WorkoutInputs['goal'], offset: number, injuries: Injury[], usedNames: Set<string>): { name: string; reps: string; cue: string } | null {
   const ok = (e: GymExercise) => muscles.includes(e.muscle) && e.minLevel <= level && !isContraindicated(e.name, injuries) && !usedNames.has(e.name)
   const pick = rotate(GYM_POOL.filter(ok), offset)[0]
   if (!pick) return null
-  return { name: pick.name, reps: REP_SCHEME[level], cue: `${pick.cue} (bonus set — from your chosen focus area)` }
+  return { name: pick.name, reps: repScheme(level, goal), cue: `${pick.cue} (bonus set — from your chosen focus area)` }
 }
 
 // Priority pool (Asa's curated screenshot batch) is the PRIMARY source now — the
@@ -284,10 +304,10 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
       const push = pushC.find(e => !usedPush.has(e.name)) || pushC[0]
       const pull = pullC.find(e => !usedPull.has(e.name)) || pullC[0]
       usedPush.add(push.name); usedPull.add(pull.name)
-      return { title: `${push.name} + ${pull.name}`, push, pull, reps: REP_SCHEME[level] }
+      return { title: `${push.name} + ${pull.name}`, push, pull, reps: repScheme(level, inp.goal) }
     })
     const usedNames = new Set<string>(Array.from(usedPush).concat(Array.from(usedPull)))
-    const focusBonus = targets.length ? pickFocusAccessory(targets, level, off + 7, injuries, usedNames) : null
+    const focusBonus = targets.length ? pickFocusAccessory(targets, level, inp.goal, off + 7, injuries, usedNames) : null
     return {
       dayNum,
       title: spec.title,
@@ -373,12 +393,20 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
     const ordered = rotate(atLevelSplit.hi, off).concat(rotate(atLevelSplit.lo, off), rotate(lowerSplit.hi, off), rotate(lowerSplit.lo, off))
     return picked.concat(ordered.slice(0, remaining).map(e => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl })))
   }
+  // Real gap found+fixed: generateHome never read `goal` at all — same
+  // program regardless of stated goal, not even the cosmetic difference the
+  // gym track had. Cardio finisher duration now varies (more for fat loss,
+  // less for muscle gain, matching the gym track's cardioFinisher logic),
+  // and 'lose' gets one extra circuit exercise below for real added
+  // metabolic density — same "goalBump" shape as the existing focus-area bump.
+  const CARDIO_SEC: Record<WorkoutInputs['goal'], number> = { lose: 90, gain: 45, maintain: 60 }
   const finisher = (off: number) => {
     const atLevel = avail.filter(e => e.type === 'cardio' && e.level === level)
     const cardio = atLevel.length ? atLevel : avail.filter(e => e.type === 'cardio')
     const pick = rotate(cardio, off)[0] || { name: 'March in Place' }
-    return { name: pick.name, duration: '60 sec', imageUrl: (pick as { imageUrl?: string }).imageUrl }
+    return { name: pick.name, duration: `${CARDIO_SEC[inp.goal]} sec`, imageUrl: (pick as { imageUrl?: string }).imageUrl }
   }
+  const goalBump = inp.goal === 'lose' ? 1 : 0
 
   const minutes = level === 1 && (week <= 1) ? '20 min' : '15 min'
   const estCalories = estimateHomeCalories(inp, level, minutes)
@@ -394,7 +422,7 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
     // non-core pick there is already the focus type), so without this bump
     // 'legs'/'arms' focus would do literally nothing on the most common split.
     const bump = focusType && types.includes(focusType) ? 1 : 0
-    const exercises = [...byType(types, off, 4 + bump), finisher(off + 3)]
+    const exercises = [...byType(types, off, 4 + bump + goalBump), finisher(off + 3)]
     return { dayNum: i + 1, title: `Day ${i + 1}: ${focus}`, exercises, estCalories }
   })
 

@@ -1,7 +1,7 @@
 // On-screen renderer for a generated WorkoutProgram (gym or home).
 // Server component; when `editable`, gym superset moves get a swap control
 // whose options are computed here (same muscle, her level, injury-safe).
-import type { WorkoutProgram, GymDay } from '@/lib/workout'
+import { GOAL_LABEL, type WorkoutProgram, type GymDay } from '@/lib/workout'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { swapOptions } from '@/lib/workout-swap'
 import ExerciseSwap from '@/components/ExerciseSwap'
@@ -34,6 +34,12 @@ export default function WorkoutView({ program, editable = false, level = 1, inju
         <span className="text-[10px] bg-gold/15 text-gold px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold">{program.levelLabel}</span>
         <span className="text-[10px] bg-obsidian border border-smoke text-ivory/60 px-2.5 py-1 rounded-full uppercase tracking-wider">{isHome ? 'Home' : 'Gym'}</span>
         <span className="text-[10px] bg-obsidian border border-smoke text-ivory/60 px-2.5 py-1 rounded-full uppercase tracking-wider">Week {program.weekNumber}</span>
+        {/* Real, not cosmetic — this program's rep/set scheme and cardio
+            duration are now actually built for this goal, not just labeled
+            with it. See lib/workout.ts's repScheme()/GOAL_LABEL. */}
+        {(GOAL_LABEL as Record<string, string>)[program.goal] && (
+          <span className="text-[10px] bg-obsidian border border-smoke text-ivory/60 px-2.5 py-1 rounded-full uppercase tracking-wider">Goal: {(GOAL_LABEL as Record<string, string>)[program.goal]}</span>
+        )}
         {program.targetNote && <span className="text-[10px] bg-obsidian border border-smoke text-ivory/60 px-2.5 py-1 rounded-full uppercase tracking-wider">Focus: {program.targetNote}</span>}
       </div>
 

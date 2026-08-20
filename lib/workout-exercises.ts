@@ -153,9 +153,22 @@ export const WARMUPS: Record<string, string[]> = {
 }
 
 // ---------- CARDIO FINISHER (incline treadmill; fixed 3.3 mph) ----------
+// Duration now genuinely varies by goal, not just the note text (real gap
+// found+fixed: this used to only swap one sentence — more cardio for fat
+// loss, less for muscle gain to reduce interference with recovery, is
+// standard coaching practice and now actually changes the minutes, not just
+// what she reads).
+const CARDIO_MIN_ADJUST: Record<string, number> = { lose: 5, gain: -5, maintain: 0 }
 export function cardioFinisher(level: Level, goal: string) {
-  const base = level === 1 ? { incline: '0–2.5%', mins: '15–20 min' } : level === 2 ? { incline: '2.5–3.0%', mins: '20–25 min' } : { incline: '3.0–4.0%', mins: '25–30 min' }
-  return { title: 'Incline Treadmill Walk', speed: '3.3 mph (fixed)', ...base, note: goal === 'gain' ? 'Keeps heart rate up without burning muscle — walk tall, no handrails.' : 'Your fat-burning finisher — walk tall, shoulders back, no handrails.' }
+  const base = level === 1 ? { incline: '0–2.5%', minLow: 15, minHigh: 20 } : level === 2 ? { incline: '2.5–3.0%', minLow: 20, minHigh: 25 } : { incline: '3.0–4.0%', minLow: 25, minHigh: 30 }
+  const adjust = CARDIO_MIN_ADJUST[goal] ?? 0
+  const mins = `${Math.max(10, base.minLow + adjust)}–${Math.max(15, base.minHigh + adjust)} min`
+  const note = goal === 'lose'
+    ? 'Your fat-burning finisher — walk tall, shoulders back, no handrails.'
+    : goal === 'gain'
+      ? 'Keeps heart rate up without burning muscle — walk tall, no handrails.'
+      : 'Steady-state to hold where you\'re at — walk tall, shoulders back, no handrails.'
+  return { title: 'Incline Treadmill Walk', speed: '3.3 mph (fixed)', incline: base.incline, mins, note }
 }
 
 // ---------- HOME BODYWEIGHT POOL ----------
