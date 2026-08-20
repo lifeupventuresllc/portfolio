@@ -145,7 +145,7 @@ export function detectWorkoutStyle(text: string): 'cardio' | undefined {
 // home/gym word to be caught — most travel phrasing won't mention either.
 export function detectLocation(text: string): 'home' | 'gym' | 'traveling' | undefined {
   const t = ` ${text.toLowerCase()} `
-  if (/traveling|travelling|on the road|at a hotel|no equipment|no gym access/.test(t)) return 'traveling'
+  if (/traveling|travelling|on the road|\bhotel\b|no equipment|no gym access/.test(t)) return 'traveling'
   if (/\b(at |from |i'?m )?home\b/.test(t)) return 'home'
   if (/\bgym\b/.test(t)) return 'gym'
   return undefined

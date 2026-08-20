@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import CoachHero from '@/components/CoachHero'
 
 function ExitIcon() {
@@ -26,6 +27,19 @@ function ExitIcon() {
 // throws the component away.
 export default function CoachOrbLauncher({ firstName, hasPlan }: { firstName: string; hasPlan: boolean }) {
   const [open, setOpen] = useState(false)
+  // Real root cause of "modal is huge / big blank gap / had to scroll to reach
+  // the input": app/plan/template.tsx wraps every /plan page in a `.luf-page`
+  // div that runs a one-time entrance animation touching `transform`. Even
+  // once that animation finishes, Chrome keeps treating it as an active
+  // transform context (fill-mode: both), which makes `position: fixed`
+  // descendants resolve against the PAGE's full scrollable height instead of
+  // the real viewport — confirmed live: the modal's `fixed inset-0` wrapper
+  // measured 1104px tall against a 687px viewport, so a "centered" panel sat
+  // mostly below the fold. Portaling straight to document.body sidesteps any
+  // transformed ancestor, now or from any future page animation, rather than
+  // just patching around this one instance.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
   // Standard modal behavior — the page shouldn't scroll out from under a
   // background that's supposed to read as "dimmed, still there," not gone.
@@ -75,7 +89,11 @@ export default function CoachOrbLauncher({ firstName, hasPlan }: { firstName: st
       </div>
 
       {/* Modal layer. Always mounted (not conditionally rendered) so
-          CoachHero's state survives every open/close — see the note above. */}
+          CoachHero's state survives every open/close — see the note above.
+          Portaled to document.body (see the mounted/transform-context note
+          above) — mounted guards against the SSR/first-paint mismatch since
+          document.body doesn't exist on the server. */}
+      {mounted && createPortal(
       <div
         className="fixed inset-0 z-50"
         style={{ pointerEvents: open ? 'auto' : 'none' }}
@@ -89,20 +107,22 @@ export default function CoachOrbLauncher({ firstName, hasPlan }: { firstName: st
           style={{ background: 'rgba(2,31,22,0.72)', opacity: open ? 1 : 0 }}
         />
 
-        {/* Panel — centered, 9:16, the full middle portion of the screen.
-            Scales/fades from (and back down to) the docked bar's spot rather
-            than just a flat fade, so closing genuinely reads as "returning
-            to its normal docked position," not "vanishing." */}
+        {/* Panel — centered on the middle HALF of the screen (25vh-75vh band:
+            "lower half of the top quadrant to the top half of the bottom
+            quadrant," Asa's exact spec), not a near-fullscreen 9:16 sheet.
+            The earlier 9:16 version stood ~74% of viewport tall, which left
+            a big dead gap between the greeting and the pinned input and
+            forced scrolling to reach it. Fixed height instead of an
+            aspect-ratio, so the panel always hugs that middle band
+            regardless of content length. Still scales/fades from (and back
+            down to) the docked bar's spot rather than just a flat fade, so
+            closing genuinely reads as "returning to its normal docked
+            position," not "vanishing." */}
         <div
           className="absolute left-1/2 top-1/2 transition-all duration-300 ease-out"
           style={{
-            // Width is derived from whichever constraint binds first — the
-            // viewport's width, a sane max panel width, or (on a wide/short
-            // viewport like a laptop) the height budget translated through
-            // the 9:16 ratio — so the ratio itself never gets clipped the
-            // way a plain width+aspect-ratio+max-height combo would.
-            width: 'min(90vw, 420px, calc(86vh * 9 / 16))',
-            aspectRatio: '9 / 16',
+            width: 'min(90vw, 420px)',
+            height: '50vh',
             transform: open ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -35%) scale(0.4)',
             opacity: open ? 1 : 0,
             transformOrigin: 'center bottom',
@@ -120,7 +140,9 @@ export default function CoachOrbLauncher({ firstName, hasPlan }: { firstName: st
             <CoachHero firstName={firstName} hasPlan={hasPlan} />
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
+      )}
     </>
   )
 }

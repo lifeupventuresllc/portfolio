@@ -46,6 +46,16 @@ export interface PlanBuildInput {
   other_info?: string
   focus_area?: FocusArea
   optional_completed?: boolean
+  // True only when she was actually asked the injuries question (the structured
+  // /plan/intake form's required 'injuries' step, with its explicit "None —
+  // continue" option) — NOT true just because a challenge_intake row exists.
+  // The Quickstart fast lane (app/api/plan/quickstart-workout/route.ts) creates
+  // a real intake row too, defaulting injuries to [] without ever asking, which
+  // used to make Coach Asa's chat treat "no injuries on file" as "confirmed
+  // injury-free" for those members — so a later chat workout request (e.g. "I'm
+  // in a hotel, build me a workout") silently never checked for injuries at all.
+  // Sticky once true (see buildInitialPlans below), same pattern as optional_completed.
+  injuriesAddressed?: boolean
   // Only the original structured-intake caller omits this (preserves its exact
   // existing "always defaults to a 4-day split" behavior). Coach Asa's chat build
   // passes her real answer for a more accurate workout/rest calorie split.
@@ -67,6 +77,7 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
 
   const priorFormData = (existingIntake?.form_data || {}) as Record<string, unknown>
   const optionalCompleted = !!inp.optional_completed || !!priorFormData.optional_completed
+  const injuriesAddressed = !!inp.injuriesAddressed || !!priorFormData.injuries_addressed
 
   const intakePayload = {
     enrollment_id: inp.enrollmentId,
@@ -93,6 +104,7 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
       other_info: inp.other_info || '',
       focus_area: inp.focus_area || 'overall',
       optional_completed: optionalCompleted,
+      injuries_addressed: injuriesAddressed,
     },
   }
 

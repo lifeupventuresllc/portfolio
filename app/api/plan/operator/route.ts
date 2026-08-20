@@ -11,8 +11,8 @@ import { assessGoalDrift } from '@/lib/fos/goal-drift'
 import { detectPlanIntent } from '@/lib/fos/plan-intent'
 import { buildInitialPlans } from '@/lib/plan-builder'
 import type { FosEventKind, WorkoutChange } from '@/lib/fos/types'
-import type { Injury } from '@/lib/workout-exercises'
-import type { WorkoutProgram } from '@/lib/workout'
+import type { Injury, Level } from '@/lib/workout-exercises'
+import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
 
 // Names the week's actual training days for the "built your whole plan" reply —
 // without this, a week-scope build only ever said "your Nx/week program is
@@ -144,9 +144,14 @@ export async function POST(request: NextRequest) {
   // the normal adjustment-flow below behaves exactly as it always has.
   // Widened to form_data (not just id) so the injury-safety clause below can
   // reuse this same fetch for post-intake users instead of a second round trip.
-  const { data: existingIntakeForPlan } = await svc.from('challenge_intake').select('id, form_data').eq('enrollment_id', eid).maybeSingle()
+  const { data: existingIntakeForPlan } = await svc.from('challenge_intake').select('id, experience_level, goal, sex, days_per_week, form_data').eq('enrollment_id', eid).maybeSingle()
   const recordedInjuries: Injury[] = Array.isArray((existingIntakeForPlan?.form_data as Record<string, unknown> | null)?.injuries)
     ? ((existingIntakeForPlan!.form_data as { injuries: Injury[] }).injuries) : []
+  // True only if she was genuinely asked (the structured intake form's required
+  // step, or a prior chat cold-start build's injury question) — NOT true just
+  // because a challenge_intake row exists. The Quickstart fast lane creates one
+  // with injuries defaulted to [] and never actually asks. See lib/plan-builder.ts.
+  const injuriesAddressed = !!(existingIntakeForPlan?.form_data as Record<string, unknown> | null)?.injuries_addressed
   if (!existingIntakeForPlan) {
     const { data: history } = await svc
       .from('fos_messages').select('role, content').eq('enrollment_id', eid)
@@ -210,6 +215,10 @@ export async function POST(request: NextRequest) {
         days_per_week, workout_days_per_week: days_per_week, cook_days_per_week: 2,
         injuries: intent.injuries, postpartum: false, training_style: 'none', focus_area,
         autoFillMeals: true,
+        // Gated above by needsInjuryAsk — by the time we reach here she's either
+        // just answered the explicit question or the conversation already covered
+        // it (intent.injuriesAddressed), so this is a genuine ask, not a default.
+        injuriesAddressed: true,
       })
 
       const namePrefix = enrollment.name ? `${enrollment.name}, ` : ''
@@ -307,6 +316,13 @@ export async function POST(request: NextRequest) {
   // via describeDecision() output on 2026-08-19: it never mentions "travel" for this
   // merge case even though the fallback plan.message did.
   let travelMergeAck = ''
+  // Real content preview for a fresh location-only swap — held separately and
+  // appended to `reply` after generateReply() has run, for the exact same
+  // reason as travelMergeAck above: describeDecision() only ever reads
+  // plan.workoutChange/nutritionChange, so exercise names baked into
+  // plan.message here would get silently discarded the moment Claude
+  // successfully personalizes the reply (the common case, not the fallback).
+  let workoutPreview = ''
   if (location) {
     const trackOverride: 'home' | 'gym' = location === 'gym' ? 'gym' : 'home'
     if (plan) {
@@ -322,12 +338,49 @@ export async function POST(request: NextRequest) {
       plan = { ...plan, workoutChange: { ...(plan.workoutChange || {}), trackOverride } }
       if (location === 'traveling') travelMergeAck = " Hope the trip's going well, by the way."
     } else {
+      // Real content, not a promise — build TODAY's actual session on the new
+      // track right here so the reply names real exercises. Real gap found
+      // live: without this, approving just pointed her at whatever the
+      // "Sculpt Sessions" dashboard card already had saved (her regular gym
+      // program), not a session genuinely built for where she said she was
+      // (e.g. "I'm in a hotel"). Best-effort — a preview failure still leaves
+      // a real, approvable trackOverride swap, just without the exercise list.
+      if (existingIntakeForPlan) {
+        const level = (existingIntakeForPlan.experience_level === 'advanced' ? 3 : existingIntakeForPlan.experience_level === 'intermediate' ? 2 : 1) as Level
+        const previewGoal = (existingIntakeForPlan.goal === 'gain' || existingIntakeForPlan.goal === 'maintain' ? existingIntakeForPlan.goal : 'lose') as 'lose' | 'gain' | 'maintain'
+        const sex = (existingIntakeForPlan.sex === 'male' ? 'male' : existingIntakeForPlan.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
+        const fd = (existingIntakeForPlan.form_data || {}) as Record<string, unknown>
+        const previewProgram = generateWorkout({
+          name: enrollment.name || 'Your', sex, track: trackOverride, level, goal: previewGoal,
+          daysPerWeek: Number(existingIntakeForPlan.days_per_week) || 3, weekNumber: 1,
+          injuries: recordedInjuries, postpartum: !!fd.postpartum,
+          trainingStyle: (fd.training_style as TrainingStyle) || 'none',
+          focusArea: (fd.focus_area as FocusArea) || 'overall',
+        })
+        workoutPreview = ` Today: ${summarizeTodaysWorkout(previewProgram)}.`
+      }
       plan = {
-        message: location === 'traveling'
-          ? "Hope the trip's going well — no equipment where you are, so I'll keep today's session bodyweight-only. Want me to lock that in?"
-          : `Got it — switching today to your ${trackOverride} session. Want me to lock that in?`,
+        message: (location === 'traveling'
+          ? "Hope the trip's going well — no equipment where you are, so I'll keep today's session bodyweight-only."
+          : `Got it — switching today to your ${trackOverride} session.`) + ' Want me to lock that in?',
         workoutChange: { trackOverride, reason: location === 'traveling' ? 'traveling — no equipment' : `training at ${location}` },
       }
+    }
+  }
+
+  // First chat-triggered workout swap for someone whose injuries were never
+  // actually asked (see injuriesAddressed above — the Quickstart fast lane is
+  // the common case: it creates a real intake row with injuries defaulted to
+  // [] and never asks). Asked once, folded right into this same reply instead
+  // of a separate round trip, then marked addressed immediately so it's never
+  // repeated. Skipped when this message itself IS an injury report — the
+  // recover() 'injury' case already has its own complete sentence for that.
+  let injuryAsk = ''
+  if (plan?.workoutChange && !injuriesAddressed && signal?.kind !== 'injury') {
+    injuryAsk = " Also — I don't have any injuries on file for you yet. Anything I should always work around, or are you all clear?"
+    if (existingIntakeForPlan) {
+      const fd = (existingIntakeForPlan.form_data || {}) as Record<string, unknown>
+      await svc.from('challenge_intake').update({ form_data: { ...fd, injuries_addressed: true } }).eq('id', existingIntakeForPlan.id)
     }
   }
 
@@ -434,6 +487,8 @@ export async function POST(request: NextRequest) {
   // happened wherever the exercises were actually chosen (lib/workout.ts,
   // lib/cardio-session.ts); this is just saying so, not doing the safety work itself.
   if (travelMergeAck) reply += travelMergeAck
+  if (workoutPreview) reply += workoutPreview
+  if (injuryAsk) reply += injuryAsk
   if (plan?.workoutChange && signal?.kind !== 'injury') {
     const clause = injurySafetyClause(recordedInjuries)
     if (clause) reply += clause

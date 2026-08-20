@@ -68,6 +68,9 @@ export async function POST(request: NextRequest) {
       // she completes the optional second pass, this flag flips and stays flipped,
       // so the dashboard's "finish your profile" nudge knows to stop showing.
       optional_completed: !!body.refining,
+      // The structured form's 'injuries' step is required (not optional) — every
+      // submission through here really did ask, unlike the Quickstart fast lane.
+      injuriesAddressed: true,
     })
 
     return NextResponse.json({ success: true, targets })
