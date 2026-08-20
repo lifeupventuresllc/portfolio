@@ -114,7 +114,7 @@ export default async function PlanDashboard() {
         svc.from('challenge_nutrition_plans').select('calories, meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
         svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
         getApprovedTodayAdjustment(enrollment.id as string, todayIso),
-        svc.from('challenge_intake').select('weight_lbs, target_lbs, goal, days_per_week').eq('enrollment_id', enrollment.id).maybeSingle(),
+        svc.from('challenge_intake').select('weight_lbs, target_lbs, goal, days_per_week, form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
         svc.from('challenge_checkins').select('weight_lbs, submitted_at').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('submitted_at', { ascending: false }).limit(1).maybeSingle(),
         svc.from('challenge_food_log').select('logged_on').eq('enrollment_id', enrollment.id).gte('logged_on', consistencyWindowStart),
       ])
@@ -136,13 +136,22 @@ export default async function PlanDashboard() {
   const todayWorkout = getEffectiveTodayWorkout(program, completed, todayAdjustment)
   const affirmation = affirmationForDay(localDayNumber())
 
+  // Real gap found+fixed same session as the calorie-target one: Quickstart
+  // (app/api/plan/quickstart-workout) writes a real challenge_intake row with
+  // entirely hardcoded stats (165lb, goal 'lose', 10lb target — nothing she's
+  // ever told us), same as it used to for nutrition. This progress bar read
+  // those numbers directly and showed "165 lbs → 155 lbs goal" as if it were
+  // her real starting point. Gated the same way as the calorie fix — only
+  // trust these numbers once required_tier_completed is genuinely true (the
+  // structured form's real weight/goal questions, or Coach Asa's chat build).
+  const statsProvided = !!(intakeRow?.form_data as Record<string, unknown> | null)?.required_tier_completed
   // challenge_intake has no goal_weight_lbs column — it's always derived from
   // weight_lbs +/- target_lbs (a delta, defaults to 10), same as
   // app/api/challenge/intake/route.ts computes it at intake time.
-  const startWeight = Number(intakeRow?.weight_lbs) || 0
+  const startWeight = statsProvided ? Number(intakeRow?.weight_lbs) || 0 : 0
   const targetDelta = Number(intakeRow?.target_lbs) || 10
-  const goalWeight = intakeRow?.goal === 'gain' ? startWeight + targetDelta : startWeight - targetDelta
-  const currentWeight = Number(latestCheckin?.weight_lbs) || startWeight
+  const goalWeight = statsProvided ? (intakeRow?.goal === 'gain' ? startWeight + targetDelta : startWeight - targetDelta) : 0
+  const currentWeight = statsProvided ? (Number(latestCheckin?.weight_lbs) || startWeight) : 0
   const goalDirection = (intakeRow?.goal === 'gain' || intakeRow?.goal === 'maintain' ? intakeRow.goal : 'lose') as 'lose' | 'gain' | 'maintain'
 
   // Consistency stat — deliberately separate from the weight math above, never
@@ -201,7 +210,19 @@ export default async function PlanDashboard() {
 
       {hasPlan && (
         <>
-          <GoalProgressBar startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} workoutConsistencyPct={workoutConsistencyPct} nutritionConsistencyPct={nutritionConsistencyPct} />
+          {statsProvided ? (
+            <GoalProgressBar startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} workoutConsistencyPct={workoutConsistencyPct} nutritionConsistencyPct={nutritionConsistencyPct} />
+          ) : (
+            // Same blank-state principle as the calorie card fix — no starting
+            // weight/goal on file yet (Quickstart-origin), so there's nothing
+            // real to plot. Same visual shape as GoalProgressBar's own card so
+            // the layout doesn't jump once she sets her real stats.
+            <Link href="/plan/intake" className="block rounded-[2rem] p-5" style={{ background: '#083023', border: '1px solid rgba(229,169,60,0.3)' }}>
+              <p className="text-[#E5A93C] text-[10px] uppercase tracking-wider font-semibold mb-1">Your progress</p>
+              <p className="text-white font-bold text-lg">Add your starting weight & goal</p>
+              <p className="text-white/50 text-sm mt-0.5">90 seconds — then this fills in with your real numbers, not a placeholder.</p>
+            </Link>
+          )}
 
           {/* Supporting, side by side — workout (left) · nutrition (right) */}
           <div className="grid grid-cols-2 gap-3.5">
