@@ -39,18 +39,29 @@ function summarizeWeekMeals(weekPlan: WeekPlan): string {
 // chat, not just a "check your dashboard" pointer. If she named a time budget,
 // leads with only as many moves as roughly fit it (~6 min/exercise incl. rest);
 // the full session is still saved either way.
-function summarizeTodaysWorkout(program: WorkoutProgram, minutesAvailable?: number, dayIndex = 0): string {
+function summarizeTodaysWorkout(program: WorkoutProgram, minutesAvailable?: number, dayIndex = 0, focusArea?: FocusArea): string {
   const exercises: string[] = []
   if (program.track === 'gym' && program.gymDays?.length) {
     const day = program.gymDays[dayIndex] || program.gymDays[0]
-    for (const s of day.supersets) { exercises.push(s.push.name, s.pull.name) }
-    for (const a of day.accessory) exercises.push(a.name)
     // Real gap found live: ab/core work lives in its own `day.ab` field (not
     // `accessory`), so it never showed up in a gym-track chat summary at
     // all — a "focus on my core" request could correctly generate a bonus
     // ab set server-side (see coreFocus in generateGym) and still read as
     // "zero core exercises" in the reply she actually sees.
-    if (day.ab) { exercises.push(day.ab.upper.name, day.ab.lower.name); if (day.ab.bonus) exercises.push(day.ab.bonus.name) }
+    const abNames: string[] = []
+    if (day.ab) { abNames.push(day.ab.upper.name, day.ab.lower.name); if (day.ab.bonus) abNames.push(day.ab.bonus.name) }
+    // Second real gap, found chasing the first one live: even after adding ab
+    // names above, a time-capped request ("25 minutes") still showed zero core
+    // work — the cap below just slices the first N names, and ab work was
+    // always appended dead last, after every superset AND accessory. For a
+    // 'core' focus specifically, that's exactly backwards: the one thing she
+    // asked for was the least likely to survive the cap. Front-load it only
+    // when core is what she actually asked for; every other focus already
+    // gets what it needs first via pickFocusDayIndex/pickGym's own targeting.
+    if (focusArea === 'core') exercises.push(...abNames)
+    for (const s of day.supersets) { exercises.push(s.push.name, s.pull.name) }
+    for (const a of day.accessory) exercises.push(a.name)
+    if (focusArea !== 'core') exercises.push(...abNames)
   } else if (program.home?.days.length) {
     for (const e of (program.home.days[dayIndex] || program.home.days[0]).exercises) exercises.push(e.name)
   }
@@ -180,6 +191,18 @@ export async function POST(request: NextRequest) {
 
     const conversationText = (history || []).map((h) => `${h.role}: ${h.content}`).join('\n')
     const intent = await detectPlanIntent(conversationText)
+    // Real gap found live: the AI classifier was told a named body part beats a
+    // generic "full body" mention in the same message, but didn't reliably
+    // follow that instruction — "focus on my full body and also my core" still
+    // came back focus_area: 'overall', silently dropping "core" entirely.
+    // Prompt instructions alone aren't reliable enough for something this
+    // important, so back it with a deterministic check: if she named a real
+    // area anywhere in her own words and the AI didn't come back with a
+    // specific one, trust the plain keyword match over the model's guess.
+    if (intent && intent.wantsWorkout && (!intent.focus_area || intent.focus_area === 'overall')) {
+      const ruleFocus = detectFocusArea(message)
+      if (ruleFocus) intent.focus_area = ruleFocus
+    }
 
     if (intent) {
       // The only follow-up worth her time: injuries (a wrong guess can actually hurt
@@ -254,7 +277,7 @@ export async function POST(request: NextRequest) {
       const dayIndex = pickFocusDayIndex(program, focus_area)
       let reply: string
       if (intent.scope === 'today' && intent.wantsWorkout) {
-        reply = `${namePrefix}here's what to do: ${summarizeTodaysWorkout(program, intent.minutesAvailable, dayIndex)}.`
+        reply = `${namePrefix}here's what to do: ${summarizeTodaysWorkout(program, intent.minutesAvailable, dayIndex, focus_area)}.`
         if (intent.wantsNutrition) reply += ` Calorie target's ${targets.calories}/day (${targets.protein_g}g protein)${mealSample ? ` — try ${mealSample}` : ''}. Full week's on your dashboard.`
       } else if (intent.wantsNutrition && !intent.wantsWorkout) {
         reply = `${namePrefix}built your week — target's ${targets.calories} cal/day (${targets.protein_g}g protein)${mealSample ? `. First up: ${mealSample}` : ''}. Full week's on your dashboard.`
@@ -293,7 +316,11 @@ export async function POST(request: NextRequest) {
   // spot), with no real adjustment card, nothing sourced from the actual
   // exercise engine, and no way to approve it into her real plan. Detecting
   // focus_area here routes it into the real plan/workoutChange path below instead.
-  const focusArea = aiResult.ok ? aiResult.focusArea : detectFocusArea(message)
+  // Same AI-instruction-following gap as the cold-start path above: back the
+  // model's read with a deterministic keyword check rather than trusting a
+  // prompt instruction alone to survive a compound phrasing like "full body
+  // and also my core."
+  const focusArea = (aiResult.ok ? aiResult.focusArea : undefined) || detectFocusArea(message)
 
   // Nothing situational matched — check whether she's actually just telling us
   // what she ate ("I had a slice of pizza"). Real Claude detection (see
@@ -433,7 +460,7 @@ export async function POST(request: NextRequest) {
     // buried in the accessory list. Route to whichever day actually matches
     // the requested focus instead of blindly reading day 0.
     const previewDayIndex = pickFocusDayIndex(previewProgram, finalFocusOverride)
-    workoutPreview = ` Today: ${summarizeTodaysWorkout(previewProgram, undefined, previewDayIndex)}.`
+    workoutPreview = ` Today: ${summarizeTodaysWorkout(previewProgram, undefined, previewDayIndex, finalFocusOverride)}.`
   }
 
   // First chat-triggered workout swap for someone whose injuries were never
