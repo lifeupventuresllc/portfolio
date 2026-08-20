@@ -19,3 +19,15 @@ create table if not exists voice_transcripts (
 
 create index if not exists voice_transcripts_enrollment_idx on voice_transcripts(enrollment_id, created_at desc);
 create index if not exists voice_transcripts_low_confidence_idx on voice_transcripts(low_confidence) where low_confidence = true;
+
+-- Real transcript content tied to a real user — same RLS shape as the fos_*
+-- tables (017_fitness_os.sql): she reads/writes only her own rows, the
+-- service role (used by app/api/voice/log/route.ts) does everything.
+alter table voice_transcripts enable row level security;
+
+drop policy if exists "own read voice_transcripts" on voice_transcripts;
+create policy "own read voice_transcripts" on voice_transcripts for select using (auth.uid() = user_id);
+drop policy if exists "own write voice_transcripts" on voice_transcripts;
+create policy "own write voice_transcripts" on voice_transcripts for insert with check (auth.uid() = user_id);
+drop policy if exists "service voice_transcripts" on voice_transcripts;
+create policy "service voice_transcripts" on voice_transcripts for all using (true) with check (true);
