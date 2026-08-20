@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import Link from 'next/link'
 import CoachHero from '@/components/CoachHero'
 
 function ExitIcon() {
@@ -64,10 +65,13 @@ export default function CoachOrbLauncher({ firstName, hasPlan }: { firstName: st
           conditionally hidden) while the modal's open: it's background
           content like everything else, and the scrim dims it the same way. */}
       <div className="flex flex-col items-center">
+        {/* Gold illumination accent — Asa's explicit call. A brighter border
+            plus a real outer glow layer (not just the existing drop shadow),
+            so the entry point to Coach Asa visibly reads as lit up. */}
         <button
           onClick={() => setOpen(true)}
           className="w-full flex items-center gap-3 rounded-full border-0 cursor-pointer px-4"
-          style={{ height: 52, background: '#0d3a2a', border: '1px solid rgba(229,169,60,0.4)', boxShadow: '0 4px 14px -6px rgba(0,0,0,0.4)' }}
+          style={{ height: 52, background: '#0d3a2a', border: '1px solid rgba(229,169,60,0.7)', boxShadow: '0 4px 14px -6px rgba(0,0,0,0.4), 0 0 18px 2px rgba(229,169,60,0.35)' }}
         >
           <span
             className="luf-float rounded-full shrink-0"
@@ -80,11 +84,16 @@ export default function CoachOrbLauncher({ firstName, hasPlan }: { firstName: st
           <span className="text-white text-sm font-bold">Talk to Coach Asa…</span>
         </button>
 
+        {/* Made clickable straight to the real intake form — Asa's explicit
+            call, viewing this as an anonymous visitor. Was a dead-end
+            informational card before; "your numbers show up the moment you
+            do" is a much stronger prompt when tapping it actually takes her
+            there instead of just telling her to go find it herself. */}
         {!hasPlan && (
-          <div className="bg-[#0d3a2a] border border-[#E5A93C]/30 rounded-2xl p-5 text-center mt-4 w-full">
+          <Link href="/plan/intake" className="block bg-[#0d3a2a] border border-[#E5A93C]/30 rounded-2xl p-5 text-center mt-4 w-full active:scale-[0.99] transition-transform hover:border-[#E5A93C]/60">
             <p className="text-white font-semibold text-sm mb-1">No plan built yet</p>
-            <p className="text-[#EDE7DA]/60 text-xs">Tell Coach Asa what you&apos;re looking for above, or pick a feature above — your numbers show up here the moment you do.</p>
-          </div>
+            <p className="text-[#EDE7DA]/60 text-xs">Tell Coach Asa what you&apos;re looking for above, or tap here to build your real plan — your numbers show up here the moment you do.</p>
+          </Link>
         )}
       </div>
 
