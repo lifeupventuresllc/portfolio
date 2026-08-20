@@ -56,6 +56,14 @@ export interface PlanBuildInput {
   // in a hotel, build me a workout") silently never checked for injuries at all.
   // Sticky once true (see buildInitialPlans below), same pattern as optional_completed.
   injuriesAddressed?: boolean
+  // True only when the structured /plan/intake form's REQUIRED tier (goal,
+  // focus area, body stats, training location — not just injuries) was
+  // actually submitted, as opposed to Quickstart or Coach Asa's cold-start
+  // chat build defaulting/guessing them. Distinct from injuriesAddressed:
+  // this covers goal specifically, which the workout engine now genuinely
+  // acts on (see lib/workout.ts's repScheme) — a silently-defaulted goal
+  // matters more now than it used to. Sticky once true, same pattern.
+  requiredTierCompleted?: boolean
   // Only the original structured-intake caller omits this (preserves its exact
   // existing "always defaults to a 4-day split" behavior). Coach Asa's chat build
   // passes her real answer for a more accurate workout/rest calorie split.
@@ -78,6 +86,7 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
   const priorFormData = (existingIntake?.form_data || {}) as Record<string, unknown>
   const optionalCompleted = !!inp.optional_completed || !!priorFormData.optional_completed
   const injuriesAddressed = !!inp.injuriesAddressed || !!priorFormData.injuries_addressed
+  const requiredTierCompleted = !!inp.requiredTierCompleted || !!priorFormData.required_tier_completed
 
   const intakePayload = {
     enrollment_id: inp.enrollmentId,
@@ -105,6 +114,7 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
       focus_area: inp.focus_area || 'overall',
       optional_completed: optionalCompleted,
       injuries_addressed: injuriesAddressed,
+      required_tier_completed: requiredTierCompleted,
     },
   }
 

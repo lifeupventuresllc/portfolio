@@ -46,8 +46,19 @@ export default async function TodayView() {
     svc.from('challenge_intake').select('form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
   ])
   // Moved here from /plan's dashboard (2026-08-12 redesign) — one-time invite into
-  // the optional intake pass she skipped to get here fast. Disappears for good once done.
-  const profileNeedsFinishing = !(intakeRow?.form_data as { optional_completed?: boolean } | null)?.optional_completed
+  // the profile pass(es) she skipped to get here fast. Disappears for good once done.
+  // Real gap found+fixed: this used to only ever check optional_completed, so a
+  // Quickstart-origin user (goal/focus/body/location/injuries never asked at all —
+  // goal defaults to 'lose' silently) got the SAME "fine-tune your plan" nudge as
+  // someone who'd already done the real required tier and just skipped the extras —
+  // and that nudge only opens the OPTIONAL tier, which doesn't include goal at all.
+  // She'd have no path back to ever set her real goal. Now checks required_tier_completed
+  // first (see lib/plan-builder.ts) and routes to the actual required form when that's
+  // what's missing, matching the goal-tailoring fix (see lib/workout.ts's repScheme) —
+  // a silently-defaulted goal matters more now than it used to.
+  const intakeFormData = (intakeRow?.form_data as { optional_completed?: boolean; required_tier_completed?: boolean } | null)
+  const needsRequiredTier = !intakeFormData?.required_tier_completed
+  const needsOptionalTier = !needsRequiredTier && !intakeFormData?.optional_completed
 
   const weekdayLabel = new Date().toLocaleDateString('en-US', { timeZone: tz, weekday: 'long', month: 'short', day: 'numeric' })
   const mealIdx = localMondayIndex(tz) // Mon=0 … Sat=5, Sun=6, in the user's timezone
@@ -221,8 +232,21 @@ export default async function TodayView() {
           <LevelUpNudge />
 
           {/* Moved here from /plan's dashboard (2026-08-12 redesign) — one-time
-              invite, disappears for good once she finishes the optional pass. */}
-          {profileNeedsFinishing && (
+              invite, disappears for good once she finishes the relevant pass.
+              Two distinct cards now, not one — see the needsRequiredTier note
+              above for why a Quickstart-origin user needs a different link
+              (and different copy) than someone who already set her real goal
+              and just skipped the optional extras. */}
+          {needsRequiredTier && (
+            <Link href="/plan/intake" className="group flex items-center justify-between gap-3 rounded-2xl px-5 py-3.5 transition-colors" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
+              <div>
+                <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>Set your real goal — 90 seconds</p>
+                <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>Right now your plan is using starting defaults for your goal, focus, and stats — tell me the real ones and I&apos;ll rebuild it around you.</p>
+              </div>
+              <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: CARD_ACCENT }}>→</span>
+            </Link>
+          )}
+          {needsOptionalTier && (
             <Link href="/plan/intake?tier=optional" className="group flex items-center justify-between gap-3 rounded-2xl px-5 py-3.5 transition-colors" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
               <div>
                 <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>Fine-tune your plan — 60 seconds</p>

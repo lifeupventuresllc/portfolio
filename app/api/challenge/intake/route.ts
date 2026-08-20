@@ -71,6 +71,14 @@ export async function POST(request: NextRequest) {
       // The structured form's 'injuries' step is required (not optional) — every
       // submission through here really did ask, unlike the Quickstart fast lane.
       injuriesAddressed: true,
+      // True only when the REQUIRED tier (name/goal/focus/body/location/
+      // injuries/food) was just submitted — not the optional follow-up pass.
+      // Quickstart and Coach Asa's cold-start chat build both skip this tier
+      // entirely (goal in particular gets silently defaulted), so this is
+      // the one honest signal of "she actually chose these, not the app."
+      // Sticky once true (see lib/plan-builder.ts) — an optional-tier
+      // submission afterward never flips it back to false.
+      requiredTierCompleted: !body.refining,
     })
 
     return NextResponse.json({ success: true, targets })
