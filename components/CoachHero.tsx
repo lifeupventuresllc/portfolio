@@ -12,7 +12,7 @@ import { winAffirmation } from '@/lib/affirmations'
 // page jump. Warm, minimal, alive: a gold "A" avatar, a personal greeting, and an
 // inline conversation. Approving a change refreshes the supporting cards on the spot.
 type Msg = { role: 'user' | 'operator'; content: string }
-type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home'; injuryBodyPart?: string; focusOverride?: 'core' | 'legs' | 'arms' }
+type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home'; injuryBodyPart?: string; focusOverride?: 'core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders' }
 type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string; eatingOut?: boolean }
 type Adjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionChange?: NutritionChange }
 

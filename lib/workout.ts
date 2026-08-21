@@ -25,20 +25,30 @@ export type TrainingStyle = 'compound' | 'split' | 'cardio' | 'none'
 // 'core' has no entry in the Muscle union (abs run through the separate
 // pickAb system, not GYM_POOL), so it's handled as a bonus ab set instead —
 // see the coreFocus checks in generateGym/generateHome.
-export type FocusArea = 'core' | 'legs' | 'arms' | 'overall'
-// 'arms' is the app's only upper-body focus bucket — there's no separate "chest"
-// value anywhere in the intake UI or chat classifiers, so a "chest and arms" ask
-// (a real, common request) needs to land here too. Includes 'chest' so a request
-// like that actually scores M_PUSH_ARMS/F_UPPER (chest+triceps+biceps-heavy days)
-// highest in pickFocusDayIndex below, instead of a day with zero chest work.
+// Real gap found live, via a formal bug report + Asa's own screenshot: 'arms'
+// used to be the app's only upper-body bucket, so "back," "chest and
+// shoulders," and "arms" all resolved to the exact same value — three
+// genuinely different asks returned the byte-for-byte identical workout, and
+// the recommendation card visibly told her "Focus → arms today" right under
+// Coach Asa's own reply describing a "back day." Split into real distinct
+// categories matching the Muscle tags the exercise pool already has (same
+// concept as Fitbod's "Pick Muscle Groups" override, confirmed via research
+// before building this — not a made-up structure). Scoped to chat's one-off
+// detection only: the structured intake form's permanent focus preference
+// (app/plan/intake/page.tsx) uses its own separate literal type, untouched by
+// this — she still only ever sees core/legs/arms/overall there by design.
+export type FocusArea = 'core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders' | 'overall'
 const FOCUS_TARGETS: Record<FocusArea, Muscle[]> = {
   legs: ['glutes', 'hamstrings', 'quads'],
-  arms: ['biceps', 'triceps', 'back', 'chest'],
+  arms: ['biceps', 'triceps'],
+  chest: ['chest'],
+  back: ['back'],
+  shoulders: ['shoulders'],
   core: [],
   overall: [],
 }
 const FOCUS_LABEL: Record<FocusArea, string> = {
-  core: 'Core & waistline', legs: 'Legs & glutes', arms: 'Arms, chest & back', overall: 'All-over',
+  core: 'Core & waistline', legs: 'Legs & glutes', arms: 'Arms', chest: 'Chest', back: 'Back', shoulders: 'Shoulders', overall: 'All-over',
 }
 
 export interface WorkoutInputs {
@@ -532,8 +542,12 @@ export function pickFocusDayIndex(program: WorkoutProgram, focusArea?: FocusArea
   if (program.track === 'home' && program.home?.days.length) {
     // Home's split has a real day titled "Upper Body & Core" — an actual,
     // literal match, not a heuristic — so core routes there directly instead
-    // of falling through to day 0.
-    const wantType = focusArea === 'arms' ? 'Upper' : focusArea === 'legs' ? 'Leg' : focusArea === 'core' ? 'Core' : null
+    // of falling through to day 0. Home's bodyweight pool has no chest/back/
+    // shoulders-specific split (equipment-free training doesn't usually
+    // isolate that finely, and the pool doesn't have the exercise variety to
+    // justify one) — all three route to the same "Upper" day arms already did.
+    const wantType = (focusArea === 'arms' || focusArea === 'chest' || focusArea === 'back' || focusArea === 'shoulders') ? 'Upper'
+      : focusArea === 'legs' ? 'Leg' : focusArea === 'core' ? 'Core' : null
     if (wantType) {
       const idx = program.home.days.findIndex(d => d.title.includes(wantType))
       if (idx >= 0) return idx

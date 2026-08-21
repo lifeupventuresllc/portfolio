@@ -10,7 +10,7 @@ import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
 // goal-protecting adjustment she can approve / modify / reject. "The goal never
 // changes. The path changes."
 type Msg = { role: 'user' | 'operator'; content: string }
-type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; injuryBodyPart?: string; trackOverride?: 'gym' | 'home'; focusOverride?: 'core' | 'legs' | 'arms' }
+type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; injuryBodyPart?: string; trackOverride?: 'gym' | 'home'; focusOverride?: 'core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders' }
 type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string; eatingOut?: boolean }
 type Adjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionChange?: NutritionChange }
 

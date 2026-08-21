@@ -40,7 +40,7 @@ export type FosEvent = {
 }
 
 export type AdjustmentStatus = 'recommended' | 'approved' | 'modified' | 'rejected'
-export type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home'; injuryBodyPart?: Injury; contentSwap?: 'cardio'; focusOverride?: 'core' | 'legs' | 'arms' }
+export type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home'; injuryBodyPart?: Injury; contentSwap?: 'cardio'; focusOverride?: 'core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders' }
 export type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string; eatingOut?: boolean }
 
 export type FosAdjustment = {
