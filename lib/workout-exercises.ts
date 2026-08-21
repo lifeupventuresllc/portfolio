@@ -173,7 +173,7 @@ export function cardioFinisher(level: Level, goal: string) {
 
 // ---------- HOME BODYWEIGHT POOL ----------
 export interface HomeExercise { name: string; level: Level; type: 'leg' | 'upper' | 'core' | 'cardio'; imageUrl?: string }
-export const HOME_POOL: HomeExercise[] = [
+const HOME_POOL_BASE: HomeExercise[] = [
   // beginner
   { name: 'Chair / Couch Squats', level: 1, type: 'leg' }, { name: 'Bodyweight Squats', level: 1, type: 'leg' },
   { name: 'Pulsating Squats', level: 1, type: 'leg' }, { name: 'Lunges in Place', level: 1, type: 'leg' },
@@ -203,6 +203,12 @@ export const HOME_POOL: HomeExercise[] = [
   { name: 'High-Intensity Burpees', level: 3, type: 'cardio' }, { name: 'Fast High Knees', level: 3, type: 'cardio' },
   { name: 'Explosive Bodyweight Squats', level: 3, type: 'leg' }, { name: 'Continuous Kickboxing Combinations', level: 3, type: 'leg' },
 ]
+// Real gap found while sourcing form images: GYM_POOL and AB_POOL already
+// auto-applied FORM_IMAGES by exact name (see their own .map() below), but
+// HOME_POOL was defined as a plain literal with no equivalent — so even a
+// genuinely matched home exercise (e.g. 'Bodyweight Squats') would never
+// actually show its photo. Same pattern as the other two pools now.
+export const HOME_POOL: HomeExercise[] = HOME_POOL_BASE.map((e) => (FORM_IMAGES[e.name] ? { ...e, imageUrl: FORM_IMAGES[e.name] } : e))
 
 export const HOME_WARMUP = ['Arm Circles (fwd/back) – 60 sec', 'Torso Twists – 60 sec', 'Leg Swings / Hip Circles – 60 sec']
 export const HOME_COOLDOWN = ['Toe Touches (Hamstrings) – 60 sec', 'Cross-Body Arm Stretch – 60 sec', 'Quad Stretch – 60 sec']
