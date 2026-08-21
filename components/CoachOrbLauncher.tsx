@@ -14,6 +14,26 @@ function ExitIcon() {
   )
 }
 
+// Standard expand/collapse glyphs — four corner-arrows growing outward to
+// maximize, pointing back inward to restore. Same pair every video player
+// and chat widget uses for this, so it reads instantly without a label.
+function MaximizeIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 4 20 4 20 9" /><line x1="20" y1="4" x2="13" y2="11" />
+      <polyline points="9 20 4 20 4 15" /><line x1="4" y1="20" x2="11" y2="13" />
+    </svg>
+  )
+}
+function MinimizeIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 9 15 9 15 4" /><line x1="15" y1="9" x2="21" y2="3" />
+      <polyline points="4 15 9 15 9 20" /><line x1="9" y1="15" x2="3" y2="21" />
+    </svg>
+  )
+}
+
 // The dashboard's primary focus: a compact glowing pill (emerald/mustard —
 // the Jewel-Box palette), sitting right under the hero photo. Tapping it
 // brings the real, fully-functional CoachHero forward as a centered 9:16
@@ -28,6 +48,11 @@ function ExitIcon() {
 // throws the component away.
 export default function CoachOrbLauncher({ firstName, hasPlan }: { firstName: string; hasPlan: boolean }) {
   const [open, setOpen] = useState(false)
+  // Real ask, live: the fixed middle-band panel meant a longer reply always
+  // needed scrolling, and there was no way to just take the whole screen for
+  // it — same "maximize" toggle every video/chat widget has. Persists across
+  // close/reopen on purpose, same reasoning as never unmounting CoachHero below.
+  const [maximized, setMaximized] = useState(false)
   // Real root cause of "modal is huge / big blank gap / had to scroll to reach
   // the input": app/plan/template.tsx wraps every /plan page in a `.luf-page`
   // div that runs a one-time entrance animation touching `transform`. Even
@@ -126,10 +151,19 @@ export default function CoachOrbLauncher({ firstName, hasPlan }: { firstName: st
             regardless of content length. Still scales/fades from (and back
             down to) the docked bar's spot rather than just a flat fade, so
             closing genuinely reads as "returning to its normal docked
-            position," not "vanishing." */}
+            position," not "vanishing." Maximized state takes the same panel
+            straight to a true full-screen sheet instead — same element, just
+            a different target size, so the open/close animation still works
+            identically either way. */}
         <div
-          className="absolute left-1/2 top-1/2 transition-all duration-300 ease-out"
-          style={{
+          className="absolute transition-all duration-300 ease-out"
+          style={maximized ? {
+            left: 0, top: 0, width: '100vw', height: '100dvh',
+            transform: open ? 'scale(1)' : 'scale(0.4)',
+            transformOrigin: 'center bottom',
+            opacity: open ? 1 : 0,
+          } : {
+            left: '50%', top: '50%',
             width: 'min(90vw, 420px)',
             height: '50vh',
             transform: open ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -35%) scale(0.4)',
@@ -139,14 +173,22 @@ export default function CoachOrbLauncher({ firstName, hasPlan }: { firstName: st
         >
           <div className="relative h-full" onClick={(e) => e.stopPropagation()}>
             <button
+              onClick={() => setMaximized((m) => !m)}
+              aria-label={maximized ? 'Restore chat size' : 'Maximize chat'}
+              className={`absolute z-10 h-9 w-9 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform ${maximized ? 'top-3 right-3' : '-top-2 -right-2'}`}
+              style={{ background: '#0d3a2a', border: '1px solid rgba(229,169,60,0.4)', boxShadow: '0 4px 14px -6px rgba(0,0,0,0.5)' }}
+            >
+              {maximized ? <MinimizeIcon /> : <MaximizeIcon />}
+            </button>
+            <button
               onClick={() => setOpen(false)}
               aria-label="Close chat"
-              className="absolute -top-2 -left-2 z-10 h-9 w-9 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+              className={`absolute z-10 h-9 w-9 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform ${maximized ? 'top-3 left-3' : '-top-2 -left-2'}`}
               style={{ background: '#0d3a2a', border: '1px solid rgba(229,169,60,0.4)', boxShadow: '0 4px 14px -6px rgba(0,0,0,0.5)' }}
             >
               <ExitIcon />
             </button>
-            <CoachHero firstName={firstName} hasPlan={hasPlan} />
+            <CoachHero firstName={firstName} hasPlan={hasPlan} maximized={maximized} />
           </div>
         </div>
       </div>,

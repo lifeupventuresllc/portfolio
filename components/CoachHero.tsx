@@ -44,7 +44,7 @@ function SendIcon() {
   )
 }
 
-export default function CoachHero({ firstName, hasPlan = true }: { firstName: string; hasPlan?: boolean }) {
+export default function CoachHero({ firstName, hasPlan = true, maximized = false }: { firstName: string; hasPlan?: boolean; maximized?: boolean }) {
   const router = useRouter()
   const [workoutDone, setWorkoutDone] = useState(false)
   const [nutri, setNutri] = useState<{ protein: number; target: number } | null>(null)
@@ -52,6 +52,12 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [pending, setPending] = useState<Adjustment | null>(null)
+  // Real bug found live: this modal never auto-scrolled to a new message —
+  // OperatorChat.tsx (the full-page chat) already did this, this component
+  // never had the equivalent. In a fixed-height panel that means a fresh
+  // Coach Asa reply could render entirely below the visible fold, reading as
+  // "cut off," and she'd have to find it by scrolling manually every time.
+  const endRef = useRef<HTMLDivElement>(null)
   // In-chat actionable cards, not dead-end text — after she approves a change,
   // or Coach Asa builds her a plan from scratch, take her straight to whatever
   // actually changed instead of making her navigate there herself. Clears on
@@ -75,6 +81,10 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
     el.style.height = `${Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT)}px`
   }
   useEffect(() => { autoGrow() }, [input])
+
+  // Only scroll when the message COUNT (or a new card) changes, instantly —
+  // not on every keystroke/render — so it never jumps while she's typing.
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' }) }, [messages.length, pending, justApproved, justBuilt, quickReplies])
 
   // Daily context quiz — shown once per day until she's answered (or already talked today).
   // Pre-selected with the most common answer for each so "Build my day" is tappable
@@ -217,7 +227,7 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
   }
 
   return (
-    <div className="relative h-full flex flex-col overflow-hidden rounded-[2.25rem] border border-gold/40 bg-white shadow-sm p-6">
+    <div className={`relative h-full flex flex-col overflow-hidden border border-gold/40 bg-white shadow-sm p-6 ${maximized ? '' : 'rounded-[2.25rem]'}`}>
       {/* Everything that can grow (identity + the quiz/greeting/message thread)
           lives in the scrollable top region; the input stays pinned at the
           bottom, same shape as any standard chat UI — see the footer region
@@ -321,6 +331,7 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
           ))}
         </div>
       )}
+      <div ref={endRef} />
       </div>
 
       {/* Pinned footer — the adjustment prompt, memo-recording notice, "stick
