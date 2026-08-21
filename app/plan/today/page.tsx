@@ -15,7 +15,7 @@ import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday } from '@/lib/fos/effective-plan'
 import { shortVersionFor } from '@/lib/workout-short'
 import { LIVE_CALL } from '@/lib/live-call'
-import type { WorkoutProgram, FocusArea } from '@/lib/workout'
+import { pickFocusDayIndex, type WorkoutProgram, type FocusArea } from '@/lib/workout'
 import type { WeekPlan } from '@/lib/meal-plan'
 
 export const dynamic = 'force-dynamic'
@@ -83,7 +83,6 @@ export default async function TodayView() {
   const program = (workoutPlan?.plan as WorkoutProgram) || null
   const numDays = program ? (program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)) : 1
   const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
-  const startDay = numDays > 0 ? completed % numDays : 0
   // Real gap found live: this card (the one the bottom-tab nav actually lands
   // on) had zero focus-area awareness, same class of bug as /plan's dashboard
   // card and /plan/workout — a chat-approved or cold-start-built "focus on
@@ -92,6 +91,15 @@ export default async function TodayView() {
   // first completed workout) her freshly-stored focus preference.
   const effectiveFocusArea = todayAdjustment?.workoutChange?.focusOverride
     || (completed === 0 && intakeFormData?.focus_area && intakeFormData.focus_area !== 'overall' ? intakeFormData.focus_area : undefined)
+  // Simplify pass (5-step algorithm run against this whole page): this used to
+  // compute "today's day" twice — once here via plain rotation for the dip-
+  // pattern's suggested moves, once inside getEffectiveTodayWorkout via
+  // pickFocusDayIndex for the main workout card — which could disagree the
+  // moment a focus request was active (main card shows her requested focus
+  // day, dip suggestion still shows whatever plain rotation landed on). One
+  // resolved index now, used everywhere on this page that needs "today's day."
+  const startDay = program && effectiveFocusArea ? pickFocusDayIndex(program, effectiveFocusArea)
+    : numDays > 0 ? completed % numDays : 0
   // Approved cardio swap already reflected in the title — see effective-plan.ts.
   const todayWorkout = getEffectiveTodayWorkout(program, completed, todayAdjustment, effectiveFocusArea)
 
@@ -133,6 +141,11 @@ export default async function TodayView() {
   const CARD_TEXT = '#ffffff'
   const CARD_MUTED = 'rgba(237,231,218,0.65)'
   const CARD_ACCENT = '#E5A93C'
+  // Simplify pass: every card on this page repeated this same three-property
+  // style object by hand — the actual friction that made scoping the gold
+  // recolor to just the budget card require several rounds of careful
+  // find-and-replace instead of one change. One definition, used everywhere.
+  const cardStyle = { background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }
 
   return (
     <div className="min-h-[100dvh] px-4 py-6" style={{ background: '#021F16' }}>
@@ -164,7 +177,7 @@ export default async function TodayView() {
               today's already flagged as an eat-out day (the meal section below
               becomes this exact same link) so she isn't shown the same CTA twice. */}
           {!eatingOutToday && (
-            <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-colors" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
+            <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-colors" style={cardStyle}>
               <div>
                 <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>Away from home right now?</p>
                 <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>Tap for exactly what to order — no thinking, no searching.</p>
@@ -183,7 +196,7 @@ export default async function TodayView() {
               again here was the same numbers twice in a row. */}
           <section>
             {eatingOutToday ? (
-              <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 rounded-2xl p-5 transition-colors" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
+              <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 rounded-2xl p-5 transition-colors" style={cardStyle}>
                 <div>
                   <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold mb-2" style={{ background: 'rgba(229,169,60,0.15)', color: CARD_ACCENT }}>Eat-out day</span>
                   <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>See exactly what to order</p>
@@ -192,7 +205,7 @@ export default async function TodayView() {
                 <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: CARD_ACCENT }}>→</span>
               </Link>
             ) : todayMeals ? (
-              <div className="rounded-2xl p-5 flex items-center justify-between gap-3" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
+              <div className="rounded-2xl p-5 flex items-center justify-between gap-3" style={cardStyle}>
                 <div>
                   <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold mb-1.5" style={{ background: 'rgba(229,169,60,0.15)', color: CARD_ACCENT }}>
                     {todayMeals.dayType === 'workout' ? 'Workout day' : 'Rest day'}
@@ -202,7 +215,7 @@ export default async function TodayView() {
                 <Link href="/plan/meals" className="text-xs font-semibold shrink-0" style={{ color: CARD_ACCENT }}>Edit my meals →</Link>
               </div>
             ) : (
-              <div className="rounded-2xl p-6 text-center" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
+              <div className="rounded-2xl p-6 text-center" style={cardStyle}>
                 <p className="font-semibold mb-1" style={{ color: CARD_TEXT }}>{mealIdx > 5 ? 'Sunday — recovery & reset' : 'No meal plan yet'}</p>
                 <p className="text-sm mb-3" style={{ color: CARD_MUTED }}>{mealIdx > 5 ? 'No cook plan today. Eat mindful, hit your protein, and log whatever you have above.' : 'Build this week’s meals and they’ll show up here each day.'}</p>
                 {mealIdx <= 5 && <Link href="/plan/meals" className="inline-block px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl" style={{ background: CARD_ACCENT, color: INK }}>Build my meals</Link>}
@@ -213,7 +226,7 @@ export default async function TodayView() {
           {/* Today's workout */}
           <section>
             {todayWorkout ? (
-              <div className="rounded-2xl p-5 flex items-center justify-between gap-4" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
+              <div className="rounded-2xl p-5 flex items-center justify-between gap-4" style={cardStyle}>
                 <div>
                   <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>{todayWorkout.title}</p>
                   {todayWorkout.muscles?.length ? <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>{todayWorkout.muscles.join(' · ')}</p> : null}
@@ -224,7 +237,7 @@ export default async function TodayView() {
                 <Link href="/plan/workout" className="luf-pulse shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform" style={{ background: CARD_ACCENT, color: INK }}>▶ Start</Link>
               </div>
             ) : (
-              <div className="rounded-2xl p-5 text-center" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
+              <div className="rounded-2xl p-5 text-center" style={cardStyle}>
                 <p className="font-semibold mb-1" style={{ color: CARD_TEXT }}>We hit a snag building your workout</p>
                 <p className="text-sm mb-3" style={{ color: CARD_MUTED }}>Shouldn&apos;t take more than a second to fix.</p>
                 <RebuildPlanButton />
@@ -234,7 +247,7 @@ export default async function TodayView() {
 
           {/* Coach access lives here now instead of its own tab — she should
               never feel like reaching Asa takes more than one tap from Today. */}
-          <Link href="/plan/coach" className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-colors" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
+          <Link href="/plan/coach" className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-colors" style={cardStyle}>
             <div>
               <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>Talk to Coach Asa</p>
               <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>Tell me about your day, ask a question, book a call.</p>
@@ -253,7 +266,7 @@ export default async function TodayView() {
               (and different copy) than someone who already set her real goal
               and just skipped the optional extras. */}
           {needsRequiredTier && (
-            <Link href="/plan/intake" className="group flex items-center justify-between gap-3 rounded-2xl px-5 py-3.5 transition-colors" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
+            <Link href="/plan/intake" className="group flex items-center justify-between gap-3 rounded-2xl px-5 py-3.5 transition-colors" style={cardStyle}>
               <div>
                 <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>Set your real goal — 90 seconds</p>
                 <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>Right now your plan is using starting defaults for your goal, focus, and stats — tell me the real ones and I&apos;ll rebuild it around you.</p>
@@ -262,7 +275,7 @@ export default async function TodayView() {
             </Link>
           )}
           {needsOptionalTier && (
-            <Link href="/plan/intake?tier=optional" className="group flex items-center justify-between gap-3 rounded-2xl px-5 py-3.5 transition-colors" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
+            <Link href="/plan/intake?tier=optional" className="group flex items-center justify-between gap-3 rounded-2xl px-5 py-3.5 transition-colors" style={cardStyle}>
               <div>
                 <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>Fine-tune your plan — 60 seconds</p>
                 <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>A few more details (schedule, food likes, injuries) makes it fit even better.</p>
