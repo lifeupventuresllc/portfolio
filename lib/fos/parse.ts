@@ -164,8 +164,15 @@ export function detectFocusArea(text: string): FocusAreaRequest | undefined {
   const t = ` ${text.toLowerCase()} `
   // 'arms' is the app's only upper-body focus bucket (no separate "chest" concept
   // in the workout engine — see FOCUS_TARGETS in lib/workout.ts) so chest/pecs/
-  // shoulders requests route here too, not left unmatched.
-  if (/\barms?\b|\bbiceps?\b|\btriceps?\b|\bchest\b|\bpecs?\b|\bshoulders?\b/.test(t)) return 'arms'
+  // shoulders/back requests route here too, not left unmatched. Real gap found
+  // auditing this against a formal bug report's own test list ("I want to work
+  // my back") — the AI classifiers were already told back->arms in their prompts,
+  // but this regex, the deterministic backstop for when the AI misses it, didn't
+  // have the word at all. A request that hit both failure points at once (AI
+  // misclassifies AND the backstop doesn't cover the word) would silently land
+  // with no focus_area — exactly the "sometimes works, sometimes doesn't" pattern
+  // a prompt-only fix can't fully close.
+  if (/\barms?\b|\bbiceps?\b|\btriceps?\b|\bchest\b|\bpecs?\b|\bshoulders?\b|\bback\b/.test(t)) return 'arms'
   if (/\blegs?\b|\bglutes?\b|\bquads?\b|\bhamstrings?\b/.test(t)) return 'legs'
   if (/\bcore\b|\babs?\b|\bwaistline\b/.test(t)) return 'core'
   return undefined
