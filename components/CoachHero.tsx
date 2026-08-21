@@ -186,6 +186,14 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
       const d = await r.json().catch(() => ({}))
       if (d?.reply) setMessages((m) => [...m, { role: 'operator', content: d.reply }])
       if (status === 'approved') {
+        // Real bug found live: approving marked the adjustment approved
+        // server-side correctly, but tapping through to /plan/workout right
+        // after could still show her OLD unchanged workout — Next's router
+        // cache serving a stale pre-approval page, since nothing here ever
+        // invalidated it. Same class of bug already fixed once this session
+        // for the intake-completion flow. router.refresh() guarantees the
+        // page she taps through to is actually fresh.
+        router.refresh()
         broadcastRefresh() // supporting cards reflect the change instantly
         setJustApproved(adj) // surfaces a real "take me there" card below, not just text
       }
@@ -338,10 +346,14 @@ export default function CoachHero({ firstName, hasPlan = true }: { firstName: st
           {adjLines(pending).length ? (
             <ul className="mb-2.5 space-y-0.5">{adjLines(pending).map((l, i) => <li key={i} className="text-white text-sm">• {l}</li>)}</ul>
           ) : <p className="text-ivory/70 text-sm mb-2.5">A small tweak to keep you on track today.</p>}
+          {/* Simplified to Yes/No, Asa's explicit call — "Change it" never
+              actually changed anything on its own (it only posted a reply
+              asking her to describe what she wants), so it wasn't a real
+              third choice, just a confusing extra tap. She can still just
+              type what she wants instead, exactly like before. */}
           <div className="flex gap-2">
-            <button onClick={() => decide('approved')} className="flex-1 bg-gold text-obsidian px-3 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Yes, do it</button>
-            <button onClick={() => decide('modified')} className="bg-charcoal border border-gold/40 text-gold px-3 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Change it</button>
-            <button onClick={() => decide('rejected')} className="bg-charcoal border border-smoke text-ivory/60 px-3 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Not now</button>
+            <button onClick={() => decide('approved')} className="flex-1 bg-gold text-obsidian px-3 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Yes</button>
+            <button onClick={() => decide('rejected')} className="flex-1 bg-charcoal border border-smoke text-ivory/60 px-3 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">No</button>
           </div>
         </div>
       )}

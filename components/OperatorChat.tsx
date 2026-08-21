@@ -99,6 +99,10 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
       const d = await r.json()
       if (d?.reply) setMessages((m) => [...m, { role: 'operator', content: d.reply }])
       if (status === 'approved') {
+        // Same stale-router-cache fix as CoachHero.tsx's decide() — tapping
+        // through to /plan/workout right after approving could show her old
+        // unchanged workout without this.
+        router.refresh()
         broadcastRefresh() // let the dashboard reflect the adjusted plan
         setJustApproved(adj) // surfaces a "take me there" link below, see render
       }
@@ -158,10 +162,12 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
                 {adjLines(pending).map((l, i) => <li key={i} className="text-white text-sm">• {l}</li>)}
               </ul>
             ) : <p className="text-ivory/70 text-sm mb-3">A small tweak to keep you on track today.</p>}
+            {/* Simplified to Yes/No, same reasoning as CoachHero.tsx — "Modify"
+                never actually changed anything itself, just prompted a reply
+                asking what she wants instead. She can just type that. */}
             <div className="flex gap-2">
-              <button onClick={() => decide('approved')} className="flex-1 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Approve</button>
-              <button onClick={() => decide('modified')} className="bg-charcoal border border-gold/40 text-gold px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Modify</button>
-              <button onClick={() => decide('rejected')} className="bg-charcoal border border-smoke text-ivory/60 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Reject</button>
+              <button onClick={() => decide('approved')} className="flex-1 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Yes</button>
+              <button onClick={() => decide('rejected')} className="flex-1 bg-charcoal border border-smoke text-ivory/60 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">No</button>
             </div>
             {pending.nutritionChange?.eatingOut && (
               <Link href="/plan/eating-out" className="mt-2.5 flex items-center justify-center gap-1.5 bg-obsidian border border-blue-500/30 text-blue-300 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:border-blue-400/60 transition-colors">
