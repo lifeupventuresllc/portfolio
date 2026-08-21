@@ -45,6 +45,10 @@ export interface PlanBuildInput {
   training_style?: TrainingStyle
   other_info?: string
   focus_area?: FocusArea
+  // A live chat ask for multiple areas at once ("arms, legs, and core") —
+  // separate from focus_area (the single permanent preference) since a
+  // single value can never represent a compound one-off request.
+  override_areas?: FocusArea[]
   optional_completed?: boolean
   // True only when she was actually asked the injuries question (the structured
   // /plan/intake form's required 'injuries' step, with its explicit "None —
@@ -185,6 +189,7 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     postpartum: !!inp.postpartum,
     trainingStyle: inp.training_style || 'none',
     focusArea: inp.focus_area || 'overall',
+    overrideAreas: inp.override_areas,
   })
 
   let weekPlan: ReturnType<typeof buildWeekFromSelections> | null = null

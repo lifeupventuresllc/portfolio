@@ -12,7 +12,13 @@ import { winAffirmation } from '@/lib/affirmations'
 // page jump. Warm, minimal, alive: a gold "A" avatar, a personal greeting, and an
 // inline conversation. Approving a change refreshes the supporting cards on the spot.
 type Msg = { role: 'user' | 'operator'; content: string }
-type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home'; injuryBodyPart?: string; focusOverride?: 'core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders' }
+type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home'; injuryBodyPart?: string; focusOverride?: ('core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders')[] }
+
+function joinAreas(areas: string[]): string {
+  if (areas.length <= 1) return areas[0] || ''
+  if (areas.length === 2) return `${areas[0]} and ${areas[1]}`
+  return `${areas.slice(0, -1).join(', ')}, and ${areas[areas.length - 1]}`
+}
 type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string; eatingOut?: boolean }
 type Adjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionChange?: NutritionChange }
 
@@ -214,13 +220,13 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
     const out: string[] = []; const w = a.workoutChange, n = a.nutritionChange
     if (w?.injuryBodyPart) out.push(`Workout → swapped to protect your ${w.injuryBodyPart.replace('_', ' ')}, from now on`)
     else if (w?.trackOverride) out.push(`Workout → swapped to a ${w.trackOverride === 'home' ? 'bodyweight home' : 'gym'} session${w.toMinutes ? `, ${w.toMinutes} min` : ''}`)
-    else if (w?.focusOverride) out.push(`Workout → focused on ${w.focusOverride} today`)
+    else if (w?.focusOverride?.length) out.push(`Workout → focused on ${joinAreas(w.focusOverride)} today`)
     else if (w?.toMinutes) out.push(`Workout → ${w.toMinutes}-min ${w.swapTo || 'session'}`)
     else if (w?.reason) out.push('Workout → re-slotted for today')
     // Additive, not exclusive — a track swap AND a focus request can land in
     // the same message ("I'm at a hotel, give me an arm workout"), and both
     // deserve their own line rather than only the first-matched one above.
-    if (w?.focusOverride && w?.trackOverride) out.push(`Focus → ${w.focusOverride} today`)
+    if (w?.focusOverride?.length && w?.trackOverride) out.push(`Focus → ${joinAreas(w.focusOverride)} today`)
     if (n?.dinnerSuggestion) out.push(`Nutrition → ${n.dinnerSuggestion}`)
     if (n?.calorieDelta) out.push(`Calories → ${n.calorieDelta > 0 ? '+' : ''}${n.calorieDelta}`)
     return out

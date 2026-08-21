@@ -10,7 +10,13 @@ import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
 // goal-protecting adjustment she can approve / modify / reject. "The goal never
 // changes. The path changes."
 type Msg = { role: 'user' | 'operator'; content: string }
-type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; injuryBodyPart?: string; trackOverride?: 'gym' | 'home'; focusOverride?: 'core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders' }
+type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; injuryBodyPart?: string; trackOverride?: 'gym' | 'home'; focusOverride?: ('core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders')[] }
+
+function joinAreas(areas: string[]): string {
+  if (areas.length <= 1) return areas[0] || ''
+  if (areas.length === 2) return `${areas[0]} and ${areas[1]}`
+  return `${areas.slice(0, -1).join(', ')}, and ${areas[areas.length - 1]}`
+}
 type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string; eatingOut?: boolean }
 type Adjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionChange?: NutritionChange }
 
@@ -114,10 +120,10 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
     const w = a.workoutChange, n = a.nutritionChange
     if (w?.injuryBodyPart) out.push(`Workout → swapped to protect your ${w.injuryBodyPart.replace('_', ' ')}, from now on`)
     else if (w?.trackOverride) out.push(`Workout → swapped to a ${w.trackOverride === 'home' ? 'bodyweight home' : 'gym'} session${w.toMinutes ? `, ${w.toMinutes} min` : ''}`)
-    else if (w?.focusOverride) out.push(`Workout → focused on ${w.focusOverride} today`)
+    else if (w?.focusOverride?.length) out.push(`Workout → focused on ${joinAreas(w.focusOverride)} today`)
     else if (w?.toMinutes) out.push(`Workout → ${w.toMinutes}-min ${w.swapTo || 'session'}`)
     else if (w?.reason) out.push(`Workout → re-slotted (${w.reason})`)
-    if (w?.focusOverride && w?.trackOverride) out.push(`Focus → ${w.focusOverride} today`)
+    if (w?.focusOverride?.length && w?.trackOverride) out.push(`Focus → ${joinAreas(w.focusOverride)} today`)
     if (n?.dinnerSuggestion) out.push(`Nutrition → ${n.dinnerSuggestion}`)
     if (n?.calorieDelta) out.push(`Calories → ${n.calorieDelta > 0 ? '+' : ''}${n.calorieDelta}`)
     return out

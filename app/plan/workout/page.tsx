@@ -2,13 +2,31 @@ import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import WorkoutPlayer from '@/components/WorkoutPlayer'
 import QuickstartWorkout from '@/components/QuickstartWorkout'
-import { generateWorkout, pickFocusDayIndex, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
+import { generateWorkout, pickFocusDayIndex, applyProgressiveOverload, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
 import { generateCardioSession } from '@/lib/cardio-session'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { localDateISO } from '@/lib/localdate'
+import { localDateISO, addDaysISO } from '@/lib/localdate'
 
 export const dynamic = 'force-dynamic'
+
+// Real progressive-overload trigger — counts consecutive PAST full weeks
+// (not the current, still-in-progress one) where she hit at least ~70% of
+// her planned training days, stopping at the first miss. A genuine earned
+// streak, computed from her actual logged workout dates, not a guess.
+function consistentWeeksStreak(loggedDates: Set<string>, plannedPerWeek: number, todayISO: string, maxWeeks = 8): number {
+  if (plannedPerWeek <= 0) return 0
+  const threshold = Math.max(2, Math.round(plannedPerWeek * 0.7))
+  let streak = 0
+  for (let w = 1; w <= maxWeeks; w++) {
+    const weekStart = addDaysISO(todayISO, -7 * w)
+    let count = 0
+    for (let d = 0; d < 7; d++) if (loggedDates.has(addDaysISO(weekStart, d))) count++
+    if (count >= threshold) streak++
+    else break
+  }
+  return streak
+}
 
 export default async function WorkoutSession() {
   const supabase = createClient()
@@ -30,7 +48,7 @@ export default async function WorkoutSession() {
   const firstName = (enrollment.name || user.email?.split('@')[0] || 'there').split(' ')[0]
   const [{ data: workoutPlan }, { data: doneRows }, { data: intake }, todayAdjustment] = await Promise.all([
     svc.from('challenge_workout_plans').select('*').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
-    svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
+    svc.from('challenge_progress').select('measurements, logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
     svc.from('challenge_intake').select('*').eq('enrollment_id', enrollment.id).maybeSingle(),
     getApprovedTodayAdjustment(enrollment.id as string, localDateISO()),
   ])
@@ -68,15 +86,16 @@ export default async function WorkoutSession() {
   // "build me an arm workout" in chat never actually showed an arm-focused
   // session here — the dashboard kept rendering her regular saved program.
   const focusOverride = todayAdjustment?.workoutChange?.focusOverride
-  if (((trackOverride && trackOverride !== program.track) || injuryOverride || focusOverride) && intake) {
+  if (((trackOverride && trackOverride !== program.track) || injuryOverride || focusOverride?.length) && intake) {
     const goal = (intake.goal === 'gain' || intake.goal === 'maintain' ? intake.goal : 'lose') as 'lose' | 'gain' | 'maintain'
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
     const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle
-    const focusArea = (focusOverride || (intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
+    const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
     program = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex, track: trackOverride || program.track, level, goal,
       daysPerWeek: Number(intake.days_per_week) || 3, weekNumber: 1, injuries, postpartum, trainingStyle, focusArea,
+      overrideAreas: focusOverride?.length ? focusOverride : undefined,
     })
   }
 
@@ -88,6 +107,13 @@ export default async function WorkoutSession() {
   const numDays = permanentPlan.track === 'home' ? (permanentPlan.home?.days.length || 1) : (permanentPlan.gymDays?.length || 1)
   const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
   let startDay = numDays > 0 ? completed % numDays : 0
+  // Real progressive overload — see applyProgressiveOverload in lib/workout.ts.
+  // Post-process only, applied to whichever program is about to be shown
+  // (regenerated-for-today or her stored plan) — never changes which
+  // exercises get picked, only the load/duration presented for them.
+  const loggedDates = new Set((doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).map((r) => r.logged_on as string))
+  const consistencyWeeks = consistentWeeksStreak(loggedDates, Number(intake?.days_per_week) || 3, localDateISO())
+  program = applyProgressiveOverload(program, consistencyWeeks)
   // Real bug found live: focusOverride alone never changes which day comes
   // first in her weekly rotation — a chat-approved "build me an arm
   // workout" saved a real workoutChange and regenerated `program` correctly
@@ -98,7 +124,11 @@ export default async function WorkoutSession() {
   // day. Route to the focus-matching day today specifically, same as the
   // track/injury overrides above already do implicitly by regenerating
   // `program` itself.
-  if (focusOverride) startDay = pickFocusDayIndex(program, focusOverride)
+  // overrideAreas above builds day 0 directly from exactly the requested
+  // areas (see daySpecFromAreas in lib/workout.ts), so it's already the
+  // right day by construction — no per-day scoring needed the way a single
+  // focusArea used to require.
+  if (focusOverride?.length) startDay = 0
   // Real gap found live: a Coach Asa COLD-START build (no account/profile yet,
   // built right in chat) has no fos_adjustment at all, so focusOverride above
   // is never set — "build me a chest and arm workout" got the right content

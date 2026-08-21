@@ -3,7 +3,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { localDateISO, localHourNumber, localDayNumber, localMondayIndex, addDaysISO } from '@/lib/localdate'
 import type { WeekPlan } from '@/lib/meal-plan'
 import { recover, injurySafetyClause, type LifeSignal, type RecoveryPlan } from '@/lib/fos/recovery'
-import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation, detectFocusArea } from '@/lib/fos/parse'
+import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation, detectFocusAreas } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
 import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
 import { extractProfileFacts, generateReply, describeDecision, answerGeneralQuestion } from '@/lib/fos/memory'
@@ -12,7 +12,7 @@ import { detectPlanIntent } from '@/lib/fos/plan-intent'
 import { buildInitialPlans } from '@/lib/plan-builder'
 import type { FosEventKind, WorkoutChange } from '@/lib/fos/types'
 import type { Injury, Level } from '@/lib/workout-exercises'
-import { generateWorkout, pickFocusDayIndex, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
+import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
 
 // Names the week's actual training days for the "built your whole plan" reply —
 // without this, a week-scope build only ever said "your Nx/week program is
@@ -39,8 +39,9 @@ function summarizeWeekMeals(weekPlan: WeekPlan): string {
 // chat, not just a "check your dashboard" pointer. If she named a time budget,
 // leads with only as many moves as roughly fit it (~6 min/exercise incl. rest);
 // the full session is still saved either way.
-function summarizeTodaysWorkout(program: WorkoutProgram, minutesAvailable?: number, dayIndex = 0, focusArea?: FocusArea): string {
+function summarizeTodaysWorkout(program: WorkoutProgram, minutesAvailable?: number, dayIndex = 0, focusAreas?: FocusArea[]): string {
   const exercises: string[] = []
+  const wantsCore = !!focusAreas?.includes('core')
   if (program.track === 'gym' && program.gymDays?.length) {
     const day = program.gymDays[dayIndex] || program.gymDays[0]
     // Real gap found live: ab/core work lives in its own `day.ab` field (not
@@ -56,12 +57,12 @@ function summarizeTodaysWorkout(program: WorkoutProgram, minutesAvailable?: numb
     // always appended dead last, after every superset AND accessory. For a
     // 'core' focus specifically, that's exactly backwards: the one thing she
     // asked for was the least likely to survive the cap. Front-load it only
-    // when core is what she actually asked for; every other focus already
-    // gets what it needs first via pickFocusDayIndex/pickGym's own targeting.
-    if (focusArea === 'core') exercises.push(...abNames)
+    // when core is among what she actually asked for; every other focus
+    // already gets what it needs first via the day's own supersets.
+    if (wantsCore) exercises.push(...abNames)
     for (const s of day.supersets) { exercises.push(s.push.name, s.pull.name) }
     for (const a of day.accessory) exercises.push(a.name)
-    if (focusArea !== 'core') exercises.push(...abNames)
+    if (!wantsCore) exercises.push(...abNames)
   } else if (program.home?.days.length) {
     for (const e of (program.home.days[dayIndex] || program.home.days[0]).exercises) exercises.push(e.name)
   }
@@ -191,17 +192,20 @@ export async function POST(request: NextRequest) {
 
     const conversationText = (history || []).map((h) => `${h.role}: ${h.content}`).join('\n')
     const intent = await detectPlanIntent(conversationText)
-    // Real gap found live: the AI classifier was told a named body part beats a
-    // generic "full body" mention in the same message, but didn't reliably
-    // follow that instruction — "focus on my full body and also my core" still
-    // came back focus_area: 'overall', silently dropping "core" entirely.
+    // Real gap found live: the AI classifier was told named areas beat a
+    // generic "full body" mention, but didn't reliably follow that
+    // instruction, and separately could still miss a real area entirely.
     // Prompt instructions alone aren't reliable enough for something this
-    // important, so back it with a deterministic check: if she named a real
-    // area anywhere in her own words and the AI didn't come back with a
-    // specific one, trust the plain keyword match over the model's guess.
-    if (intent && intent.wantsWorkout && (!intent.focus_area || intent.focus_area === 'overall')) {
-      const ruleFocus = detectFocusArea(message)
-      if (ruleFocus) intent.focus_area = ruleFocus
+    // important, so back it with a deterministic check: any real area found
+    // by the plain keyword scan that the AI didn't already capture gets
+    // added in — this only ever adds areas she genuinely named, never
+    // removes ones the AI already found.
+    if (intent && intent.wantsWorkout && !intent.focusOverall) {
+      const ruleFocuses = detectFocusAreas(message)
+      const existing = new Set(intent.focus_areas || [])
+      const merged = [...(intent.focus_areas || [])]
+      for (const a of ruleFocuses) if (!existing.has(a)) merged.push(a)
+      if (merged.length) intent.focus_areas = merged
     }
 
     if (intent) {
@@ -212,7 +216,7 @@ export async function POST(request: NextRequest) {
       // else (weight, goal, days/week, experience) gets a silent, disclosed default
       // instead of another question.
       const needsInjuryAsk = intent.wantsWorkout && !intent.injuriesAddressed
-      const needsFocusAsk = intent.wantsWorkout && !intent.focus_area
+      const needsFocusAsk = intent.wantsWorkout && !intent.focus_areas?.length && !intent.focusOverall
       // A wrong guess here isn't unsafe like injuries, but it silently determines
       // rep/set schemes and day structure (see lib/workout.ts's level-aware split
       // and repScheme) — worth one real question instead of a silent 'beginner'
@@ -252,7 +256,14 @@ export async function POST(request: NextRequest) {
       // so this is a genuine value, not a silent guess. The ?? 'beginner' is just a
       // type-safety fallback, not expected to actually fire in practice.
       const experience_level = intent.experience_level ?? 'beginner'
-      const focus_area = intent.focus_area || 'overall'
+      // Real fix, root cause: focus_area used to be a single value, so "arms,
+      // legs, and core" could only ever keep one of the three. focus_areas is
+      // the full list of everything she actually named — override_areas below
+      // builds a real day from ALL of them (see daySpecFromAreas in
+      // lib/workout.ts), not just the first. focus_area (singular) stays only
+      // as the permanent-preference fallback when she named nothing specific.
+      const focus_areas = intent.focus_areas?.length ? intent.focus_areas : undefined
+      const focus_area = focus_areas?.[0] || 'overall'
 
       const { targets, program, weekPlan } = await buildInitialPlans({
         enrollmentId: eid, userId: user.id, name: enrollment.name || 'Your',
@@ -260,6 +271,7 @@ export async function POST(request: NextRequest) {
         activity_level: 'moderate', experience_level, training_location,
         days_per_week, workout_days_per_week: days_per_week, cook_days_per_week: 2,
         injuries: intent.injuries, postpartum: false, training_style: 'none', focus_area,
+        override_areas: focus_areas,
         autoFillMeals: true,
         // Gated above by needsInjuryAsk — by the time we reach here she's either
         // just answered the explicit question or the conversation already covered
@@ -269,15 +281,14 @@ export async function POST(request: NextRequest) {
 
       const namePrefix = enrollment.name ? `${enrollment.name}, ` : ''
       const mealSample = weekPlan ? summarizeWeekMeals(weekPlan) : ''
-      // Real gap found live: this reply always showed day 0 of the freshly-built
-      // program regardless of focus_area — a "chest and arms" ask could land on a
-      // leg-forward day just because it happened to be first. The other chat path
-      // (workoutChange/focusOverride below) already gets this right via
-      // pickFocusDayIndex; the cold-start build never called it at all.
-      const dayIndex = pickFocusDayIndex(program, focus_area)
+      // Day 0 is already the correct day by construction now — when
+      // override_areas was passed above, generateGym/generateHome build day 0
+      // directly from those exact areas (see lib/workout.ts), so there's
+      // nothing left to search for the way pickFocusDayIndex used to.
+      const dayIndex = 0
       let reply: string
       if (intent.scope === 'today' && intent.wantsWorkout) {
-        reply = `${namePrefix}here's what to do: ${summarizeTodaysWorkout(program, intent.minutesAvailable, dayIndex, focus_area)}.`
+        reply = `${namePrefix}here's what to do: ${summarizeTodaysWorkout(program, intent.minutesAvailable, dayIndex, focus_areas)}.`
         if (intent.wantsNutrition) reply += ` Calorie target's ${targets.calories}/day (${targets.protein_g}g protein)${mealSample ? ` — try ${mealSample}` : ''}. Full week's on your dashboard.`
       } else if (intent.wantsNutrition && !intent.wantsWorkout) {
         reply = `${namePrefix}built your week — target's ${targets.calories} cal/day (${targets.protein_g}g protein)${mealSample ? `. First up: ${mealSample}` : ''}. Full week's on your dashboard.`
@@ -331,7 +342,17 @@ export async function POST(request: NextRequest) {
   // model's read with a deterministic keyword check rather than trusting a
   // prompt instruction alone to survive a compound phrasing like "full body
   // and also my core."
-  const focusArea = (aiResult.ok ? aiResult.focusArea : undefined) || detectFocusArea(message)
+  // Merge, not either/or — same reasoning as the cold-start path's ruleFocuses
+  // merge above: the AI read can miss a compound phrasing, so a deterministic
+  // keyword scan backs it up rather than replacing it, and any area either one
+  // catches survives (never just the first-matched one).
+  const focusAreas = (() => {
+    const fromAi = aiResult.ok ? aiResult.focusAreas || [] : []
+    const fromRules = detectFocusAreas(message)
+    const merged = [...fromAi]
+    for (const a of fromRules) if (!merged.includes(a)) merged.push(a)
+    return merged
+  })()
 
   // Nothing situational matched — check whether she's actually just telling us
   // what she ate ("I had a slice of pizza"). Real Claude detection (see
@@ -385,10 +406,13 @@ export async function POST(request: NextRequest) {
   // (bare "build me an arm workout") so it gets a real adjustment card and
   // real engine-sourced content instead of falling through to the generic
   // Q&A path below.
-  if (focusArea) {
+  if (focusAreas.length) {
+    const label = focusAreas.length === 1 ? focusAreas[0]
+      : focusAreas.length === 2 ? `${focusAreas[0]} and ${focusAreas[1]}`
+      : `${focusAreas.slice(0, -1).join(', ')}, and ${focusAreas[focusAreas.length - 1]}`
     plan = plan
-      ? { ...plan, workoutChange: { ...(plan.workoutChange || {}), focusOverride: focusArea } }
-      : { message: `Got it — ${focusArea} today. Want me to lock that in?`, workoutChange: { focusOverride: focusArea, reason: `requested ${focusArea} focus` } }
+      ? { ...plan, workoutChange: { ...(plan.workoutChange || {}), focusOverride: focusAreas } }
+      : { message: `Got it — ${label} today. Want me to lock that in?`, workoutChange: { focusOverride: focusAreas, reason: `requested ${label} focus` } }
   }
 
   // She told us where she's training today — never ask when she's already said it.
@@ -451,7 +475,7 @@ export async function POST(request: NextRequest) {
   // failure still leaves a real, approvable swap, just without the list.
   const finalTrackOverride = plan?.workoutChange?.trackOverride
   const finalFocusOverride = plan?.workoutChange?.focusOverride
-  if ((finalTrackOverride || finalFocusOverride) && existingIntakeForPlan) {
+  if ((finalTrackOverride || finalFocusOverride?.length) && existingIntakeForPlan) {
     const level = (existingIntakeForPlan.experience_level === 'advanced' ? 3 : existingIntakeForPlan.experience_level === 'intermediate' ? 2 : 1) as Level
     const previewGoal = (existingIntakeForPlan.goal === 'gain' || existingIntakeForPlan.goal === 'maintain' ? existingIntakeForPlan.goal : 'lose') as 'lose' | 'gain' | 'maintain'
     const sex = (existingIntakeForPlan.sex === 'male' ? 'male' : existingIntakeForPlan.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
@@ -462,15 +486,13 @@ export async function POST(request: NextRequest) {
       daysPerWeek: Number(existingIntakeForPlan.days_per_week) || 3, weekNumber: 1,
       injuries: recordedInjuries, postpartum: !!fd.postpartum,
       trainingStyle: (fd.training_style as TrainingStyle) || 'none',
-      focusArea: finalFocusOverride || (fd.focus_area as FocusArea) || 'overall',
+      focusArea: (fd.focus_area as FocusArea) || 'overall',
+      overrideAreas: finalFocusOverride?.length ? finalFocusOverride : undefined,
     })
-    // Real bug found live: focusOverride alone never changes which day comes
-    // first in her weekly rotation (it only adds one bonus exercise to
-    // whatever day already was first) — "build me an arm workout" was
-    // naming her regular Day 1, often a leg day, with one arm exercise
-    // buried in the accessory list. Route to whichever day actually matches
-    // the requested focus instead of blindly reading day 0.
-    const previewDayIndex = pickFocusDayIndex(previewProgram, finalFocusOverride)
+    // overrideAreas above builds day 0 directly from exactly the requested
+    // areas (see daySpecFromAreas in lib/workout.ts) — no per-day scoring
+    // needed the way a single focusArea used to require via pickFocusDayIndex.
+    const previewDayIndex = 0
     workoutPreview = ` Today: ${summarizeTodaysWorkout(previewProgram, undefined, previewDayIndex, finalFocusOverride)}.`
   }
 

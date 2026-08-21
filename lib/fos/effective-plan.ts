@@ -27,10 +27,11 @@ export type EffectiveWorkout = { title: string; muscles?: string[] } | null
 // `focusArea` mirrors the same resolved value the other two surfaces use —
 // an approved one-off override, or (only before she's completed anything,
 // same reasoning as /plan/workout) her freshly-stored focus preference.
-export function getEffectiveTodayWorkout(program: WorkoutProgram | null, completedCount: number, todayAdjustment: TodayAdjustment, focusArea?: FocusArea): EffectiveWorkout {
+export function getEffectiveTodayWorkout(program: WorkoutProgram | null, completedCount: number, todayAdjustment: TodayAdjustment, focusArea?: FocusArea | FocusArea[]): EffectiveWorkout {
   if (!program) return null
   const numDays = program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)
-  const startDay = focusArea ? pickFocusDayIndex(program, focusArea) : (numDays > 0 ? completedCount % numDays : 0)
+  const hasFocus = Array.isArray(focusArea) ? focusArea.length > 0 : !!focusArea
+  const startDay = hasFocus ? pickFocusDayIndex(program, focusArea) : (numDays > 0 ? completedCount % numDays : 0)
   let workout: EffectiveWorkout = null
   if (program.track === 'home') {
     const d = program.home?.days[startDay]

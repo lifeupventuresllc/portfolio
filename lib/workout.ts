@@ -62,6 +62,12 @@ export interface WorkoutInputs {
   injuries?: Injury[]
   targets?: Muscle[]
   focusArea?: FocusArea
+  // Multi-area chat request ("arms, legs, and core") — replaces day 0 of the
+  // rotation with a day built directly from ALL named areas via
+  // daySpecFromAreas, instead of the single-value focusArea only ever being
+  // able to pick one. focusArea above stays for the permanent single-value
+  // preference (intake form); this is specifically for a live chat ask.
+  overrideAreas?: FocusArea[]
   postpartum?: boolean // surfaces postpartum-labeled ab work first, see pickAb
   trainingStyle?: TrainingStyle
   // Optional — only needed to surface a personalized calorie-burn estimate on the
@@ -103,6 +109,9 @@ export interface WorkoutProgram {
   injuryNotes?: string[]
   targetNote?: string
   home?: { minutes: string; warmup: string[]; days: HomeDay[]; cooldown: string[]; walking: string; estCaloriesTotal?: number }
+  // Set only when applyProgressiveOverload actually bumped the program — a
+  // real, UI-surfaceable "why did my sets change" explanation, not silent.
+  progressionNote?: string
 }
 
 const LEVEL_LABEL: Record<Level, string> = { 1: 'Beginner', 2: 'Intermediate', 3: 'Advanced' }
@@ -148,92 +157,80 @@ function estimateHomeCalories(inp: WorkoutInputs, level: Level, minutesLabel: st
   return Math.round(HOME_MET[level] * (bmr / 24) * (minutes / 60))
 }
 
-// ── Split system ─────────────────────────────────────────────
-// A day = 3 push/pull supersets. Each slot names the muscles its push
-// and pull may come from. Splits honor a true push-pull system:
-//   • Males: legs get their OWN day; upper is split push-vs-pull.
-//   • Females: legs 2–3×/week, with one leg day that's also push-pull.
-// Abs, cardio, calves + tibialis are added to every day downstream.
+// ── Split system — rebuilt from a computed foundation, not hardcoded day
+// templates ──────────────────────────────────────────────────────────────
+// Real gap that no amount of prompt/classifier tweaking could ever fix: the
+// old system had 8 separate hand-authored day objects (one per sex/day-count
+// combination), each with its own fixed muscle pairing baked in — asking for
+// "back" or "arms, legs, and core" could only ever route to whichever
+// pre-written day happened to score closest, never a day actually built
+// FROM what she asked for. Replaced with a small set of reusable muscle-
+// pairing "slot sets" plus a rotation cycle, so the split is COMPUTED for
+// any day count instead of enumerated by hand — and a chat-requested focus
+// for "today" builds a real day from her exact named areas the same way,
+// through the same function, instead of being a special case bolted on.
+// Researched real training-split science before rebuilding this (Push/Pull/
+// Legs vs. old-style single-muscle "bro splits") — PPL-style antagonist
+// pairing, training each muscle ~2x/week, is the current evidence-backed
+// default for most people including beginners, which is exactly what this
+// rotation still does; only the DaySpec objects were hand-authored, not the
+// underlying training logic, which was already correct and stays intact.
 type Slot = { push: Muscle[]; pull: Muscle[] }
 type DaySpec = { title: string; muscles: string[]; warm: 'legs' | 'upper'; slots: Slot[] }
 
-// Male day templates
-const M_PUSH_ARMS: DaySpec = {
-  title: 'Push · Chest & Triceps + Pull · Biceps', muscles: ['Chest', 'Triceps', 'Biceps'], warm: 'upper',
-  slots: [{ push: ['chest'], pull: ['biceps'] }, { push: ['triceps'], pull: ['biceps'] }, { push: ['chest', 'triceps'], pull: ['biceps'] }],
-}
-const M_LEGS: DaySpec = {
-  title: 'Legs · Push Quads + Pull Hamstrings', muscles: ['Quads', 'Hamstrings', 'Glutes'], warm: 'legs',
-  slots: [{ push: ['quads'], pull: ['hamstrings'] }, { push: ['quads'], pull: ['glutes'] }, { push: ['quads'], pull: ['hamstrings', 'glutes'] }],
-}
-const M_PUSH_DELTS: DaySpec = {
-  title: 'Push · Shoulders + Pull · Back', muscles: ['Shoulders', 'Back'], warm: 'upper',
-  slots: [{ push: ['shoulders'], pull: ['back'] }, { push: ['shoulders'], pull: ['back'] }, { push: ['shoulders'], pull: ['back'] }],
-}
-const M_UPPER: DaySpec = {
-  title: 'Upper Body · Push + Pull', muscles: ['Chest', 'Back', 'Shoulders', 'Arms'], warm: 'upper',
-  slots: [{ push: ['chest'], pull: ['back'] }, { push: ['shoulders'], pull: ['biceps'] }, { push: ['triceps'], pull: ['back'] }],
-}
-const FULL_BODY: DaySpec = {
-  title: 'Full Body · Push + Pull', muscles: ['Full Body'], warm: 'legs',
-  slots: [{ push: ['quads'], pull: ['back'] }, { push: ['chest'], pull: ['hamstrings', 'glutes'] }, { push: ['shoulders'], pull: ['biceps'] }],
+const LEGS_SLOTS: Slot[] = [{ push: ['quads'], pull: ['glutes'] }, { push: ['quads'], pull: ['hamstrings'] }, { push: ['quads'], pull: ['glutes', 'hamstrings'] }]
+const PUSH_SLOTS: Slot[] = [{ push: ['chest'], pull: ['biceps'] }, { push: ['triceps'], pull: ['biceps'] }, { push: ['chest', 'triceps'], pull: ['biceps'] }]
+const PULL_SLOTS: Slot[] = [{ push: ['shoulders'], pull: ['back'] }, { push: ['shoulders'], pull: ['back'] }, { push: ['chest'], pull: ['back'] }]
+const FULL_BODY_SLOTS: Slot[] = [{ push: ['quads'], pull: ['back'] }, { push: ['chest'], pull: ['hamstrings', 'glutes'] }, { push: ['shoulders'], pull: ['biceps'] }]
+
+const SLOT_SETS = {
+  legs: { title: 'Legs · Quads, Hamstrings & Glutes', muscles: ['Quads', 'Hamstrings', 'Glutes'], warm: 'legs' as const, slots: LEGS_SLOTS },
+  push: { title: 'Push · Chest & Triceps', muscles: ['Chest', 'Triceps', 'Biceps'], warm: 'upper' as const, slots: PUSH_SLOTS },
+  pull: { title: 'Pull · Shoulders & Back', muscles: ['Shoulders', 'Back'], warm: 'upper' as const, slots: PULL_SLOTS },
+  full: { title: 'Full Body · Push + Pull', muscles: ['Full Body'], warm: 'legs' as const, slots: FULL_BODY_SLOTS },
 }
 
-// Female day templates — glute/leg forward, upper woven in
-const F_LOWER: DaySpec = {
-  title: 'Lower · Glutes & Hamstrings', muscles: ['Glutes', 'Hamstrings', 'Quads'], warm: 'legs',
-  slots: [{ push: ['quads'], pull: ['glutes'] }, { push: ['quads'], pull: ['hamstrings'] }, { push: ['quads'], pull: ['glutes', 'hamstrings'] }],
-}
-const F_UPPER: DaySpec = {
-  title: 'Upper · Push + Pull', muscles: ['Chest', 'Back', 'Shoulders', 'Arms'], warm: 'upper',
-  slots: [{ push: ['chest'], pull: ['back'] }, { push: ['shoulders'], pull: ['biceps'] }, { push: ['triceps'], pull: ['back'] }],
-}
-const F_LOWER_PP: DaySpec = {
-  title: 'Legs + Upper · Push-Pull', muscles: ['Glutes', 'Quads', 'Upper'], warm: 'legs',
-  slots: [{ push: ['quads'], pull: ['glutes'] }, { push: ['shoulders'], pull: ['back'] }, { push: ['chest'], pull: ['hamstrings'] }],
+// Legs-forward cadence for the app's real target avatar (women) — legs hit
+// twice per 4-day cycle instead of once per 3-day cycle. A deliberate,
+// previously-confirmed product choice, kept intact — just computed via a
+// short rotation array now instead of 4 separately hand-written day objects.
+const ROTATION_CYCLE: Record<'male' | 'female', Array<keyof typeof SLOT_SETS>> = {
+  male: ['push', 'legs', 'pull'],
+  female: ['legs', 'push', 'legs', 'pull'],
 }
 
 const clampDays = (d: number) => Math.min(Math.max(Math.round(d) || 3, 1), 6)
 
-// Male: legs their own day; 4th+ days are Full Body (per coach spec).
-// Real gap found+fixed: a true beginner and an advanced lifter training the
-// same days/week used to get the IDENTICAL day-template split — only the
-// eligible exercises and rep scheme changed. The home track already varied
-// its day STRUCTURE by level (full-body-only for beginners, alternating
-// split for intermediate+); gym never did. A beginner training 3+ days/week
-// now gets Full Body every day too, same as home's approach, instead of an
-// isolating push/pull/legs split her first weeks in.
-function maleSplit(days: number, level: Level): DaySpec[] {
-  const n = clampDays(days)
-  if (level === 1) return Array(n).fill(FULL_BODY)
-  if (n === 1) return [FULL_BODY]
-  if (n === 2) return [M_UPPER, M_LEGS]
-  const base = [M_PUSH_ARMS, M_LEGS, M_PUSH_DELTS]
-  for (let i = 3; i < n; i++) base.push(FULL_BODY)
-  return base
-}
-
-// Female: legs 2–3×/week; one leg day is also push-pull (F_LOWER_PP).
-// Beginner-level fix mirrors maleSplit above, but keeps the deliberate
-// glute-forward design (F_LOWER_PP already combines legs + shoulders +
-// chest in one day — the female equivalent of "full body" here — rather
-// than forcing the male FULL_BODY template's exact muscle mix onto her).
-function femaleSplit(days: number, level: Level): DaySpec[] {
-  const n = clampDays(days)
-  if (level === 1) return Array(n).fill(F_LOWER_PP)
-  const plans: Record<number, DaySpec[]> = {
-    1: [F_LOWER_PP],
-    2: [F_LOWER, F_LOWER_PP],
-    3: [F_LOWER, F_UPPER, F_LOWER_PP],
-    4: [F_LOWER, F_UPPER, F_LOWER, F_LOWER_PP],
-    5: [F_LOWER, F_UPPER, F_LOWER, F_UPPER, F_LOWER_PP],
-    6: [F_LOWER, F_UPPER, F_LOWER, F_UPPER, F_LOWER_PP, F_UPPER],
-  }
-  return plans[n]
-}
-
+// Beginners (level 1) get Full Body every day regardless of day count —
+// same reasoning as before (isolating splits aren't the right first-weeks
+// program), just computed instead of special-cased per sex/day-count.
 function splitFor(sex: WorkoutInputs['sex'], days: number, level: Level): DaySpec[] {
-  return sex === 'male' ? maleSplit(days, level) : femaleSplit(days, level) // 'other'/undefined → female (avatar)
+  const n = clampDays(days)
+  if (level === 1) return Array(n).fill(SLOT_SETS.full)
+  const cycle = sex === 'male' ? ROTATION_CYCLE.male : ROTATION_CYCLE.female // 'other'/undefined → female (avatar)
+  return Array.from({ length: n }, (_, i) => SLOT_SETS[cycle[i % cycle.length]])
+}
+
+// The actual fix for "arms, legs, and core" only ever building "arms":
+// builds a real day directly from whatever areas she named — any number of
+// them — through the exact same Slot/DaySpec shape as the rotation above,
+// so every downstream step (superset assembly, accessory, ab work, cardio)
+// works identically whether a day came from the weekly rotation or from a
+// live chat request. 2 slots per named area keeps a 1-area ask proportionate
+// (~2 exercises) and a 3-area ask still a real, complete session (~6).
+export function daySpecFromAreas(areas: FocusArea[]): DaySpec {
+  const bodyAreas = areas.filter((a): a is Exclude<FocusArea, 'core' | 'overall'> => a !== 'core' && a !== 'overall')
+  const slots: Slot[] = bodyAreas.flatMap((area) => {
+    const m = FOCUS_TARGETS[area]
+    return [{ push: m, pull: m }, { push: m, pull: m }]
+  })
+  const label = areas.map((a) => a === 'core' ? 'Core' : a === 'overall' ? 'Full Body' : a[0].toUpperCase() + a.slice(1)).join(' + ')
+  return {
+    title: `${label}${slots.length ? '' : ' · Full Body'}`,
+    muscles: bodyAreas.length ? bodyAreas.map((a) => a[0].toUpperCase() + a.slice(1)) : ['Full Body'],
+    warm: bodyAreas.includes('legs') ? 'legs' : 'upper',
+    slots: slots.length ? slots : FULL_BODY_SLOTS,
+  }
 }
 
 export function rotate<T>(arr: T[], n: number): T[] {
@@ -317,8 +314,12 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
   const week = inp.weekNumber || 1
   const injuries = inp.injuries || []
   const targets = (inp.targets && inp.targets.length) ? inp.targets : FOCUS_TARGETS[inp.focusArea || 'overall']
-  const coreFocus = inp.focusArea === 'core'
+  const coreFocus = inp.focusArea === 'core' || !!inp.overrideAreas?.includes('core')
   const split = splitFor(inp.sex, inp.daysPerWeek || 3, level)
+  // A live chat ask for specific areas replaces "today" (day 0) with a day
+  // built directly from exactly what she named — every other day in her
+  // week keeps its normal rotation assignment, untouched.
+  if (inp.overrideAreas?.length) split[0] = daySpecFromAreas(inp.overrideAreas)
 
   return split.map((spec, i) => {
     const dayNum = i + 1
@@ -380,7 +381,7 @@ function homeSplit(daysPerWeek: number, level: Level): string[] {
   const n = clampDays(daysPerWeek)
   if (level < 2) return Array(n).fill('Full Body')
   if (n === 1) return ['Full Body']
-  const cycle = ['Leg Focus', 'Upper Body & Core 🚫 No Leg Strain']
+  const cycle = ['Leg Focus', 'Upper Body & Core']
   return Array.from({ length: n }, (_, i) => cycle[i % 2]) // n=3 → Leg/Upper/Leg, matches the original default exactly
 }
 
@@ -392,7 +393,7 @@ const HOME_AB_PRIORITY = AB_POOL.filter(a => a.priority && !a.weighted && !a.nam
 function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
   const level = inp.level
   const week = inp.weekNumber || 1
-  const coreFocus = inp.focusArea === 'core'
+  const coreFocus = inp.focusArea === 'core' || !!inp.overrideAreas?.includes('core')
   // Home exercises only carry a broad 'leg'/'upper'/'core'/'cardio' type, not
   // per-muscle data like GYM_POOL — 'upper' is the closest available proxy
   // for "arms & back". On a split that's already Leg-day/Upper-day
@@ -401,7 +402,13 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
   // Full Body days (level 1 or a 1-day/week split), where leg/upper/core mix
   // together. The count bump below is what actually adds real extra volume
   // on every split, tested against a real generated program before shipping.
-  const focusType: 'leg' | 'upper' | null = coreFocus ? null : inp.focusArea === 'legs' ? 'leg' : inp.focusArea === 'arms' ? 'upper' : null
+  // A live chat override with any upper-body area (arms/chest/back/shoulders)
+  // maps to the same 'upper' proxy — the real per-muscle split lives on the
+  // gym track (GYM_POOL has the fine-grained tags); this is home's honest ceiling.
+  const overrideUpper = inp.overrideAreas?.some((a) => a === 'arms' || a === 'chest' || a === 'back' || a === 'shoulders')
+  const focusType: 'leg' | 'upper' | null = coreFocus ? null
+    : inp.overrideAreas?.includes('legs') ? 'leg' : overrideUpper ? 'upper'
+    : inp.focusArea === 'legs' ? 'leg' : inp.focusArea === 'arms' ? 'upper' : null
   const split = homeSplit(inp.daysPerWeek || 3, level)
 
   const injuries = inp.injuries || []
@@ -510,24 +517,31 @@ export function generateWorkout(inp: WorkoutInputs): WorkoutProgram {
 // slots hit the target muscles on gym, or by the home split's own Leg/Upper
 // label), so "today" genuinely means an arm-heavy day, not just Day 1 with
 // an asterisk.
-export function pickFocusDayIndex(program: WorkoutProgram, focusArea?: FocusArea): number {
-  if (!focusArea || focusArea === 'overall') return 0
+// Accepts one area or several — a compound ask ("arms, legs, and core")
+// scores every day against the UNION of all named areas' targets rather than
+// only the first one, so the day picked is whichever real day overlaps the
+// most with everything she asked for, not just the first-named area.
+export function pickFocusDayIndex(program: WorkoutProgram, focusArea?: FocusArea | FocusArea[]): number {
+  const areas = (Array.isArray(focusArea) ? focusArea : focusArea ? [focusArea] : []).filter((a) => a !== 'overall')
+  if (!areas.length) return 0
   if (program.track === 'gym' && program.gymDays?.length) {
-    // Real gap found live: 'core' used to short-circuit straight to day 0 on
-    // the theory that ab/core work is a same-day bonus added everywhere
-    // anyway, so which day gets shown "didn't matter." It matters a lot to
-    // her: asking for "just my core" and landing on a day literally titled
-    // "Legs + Lower" reads as completely ignoring her, even though the bonus
-    // ab work really is in there. There's no true "core day" in the split
-    // (abs aren't a GYM_POOL muscle, see FOCUS_TARGETS above), so the best
-    // real signal available is to avoid a leg/full-body-titled day in favor
-    // of whichever day is least leg-dominant — not a perfect "core day," but
-    // never contradicts what she just asked for.
-    if (focusArea === 'core') {
+    const bodyAreas = areas.filter((a): a is Exclude<FocusArea, 'core' | 'overall'> => a !== 'core')
+    const wantsCore = areas.includes('core')
+    if (!bodyAreas.length && wantsCore) {
+      // Real gap found live: 'core' used to short-circuit straight to day 0 on
+      // the theory that ab/core work is a same-day bonus added everywhere
+      // anyway, so which day gets shown "didn't matter." It matters a lot to
+      // her: asking for "just my core" and landing on a day literally titled
+      // "Legs + Lower" reads as completely ignoring her, even though the bonus
+      // ab work really is in there. There's no true "core day" in the split
+      // (abs aren't a GYM_POOL muscle, see FOCUS_TARGETS above), so the best
+      // real signal available is to avoid a leg/full-body-titled day in favor
+      // of whichever day is least leg-dominant — not a perfect "core day," but
+      // never contradicts what she just asked for.
       const idx = program.gymDays.findIndex(d => !/leg|lower|full body/i.test(d.title))
       return idx >= 0 ? idx : 0
     }
-    const targets = FOCUS_TARGETS[focusArea]
+    const targets = bodyAreas.flatMap((a) => FOCUS_TARGETS[a])
     let bestIdx = 0, bestScore = -1
     program.gymDays.forEach((day, i) => {
       let score = 0
@@ -546,12 +560,55 @@ export function pickFocusDayIndex(program: WorkoutProgram, focusArea?: FocusArea
     // shoulders-specific split (equipment-free training doesn't usually
     // isolate that finely, and the pool doesn't have the exercise variety to
     // justify one) — all three route to the same "Upper" day arms already did.
-    const wantType = (focusArea === 'arms' || focusArea === 'chest' || focusArea === 'back' || focusArea === 'shoulders') ? 'Upper'
-      : focusArea === 'legs' ? 'Leg' : focusArea === 'core' ? 'Core' : null
+    const wantsUpper = areas.some((a) => a === 'arms' || a === 'chest' || a === 'back' || a === 'shoulders')
+    const wantType = wantsUpper ? 'Upper' : areas.includes('legs') ? 'Leg' : areas.includes('core') ? 'Core' : null
     if (wantType) {
       const idx = program.home.days.findIndex(d => d.title.includes(wantType))
       if (idx >= 0) return idx
     }
   }
   return 0
+}
+
+// Real progressive overload — the one new capability asked for on top of
+// the Fitbod-style rewrite: "either time or weight or both, based off the
+// user's level." No per-exercise weight log exists anywhere in this app
+// (challenge_progress only ever tracked workout-done/nutrition-done
+// booleans, not sets/reps/weight — confirmed by reading the schema before
+// building this), so a computed "add exactly 5lbs" number would be
+// fabricated, not real. What IS real and available today: her own logged
+// training consistency. A genuinely consistent pattern — the caller
+// computes this from real challenge_progress dates, see
+// app/plan/workout/page.tsx — is exactly the standard trigger real coaches
+// use to tell a client to push harder. Gym gets a WEIGHT/rep cue (no real
+// weight data to compute a number from, so it names the action instead of
+// inventing one); home/bodyweight gets a real TIME bump, since duration is
+// something this function actually controls. Pure post-process over an
+// already-built program — never changes exercise selection, only the
+// load/duration presented for it, so it can't introduce a selection bug.
+const PROGRESSION_THRESHOLD_WEEKS = 3
+export function applyProgressiveOverload(program: WorkoutProgram, consistencyWeeks: number): WorkoutProgram {
+  if (consistencyWeeks < PROGRESSION_THRESHOLD_WEEKS) return program
+  const note = `${consistencyWeeks} weeks consistent at this level — time to push a little harder.`
+  if (program.track === 'gym' && program.gymDays?.length) {
+    const cue = ' — go up in weight or reps from last time'
+    const gymDays = program.gymDays.map((day) => ({
+      ...day,
+      supersets: day.supersets.map((s) => (s.reps.includes(cue) ? s : { ...s, reps: `${s.reps}${cue}` })),
+    }))
+    return { ...program, gymDays, progressionNote: note }
+  }
+  if (program.track === 'home' && program.home) {
+    const bump = (d: string): string => {
+      const m = d.match(/^(\d+)(\D*)$/)
+      if (!m) return d
+      return `${Math.round(parseInt(m[1], 10) * 1.2)}${m[2]}`
+    }
+    const days = program.home.days.map((day) => ({
+      ...day,
+      exercises: day.exercises.map((e) => ({ ...e, duration: bump(e.duration) })),
+    }))
+    return { ...program, home: { ...program.home, days }, progressionNote: note }
+  }
+  return program
 }

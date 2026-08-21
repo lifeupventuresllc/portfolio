@@ -126,7 +126,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
         <button onClick={() => router.push('/plan')} className="text-ivory/50 hover:text-gold text-xs font-semibold">← My week</button>
         <button onClick={() => setSwitching((s) => !s)} className="text-center">
           <p className="text-gold text-[10px] font-semibold tracking-[0.2em] uppercase">
-            {targetMinutes ? '⚡ Shortened for today' : "Today's session"} · about {estimateWorkoutMinutes(steps)} min
+            {targetMinutes ? 'Shortened for today' : "Today's session"} · about {estimateWorkoutMinutes(steps)} min
             {/* Real, not cosmetic — reps/sets and cardio duration are now
                 actually built for this goal (see lib/workout.ts's
                 repScheme()), not just labeled with it. */}
@@ -136,6 +136,12 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
         </button>
         <span className="text-ivory/50 text-xs tabular-nums w-10 text-right">{i + 1}/{steps.length}</span>
       </div>
+
+      {/* Real progressive-overload callout — see applyProgressiveOverload in
+          lib/workout.ts. Only ever appears once she's actually earned it. */}
+      {program.progressionNote && (
+        <p className="text-gold/90 text-xs font-medium text-center mb-3 -mt-1">{program.progressionNote}</p>
+      )}
 
       {/* progress bar */}
       <div className="h-1.5 bg-charcoal rounded-full overflow-hidden mb-8">
@@ -169,7 +175,13 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
             <Image src={step.imageUrl} alt={step.name} width={200} height={200} className="w-full h-full object-cover" />
           </div>
         ) : (
-          <div className="w-[200px] h-[200px] rounded-full border-2 border-gold/20 flex items-center justify-center mb-2"><span className="text-6xl">🏋🏽</span></div>
+          <div className="w-[200px] h-[200px] rounded-full border-2 border-gold/20 flex items-center justify-center mb-2">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gold/60">
+              <path d="M6.5 9v6M4 10v4M17.5 9v6M20 10v4M9 12h6" strokeLinecap="round" strokeLinejoin="round" />
+              <rect x="5" y="8" width="3" height="8" rx="1" />
+              <rect x="16" y="8" width="3" height="8" rx="1" />
+            </svg>
+          </div>
         )}
 
         <h1 className="text-3xl font-bold text-white mt-7 mb-1 leading-tight text-balance">{step.name}</h1>

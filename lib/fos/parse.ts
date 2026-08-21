@@ -22,7 +22,7 @@ const CLASSIFY_TOOL = {
       body_part: { type: 'string', enum: [...INJURY_BODY_PARTS], description: 'injury only: which body part, using lower_back for any back pain' },
       workout_style: { type: 'string', enum: ['cardio'], description: 'Set ONLY if she explicitly asks for cardio/HIIT/a different type of workout than her usual one today — independent of kind, can accompany any category.' },
       location: { type: 'string', enum: ['home', 'gym', 'traveling'], description: 'Set ONLY if she explicitly states where she is or will be working out today (e.g. "I\'m home", "at the gym", "traveling for work", "no equipment here") — independent of kind, can accompany any category. Do not guess from context.' },
-      focus_area: { type: 'string', enum: ['core', 'legs', 'arms', 'chest', 'back', 'shoulders'], description: 'Set ONLY if she explicitly asks to target a specific body area for today\'s workout (e.g. "give me an arm workout", "focus on legs today", "core workout please", "I want to work my back", "chest and shoulders today"). Chest, back, and shoulders are each their own real value now — do not force everything into "arms"; "arms" means biceps/triceps specifically. If she names two areas together (e.g. "chest and arms"), pick whichever she said FIRST or most emphasized — only one focus_area can be set. Independent of kind, can accompany any category. Do not guess from context or set this for her permanent/default focus, only a request for TODAY.' },
+      focus_areas: { type: 'array', items: { type: 'string', enum: ['core', 'legs', 'arms', 'chest', 'back', 'shoulders'] }, description: 'Set to EVERY specific body area she explicitly asks to target for today\'s workout — can be one value or several, e.g. "give me an arm workout" is ["arms"], "I want to hit my legs and core today" is ["legs","core"]. Never drop a named area just because she named more than one — a compound ask like "arms, legs, and core" must capture all three, not just the first. Chest, back, and shoulders are each their own real value — do not force everything into "arms"; "arms" means biceps/triceps specifically. Independent of kind, can accompany any category. Do not guess from context or set this for her permanent/default focus, only a request for TODAY.' },
     },
     required: ['kind'],
   },
@@ -46,7 +46,7 @@ Separately, if she explicitly asks for cardio/HIIT/a different type of workout t
 
 Separately again, if she explicitly says where she is or will be training today (home, gym, traveling, "no equipment", a hotel, etc.), also set location — this can accompany any kind too. Never infer it from what she's asking for; only set it when she actually stated it — but "stated it" includes earlier in this same conversation, not only the newest line. If she said "I'm at home, no equipment" two messages ago and this message is a follow-up about the same session (e.g. approving a change, asking a clarifying question, saying "yes"), location is still 'home' — carry it forward. Only drop it if a later message clearly moves on to a different day/session.
 
-Separately again, if she explicitly asks to target a specific body area for TODAY's workout, also set focus_area — this can accompany any kind too, e.g. "I'm at a hotel, give me an arm workout" is kind=none, location=traveling, focus_area=arms. Chest, back, and shoulders are each real distinct values now (not folded into "arms" — "arms" means biceps/triceps specifically), e.g. "I want to work my back" is focus_area=back, "chest and shoulders today" is focus_area=chest or focus_area=shoulders (whichever she said first — only one value fits). If she names a specific body part alongside a general phrase like "full body"/"whole body"/"everything" in the same message (e.g. "focus on my full body and also my core"), the specific part wins — set focus_area=core, not omit it — a named body part is always a deliberate ask. Same carry-forward rule as location: if she named a focus area earlier in this conversation and hasn't since said something that contradicts or replaces it, it's still her focus for this message too — don't drop it just because her newest line didn't repeat the word. Only her permanent/default focus area lives elsewhere (her profile) — this field is only for an explicit one-off request stated in this conversation.`
+Separately again, if she explicitly asks to target specific body area(s) for TODAY's workout, also set focus_areas — this can accompany any kind too, e.g. "I'm at a hotel, give me an arm workout" is kind=none, location=traveling, focus_areas=["arms"]. Chest, back, and shoulders are each real distinct values now (not folded into "arms" — "arms" means biceps/triceps specifically). CAPTURE EVERY AREA SHE NAMES, not just one: "I want to tone my arms and hit my legs and core today" is focus_areas=["arms","legs","core"] — dropping any of the three is a real failure, not a simplification. If she names a specific body part alongside a general phrase like "full body"/"whole body"/"everything" in the same message (e.g. "focus on my full body and also my core"), the specific part wins — set focus_areas=["core"], not omit it. Same carry-forward rule as location: if she named focus area(s) earlier in this conversation and hasn't since said something that contradicts or replaces them, they're still her focus for this message too — don't drop them just because her newest line didn't repeat the words. Only her permanent/default focus area lives elsewhere (her profile) — this field is only for an explicit one-off request stated in this conversation.`
 
 // A confident "none" from Claude (nothing situational here) and "the call never
 // happened" (unconfigured / failed) are different outcomes — the first should NOT
@@ -54,7 +54,7 @@ Separately again, if she explicitly asks to target a specific body area for TODA
 // "my daughter's stressed about her exam" hitting the stressed pattern), only the
 // second should. `ok: false` means the caller should try parseSignal() instead.
 export type FocusAreaRequest = 'core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders'
-type AIClassifyResult = { ok: true; signal: LifeSignal | null; workoutStyle?: 'cardio'; location?: 'home' | 'gym' | 'traveling'; focusArea?: FocusAreaRequest } | { ok: false }
+type AIClassifyResult = { ok: true; signal: LifeSignal | null; workoutStyle?: 'cardio'; location?: 'home' | 'gym' | 'traveling'; focusAreas?: FocusAreaRequest[] } | { ok: false }
 
 // Claude-based intent classifier — replaces the regex matcher below as the primary
 // path now that the key is live. Falls back to the rule-based parser (still
@@ -89,15 +89,15 @@ export async function parseSignalAI(conversationText: string): Promise<AIClassif
     })
     const block = msg.content.find((b) => b.type === 'tool_use')
     if (!block || block.type !== 'tool_use') return { ok: false }
-    const input = block.input as { kind: string; minutes?: number; days?: number; free_at?: string; body_part?: string; workout_style?: string; location?: string; focus_area?: string }
+    const input = block.input as { kind: string; minutes?: number; days?: number; free_at?: string; body_part?: string; workout_style?: string; location?: string; focus_areas?: unknown }
     const workoutStyle: 'cardio' | undefined = input.workout_style === 'cardio' ? 'cardio' : undefined
     const location: 'home' | 'gym' | 'traveling' | undefined =
       input.location === 'home' || input.location === 'gym' || input.location === 'traveling' ? input.location : undefined
-    const focusArea: FocusAreaRequest | undefined =
-      input.focus_area === 'core' || input.focus_area === 'legs' || input.focus_area === 'arms'
-        || input.focus_area === 'chest' || input.focus_area === 'back' || input.focus_area === 'shoulders'
-        ? input.focus_area : undefined
-    const extras = { workoutStyle, location, focusArea }
+    const VALID_AREAS = ['core', 'legs', 'arms', 'chest', 'back', 'shoulders']
+    const focusAreas: FocusAreaRequest[] | undefined = Array.isArray(input.focus_areas)
+      ? (input.focus_areas as unknown[]).filter((v): v is FocusAreaRequest => VALID_AREAS.includes(v as string))
+      : undefined
+    const extras = { workoutStyle, location, focusAreas: focusAreas?.length ? focusAreas : undefined }
     switch (input.kind) {
       case 'time_crunch': return { ok: true, signal: { kind: 'time_crunch', minutes: input.minutes ?? 20 }, ...extras }
       case 'exhausted': return { ok: true, signal: { kind: 'exhausted' }, ...extras }
@@ -191,4 +191,24 @@ export function detectFocusArea(text: string): FocusAreaRequest | undefined {
   if (/\blegs?\b|\bglutes?\b|\bquads?\b|\bhamstrings?\b/.test(t)) return 'legs'
   if (/\bcore\b|\babs?\b|\bwaistline\b/.test(t)) return 'core'
   return undefined
+}
+
+// Multi-area counterpart — real gap found live via Asa's own screenshot:
+// "I wanna focus on toning up my arms and I wanna hit my legs and core
+// today" only ever built "arms," silently dropping legs and core, because
+// the single-value version (and the AI classifier's old single-value field)
+// physically couldn't hold more than one answer. Scans for every area
+// mentioned instead of stopping at the first match — a real multi-area ask
+// is common and deserves a real multi-area session, not one third of it.
+export function detectFocusAreas(text: string): FocusAreaRequest[] {
+  const t = ` ${text.toLowerCase()} `
+  const found: FocusAreaRequest[] = []
+  const add = (a: FocusAreaRequest) => { if (!found.includes(a)) found.push(a) }
+  if (/\bchest\b|\bpecs?\b/.test(t)) add('chest')
+  if (/\bback\b/.test(t)) add('back')
+  if (/\bshoulders?\b|\bdelts?\b/.test(t)) add('shoulders')
+  if (/\barms?\b|\bbiceps?\b|\btriceps?\b/.test(t)) add('arms')
+  if (/\blegs?\b|\bglutes?\b|\bquads?\b|\bhamstrings?\b/.test(t)) add('legs')
+  if (/\bcore\b|\babs?\b|\bwaistline\b/.test(t)) add('core')
+  return found
 }
