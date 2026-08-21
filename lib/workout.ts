@@ -218,11 +218,29 @@ function splitFor(sex: WorkoutInputs['sex'], days: number, level: Level): DaySpe
 // works identically whether a day came from the weekly rotation or from a
 // live chat request. 2 slots per named area keeps a 1-area ask proportionate
 // (~2 exercises) and a 3-area ask still a real, complete session (~6).
+// Real bug found live: chest and back are each ENTIRELY one movement
+// direction in GYM_POOL (every chest exercise is 'push', every back
+// exercise is 'pull' — confirmed by reading the pool) — so building a slot
+// as {push: m, pull: m} for either one asks pickGym for a movement that
+// literally does not exist for that muscle. pickGym's fallback then quietly
+// ignores the muscle filter and returns whatever's next in the whole pool,
+// which is how "focus on my back" came back with tricep/calf/core exercises
+// and only 2 real back moves. Every area gets a real antagonist pairing
+// instead — the same pairing already used for the weekly rotation's own
+// PUSH_SLOTS/PULL_SLOTS/LEGS_SLOTS above, so a live chat request and the
+// normal weekly split build a day the exact same, correct way.
+const AREA_SLOT_MUSCLES: Record<Exclude<FocusArea, 'core' | 'overall'>, { push: Muscle[]; pull: Muscle[] }> = {
+  legs: { push: ['quads'], pull: ['glutes', 'hamstrings'] },
+  arms: { push: ['triceps'], pull: ['biceps'] },
+  chest: { push: ['chest'], pull: ['biceps'] },
+  back: { push: ['shoulders'], pull: ['back'] },
+  shoulders: { push: ['shoulders'], pull: ['shoulders'] },
+}
 export function daySpecFromAreas(areas: FocusArea[]): DaySpec {
   const bodyAreas = areas.filter((a): a is Exclude<FocusArea, 'core' | 'overall'> => a !== 'core' && a !== 'overall')
   const slots: Slot[] = bodyAreas.flatMap((area) => {
-    const m = FOCUS_TARGETS[area]
-    return [{ push: m, pull: m }, { push: m, pull: m }]
+    const { push, pull } = AREA_SLOT_MUSCLES[area]
+    return [{ push, pull }, { push, pull }]
   })
   const label = areas.map((a) => a === 'core' ? 'Core' : a === 'overall' ? 'Full Body' : a[0].toUpperCase() + a.slice(1)).join(' + ')
   return {
@@ -313,7 +331,14 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
   const level = inp.level
   const week = inp.weekNumber || 1
   const injuries = inp.injuries || []
-  const targets = (inp.targets && inp.targets.length) ? inp.targets : FOCUS_TARGETS[inp.focusArea || 'overall']
+  // A live chat ask should also steer the bonus accessory pick and the
+  // exact-vs-fallback sort priority in pickGym — without this, "focus on my
+  // back" built a real back-targeted day 0 (see daySpecFromAreas) but the
+  // bonus accessory exercise still came from her unrelated PERMANENT
+  // preference, not what she actually asked for right now.
+  const targets = (inp.targets && inp.targets.length) ? inp.targets
+    : inp.overrideAreas?.length ? inp.overrideAreas.flatMap((a) => FOCUS_TARGETS[a])
+    : FOCUS_TARGETS[inp.focusArea || 'overall']
   const coreFocus = inp.focusArea === 'core' || !!inp.overrideAreas?.includes('core')
   const split = splitFor(inp.sex, inp.daysPerWeek || 3, level)
   // A live chat ask for specific areas replaces "today" (day 0) with a day
