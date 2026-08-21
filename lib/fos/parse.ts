@@ -28,7 +28,7 @@ const CLASSIFY_TOOL = {
   },
 }
 
-const CLASSIFY_SYSTEM = `You read a message a woman sends her fitness coach about her day and classify it into exactly one category:
+const CLASSIFY_SYSTEM = `You read a RECENT CONVERSATION between a woman and her AI fitness coach — not just her latest message in isolation — and classify her most recent message into exactly one category:
 - injury: she mentions a NEW pain, strain, or injury (hurt/pulled/tweaked/sprained/rolled/twisted something) — not routine post-workout soreness. If she mentions an injury AND something else (like time), still classify as injury — safety takes priority.
 - time_crunch: she's short on time today ("only have 20 min", "in a hurry")
 - exhausted: low energy, drained, burnt out
@@ -44,9 +44,9 @@ Pick the single best match. If more than one could apply (other than injury, whi
 
 Separately, if she explicitly asks for cardio/HIIT/a different type of workout than usual (not just describing how she feels), also set workout_style — this can accompany any kind, e.g. "only have 20 min, want cardio" is still kind=time_crunch with workout_style=cardio.
 
-Separately again, if she explicitly says where she is or will be training today (home, gym, traveling, "no equipment", a hotel, etc.), also set location — this can accompany any kind too. Never infer it from what she's asking for; only set it when she actually states it.
+Separately again, if she explicitly says where she is or will be training today (home, gym, traveling, "no equipment", a hotel, etc.), also set location — this can accompany any kind too. Never infer it from what she's asking for; only set it when she actually stated it — but "stated it" includes earlier in this same conversation, not only the newest line. If she said "I'm at home, no equipment" two messages ago and this message is a follow-up about the same session (e.g. approving a change, asking a clarifying question, saying "yes"), location is still 'home' — carry it forward. Only drop it if a later message clearly moves on to a different day/session.
 
-Separately again, if she explicitly asks to target a specific body area for TODAY's workout, also set focus_area — this can accompany any kind too, e.g. "I'm at a hotel, give me an arm workout" is kind=none, location=traveling, focus_area=arms. Chest, back, and shoulders are each real distinct values now (not folded into "arms" — "arms" means biceps/triceps specifically), e.g. "I want to work my back" is focus_area=back, "chest and shoulders today" is focus_area=chest or focus_area=shoulders (whichever she said first — only one value fits). If she names a specific body part alongside a general phrase like "full body"/"whole body"/"everything" in the same message (e.g. "focus on my full body and also my core"), the specific part wins — set focus_area=core, not omit it — a named body part is always a deliberate ask. Only her permanent/default focus area lives elsewhere (her profile) — this field is only for an explicit one-off request stated in this message.`
+Separately again, if she explicitly asks to target a specific body area for TODAY's workout, also set focus_area — this can accompany any kind too, e.g. "I'm at a hotel, give me an arm workout" is kind=none, location=traveling, focus_area=arms. Chest, back, and shoulders are each real distinct values now (not folded into "arms" — "arms" means biceps/triceps specifically), e.g. "I want to work my back" is focus_area=back, "chest and shoulders today" is focus_area=chest or focus_area=shoulders (whichever she said first — only one value fits). If she names a specific body part alongside a general phrase like "full body"/"whole body"/"everything" in the same message (e.g. "focus on my full body and also my core"), the specific part wins — set focus_area=core, not omit it — a named body part is always a deliberate ask. Same carry-forward rule as location: if she named a focus area earlier in this conversation and hasn't since said something that contradicts or replaces it, it's still her focus for this message too — don't drop it just because her newest line didn't repeat the word. Only her permanent/default focus area lives elsewhere (her profile) — this field is only for an explicit one-off request stated in this conversation.`
 
 // A confident "none" from Claude (nothing situational here) and "the call never
 // happened" (unconfigured / failed) are different outcomes — the first should NOT
@@ -61,8 +61,22 @@ type AIClassifyResult = { ok: true; signal: LifeSignal | null; workoutStyle?: 'c
 // zero-AI, always available) only when unconfigured or the call fails, so the
 // operator never goes silent. Output shape is identical either way: recover()'s
 // hand-tuned, identity-affirming copy is untouched — only how we read her is upgraded.
-export async function parseSignalAI(text: string): Promise<AIClassifyResult> {
-  if (!anthropicConfigured() || !text.trim()) return { ok: false }
+//
+// Real root cause found live, after several individual symptoms (leg content
+// resurfacing after asking for "back," equipment/location not respected on a
+// follow-up message) turned out to be the same underlying bug: this only ever
+// looked at her single latest message, with zero memory of anything said
+// earlier in the SAME conversation — unlike detectPlanIntent (the cold-start
+// classifier), which reads the whole thread. So the moment she said "I'm at
+// home, no equipment" or "focus on my back" in one message and then sent
+// ANYTHING else afterward (approving a change, a follow-up question, even
+// just "yes"), that context vanished completely for every message after it,
+// since each call started from nothing. `conversationText` is the recent
+// thread formatted as "role: content" lines (same shape detectPlanIntent
+// already uses) — her latest message is still the one being classified, the
+// difference is the model can now actually see what came before it.
+export async function parseSignalAI(conversationText: string): Promise<AIClassifyResult> {
+  if (!anthropicConfigured() || !conversationText.trim()) return { ok: false }
   try {
     const client = new Anthropic()
     const msg = await client.messages.create({
@@ -71,7 +85,7 @@ export async function parseSignalAI(text: string): Promise<AIClassifyResult> {
       system: CLASSIFY_SYSTEM,
       tools: [CLASSIFY_TOOL],
       tool_choice: { type: 'tool', name: 'classify_life_signal' },
-      messages: [{ role: 'user', content: text }],
+      messages: [{ role: 'user', content: conversationText }],
     })
     const block = msg.content.find((b) => b.type === 'tool_use')
     if (!block || block.type !== 'tool_use') return { ok: false }

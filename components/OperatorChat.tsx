@@ -166,8 +166,8 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
                 never actually changed anything itself, just prompted a reply
                 asking what she wants instead. She can just type that. */}
             <div className="flex gap-2">
-              <button onClick={() => decide('approved')} className="flex-1 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Yes</button>
-              <button onClick={() => decide('rejected')} className="flex-1 bg-charcoal border border-smoke text-ivory/60 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">No</button>
+              <button onClick={() => decide('approved')} className="flex-1 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Yes, update it</button>
+              <button onClick={() => decide('rejected')} className="flex-1 bg-charcoal border border-smoke text-ivory/60 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">No, keep it</button>
             </div>
             {pending.nutritionChange?.eatingOut && (
               <Link href="/plan/eating-out" className="mt-2.5 flex items-center justify-center gap-1.5 bg-obsidian border border-blue-500/30 text-blue-300 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:border-blue-400/60 transition-colors">

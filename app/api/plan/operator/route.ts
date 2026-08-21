@@ -303,7 +303,18 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const aiResult = await parseSignalAI(message)
+  // Root cause found live: parseSignalAI used to only ever see her single
+  // latest message, so anything she'd said a message or two earlier (a
+  // stated location/equipment situation, a focus area) vanished the instant
+  // she sent anything else — approving a change, a follow-up question, even
+  // just "yes." Pulling a real recent window and formatting it the same way
+  // the cold-start classifier already does (which never had this problem)
+  // gives it actual conversational memory instead of message-by-message amnesia.
+  const { data: recentHistory } = await svc
+    .from('fos_messages').select('role, content').eq('enrollment_id', eid)
+    .order('created_at', { ascending: false }).limit(10)
+  const conversationText = [...(recentHistory || [])].reverse().map((h) => `${h.role}: ${h.content}`).join('\n')
+  const aiResult = await parseSignalAI(conversationText)
   const signal = aiResult.ok ? aiResult.signal : parseSignal(message)
   const signalSource: 'ai' | 'rule' = aiResult.ok ? 'ai' : 'rule'
   const workoutStyle = aiResult.ok ? aiResult.workoutStyle : detectWorkoutStyle(message)

@@ -189,7 +189,14 @@ export const HOME_POOL: HomeExercise[] = [
   { name: 'Bicycle Kicks', level: 2, type: 'core' }, { name: 'Kickboxing Kicks (Right Leg)', level: 2, type: 'leg' },
   { name: 'Kickboxing Kicks (Left Leg)', level: 2, type: 'leg' }, { name: 'Lateral Toe Touches (Skater Style)', level: 2, type: 'cardio' },
   { name: 'Regular Push-Ups', level: 2, type: 'upper' }, { name: 'Oblique Toe Touches with Movement', level: 2, type: 'core' },
-  { name: 'Jump Rope', level: 2, type: 'cardio' },
+  // Real gap found live: "Jump Rope" was the one entry in this whole pool
+  // that actually needs equipment — every other move here (jumping jacks,
+  // high knees, mountain climbers, running in place) is genuinely bodyweight,
+  // which is the entire point of the "home" track (no gym, no equipment
+  // assumed). She asked for a home workout and got handed something she
+  // may not own. Swapped for a real equipment-free substitute at the same
+  // level and intensity, not just deleted.
+  { name: 'Butt Kicks', level: 2, type: 'cardio' },
   // advanced
   { name: 'Skater Jumps', level: 3, type: 'cardio' }, { name: 'Skater Jumps + Pulsating Squat Combo', level: 3, type: 'leg' },
   { name: 'Forward Jumps + Run Back', level: 3, type: 'cardio' }, { name: 'High-Intensity Mountain Climbers', level: 3, type: 'cardio' },

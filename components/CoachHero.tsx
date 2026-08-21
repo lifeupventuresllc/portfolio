@@ -362,9 +362,12 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
               asking her to describe what she wants), so it wasn't a real
               third choice, just a confusing extra tap. She can still just
               type what she wants instead, exactly like before. */}
+          {/* Real ask, live: bare "Yes"/"No" still didn't say what she was
+              agreeing to — explicit verbs make it unambiguous without going
+              back to 3 buttons. */}
           <div className="flex gap-2">
-            <button onClick={() => decide('approved')} className="flex-1 bg-gold text-obsidian px-3 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Yes</button>
-            <button onClick={() => decide('rejected')} className="flex-1 bg-charcoal border border-smoke text-ivory/60 px-3 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">No</button>
+            <button onClick={() => decide('approved')} className="flex-1 bg-gold text-obsidian px-3 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">Yes, update it</button>
+            <button onClick={() => decide('rejected')} className="flex-1 bg-charcoal border border-smoke text-ivory/60 px-3 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">No, keep it</button>
           </div>
         </div>
       )}
