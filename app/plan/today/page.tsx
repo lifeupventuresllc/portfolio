@@ -20,6 +20,25 @@ import type { WeekPlan } from '@/lib/meal-plan'
 
 export const dynamic = 'force-dynamic'
 
+// Plain outline glyphs, never emoji — standing style rule (see CoachOrbLauncher's
+// ExitIcon for the same stroke/weight convention this matches).
+function ChatIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4.5h16a1 1 0 0 1 1 1V16a1 1 0 0 1-1 1H9l-4.5 4V17H4a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1Z" />
+    </svg>
+  )
+}
+function TargetIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="4.5" />
+      <circle cx="12" cy="12" r="0.6" fill="currentColor" />
+    </svg>
+  )
+}
+
 export default async function TodayView() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -187,41 +206,19 @@ export default async function TodayView() {
           )}
 
           {/* Food log — the heartbeat of the daily view. Budget = TODAY'S calorie target
-              (workout days higher, rest days lower); the app already knows which day this is. */}
-          <FoodLog planned={planned} budget={calBudget} dayType={todayMeals?.dayType ?? null} />
-
-          {/* Today's planned meals — kept to one line + an edit link, not a
-              second itemized list. FoodLog above already shows every planned
-              meal (tap to log), so repeating name/cal/protein for each one
-              again here was the same numbers twice in a row. */}
-          <section>
-            {eatingOutToday ? (
-              <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 rounded-2xl p-5 transition-colors" style={cardStyle}>
-                <div>
-                  <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold mb-2" style={{ background: 'rgba(229,169,60,0.15)', color: CARD_ACCENT }}>Eat-out day</span>
-                  <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>See exactly what to order</p>
-                  <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>No thinking, no searching — picked for you, budget-matched.</p>
-                </div>
-                <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: CARD_ACCENT }}>→</span>
-              </Link>
-            ) : todayMeals ? (
-              <div className="rounded-2xl p-5 flex items-center justify-between gap-3" style={cardStyle}>
-                <div>
-                  <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold mb-1.5" style={{ background: 'rgba(229,169,60,0.15)', color: CARD_ACCENT }}>
-                    {todayMeals.dayType === 'workout' ? 'Workout day' : 'Rest day'}
-                  </span>
-                  <p className="text-sm" style={{ color: CARD_MUTED }}>Target {todayMeals.target} cal · {todayMeals.totalProtein}g protein planned</p>
-                </div>
-                <Link href="/plan/meals" className="text-xs font-semibold shrink-0" style={{ color: CARD_ACCENT }}>Edit my meals →</Link>
-              </div>
-            ) : (
-              <div className="rounded-2xl p-6 text-center" style={cardStyle}>
-                <p className="font-semibold mb-1" style={{ color: CARD_TEXT }}>{mealIdx > 5 ? 'Sunday — recovery & reset' : 'No meal plan yet'}</p>
-                <p className="text-sm mb-3" style={{ color: CARD_MUTED }}>{mealIdx > 5 ? 'No cook plan today. Eat mindful, hit your protein, and log whatever you have above.' : 'Build this week’s meals and they’ll show up here each day.'}</p>
-                {mealIdx <= 5 && <Link href="/plan/meals" className="inline-block px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl" style={{ background: CARD_ACCENT, color: INK }}>Build my meals</Link>}
-              </div>
-            )}
-          </section>
+              (workout days higher, rest days lower); the app already knows which day this is.
+              Layout-simplify pass (Option A, Asa's pick): the old standalone "today's
+              meals" card merged into this one as a single status row instead of a
+              second full card saying nearly the same thing the budget ring already
+              implies — fewer full-width blocks to scroll past, same information. */}
+          <FoodLog
+            planned={planned} budget={calBudget} dayType={todayMeals?.dayType ?? null}
+            mealStatus={
+              eatingOutToday ? { kind: 'eatingOut' }
+                : todayMeals ? { kind: 'planned', totalProtein: todayMeals.totalProtein }
+                : { kind: 'empty', isSunday: mealIdx > 5 }
+            }
+          />
 
           {/* Today's workout */}
           <section>
@@ -245,44 +242,35 @@ export default async function TodayView() {
             )}
           </section>
 
-          {/* Coach access lives here now instead of its own tab — she should
-              never feel like reaching Asa takes more than one tap from Today. */}
-          <Link href="/plan/coach" className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-colors" style={cardStyle}>
-            <div>
-              <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>Talk to Coach Asa</p>
-              <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>Tell me about your day, ask a question, book a call.</p>
-            </div>
-            <span className="text-sm shrink-0" style={{ color: CARD_ACCENT }}>→</span>
-          </Link>
-
           {/* Moved here from /plan's dashboard (2026-08-12 redesign) — infrequent,
-              only renders itself when she's actually eligible. */}
+              only renders itself when she's actually eligible. Kept as its own card,
+              not folded into the pill row below — it's a real inline accept/decline
+              decision, not a one-tap "go somewhere" link, so a pill can't represent it. */}
           <LevelUpNudge />
 
-          {/* Moved here from /plan's dashboard (2026-08-12 redesign) — one-time
-              invite, disappears for good once she finishes the relevant pass.
-              Two distinct cards now, not one — see the needsRequiredTier note
-              above for why a Quickstart-origin user needs a different link
-              (and different copy) than someone who already set her real goal
-              and just skipped the optional extras. */}
-          {needsRequiredTier && (
-            <Link href="/plan/intake" className="group flex items-center justify-between gap-3 rounded-2xl px-5 py-3.5 transition-colors" style={cardStyle}>
-              <div>
-                <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>Set your real goal — 90 seconds</p>
-                <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>Right now your plan is using starting defaults for your goal, focus, and stats — tell me the real ones and I&apos;ll rebuild it around you.</p>
-              </div>
-              <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: CARD_ACCENT }}>→</span>
+          {/* Layout-simplify pass (Option A, Asa's pick): Coach Asa access + the
+              intake nudges below were three separate full-width cards saying
+              "go somewhere else" — collapsed into one row of compact links since
+              none of them need more than a label and an icon to do their job.
+              Real content unchanged (nothing here failed the required-test —
+              Coach Asa is the app's only mobile entry point outside /plan itself,
+              and the intake nudges are load-bearing for real personalization,
+              see the needsRequiredTier note above) — only the visual weight drops. */}
+          <div className="flex flex-wrap gap-2">
+            <Link href="/plan/coach" className="inline-flex items-center gap-2 rounded-full pl-3.5 pr-4 py-2.5 text-xs font-semibold transition-colors" style={{ background: 'rgba(229,169,60,0.1)', border: '1px solid rgba(229,169,60,0.3)', color: CARD_ACCENT }}>
+              <ChatIcon /> Coach Asa
             </Link>
-          )}
-          {needsOptionalTier && (
-            <Link href="/plan/intake?tier=optional" className="group flex items-center justify-between gap-3 rounded-2xl px-5 py-3.5 transition-colors" style={cardStyle}>
-              <div>
-                <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>Fine-tune your plan — 60 seconds</p>
-                <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>A few more details (schedule, food likes, injuries) makes it fit even better.</p>
-              </div>
-              <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: CARD_ACCENT }}>→</span>
-            </Link>
-          )}
+            {needsRequiredTier && (
+              <Link href="/plan/intake" className="inline-flex items-center gap-2 rounded-full pl-3.5 pr-4 py-2.5 text-xs font-semibold transition-colors" style={{ background: 'rgba(229,169,60,0.1)', border: '1px solid rgba(229,169,60,0.3)', color: CARD_ACCENT }}>
+                <TargetIcon /> Set your real goal
+              </Link>
+            )}
+            {needsOptionalTier && (
+              <Link href="/plan/intake?tier=optional" className="inline-flex items-center gap-2 rounded-full pl-3.5 pr-4 py-2.5 text-xs font-semibold transition-colors" style={{ background: 'rgba(229,169,60,0.1)', border: '1px solid rgba(229,169,60,0.3)', color: CARD_ACCENT }}>
+                <TargetIcon /> Fine-tune your plan
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </div>

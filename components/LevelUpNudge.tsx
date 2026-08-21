@@ -34,7 +34,7 @@ export default function LevelUpNudge() {
   return (
     <div className="rounded-2xl border border-emerald-400/40 bg-gradient-to-br from-emerald-500/20 to-charcoal bg-charcoal backdrop-blur-md px-5 py-4">
       {accepted ? (
-        <p className="text-white font-semibold text-sm">🎉 Leveled up to {state.nextLevelName}! Your next workout will reflect it.</p>
+        <p className="text-white font-semibold text-sm">Leveled up to {state.nextLevelName}! Your next workout will reflect it.</p>
       ) : (
         <>
           <p className="text-emerald-300 text-[9px] uppercase tracking-[0.25em] font-semibold mb-1">Level Up?</p>

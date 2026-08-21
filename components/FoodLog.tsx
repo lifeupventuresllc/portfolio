@@ -61,7 +61,17 @@ function MacroBar({ label, val, target }: { label: string; val: number; target: 
   )
 }
 
-export default function FoodLog({ planned = [], budget = null, dayType = null }: { planned?: PlannedItem[]; budget?: number | null; dayType?: 'workout' | 'rest' | null }) {
+// Layout-simplify pass (5-step algorithm, Option A — Asa's pick): the
+// standalone "today's meals" card in app/plan/today/page.tsx said the same
+// thing this card's own budget ring already implies (is there a real target
+// today, or not) — merged in as one line + link instead of a second full
+// card, so a day-to-day glance at nutrition is one card, not two.
+type MealStatus =
+  | { kind: 'eatingOut' }
+  | { kind: 'planned'; totalProtein: number }
+  | { kind: 'empty'; isSunday: boolean }
+
+export default function FoodLog({ planned = [], budget = null, dayType = null, mealStatus = null }: { planned?: PlannedItem[]; budget?: number | null; dayType?: 'workout' | 'rest' | null; mealStatus?: MealStatus | null }) {
   const [data, setData] = useState<Payload | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -227,6 +237,28 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
         </p>
       </div>
 
+      {/* Merged in from the old standalone "today's meals" card — whether a
+          real meal plan exists for today at all, distinct from the ring
+          above (which only shows a budget number, not whether it's planned). */}
+      {mealStatus?.kind === 'eatingOut' && (
+        <a href="/plan/eating-out" className="mb-4 flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5" style={{ background: 'rgba(2,31,22,0.08)', border: `1px solid ${ACCENT}33` }}>
+          <span className="text-xs font-semibold" style={{ color: INK }}>Eat-out day — see exactly what to order</span>
+          <span className="text-xs shrink-0" style={{ color: ACCENT }}>→</span>
+        </a>
+      )}
+      {mealStatus?.kind === 'planned' && (
+        <a href="/plan/meals" className="mb-4 flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5" style={{ background: 'rgba(2,31,22,0.08)', border: `1px solid ${ACCENT}33` }}>
+          <span className="text-xs" style={{ color: MUTED }}>{mealStatus.totalProtein}g protein planned today</span>
+          <span className="text-xs font-semibold shrink-0" style={{ color: ACCENT }}>Edit my meals →</span>
+        </a>
+      )}
+      {mealStatus?.kind === 'empty' && (
+        <div className="mb-4 rounded-xl px-3.5 py-3 text-center" style={{ background: 'rgba(2,31,22,0.08)', border: `1px solid ${ACCENT}33` }}>
+          <p className="text-xs mb-2" style={{ color: MUTED }}>{mealStatus.isSunday ? 'Sunday — no cook plan, eat mindful and log whatever you have.' : "No meal plan yet — build this week's and it'll show up here."}</p>
+          {!mealStatus.isSunday && <a href="/plan/meals" className="inline-block text-white px-4 py-2 font-bold text-[10px] uppercase tracking-wider rounded-lg" style={{ background: ACCENT }}>Build my meals</a>}
+        </div>
+      )}
+
       {/* One-tap: log a meal straight from today's plan */}
       {planned.length > 0 && (
         <div className="mb-4">
@@ -251,7 +283,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
               {MEALS.map((m) => <option key={m} value={m}>{MEAL_LABEL[m]}</option>)}
             </select>
             <form onSubmit={(e) => { e.preventDefault(); runSearch(q) }} className="flex-1 flex gap-2">
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a food, or say it 🎤" autoFocus className="flex-1 min-w-0 bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a food, or say it" autoFocus className="flex-1 min-w-0 bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
               <VoiceButton onInterim={(t) => setQ(t)} onResult={(t) => { setQ(t); runSearch(t) }} />
               <button type="submit" disabled={searching || !q.trim()} className="shrink-0 bg-gold text-obsidian px-3 rounded-lg font-bold text-xs uppercase disabled:opacity-50">{searching ? '…' : 'Go'}</button>
             </form>
