@@ -7,6 +7,7 @@ import Ring from '@/components/Ring'
 import Confetti from '@/components/Confetti'
 import QuickFeedback from '@/components/QuickFeedback'
 import EffortTap from '@/components/EffortTap'
+import WorkoutMusicPlayer from '@/components/WorkoutMusicPlayer'
 import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { buildSteps, dayLabels, estimateWorkoutMinutes, trimStepsToTarget, type WorkoutStep } from '@/lib/workout-steps'
 import { GOAL_LABEL, type WorkoutProgram } from '@/lib/workout'
@@ -144,9 +145,11 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
       )}
 
       {/* progress bar */}
-      <div className="h-1.5 bg-charcoal rounded-full overflow-hidden mb-8">
+      <div className="h-1.5 bg-charcoal rounded-full overflow-hidden mb-4">
         <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
       </div>
+
+      <WorkoutMusicPlayer />
 
       {/* Day switcher sheet */}
       {switching && (
