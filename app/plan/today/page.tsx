@@ -100,16 +100,20 @@ export default async function TodayView() {
   // eating-out frequency, chat-reported stress, calendar) as ONE combined
   // read instead of separate siloed checks — a real rough patch shows up as
   // a combination, not one clean threshold crossing. See lib/fos/pattern.ts.
-  const patternAssessment = await assessLifePattern(enrollment.id as string, localDateISO(tz))
+  // Layer 1 Phase 5 (structural) is the longer-horizon counterpart — a real
+  // 3-week pattern means the plan itself doesn't match her life anymore, not
+  // just a rough day. Never rewrites anything without her approval.
+  // Speed-up found running the 5-step algorithm against this whole page:
+  // these two were awaited one after another even though neither reads the
+  // other's result — real, unnecessary sequential latency on every load.
+  // Parallelized, same as every other independent fetch on this page.
+  const [patternAssessment, structuralAssessment] = await Promise.all([
+    assessLifePattern(enrollment.id as string, localDateISO(tz)),
+    assessStructuralPattern(enrollment.id as string, localDateISO(tz)),
+  ])
   const dipMoves = patternAssessment.isDip && program ? shortVersionFor(program, startDay) : []
   const patternMessage = patternAssessment.isDip ? messageForPattern(patternAssessment) : null
   const showWorkoutAction = dipMoves.length > 0 && patternAssessment.signals.includes('workout_dip')
-
-  // Layer 1 Phase 5: the longer-horizon counterpart to the acute pattern
-  // engine above — a real 3-week pattern means the plan itself doesn't
-  // match her life anymore, not just a rough day. Never rewrites anything
-  // without her approval. See lib/fos/plan-evolution.ts.
-  const structuralAssessment = await assessStructuralPattern(enrollment.id as string, localDateISO(tz))
   const structuralMessage = messageForStructural(structuralAssessment)
 
   // For You page — page field is the dashboard's own forest ground
