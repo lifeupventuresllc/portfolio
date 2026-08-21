@@ -34,11 +34,20 @@ function MusicNoteIcon() {
 
 // Background music for the workout screen — Peloton/Nike Training-style
 // persistent mini-player. Rotation loops continuously through the whole
-// library (see lib/workout-music.ts for the track list + license source);
-// which track it lands on first is randomized per session, not always
-// track 0, so a real workout doesn't always open on the same song.
+// library (see lib/workout-music.ts for the track list + license source).
 export default function WorkoutMusicPlayer() {
-  const [idx, setIdx] = useState(() => Math.floor(Math.random() * WORKOUT_TRACKS.length))
+  // Real bug found live on production: this used to pick a RANDOM starting
+  // track inside useState's initializer. That function runs once during
+  // server-render and again, separately, during client hydration — two
+  // different random values almost every time, a classic Next.js SSR
+  // hydration mismatch. React can quietly discard a subtree that mismatches
+  // badly enough in production (no visible error, no console warning in the
+  // production build), which is exactly how this whole player silently
+  // vanished on the live site — confirmed live: build succeeded, the route's
+  // JS bundle grew to include it, but the DOM had zero trace of it. Fixed by
+  // starting deterministic (index 0, identical on server and client) and
+  // never touching Math.random()/Date.now() during the initial render.
+  const [idx, setIdx] = useState(0)
   const [playing, setPlaying] = useState(false)
   // Autoplay-on-start is attempted, but browsers can still block a fresh
   // <audio> element from playing with sound before any direct gesture on
@@ -48,6 +57,7 @@ export default function WorkoutMusicPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null)
   const track = WORKOUT_TRACKS[idx]
 
+  // One-time autoplay attempt for track 0, right on mount.
   useEffect(() => {
     const a = audioRef.current
     if (!a) return
@@ -55,6 +65,11 @@ export default function WorkoutMusicPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Whenever the track changes because she tapped next/back WHILE music was
+  // already playing, keep playing — resume on the new src instead of going
+  // silent. `playing` is still false at mount (the effect above hasn't
+  // resolved yet), so this naturally no-ops on the initial render and only
+  // ever fires for a real next/back press.
   useEffect(() => {
     const a = audioRef.current
     if (!a || !playing) return
