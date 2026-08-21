@@ -202,6 +202,14 @@ export function describeDecision(signal: LifeSignal | null, plan: RecoveryPlan):
     if (wc.toMinutes != null) bits.push(`shorten today's workout to ${wc.toMinutes} minutes`)
     if (wc.swapTo) bits.push(`swap to ${wc.swapTo}`)
     if (wc.trackOverride) bits.push(`switch to a ${wc.trackOverride} workout`)
+    // Real gap found live: this never mentioned focusOverride at all, so the
+    // model had zero grounding for what body area(s) actually got built and
+    // would just echo whatever she'd asked for in her raw message instead —
+    // which silently diverged from the real computed decision the moment
+    // there was a bug in what got built (exactly how a reply could say "arms,
+    // legs, and core" while the actual adjustment card only ever showed
+    // "arms"). Named here now so the reply is grounded in truth, not an echo.
+    if (wc.focusOverride?.length) bits.push(`focus today's workout on ${wc.focusOverride.join(', ')}`)
     if (bits.length) parts.push(`Workout: ${bits.join(', ')}${wc.reason ? ` (reason: ${wc.reason})` : ''}.`)
   }
   if (plan.nutritionChange) {

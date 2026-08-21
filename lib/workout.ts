@@ -406,8 +406,17 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
   // maps to the same 'upper' proxy — the real per-muscle split lives on the
   // gym track (GYM_POOL has the fine-grained tags); this is home's honest ceiling.
   const overrideUpper = inp.overrideAreas?.some((a) => a === 'arms' || a === 'chest' || a === 'back' || a === 'shoulders')
-  const focusType: 'leg' | 'upper' | null = coreFocus ? null
-    : inp.overrideAreas?.includes('legs') ? 'leg' : overrideUpper ? 'upper'
+  // Real bug found live: coreFocus and focusType used to be mutually
+  // exclusive (coreFocus ? null : ...), so a compound request that included
+  // 'core' alongside a real body area ("arms, legs, and core") silently
+  // dropped ALL leg/upper targeting the moment core was one of the areas
+  // named — the session came back almost entirely core/cardio content with
+  // at most one stray upper move, nothing resembling "legs" at all. core
+  // only controls the separate ab-set bonus below; it should never override
+  // which non-core type gets prioritized.
+  const focusType: 'leg' | 'upper' | null =
+    inp.overrideAreas?.includes('legs') ? 'leg' : overrideUpper ? 'upper'
+    : coreFocus ? null
     : inp.focusArea === 'legs' ? 'leg' : inp.focusArea === 'arms' ? 'upper' : null
   const split = homeSplit(inp.daysPerWeek || 3, level)
 

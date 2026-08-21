@@ -342,17 +342,22 @@ export async function POST(request: NextRequest) {
   // model's read with a deterministic keyword check rather than trusting a
   // prompt instruction alone to survive a compound phrasing like "full body
   // and also my core."
-  // Merge, not either/or — same reasoning as the cold-start path's ruleFocuses
-  // merge above: the AI read can miss a compound phrasing, so a deterministic
-  // keyword scan backs it up rather than replacing it, and any area either one
-  // catches survives (never just the first-matched one).
-  const focusAreas = (() => {
-    const fromAi = aiResult.ok ? aiResult.focusAreas || [] : []
-    const fromRules = detectFocusAreas(message)
-    const merged = [...fromAi]
-    for (const a of fromRules) if (!merged.includes(a)) merged.push(a)
-    return merged
-  })()
+  // The current message's own explicit areas win outright over anything the
+  // AI carried forward from earlier in the conversation — a genuine bug found
+  // live via the exact case this comment describes: she asked for "arms, legs,
+  // and core" in one turn, then a later turn asked for "back" specifically,
+  // and got a workout for all four areas merged together, because this used to
+  // ALWAYS union the AI's conversation-aware read with the current message's
+  // keyword scan, regardless of recency. parseSignalAI's own carry-forward
+  // (see its system prompt) exists for a message that doesn't restate her
+  // focus at all ("yes", a follow-up question) — once she names something
+  // concrete in THIS message, that's a real, deliberate replacement, not an
+  // addition, so it's trusted alone. Only fall back to the AI's (possibly
+  // carried-forward) read when this message names nothing on its own.
+  const currentMessageAreas = detectFocusAreas(message)
+  const focusAreas = currentMessageAreas.length
+    ? currentMessageAreas
+    : (aiResult.ok ? aiResult.focusAreas || [] : [])
 
   // Nothing situational matched — check whether she's actually just telling us
   // what she ate ("I had a slice of pizza"). Real Claude detection (see

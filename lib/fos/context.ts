@@ -45,6 +45,26 @@ export async function logEvent(enrollmentId: string, userId: string | null, ev: 
   })
 }
 
+const VALID_FOCUS_AREAS = ['core', 'legs', 'arms', 'chest', 'back', 'shoulders']
+
+// focusOverride used to be a single string value before the multi-area rewrite —
+// real rows approved before that ship are still sitting in the table in that old
+// shape. Reading one as-is and handing it to array-only callers (.some, .includes
+// used as an array method, etc.) throws at runtime — this is the actual root
+// cause of a live "/plan/workout" server crash right after the rewrite shipped,
+// traced back to exactly this: an old approved adjustment from before the
+// deploy, read fresh through the new array-typed path. Normalized once here, at
+// the one place this ever gets read out of the database, so every downstream
+// caller can trust the array invariant without its own defensive check.
+function normalizeFocusOverride(v: unknown): WorkoutChange['focusOverride'] {
+  if (typeof v === 'string') return VALID_FOCUS_AREAS.includes(v) ? [v as NonNullable<WorkoutChange['focusOverride']>[number]] : undefined
+  if (Array.isArray(v)) {
+    const cleaned = v.filter((a): a is NonNullable<WorkoutChange['focusOverride']>[number] => VALID_FOCUS_AREAS.includes(a as string))
+    return cleaned.length ? cleaned : undefined
+  }
+  return undefined
+}
+
 // The adjustment she APPROVED for today (if any) — so the dashboard reflects the
 // adapted plan. Newest approved wins if she adjusted more than once.
 export async function getApprovedTodayAdjustment(enrollmentId: string, todayISO: string) {
@@ -54,8 +74,11 @@ export async function getApprovedTodayAdjustment(enrollmentId: string, todayISO:
     .eq('enrollment_id', enrollmentId).eq('for_date', todayISO).eq('status', 'approved')
     .order('created_at', { ascending: false }).limit(1).maybeSingle()
   if (!data) return null
+  const rawWorkoutChange = data.workout_change as (Omit<WorkoutChange, 'focusOverride'> & { focusOverride?: unknown }) | null
   return {
-    workoutChange: (data.workout_change as WorkoutChange | null) ?? null,
+    workoutChange: rawWorkoutChange
+      ? { ...rawWorkoutChange, focusOverride: normalizeFocusOverride(rawWorkoutChange.focusOverride) }
+      : null,
     nutritionChange: (data.nutrition_change as NutritionChange | null) ?? null,
     message: (data.message as string | null) ?? null,
   }
