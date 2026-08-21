@@ -25,16 +25,21 @@ const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const
 const MEAL_LABEL: Record<string, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks' }
 const SLOT_TO_MEAL: Record<string, string> = { BF: 'breakfast', LN: 'lunch', DN: 'dinner', SN: 'snack', DS: 'snack' }
 
-// This card is emerald (dashboard's own card color), sitting on the For You
-// page's mustard field — so its accent/text roles flip to what reads on a
-// dark card: mustard accent, white primary text, translucent-ivory muted text.
-const ACCENT = '#E5A93C'
-const INK = '#ffffff'
-const MUTED = 'rgba(237,231,218,0.65)'
-const CARD_BG = 'linear-gradient(135deg, #0d3a2a, #044A34 60%, #08281d)'
-const CARD_BORDER = '1px solid rgba(229,169,60,0.4)'
-const CARD_GLOW = '0 0 16px -4px rgba(229,169,60,0.4)'
-const OVER_TEXT = '#fbbf24'
+// "Gold Flip" scheme (see app/plan/today/page.tsx for the full note) — this
+// card now shares the same warm gold-to-amber card treatment as the rest of
+// the For You page, sitting on the dashboard's forest field. Roles flip
+// accordingly: dark-ink accent/primary text, translucent-dark muted text.
+// OVER_TEXT/OVER_BG shift away from amber specifically because amber-on-gold
+// has almost no contrast — the "over budget" warning needs its own hue here,
+// not just its old value carried over.
+const ACCENT = '#241705'
+const INK = '#241705'
+const MUTED = 'rgba(36,23,5,0.72)'
+const CARD_BG = 'linear-gradient(135deg, #E9B24E, #D89A2E 55%, #B37D22)'
+const CARD_BORDER = '1px solid rgba(2,31,22,0.16)'
+const CARD_GLOW = '0 10px 22px -14px rgba(0,0,0,0.5)'
+const OVER_TEXT = '#8B2E12'
+const OVER_BG = '#8B2E12'
 
 // Just protein — carbs/fat bars used to sit here too, but three number-vs-target
 // bars next to a calorie ring read as a math problem. Protein is the one macro
@@ -50,7 +55,7 @@ function MacroBar({ label, val, target }: { label: string; val: number; target: 
         <span style={{ color: over ? OVER_TEXT : INK, fontWeight: over ? 600 : 500 }}>{val}<span style={{ color: MUTED }}> / {target}g</span></span>
       </div>
       <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.14)' }}>
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: over ? '#f59e0b' : ACCENT }} />
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: over ? OVER_BG : ACCENT }} />
       </div>
     </div>
   )
@@ -203,7 +208,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
       {/* Money ring (calories = dollars) + the one macro bar that matters */}
       <div className="flex items-center gap-5 mb-4">
         <div className={pop ? 'luf-pop' : ''}>
-          <Ring pct={calPct} size={104} stroke={9} color={calOver ? '#f59e0b' : ACCENT}>
+          <Ring pct={calPct} size={104} stroke={9} color={calOver ? OVER_BG : ACCENT}>
             <div className="text-center leading-none">
               <p className="text-[8px] uppercase tracking-wider mb-0.5" style={{ color: MUTED }}>{calOver ? 'over' : 'left'}</p>
               <p className="font-bold text-xl" style={{ color: calOver ? OVER_TEXT : ACCENT }}>{calOver ? '-' : ''}${Math.abs(remaining)}</p>
@@ -216,7 +221,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null }:
           <p className="text-[10px]" style={{ color: MUTED }}>Hit your protein and cravings get quieter — that&apos;s the goal, not just the number.</p>
         </div>
       </div>
-      <div className="mb-4 rounded-2xl border px-4 py-3 text-center" style={{ borderColor: calOver ? '#f59e0b66' : `${ACCENT}66`, background: calOver ? '#f59e0b1A' : `${ACCENT}1A` }}>
+      <div className="mb-4 rounded-2xl border px-4 py-3 text-center" style={{ borderColor: calOver ? `${OVER_BG}66` : `${ACCENT}66`, background: calOver ? `${OVER_BG}1A` : `${ACCENT}1A` }}>
         <p className="text-base font-bold" style={{ color: calOver ? OVER_TEXT : ACCENT }}>
           {loading ? 'Loading your day…' : calOver ? `$${Math.abs(remaining)} over budget — no guilt, fresh budget tomorrow.` : `Spent $${t.calories} · $${remaining} left${t.calories === 0 ? ' — log your first meal below' : ''}`}
         </p>

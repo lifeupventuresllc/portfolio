@@ -112,30 +112,34 @@ export default async function TodayView() {
   const structuralAssessment = await assessStructuralPattern(enrollment.id as string, localDateISO(tz))
   const structuralMessage = messageForStructural(structuralAssessment)
 
-  // For You page — the field (page background) is the dashboard's mustard
-  // accent, reversed. The boxes themselves are emerald, same as the
-  // dashboard's own cards, with a mustard border + glow for contrast against
-  // the mustard field — so text/accents on a card flip to mustard/white,
-  // while the few things sitting directly on the mustard field (heading,
-  // back button) stay dark-green-on-mustard. Asa's direct request.
-  const ACCENT = '#044A34'
+  // For You page — "Gold Flip" scheme, chosen from a live mockup (3 options
+  // built + compared: /plan/today's own gold cards, an ivory-editorial
+  // version, and a charcoal-neutral one — Asa picked this one). Page field is
+  // now the dashboard's own forest ground (#021F16), same as /plan itself,
+  // instead of this page's old standalone mustard field — so the two pages
+  // read as one continuous app instead of two different backgrounds. The
+  // boxes carry the page's own gold identity instead: a warm gold-to-amber
+  // gradient with dark ink text, inverted from the old mustard-field/
+  // emerald-box relationship. Header elements (back pill, weekday label,
+  // headline) flip from dark-on-mustard to light/gold-on-forest to match.
+  const ACCENT = '#E5A93C'
   const INK = '#021F16'
-  const CARD_BG = 'linear-gradient(135deg, #0d3a2a, #044A34 60%, #08281d)'
-  const CARD_BORDER = '1px solid rgba(229,169,60,0.4)'
-  const CARD_GLOW = '0 0 16px -4px rgba(229,169,60,0.4)'
-  const CARD_TEXT = '#ffffff'
-  const CARD_MUTED = 'rgba(237,231,218,0.65)'
-  const CARD_ACCENT = '#E5A93C'
+  const CARD_BG = 'linear-gradient(135deg, #E9B24E, #D89A2E 55%, #B37D22)'
+  const CARD_BORDER = '1px solid rgba(2,31,22,0.16)'
+  const CARD_GLOW = '0 10px 22px -14px rgba(0,0,0,0.5)'
+  const CARD_TEXT = '#241705'
+  const CARD_MUTED = 'rgba(36,23,5,0.72)'
+  const CARD_ACCENT = INK
 
   return (
-    <div className="min-h-[100dvh] px-4 py-6" style={{ background: '#E5A93C' }}>
+    <div className="min-h-[100dvh] px-4 py-6" style={{ background: '#021F16' }}>
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between gap-3 mb-4">
-          <Link href="/plan" className="inline-flex items-center gap-1.5 bg-white text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all" style={{ border: `1px solid ${ACCENT}`, color: ACCENT }}>← Home</Link>
+          <Link href="/plan" className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all" style={{ background: '#0d3a2a', border: `1px solid rgba(229,169,60,0.4)`, color: ACCENT }}>← Home</Link>
           <ClientMenu firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
         </div>
         <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1" style={{ color: ACCENT }}>{weekdayLabel}</p>
-        <h1 className="font-bold mb-6" style={{ color: INK, fontFamily: 'Georgia, "Times New Roman", ui-serif, serif', fontSize: 'clamp(1.75rem, 6vw, 2.25rem)' }}>Today, {firstName}</h1>
+        <h1 className="font-bold mb-6" style={{ color: '#ffffff', fontFamily: 'Georgia, "Times New Roman", ui-serif, serif', fontSize: 'clamp(1.75rem, 6vw, 2.25rem)' }}>Today, {firstName}</h1>
 
         <div className="space-y-6">
           {/* The primary feature, live: one unified read across everything she does,
@@ -178,7 +182,7 @@ export default async function TodayView() {
             {eatingOutToday ? (
               <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 rounded-2xl p-5 transition-colors" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
                 <div>
-                  <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold mb-2" style={{ background: 'rgba(229,169,60,0.15)', color: CARD_ACCENT }}>Eat-out day</span>
+                  <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold mb-2" style={{ background: 'rgba(2,31,22,0.16)', color: CARD_ACCENT }}>Eat-out day</span>
                   <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>See exactly what to order</p>
                   <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>No thinking, no searching — picked for you, budget-matched.</p>
                 </div>
@@ -187,7 +191,7 @@ export default async function TodayView() {
             ) : todayMeals ? (
               <div className="rounded-2xl p-5 flex items-center justify-between gap-3" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
                 <div>
-                  <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold mb-1.5" style={{ background: 'rgba(229,169,60,0.15)', color: CARD_ACCENT }}>
+                  <span className="inline-block text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold mb-1.5" style={{ background: 'rgba(2,31,22,0.16)', color: CARD_ACCENT }}>
                     {todayMeals.dayType === 'workout' ? 'Workout day' : 'Rest day'}
                   </span>
                   <p className="text-sm" style={{ color: CARD_MUTED }}>Target {todayMeals.target} cal · {todayMeals.totalProtein}g protein planned</p>
@@ -198,7 +202,7 @@ export default async function TodayView() {
               <div className="rounded-2xl p-6 text-center" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
                 <p className="font-semibold mb-1" style={{ color: CARD_TEXT }}>{mealIdx > 5 ? 'Sunday — recovery & reset' : 'No meal plan yet'}</p>
                 <p className="text-sm mb-3" style={{ color: CARD_MUTED }}>{mealIdx > 5 ? 'No cook plan today. Eat mindful, hit your protein, and log whatever you have above.' : 'Build this week’s meals and they’ll show up here each day.'}</p>
-                {mealIdx <= 5 && <Link href="/plan/meals" className="inline-block px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl" style={{ background: CARD_ACCENT, color: INK }}>Build my meals</Link>}
+                {mealIdx <= 5 && <Link href="/plan/meals" className="inline-block px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-xl" style={{ background: INK, color: '#E5A93C' }}>Build my meals</Link>}
               </div>
             )}
           </section>
@@ -214,7 +218,7 @@ export default async function TodayView() {
                     <p className="text-[11px] mt-1 font-semibold" style={{ color: CARD_ACCENT }}>Adjusted: {todayAdjustment.workoutChange.toMinutes ? `${todayAdjustment.workoutChange.toMinutes}-min ` : ''}{todayAdjustment.workoutChange.swapTo || 'adapted for today'}</p>
                   )}
                 </div>
-                <Link href="/plan/workout" className="luf-pulse shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform" style={{ background: CARD_ACCENT, color: INK }}>▶ Start</Link>
+                <Link href="/plan/workout" className="luf-pulse shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform" style={{ background: INK, color: '#E5A93C' }}>▶ Start</Link>
               </div>
             ) : (
               <div className="rounded-2xl p-5 text-center" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
