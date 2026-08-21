@@ -326,6 +326,18 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
     })
     const usedNames = new Set<string>(Array.from(usedPush).concat(Array.from(usedPull)))
     const focusBonus = targets.length ? pickFocusAccessory(targets, level, inp.goal, off + 7, injuries, usedNames) : null
+    const upperAb = pickAb('upper', level, off, inp.postpartum, injuries)
+    // Real gap found live: the bonus ab pick and the regular upper ab pick
+    // are both drawn from the same 'upper' zone — a small filtered pool
+    // (postpartum/level/injury-narrowed) could land both offsets on the
+    // identical exercise, showing the same name twice in one list. One retry
+    // at a different offset is enough; if the pool really is that small, a
+    // repeat is unavoidable, not a bug.
+    let bonusAb: AbExercise | undefined
+    if (coreFocus) {
+      bonusAb = pickAb('upper', level, off + 5, inp.postpartum, injuries)
+      if (bonusAb.name === upperAb.name) bonusAb = pickAb('upper', level, off + 6, inp.postpartum, injuries)
+    }
     return {
       dayNum,
       title: spec.title,
@@ -338,10 +350,10 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
         ...(focusBonus ? [focusBonus] : []),
       ],
       ab: {
-        upper: pickAb('upper', level, off, inp.postpartum, injuries),
+        upper: upperAb,
         lower: pickAb('lower', level, off + 2, inp.postpartum, injuries),
         scheme: AB_SCHEME[level],
-        ...(coreFocus ? { bonus: pickAb('upper', level, off + 5, inp.postpartum, injuries) } : {}),
+        ...(bonusAb ? { bonus: bonusAb } : {}),
       },
       cardio: buildCardioFinisher(level, inp.goal, inp.trainingStyle, injuries, off),
     } as GymDay
