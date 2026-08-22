@@ -490,6 +490,25 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
     }
     // prefer moves at the client's exact level (progression), fall back to lower levels only if needed
     const remaining = count - picked.length
+    // Real gap found live: a genuine full-body day (both 'leg' and 'upper' in
+    // types, no single focusType bias) used to lump them into ONE combined,
+    // rotated pool and just take the first N — since HOME_POOL happens to
+    // list several consecutive beginner leg entries before its first upper
+    // entry, an "overall" session could come back with ZERO upper-body work,
+    // purely from pool-order luck, not by design. Splitting the remaining
+    // count evenly between a real leg pool and a real upper pool guarantees
+    // an actual mix every time instead of leaving it to chance.
+    if (!focusType && types.includes('leg') && types.includes('upper')) {
+      const legCount = Math.ceil(remaining / 2)
+      const upperCount = remaining - legCount
+      const pickType = (type: 'leg' | 'upper', typeOff: number, n: number) => {
+        const atLevel = avail.filter(e => e.type === type && e.level === level)
+        const lower = avail.filter(e => e.type === type && e.level < level)
+        return rotate(atLevel, typeOff).concat(rotate(lower, typeOff)).slice(0, n)
+          .map(e => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl }))
+      }
+      return picked.concat(pickType('leg', off, legCount), pickType('upper', off + 3, upperCount))
+    }
     // Focus-type moves partitioned to the FRONT before rotating, not sorted-then-rotated —
     // rotating a sorted array can shove the very items we just prioritized to the back,
     // silently undoing the prioritization. Each partition still rotates independently so
