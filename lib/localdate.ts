@@ -44,3 +44,20 @@ export function addDaysISO(isoDate: string, delta: number): string {
   d.setUTCDate(d.getUTCDate() + delta)
   return d.toISOString().slice(0, 10)
 }
+
+// Real gap found live: lib/workout.ts's own header comment says "Deterministic
+// by weekNumber (same week = same plan, weeks vary)" — the whole exercise-
+// rotation system is built around weekNumber advancing over real time. But
+// every single call site across the app hardcoded weekNumber: 1, including
+// the manual "rebuild my workout" endpoint — nothing anywhere ever computed
+// a real one, so an actual real user's exercise selection (not which day
+// she's on — that already rotates correctly by completed-workout count) never
+// varied week to week, ever, for as long as she used the app. This is the one
+// real computation of it: whole calendar weeks since her plan started, floor
+// at 1 so a brand-new plan still reads as week 1.
+export function currentWeekNumber(createdAt: string): number {
+  const start = new Date(createdAt)
+  if (Number.isNaN(start.getTime())) return 1
+  const days = Math.floor((Date.now() - start.getTime()) / 86400000)
+  return Math.max(1, Math.floor(days / 7) + 1)
+}

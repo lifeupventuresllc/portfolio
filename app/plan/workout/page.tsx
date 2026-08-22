@@ -6,7 +6,7 @@ import { generateWorkout, pickFocusDayIndex, applyProgressiveOverload, type Work
 import { generateCardioSession } from '@/lib/cardio-session'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { localDateISO, addDaysISO } from '@/lib/localdate'
+import { localDateISO, addDaysISO, currentWeekNumber } from '@/lib/localdate'
 
 export const dynamic = 'force-dynamic'
 
@@ -78,7 +78,10 @@ export default async function WorkoutSession() {
     ? (intake?.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
 
   const trackOverride = todayAdjustment?.workoutChange?.trackOverride
-  const injuryOverride = todayAdjustment?.workoutChange?.injuryBodyPart
+  // An approved injury override needs no separate branch here anymore — it's
+  // already permanently written into intake.form_data.injuries by the time
+  // this page loads (see the comment below), and regeneration now always
+  // reads that fresh on every visit rather than only on an explicit override.
   // A chat-approved "focus on arms/legs/core today" request — same TODAY-ONLY
   // regeneration mechanism as trackOverride/injuryOverride, not a permanent
   // plan change. Real gap found live: this used to only ever be read from her
@@ -86,15 +89,30 @@ export default async function WorkoutSession() {
   // "build me an arm workout" in chat never actually showed an arm-focused
   // session here — the dashboard kept rendering her regular saved program.
   const focusOverride = todayAdjustment?.workoutChange?.focusOverride
-  if (((trackOverride && trackOverride !== program.track) || injuryOverride || focusOverride?.length) && intake) {
+  // Real gap found live: this used to only regenerate on an explicit
+  // track/injury/focus override, so the DEFAULT case — no override at all,
+  // what every visit looks like most of the time — just read the stored
+  // plan.plan blob as-is forever. That blob was generated exactly ONCE, at
+  // intake time, with weekNumber permanently baked in at 1 — so exercise
+  // SELECTION (not which day she's on, which already correctly rotates by
+  // completed-workout count below) never actually varied week to week, ever,
+  // for as long as she used the app — the opposite of what "Deterministic by
+  // weekNumber ... weeks vary" in lib/workout.ts was actually meant to do.
+  // Regenerating from her real intake + a real current week number on every
+  // visit makes that genuinely true, while a same-day chat override still
+  // wins for today specifically via trackOverride/overrideAreas below.
+  if (intake) {
     const goal = (intake.goal === 'gain' || intake.goal === 'maintain' ? intake.goal : 'lose') as 'lose' | 'gain' | 'maintain'
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
     const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle
     const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
+    const weekNumber = currentWeekNumber((enrollment.created_at as string) || new Date().toISOString())
     program = generateWorkout({
-      name: (enrollment.name as string) || 'Your', sex, track: trackOverride || program.track, level, goal,
-      daysPerWeek: Number(intake.days_per_week) || 3, weekNumber: 1, injuries, postpartum, trainingStyle, focusArea,
+      name: (enrollment.name as string) || 'Your', sex,
+      track: trackOverride || (intake.training_location === 'home' ? 'home' : 'gym'),
+      level, goal,
+      daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyle, focusArea,
       overrideAreas: focusOverride?.length ? focusOverride : undefined,
     })
   }
