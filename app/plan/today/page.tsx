@@ -108,6 +108,13 @@ export default async function TodayView() {
   const program = (workoutPlan?.plan as WorkoutProgram) || null
   const numDays = program ? (program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)) : 1
   const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
+  // Layout-simplify pass (Option A, Asa's pick from 3 real-app-inspired
+  // mockups — Whoop's "one score" move): the hero ring below needs a real,
+  // honest TODAY-specific signal, not the cumulative `completed` count above
+  // (that one's for rotation position, answers "how many ever," not "did she
+  // already go today"). logged_on was already being selected for doneRows —
+  // this was one filter away, not a new query.
+  const workoutDoneToday = (doneRows || []).some((r) => r.logged_on === todayIso && (r.measurements as { workout?: boolean } | null)?.workout)
   // Real gap found live: this card (the one the bottom-tab nav actually lands
   // on) had zero focus-area awareness, same class of bug as /plan's dashboard
   // card and /plan/workout — a chat-approved or cold-start-built "focus on
@@ -197,6 +204,46 @@ export default async function TodayView() {
               Asa has recorded real audio for the slot her week earned. */}
           {(enrollment.tier === 'challenge' || enrollment.tier === 'inner_circle') && <MondayMemo />}
 
+          {/* Layout-simplify pass (Option A, Asa's pick from 3 real-app-inspired
+              mockups — Whoop's "one score" move): compress today into one
+              glanceable ring + one sentence naming exactly what's next,
+              instead of a separate elaborate workout card further down the
+              page repeating information the ring/sentence already carries.
+              workoutDoneToday is a real, today-specific signal (see above),
+              not the cumulative rotation counter. */}
+          <section className="rounded-2xl p-6" style={cardStyle}>
+            {todayWorkout ? (
+              <div className="flex flex-col items-center text-center">
+                <div className="relative w-32 h-32 mb-4">
+                  <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transform: 'rotate(-90deg)' }}>
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="9" />
+                    <circle cx="50" cy="50" r="42" fill="none" stroke={CARD_ACCENT} strokeWidth="9" strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 42}`} strokeDashoffset={`${workoutDoneToday ? 0 : 2 * Math.PI * 42 * 0.78}`} />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <p className="text-2xl font-bold" style={{ color: CARD_TEXT, fontFamily: 'Georgia, "Times New Roman", ui-serif, serif' }}>{workoutDoneToday ? 'Done' : 'Today'}</p>
+                    {!workoutDoneToday && <p className="text-[10px] uppercase tracking-wider font-semibold mt-0.5" style={{ color: CARD_MUTED }}>not started</p>}
+                  </div>
+                </div>
+                <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>
+                  {workoutDoneToday ? 'You already showed up today.' : <>Next: <span style={{ color: CARD_ACCENT }}>{todayWorkout.title}</span></>}
+                </p>
+                {!workoutDoneToday && todayAdjustment?.workoutChange && (
+                  <p className="text-[11px] mt-1 font-semibold" style={{ color: CARD_ACCENT }}>Adjusted: {todayAdjustment.workoutChange.toMinutes ? `${todayAdjustment.workoutChange.toMinutes}-min ` : ''}{todayAdjustment.workoutChange.swapTo || 'adapted for today'}</p>
+                )}
+                {!workoutDoneToday && (
+                  <Link href="/plan/workout" className="luf-pulse mt-4 w-full inline-flex items-center justify-center gap-1.5 px-4 py-3 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.02] transition-transform" style={{ background: CARD_ACCENT, color: INK }}>▶ Start workout</Link>
+                )}
+              </div>
+            ) : (
+              <div className="text-center">
+                <p className="font-semibold mb-1" style={{ color: CARD_TEXT }}>We hit a snag building your workout</p>
+                <p className="text-sm mb-3" style={{ color: CARD_MUTED }}>Shouldn&apos;t take more than a second to fix.</p>
+                <RebuildPlanButton />
+              </div>
+            )}
+          </section>
+
           {/* The zero-decision escape hatch — for the moment she's out, off-plan, and
               would otherwise have to decide (or skip eating entirely). Hidden when
               today's already flagged as an eat-out day (the meal section below
@@ -225,28 +272,6 @@ export default async function TodayView() {
                 : { kind: 'empty', isSunday: mealIdx > 5 }
             }
           />
-
-          {/* Today's workout */}
-          <section>
-            {todayWorkout ? (
-              <div className="rounded-2xl p-5 flex items-center justify-between gap-4" style={cardStyle}>
-                <div>
-                  <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>{todayWorkout.title}</p>
-                  {todayWorkout.muscles?.length ? <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>{todayWorkout.muscles.join(' · ')}</p> : null}
-                  {todayAdjustment?.workoutChange && (
-                    <p className="text-[11px] mt-1 font-semibold" style={{ color: CARD_ACCENT }}>Adjusted: {todayAdjustment.workoutChange.toMinutes ? `${todayAdjustment.workoutChange.toMinutes}-min ` : ''}{todayAdjustment.workoutChange.swapTo || 'adapted for today'}</p>
-                  )}
-                </div>
-                <Link href="/plan/workout" className="luf-pulse shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform" style={{ background: CARD_ACCENT, color: INK }}>▶ Start</Link>
-              </div>
-            ) : (
-              <div className="rounded-2xl p-5 text-center" style={cardStyle}>
-                <p className="font-semibold mb-1" style={{ color: CARD_TEXT }}>We hit a snag building your workout</p>
-                <p className="text-sm mb-3" style={{ color: CARD_MUTED }}>Shouldn&apos;t take more than a second to fix.</p>
-                <RebuildPlanButton />
-              </div>
-            )}
-          </section>
 
           {/* Moved here from /plan's dashboard (2026-08-12 redesign) — infrequent,
               only renders itself when she's actually eligible. Kept as its own card,
