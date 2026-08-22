@@ -12,7 +12,7 @@ import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { buildSteps, dayLabels, estimateWorkoutMinutes, trimStepsToTarget, type WorkoutStep } from '@/lib/workout-steps'
 import { GOAL_LABEL, type WorkoutProgram } from '@/lib/workout'
 import { hapticTap } from '@/lib/haptics'
-import { playCountdownBeep } from '@/lib/countdown-beep'
+import { playCountdownBeep, unlockAudioContext } from '@/lib/countdown-beep'
 
 // Guided in-workout player. Opens straight into TODAY'S session (no picker
 // screen); a compact switcher lets her change the day. One countdown interval
@@ -44,6 +44,19 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
   // or a rest period, both drive off the same `left` countdown below, so
   // one flag covers "even for the rest of it" the way it was asked for.
   const [musicDucked, setMusicDucked] = useState(false)
+
+  // Real bug found live: the countdown beep's AudioContext only ever got
+  // created/resumed from inside the countdown's own setInterval tick, never
+  // from a direct click — browsers require that resume to happen inside a
+  // real user-gesture call stack or they leave it permanently suspended
+  // (silent, no error). One tap anywhere on this screen — which happens
+  // almost immediately in practice (pause, next, day switch) — unlocks it
+  // well before any real countdown needs it.
+  useEffect(() => {
+    const unlock = () => unlockAudioContext()
+    document.addEventListener('pointerdown', unlock, { once: true })
+    return () => document.removeEventListener('pointerdown', unlock)
+  }, [])
 
   // finish() fires this save without awaiting it, so the confetti/"that's done"
   // screen never waits on a network round trip. But a fast tap on "Back to my

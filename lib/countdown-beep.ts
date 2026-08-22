@@ -17,6 +17,20 @@ function getCtx(): AudioContext | null {
   return ctx
 }
 
+// Real bug found live: playCountdownBeep only ever fired from the
+// countdown's setInterval tick, never from a direct click — so the
+// AudioContext's very first creation/resume attempt always happened
+// OUTSIDE a genuine user gesture. Browsers require the resume to happen
+// inside a real click/tap call stack or they leave it permanently
+// suspended (no console error, just silent audio forever) — exactly what
+// "refreshed my session and couldn't hear anything" was. Call this once
+// on the very first tap anywhere on the workout screen (see
+// WorkoutPlayer.tsx) so the context is already running by the time a real
+// countdown needs it, well before any timer ever touches it.
+export function unlockAudioContext() {
+  getCtx()
+}
+
 // secondsLeft: 10 down to 1. The final beep (secondsLeft === 1, i.e. the
 // step is about to hit zero) gets a distinct higher, longer tone — same
 // "go" cue pattern as a real gym interval timer.
