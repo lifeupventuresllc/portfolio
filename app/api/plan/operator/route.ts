@@ -286,8 +286,15 @@ export async function POST(request: NextRequest) {
       // builds a real day from ALL of them (see daySpecFromAreas in
       // lib/workout.ts), not just the first. focus_area (singular) stays only
       // as the permanent-preference fallback when she named nothing specific.
-      const focus_areas = intent.focus_areas?.length ? intent.focus_areas : undefined
-      const focus_area = focus_areas?.[0] || 'overall'
+      // Real gap found live: this used to pass undefined for an explicit
+      // "overall" answer, which meant day 0 fell through to whatever the
+      // normal weekly rotation's first day happened to be (a female plan's
+      // rotation opens on a leg day) — an "overall" ask could still come
+      // back looking leg-specific. Always a real array now: empty means
+      // exactly "overall," which daySpecFromAreas/generateHome now both
+      // build as a genuine full-body day, not a rotation coincidence.
+      const focus_areas = intent.focus_areas?.length ? intent.focus_areas : []
+      const focus_area = focus_areas[0] || 'overall'
 
       const { targets, program, weekPlan } = await buildInitialPlans({
         enrollmentId: eid, userId: user.id, name: enrollment.name || 'Your',

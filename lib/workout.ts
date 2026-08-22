@@ -355,8 +355,16 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
   const split = splitFor(inp.sex, inp.daysPerWeek || 3, level)
   // A live chat ask for specific areas replaces "today" (day 0) with a day
   // built directly from exactly what she named — every other day in her
-  // week keeps its normal rotation assignment, untouched.
-  if (inp.overrideAreas?.length) split[0] = daySpecFromAreas(inp.overrideAreas)
+  // week keeps its normal rotation assignment, untouched. Checked by
+  // presence, not length: an explicit EMPTY array (she said "overall," see
+  // the cold-start build in route.ts) still means "override day 0" — real
+  // gap found live, a cold-start "overall" request used to fall through to
+  // whatever day 0 of the normal weekly rotation happened to be (a female
+  // plan's rotation opens on a leg day), so an "overall" ask could still
+  // come back looking like a leg-specific session. daySpecFromAreas([])
+  // already builds a genuine full-body day for exactly this case — it just
+  // never used to get called for it.
+  if (inp.overrideAreas !== undefined) split[0] = daySpecFromAreas(inp.overrideAreas)
 
   return split.map((spec, i) => {
     const dayNum = i + 1
@@ -456,6 +464,14 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
     : coreFocus ? null
     : inp.focusArea === 'legs' ? 'leg' : inp.focusArea === 'arms' ? 'upper' : null
   const split = homeSplit(inp.daysPerWeek || 3, level)
+  // Same fix as generateGym's daySpecFromAreas call: an explicit EMPTY
+  // overrideAreas (she said "overall," see the cold-start build in
+  // route.ts) still means "override day 0" — without this, an "overall"
+  // request could land on day 0 of the normal Leg/Upper alternating split,
+  // which opens on "Leg Focus," making a genuinely no-preference ask look
+  // leg-specific. Forcing the label routes it into the mixed
+  // leg+upper+core branch below, same as any other Full Body day.
+  if (inp.overrideAreas?.length === 0) split[0] = 'Full Body'
 
   const injuries = inp.injuries || []
   const avail = HOME_POOL.filter(e => e.level <= level && !isContraindicated(e.name, injuries))
