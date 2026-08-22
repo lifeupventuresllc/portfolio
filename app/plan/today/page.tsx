@@ -53,6 +53,12 @@ export default async function TodayView() {
   if (!enrollment) redirect('/plan')
   if (!enrollment.intake_completed) redirect('/plan')
 
+  // Real bug found live (screenshot): "there" is a fine fallback for an idiomatic
+  // "Hey there," but the heading below is a vocative "Today, {name}" construction —
+  // "Today, there" reads as broken, not friendly. hasRealName gates whether that
+  // comma-name suffix renders at all, instead of ever substituting the fallback word
+  // into a sentence shape it was never written for.
+  const hasRealName = !!(enrollment.name || user.email)
   const firstName = (enrollment.name || user.email?.split('@')[0] || 'there').split(' ')[0]
 
   const tz = getTimezone()
@@ -174,7 +180,7 @@ export default async function TodayView() {
           <ClientMenu firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
         </div>
         <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1" style={{ color: ACCENT }}>{weekdayLabel}</p>
-        <h1 className="font-bold mb-6" style={{ color: '#ffffff', fontFamily: 'Georgia, "Times New Roman", ui-serif, serif', fontSize: 'clamp(1.75rem, 6vw, 2.25rem)' }}>Today, {firstName}</h1>
+        <h1 className="font-bold mb-6" style={{ color: '#ffffff', fontFamily: 'Georgia, "Times New Roman", ui-serif, serif', fontSize: 'clamp(1.75rem, 6vw, 2.25rem)' }}>Today{hasRealName ? `, ${firstName}` : ''}</h1>
 
         <div className="space-y-6">
           {/* The primary feature, live: one unified read across everything she does,
