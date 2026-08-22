@@ -35,7 +35,13 @@ function MusicNoteIcon() {
 // Background music for the workout screen — Peloton/Nike Training-style
 // persistent mini-player. Rotation loops continuously through the whole
 // library (see lib/workout-music.ts for the track list + license source).
-export default function WorkoutMusicPlayer() {
+export default function WorkoutMusicPlayer({ duck = false }: {
+  // True during the last 10 seconds of any timed step (exercise hold or
+  // rest, set by WorkoutPlayer) — ducks the music down so the countdown
+  // beep (lib/countdown-beep.ts) reads clearly over it without cutting the
+  // music out entirely.
+  duck?: boolean
+}) {
   // Real bug found live on production: this used to pick a RANDOM starting
   // track inside useState's initializer. That function runs once during
   // server-render and again, separately, during client hydration — two
@@ -75,6 +81,27 @@ export default function WorkoutMusicPlayer() {
     if (!a || !playing) return
     a.play().catch(() => setBlocked(true))
   }, [idx, playing])
+
+  // Smooth volume ramp rather than an instant jump — a hard cut reads as a
+  // glitch, a ~400ms fade reads as an intentional duck. Ramps back up the
+  // same way once the 10-second countdown clears.
+  useEffect(() => {
+    const a = audioRef.current
+    if (!a) return
+    const target = duck ? 0.3 : 1
+    const start = a.volume
+    if (Math.abs(start - target) < 0.01) return
+    const startTime = performance.now()
+    const durationMs = 400
+    let raf = 0
+    const step = (now: number) => {
+      const t = Math.min(1, (now - startTime) / durationMs)
+      a.volume = start + (target - start) * t
+      if (t < 1) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [duck])
 
   const toggle = () => {
     const a = audioRef.current

@@ -12,6 +12,7 @@ import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { buildSteps, dayLabels, estimateWorkoutMinutes, trimStepsToTarget, type WorkoutStep } from '@/lib/workout-steps'
 import { GOAL_LABEL, type WorkoutProgram } from '@/lib/workout'
 import { hapticTap } from '@/lib/haptics'
+import { playCountdownBeep } from '@/lib/countdown-beep'
 
 // Guided in-workout player. Opens straight into TODAY'S session (no picker
 // screen); a compact switcher lets her change the day. One countdown interval
@@ -39,6 +40,10 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
   const [paused, setPaused] = useState(false)
   const [done, setDone] = useState(false)
   const [switching, setSwitching] = useState(false)
+  // True for the last 10 seconds of ANY timed step — a real exercise hold
+  // or a rest period, both drive off the same `left` countdown below, so
+  // one flag covers "even for the rest of it" the way it was asked for.
+  const [musicDucked, setMusicDucked] = useState(false)
 
   // finish() fires this save without awaiting it, so the confetti/"that's done"
   // screen never waits on a network round trip. But a fast tap on "Back to my
@@ -75,8 +80,16 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
       .finally(() => broadcastRefresh())
   }
 
-  // Reset the countdown when the step (or day) changes.
-  useEffect(() => { setLeft(step?.seconds ?? null) }, [i, dayIdx, step?.seconds])
+  // Reset the countdown when the step (or day) changes. A step that starts
+  // at 10 seconds or under (a short rest, say) should already read as
+  // "ducked" from its very first tick, not wait a second for the interval
+  // below to catch up — so this checks the starting value too, not just
+  // the interval's own tick-by-tick countdown.
+  useEffect(() => {
+    const secs = step?.seconds ?? null
+    setLeft(secs)
+    setMusicDucked(secs != null && secs <= 10 && secs >= 1)
+  }, [i, dayIdx, step?.seconds])
 
   // Persist live progress so the dashboard's workout ring reflects mid-session state.
   useEffect(() => {
@@ -88,13 +101,21 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
   }, [i, steps.length, done])
 
   // ONE interval per step — decrements each second, advances at zero. No churn.
+  // Also drives the 10-second countdown beep + music duck (lib/countdown-beep.ts)
+  // — same interval as the visible countdown, so the beep is always in sync
+  // with what she's actually looking at, on both real exercise holds and
+  // rest periods (both just have a `seconds` value, nothing rest-specific
+  // needed here).
   useEffect(() => {
     if (!isTimed || paused || done) return
     const id = setInterval(() => {
       setLeft((l) => {
         if (l == null) return l
+        const next = l <= 1 ? 0 : l - 1
+        if (next >= 1 && next <= 10) { playCountdownBeep(next); setMusicDucked(true) }
+        else setMusicDucked(false)
         if (l <= 1) { clearInterval(id); advanceRef.current(); return 0 }
-        return l - 1
+        return next
       })
     }, 1000)
     return () => clearInterval(id)
@@ -149,7 +170,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
         <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
       </div>
 
-      <WorkoutMusicPlayer />
+      <WorkoutMusicPlayer duck={musicDucked} />
 
       {/* Day switcher sheet */}
       {switching && (
