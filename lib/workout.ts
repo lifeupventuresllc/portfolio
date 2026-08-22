@@ -284,7 +284,19 @@ function pickGym(movement: Movement, muscles: string[], level: Level, weekOffset
 // ab exercise below, so all three focus areas behave consistently.
 function pickFocusAccessory(muscles: Muscle[], level: Level, goal: WorkoutInputs['goal'], offset: number, injuries: Injury[], usedNames: Set<string>): { name: string; reps: string; cue: string } | null {
   const ok = (e: GymExercise) => muscles.includes(e.muscle) && e.minLevel <= level && !isContraindicated(e.name, injuries) && !usedNames.has(e.name)
-  const pick = rotate(GYM_POOL.filter(ok), offset)[0]
+  // Real gap found: pickGym's own sort already puts free weights first
+  // (barbell/dumbbell over machine/cable), but this bonus pick never had
+  // that bias at all — plain rotation over the whole candidate list. Since
+  // this only ever returns ONE exercise (not several to choose from like
+  // pickGym), a soft sort-then-rotate tiebreak isn't reliable here — a
+  // large rotation offset can still wrap straight past every free-weight
+  // candidate into machine territory. Restricting to the free-weight subset
+  // whenever one exists (falling back to the full pool only when it
+  // genuinely doesn't) makes "prioritize free weights" actually hold,
+  // regardless of offset.
+  const candidates = GYM_POOL.filter(ok)
+  const freeCandidates = candidates.filter((e) => e.free)
+  const pick = rotate(freeCandidates.length ? freeCandidates : candidates, offset)[0]
   if (!pick) return null
   return { name: pick.name, reps: repScheme(level, goal), cue: `${pick.cue} (bonus set — from your chosen focus area)` }
 }

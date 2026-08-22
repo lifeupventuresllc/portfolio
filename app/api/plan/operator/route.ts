@@ -209,31 +209,42 @@ export async function POST(request: NextRequest) {
     }
 
     if (intent) {
-      // The only follow-up worth her time: injuries (a wrong guess can actually hurt
-      // her) and target area (a wrong guess just misses what she wanted). Only asked
-      // when she's asking for a workout AND genuinely hasn't addressed it anywhere in
-      // the conversation yet — never re-asked once either is answered. Everything
-      // else (weight, goal, days/week, experience) gets a silent, disclosed default
-      // instead of another question.
+      // The always-ask essentials: injuries (a wrong guess can actually hurt her),
+      // training location (a wrong guess builds the wrong equipment pool entirely —
+      // barbell squats for someone with zero equipment at home), and target area (a
+      // wrong guess just misses what she wanted). Only asked when she's asking for a
+      // workout AND genuinely hasn't addressed it anywhere in the conversation yet —
+      // never re-asked once answered, and never asked at all for a returning user
+      // whose intake already has it on file (see existingIntakeForPlan elsewhere in
+      // this route). Everything else (weight, goal, days/week) gets a silent,
+      // disclosed default instead of another question.
       const needsInjuryAsk = intent.wantsWorkout && !intent.injuriesAddressed
+      // Real gap found live: this used to silently default to 'gym' the moment she
+      // asked for a workout without naming a location — the exact "it never asks if
+      // I'm home or at the gym" complaint. Equipment availability isn't a cosmetic
+      // detail like weight/goal; it determines which entire exercise pool gets used,
+      // so it gets a real question same as injuries, not a guess.
+      const needsLocationAsk = intent.wantsWorkout && !intent.training_location
       const needsFocusAsk = intent.wantsWorkout && !intent.focus_areas?.length && !intent.focusOverall
       // A wrong guess here isn't unsafe like injuries, but it silently determines
       // rep/set schemes and day structure (see lib/workout.ts's level-aware split
       // and repScheme) — worth one real question instead of a silent 'beginner'
       // default with no disclosure, unlike weight/goal which stay silent defaults.
       const needsLevelAsk = intent.wantsWorkout && !intent.experience_level
-      if (needsInjuryAsk || needsFocusAsk || needsLevelAsk) {
+      if (needsInjuryAsk || needsLocationAsk || needsFocusAsk || needsLevelAsk) {
         // Real gap found live: a brand-new cold-start chat almost always has
-        // BOTH level and injuries unknown at once (the common case, not the
-        // rare one), which used to combine into one multi-part sentence with
-        // no tappable buttons at all — exactly the case she hit. Ask ONE
-        // thing at a time instead, each always paired with real buttons, so
-        // tapping through 2-3 quick questions replaces typing a combined
-        // answer. One extra round trip in the worst case, never a dead end.
+        // several of these unknown at once (the common case, not the rare
+        // one), which used to combine into one multi-part sentence with no
+        // tappable buttons at all — exactly the case she hit. Ask ONE thing
+        // at a time instead, each always paired with real buttons, so
+        // tapping through a few quick questions replaces typing a combined
+        // answer. A few extra round trips in the worst case, never a dead end.
         const q = needsLevelAsk ? "Quick one — what experience level you're at?"
+          : needsLocationAsk ? 'Quick one — training at home or the gym today?'
           : needsFocusAsk ? 'Quick one — a specific area you want to focus on, or just overall?'
           : 'Quick one — any injuries or areas I should work around today?'
         const quickReplies = needsLevelAsk ? ['New to this', 'Some experience', 'Advanced']
+          : needsLocationAsk ? ['Home', 'Gym']
           : needsFocusAsk ? ['Core', 'Legs', 'Arms', 'Overall']
           : ['No injuries']
         await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: q })
@@ -250,11 +261,15 @@ export async function POST(request: NextRequest) {
       const sex = intent.sex ?? 'female'
       const height_in = intent.height_in ?? 64
       const days_per_week = intent.days_per_week ?? 3
+      // Gated above by needsLocationAsk same as injuries/level/focus — by the time
+      // we reach here she's either just answered it or the conversation already
+      // covered it, so this is a genuine value now, not a silent guess. The ??
+      // 'gym' is just a type-safety fallback, not expected to actually fire.
       const training_location = intent.training_location ?? 'gym'
-      // Gated above by needsLevelAsk same as injuries/focus — by the time we reach
-      // here she's either just answered it or the conversation already covered it,
-      // so this is a genuine value, not a silent guess. The ?? 'beginner' is just a
-      // type-safety fallback, not expected to actually fire in practice.
+      // Gated above by needsLevelAsk same as injuries/location/focus — by the time
+      // we reach here she's either just answered it or the conversation already
+      // covered it, so this is a genuine value, not a silent guess. The ?? 'beginner'
+      // is just a type-safety fallback, not expected to actually fire in practice.
       const experience_level = intent.experience_level ?? 'beginner'
       // Real fix, root cause: focus_area used to be a single value, so "arms,
       // legs, and core" could only ever keep one of the three. focus_areas is
