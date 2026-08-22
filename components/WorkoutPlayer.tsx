@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import Ring from '@/components/Ring'
 import Confetti from '@/components/Confetti'
 import QuickFeedback from '@/components/QuickFeedback'
 import EffortTap from '@/components/EffortTap'
@@ -13,6 +12,37 @@ import { buildSteps, dayLabels, estimateWorkoutMinutes, trimStepsToTarget, type 
 import { GOAL_LABEL, type WorkoutProgram } from '@/lib/workout'
 import { hapticTap } from '@/lib/haptics'
 import { playCountdownBeep, unlockAudioContext } from '@/lib/countdown-beep'
+
+function formatClock(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60)
+  const s = totalSeconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function PlayIcon() {
+  return <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+}
+function PauseIcon() {
+  return <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" /><rect x="14" y="5" width="4" height="14" /></svg>
+}
+function CheckIcon() {
+  return <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M4 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+}
+function SkipBackIcon() {
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM20 6v12l-8.5-6z" /></svg>
+}
+function SkipForwardIcon() {
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4 6l8.5 6L4 18z" /></svg>
+}
+function DumbbellIcon() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gold/40">
+      <path d="M6.5 9v6M4 10v4M17.5 9v6M20 10v4M9 12h6" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="5" y="8" width="3" height="8" rx="1" />
+      <rect x="16" y="8" width="3" height="8" rx="1" />
+    </svg>
+  )
+}
 
 // Guided in-workout player. Opens straight into TODAY'S session (no picker
 // screen); a compact switcher lets her change the day. One countdown interval
@@ -151,7 +181,6 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
   }
 
   if (!step) return null
-  const pct = isTimed && left != null ? (left / step.seconds!) * 100 : 0
   const progress = Math.round(((i + 1) / steps.length) * 100)
 
   return (
@@ -197,47 +226,63 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
         </div>
       )}
 
-      <div key={`${dayIdx}-${i}`} className="q-in-fwd flex-1 flex flex-col items-center justify-center text-center">
-        <p className={`text-xs font-semibold tracking-[0.2em] uppercase mb-5 ${step.rest ? 'text-green-400' : 'text-gold'}`}>{step.phase}</p>
+      <div key={`${dayIdx}-${i}`} className="q-in-fwd flex-1 flex flex-col">
+        {/* Info + timer band — the countdown lives here now, not layered over
+            the image, so a real photo and a running clock can both show at
+            once instead of being an either/or (real gap that used to mean
+            the image never rendered for ANY timed step, home track included,
+            since every home exercise is timed). */}
+        <div className={`rounded-t-3xl px-5 py-4 flex items-center justify-between border border-b-0 ${step.rest ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-gold/10 border-gold/30'}`}>
+          <div>
+            <p className={`text-xs font-semibold tracking-[0.2em] uppercase ${step.rest ? 'text-emerald-400' : 'text-gold'}`}>{step.phase}</p>
+            <p className="text-ivory/50 text-xs font-medium mt-0.5 tabular-nums">Exercise {i + 1}/{steps.length}</p>
+          </div>
+          {isTimed && left != null && <p className="text-4xl font-bold text-white tabular-nums">{formatClock(left)}</p>}
+        </div>
 
-        {isTimed ? (
-          <Ring pct={pct} size={200} stroke={10} color={step.rest ? '#46c46f' : '#f5a623'} track="rgba(255,255,255,0.08)" animateOnMount={false}>
-            <div>
-              <p className="text-5xl font-bold text-white tabular-nums">{left}</p>
-              <p className="text-ivory/50 text-xs uppercase tracking-wider">seconds</p>
+        {/* Main card — image, name, reps/sets (large font throughout, per spec) */}
+        <div className="bg-charcoal border border-t-0 border-smoke rounded-b-3xl px-5 pt-6 pb-8 flex flex-col items-center text-center">
+          {step.imageUrl ? (
+            <div className="w-full max-w-sm aspect-[4/3] rounded-2xl overflow-hidden mb-5 bg-obsidian">
+              <Image src={step.imageUrl} alt={step.name} width={480} height={360} className="w-full h-full object-cover" />
             </div>
-          </Ring>
-        ) : step.imageUrl ? (
-          <div className="w-[200px] h-[200px] rounded-full border-2 border-gold/20 overflow-hidden mb-2">
-            <Image src={step.imageUrl} alt={step.name} width={200} height={200} className="w-full h-full object-cover" />
-          </div>
-        ) : (
-          <div className="w-[200px] h-[200px] rounded-full border-2 border-gold/20 flex items-center justify-center mb-2">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gold/60">
-              <path d="M6.5 9v6M4 10v4M17.5 9v6M20 10v4M9 12h6" strokeLinecap="round" strokeLinejoin="round" />
-              <rect x="5" y="8" width="3" height="8" rx="1" />
-              <rect x="16" y="8" width="3" height="8" rx="1" />
-            </svg>
-          </div>
-        )}
+          ) : (
+            <div className="w-full max-w-sm aspect-[4/3] rounded-2xl mb-5 bg-obsidian border border-gold/20 flex items-center justify-center">
+              <DumbbellIcon />
+            </div>
+          )}
 
-        <h1 className="text-3xl font-bold text-white mt-7 mb-1 leading-tight text-balance">{step.name}</h1>
-        {step.detail && <p className="text-gold font-semibold mb-3">{step.detail}</p>}
-        {step.cue && <p className="text-ivory/60 text-sm max-w-sm leading-relaxed">{step.cue}</p>}
+          <h1 className="text-4xl font-bold text-white mb-2 leading-tight text-balance">{step.name}</h1>
+          {step.detail && <p className="text-gold text-2xl font-bold mb-3">{step.detail}</p>}
+          {step.cue && <p className="text-ivory/60 text-sm max-w-sm leading-relaxed">{step.cue}</p>}
+        </div>
       </div>
 
-      {/* controls */}
-      <div className="mt-8">
-        <div className="flex gap-3">
-          <button onClick={() => setI(Math.max(0, i - 1))} disabled={i === 0} className="px-5 py-4 rounded-2xl bg-charcoal border border-smoke text-ivory/60 disabled:opacity-30 active:scale-95 transition-transform">←</button>
-          {isTimed ? (
-            <button onClick={() => setPaused((p) => !p)} className="flex-1 bg-charcoal border border-gold/40 text-gold px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl active:scale-[.98] transition-transform">{paused ? 'Resume' : 'Pause'}</button>
-          ) : (
-            <button onClick={() => { hapticTap(); advanceRef.current() }} className="luf-glow flex-1 bg-gold text-obsidian px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl active:scale-[.98] transition-transform">Done — Next →</button>
-          )}
-          <button onClick={() => advanceRef.current()} className="px-5 py-4 rounded-2xl bg-charcoal border border-smoke text-ivory/60 active:scale-95 transition-transform">→</button>
+      {/* Transport controls — one big circular action in the center (pause/
+          resume for a timed step, a checkmark to advance for a rep-based
+          one), skip back/forward on either side. */}
+      <div className="mt-6">
+        <div className="flex items-center justify-center gap-6">
+          <button onClick={() => setI(Math.max(0, i - 1))} disabled={i === 0} aria-label="Previous step"
+            className="w-14 h-14 rounded-full bg-charcoal border border-smoke text-ivory/60 disabled:opacity-30 flex items-center justify-center active:scale-95 transition-transform">
+            <SkipBackIcon />
+          </button>
+          <button
+            onClick={isTimed ? () => setPaused((p) => !p) : () => { hapticTap(); advanceRef.current() }}
+            aria-label={isTimed ? (paused ? 'Resume' : 'Pause') : 'Done, next exercise'}
+            className="luf-glow w-20 h-20 rounded-full bg-gold text-obsidian flex items-center justify-center active:scale-95 transition-transform">
+            {isTimed ? (paused ? <PlayIcon /> : <PauseIcon />) : <CheckIcon />}
+          </button>
+          <button onClick={() => advanceRef.current()} aria-label="Skip to next step"
+            className="w-14 h-14 rounded-full bg-charcoal border border-smoke text-ivory/60 flex items-center justify-center active:scale-95 transition-transform">
+            <SkipForwardIcon />
+          </button>
         </div>
-        {isTimed && <button onClick={() => advanceRef.current()} className="w-full text-center text-ivory/50 text-xs mt-3 hover:text-gold">Skip →</button>}
+        <p className="text-center text-ivory/40 text-xs mt-4">
+          {i + 1 < steps.length
+            ? <>Up next · <span className="text-ivory/70 font-medium">{steps[i + 1].name}</span></>
+            : "Last one — you're almost done"}
+        </p>
       </div>
     </div>
   )

@@ -106,7 +106,11 @@ export function buildSteps(program: WorkoutProgram, dayIdx: number): WorkoutStep
     steps.push({ phase: 'Rest', name: 'Rest', seconds: 60, rest: true })
   })
   day.accessory.forEach((a) => {
-    steps.push({ phase: 'Accessory', name: a.name, detail: a.reps, cue: a.cue })
+    // Real bug found live: every other exercise category (supersets, abs,
+    // compound-cardio moves) passed imageUrl through to the step — this one
+    // never did, so a matched accessory exercise (Standing Calf Raise is one)
+    // could never show its real photo no matter what.
+    steps.push({ phase: 'Accessory', name: a.name, detail: a.reps, cue: a.cue, imageUrl: a.imageUrl })
     steps.push({ phase: 'Rest', name: 'Rest', seconds: 45, rest: true })
   })
   steps.push({ phase: `Abs · ${day.ab.scheme}`, name: day.ab.upper.name, detail: day.ab.scheme, cue: day.ab.upper.cue, imageUrl: day.ab.upper.imageUrl })

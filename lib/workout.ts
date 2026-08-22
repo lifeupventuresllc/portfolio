@@ -11,6 +11,7 @@ import {
   type GymExercise, type AbExercise, type Level, type Movement, type Injury, type Muscle,
 } from './workout-exercises'
 import { compoundExercisesForLevel } from './compound-exercises'
+import { FORM_IMAGES } from './exercise-images'
 
 // Her stated preference from intake (see the "workout style" question). 'compound'
 // is the only value that changes behavior today: it makes the cardio/HIIT finisher
@@ -94,7 +95,7 @@ export interface CardioFinisher {
 export interface GymDay {
   dayNum: number; title: string; muscles: string[]; warmup: string[]
   supersets: Superset[]
-  accessory: { name: string; reps: string; cue: string }[]
+  accessory: { name: string; reps: string; cue: string; imageUrl?: string }[]
   // bonus: only set when she's chosen 'core' as her focus area — an extra ab
   // set on top of the standard upper+lower, since core has no Muscle-union
   // entry to weight through the normal target system.
@@ -282,7 +283,7 @@ function pickGym(movement: Movement, muscles: string[], level: Level, weekOffset
 // muscles, appended to the day's existing accessory work (same place the
 // calf-raise/tibialis pair already lives) — same shape as the 'core' bonus
 // ab exercise below, so all three focus areas behave consistently.
-function pickFocusAccessory(muscles: Muscle[], level: Level, goal: WorkoutInputs['goal'], offset: number, injuries: Injury[], usedNames: Set<string>): { name: string; reps: string; cue: string } | null {
+function pickFocusAccessory(muscles: Muscle[], level: Level, goal: WorkoutInputs['goal'], offset: number, injuries: Injury[], usedNames: Set<string>): { name: string; reps: string; cue: string; imageUrl?: string } | null {
   const ok = (e: GymExercise) => muscles.includes(e.muscle) && e.minLevel <= level && !isContraindicated(e.name, injuries) && !usedNames.has(e.name)
   // Real gap found: pickGym's own sort already puts free weights first
   // (barbell/dumbbell over machine/cable), but this bonus pick never had
@@ -298,7 +299,7 @@ function pickFocusAccessory(muscles: Muscle[], level: Level, goal: WorkoutInputs
   const freeCandidates = candidates.filter((e) => e.free)
   const pick = rotate(freeCandidates.length ? freeCandidates : candidates, offset)[0]
   if (!pick) return null
-  return { name: pick.name, reps: repScheme(level, goal), cue: `${pick.cue} (bonus set — from your chosen focus area)` }
+  return { name: pick.name, reps: repScheme(level, goal), cue: `${pick.cue} (bonus set — from your chosen focus area)`, imageUrl: pick.imageUrl }
 }
 
 // Priority pool (Asa's curated screenshot batch) is the PRIMARY source now — the
@@ -400,9 +401,19 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
       muscles: spec.muscles,
       warmup: WARMUPS[spec.warm],
       supersets,
+      // Real gap found live (direct question, not a guess): calf/ankle work
+      // used to be hardcoded onto EVERY single day regardless of what that
+      // day actually trains — a chest or back day would still tack on calf
+      // raises, which aren't required by anything that day's supersets
+      // actually target. Only include them on a day that genuinely trains
+      // legs (or a full-body day, which does too) — a push/pull/upper day
+      // gets none, same "is it required for this?" test as everywhere else
+      // in this codebase.
       accessory: [
-        { name: 'Standing Calf Raise', reps: level === 1 ? '2 × 15–20' : '3 × 15–20', cue: 'Rise onto toes, squeeze at the top, lower slow for a full stretch.' },
-        { name: 'Single-Arm Tibialis Raise (wall)', reps: '2 × 15 each', cue: 'Back to wall, lift toes toward shins, squeeze the shin, lower slow.' },
+        ...(spec.muscles.some((m) => /quad|hamstring|glute|leg|full body/i.test(m)) ? [
+          { name: 'Standing Calf Raise', reps: level === 1 ? '2 × 15–20' : '3 × 15–20', cue: 'Rise onto toes, squeeze at the top, lower slow for a full stretch.', imageUrl: FORM_IMAGES['Standing Calf Raise'] },
+          { name: 'Single-Arm Tibialis Raise (wall)', reps: '2 × 15 each', cue: 'Back to wall, lift toes toward shins, squeeze the shin, lower slow.', imageUrl: FORM_IMAGES['Single-Arm Tibialis Raise (wall)'] },
+        ] : []),
         ...(focusBonus ? [focusBonus] : []),
       ],
       ab: {
