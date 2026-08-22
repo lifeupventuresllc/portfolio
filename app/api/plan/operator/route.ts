@@ -3,7 +3,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { localDateISO, localHourNumber, localDayNumber, localMondayIndex, addDaysISO } from '@/lib/localdate'
 import type { WeekPlan } from '@/lib/meal-plan'
 import { recover, injurySafetyClause, type LifeSignal, type RecoveryPlan } from '@/lib/fos/recovery'
-import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation, detectFocusAreas } from '@/lib/fos/parse'
+import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation, detectFocusAreas, injuriesGenuinelyAddressed } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
 import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
 import { extractProfileFacts, generateReply, describeDecision, answerGeneralQuestion } from '@/lib/fos/memory'
@@ -207,6 +207,15 @@ export async function POST(request: NextRequest) {
       for (const a of ruleFocuses) if (!existing.has(a)) merged.push(a)
       if (merged.length) intent.focus_areas = merged
     }
+    // Real, reproducible bug found via a live stress test: the AI classifier
+    // can self-report injuries_addressed: true even when injuries were NEVER
+    // mentioned anywhere in the conversation — a plain "build me a workout"
+    // sailed straight through level/location/focus quick-replies to a built
+    // plan with the injury question never asked at all. This is the one
+    // question where a wrong guess can actually hurt her, so it never gets
+    // to rest on the model's own say-so — only a real, grounded check of the
+    // stored conversation can mark it addressed.
+    if (intent) intent.injuriesAddressed = injuriesGenuinelyAddressed(history || [])
 
     if (intent) {
       // The always-ask essentials: injuries (a wrong guess can actually hurt her),

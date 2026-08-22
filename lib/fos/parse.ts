@@ -212,3 +212,21 @@ export function detectFocusAreas(text: string): FocusAreaRequest[] {
   if (/\bcore\b|\babs?\b|\bwaistline\b/.test(t)) add('core')
   return found
 }
+
+// Real, reproducible bug found via a live stress test: detectPlanIntent's AI
+// classifier can self-report injuries_addressed: true even when injuries were
+// NEVER mentioned anywhere in the conversation — a plain "build me a workout"
+// followed by answering level/location/focus quick-replies sailed straight
+// through to a built plan with the injury question never asked at all. This
+// is the one question where a wrong guess can actually hurt her, so it can't
+// rest on an LLM's self-report of "I already handled that." Grounded instead
+// in the actual stored conversation: either she was directly asked the real
+// injury question and replied at all afterward (the strongest possible
+// signal — a real question, a real answer), or she volunteered
+// injury/pain/limitation language on her own, unprompted, in her own words.
+export function injuriesGenuinelyAddressed(history: { role: string; content: string }[]): boolean {
+  const askedIdx = history.findIndex((h) => h.role === 'operator' && /any injuries or areas i should work around/i.test(h.content))
+  if (askedIdx >= 0 && history.slice(askedIdx + 1).some((h) => h.role === 'user')) return true
+  const userText = history.filter((h) => h.role === 'user').map((h) => h.content).join(' ').toLowerCase()
+  return /\b(injur(y|ies|ed)?|hurt|pain(ful)?|sore(ness)?|tweak(ed)?|sprain(ed)?|pulled|strain(ed)?|no injuries|i'?m fine|nothing wrong|nothing to report)\b/.test(userText)
+}
