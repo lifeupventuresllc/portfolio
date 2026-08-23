@@ -45,6 +45,11 @@ export default async function WorkoutSession() {
   }
   if (!enrollment) redirect('/plan')
 
+  // Same real bug as /plan/today's "Today, there" (found live, screenshot):
+  // "there" only works for an idiomatic "Hey there," never for a vocative
+  // "That's done, {name}." — WorkoutPlayer's finish screen needs the same
+  // hasRealName gate, not just this page's own copy.
+  const hasRealName = !!(enrollment.name || user.email)
   const firstName = (enrollment.name || user.email?.split('@')[0] || 'there').split(' ')[0]
   const [{ data: workoutPlan }, { data: doneRows }, { data: intake }, todayAdjustment] = await Promise.all([
     svc.from('challenge_workout_plans').select('*').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
@@ -179,7 +184,7 @@ export default async function WorkoutSession() {
 
   return (
     <div className="min-h-[100dvh] bg-obsidian px-4 py-8">
-      <WorkoutPlayer program={program} firstName={firstName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} />
+      <WorkoutPlayer program={program} firstName={firstName} hasRealName={hasRealName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} />
       {/* The quickstart flow (QuickstartWorkout) only ever shows its home/gym
           picker once, on the very first build — real behavior, not a bug, since
           re-showing it every visit would defeat the "no wall" point. But she

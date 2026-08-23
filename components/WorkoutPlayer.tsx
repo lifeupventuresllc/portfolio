@@ -47,9 +47,17 @@ function DumbbellIcon() {
 // Guided in-workout player. Opens straight into TODAY'S session (no picker
 // screen); a compact switcher lets her change the day. One countdown interval
 // per step (not recreated every second) so the timer runs smooth.
-export default function WorkoutPlayer({ program, firstName, startDay = 0, targetMinutes }: {
+export default function WorkoutPlayer({ program, firstName, hasRealName = true, startDay = 0, targetMinutes }: {
   program: WorkoutProgram
   firstName: string
+  // Real bug found live: "there" (firstName's fallback for a nameless guest
+  // account) only works in an idiomatic "Hey there," not the finish screen's
+  // vocative "That's done, {name}." — gates whether that name actually
+  // renders instead of ever substituting the fallback into a sentence shape
+  // it was never written for. Defaults true so every other real caller
+  // (there's only the one right now) keeps rendering the name exactly as
+  // before without needing to pass this explicitly.
+  hasRealName?: boolean
   startDay?: number
   // Set when Coach Asa's chat approved a time-crunch/low-energy/re-entry adjustment
   // for today — genuinely shortens the session instead of just relabeling it.
@@ -170,7 +178,7 @@ export default function WorkoutPlayer({ program, firstName, startDay = 0, target
       <div className="max-w-lg mx-auto text-center q-in-fwd py-10">
         <Confetti fire={done} />
         <p className="text-6xl mb-4">🔥</p>
-        <h1 className="text-3xl font-bold text-white mb-2">That&apos;s done, {firstName}.</h1>
+        <h1 className="text-3xl font-bold text-white mb-2">That&apos;s done{hasRealName ? `, ${firstName}` : ''}.</h1>
         <p className="text-ivory/60 text-sm mb-8">You showed up and you finished. That&apos;s the whole game. I logged it for your streak.</p>
         <EffortTap />
         <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} className="luf-glow w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl mt-6">Back to my week</button>

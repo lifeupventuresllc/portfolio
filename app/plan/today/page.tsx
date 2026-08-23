@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import FoodLog, { type PlannedItem } from '@/components/FoodLog'
 import LifePatternCard from '@/components/LifePatternCard'
 import PlanEvolutionCard from '@/components/PlanEvolutionCard'
 import ClientMenu from '@/components/ClientMenu'
@@ -38,6 +37,13 @@ function TargetIcon() {
     </svg>
   )
 }
+function MealIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 3v7a2 2 0 0 0 4 0V3M8 10v11M16 3c-1.4 0-2.5 1.6-2.5 4.5S14.6 12 16 12s2.5-1.6 2.5-4.5S17.4 3 16 3ZM16 12v9" />
+    </svg>
+  )
+}
 
 export default async function TodayView() {
   const supabase = createClient()
@@ -63,12 +69,17 @@ export default async function TodayView() {
 
   const tz = getTimezone()
   const todayIso = localDateISO(tz)
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }] = await Promise.all([
+  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }, { data: foodRows }] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('measurements, logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
     svc.from('challenge_intake').select('form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
+    // Real numbers for the slim nutrition row below (Whoop-mockup match) — the
+    // same challenge_food_log table FoodLog itself reads client-side, queried
+    // here server-side so the glance row never has to wait on a second
+    // client fetch just to show "X cal left."
+    svc.from('challenge_food_log').select('calories, protein_g').eq('enrollment_id', enrollment.id).eq('logged_on', todayIso),
   ])
   // Moved here from /plan's dashboard (2026-08-12 redesign) — one-time invite into
   // the profile pass(es) she skipped to get here fast. Disappears for good once done.
@@ -92,10 +103,16 @@ export default async function TodayView() {
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
     ? (nutritionPlan.meals as WeekPlan) : null
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
-  const planned: PlannedItem[] = (todayMeals?.meals || []).map((m) => ({ slot: m.slot, name: m.name, cal: m.cal, protein: m.protein, carbs: m.carbs, fat: m.fat }))
 
   // Coach Asa adjusted today's calories? Reflect it in the budget — same as /plan's dashboard.
   const calBudget = todayMeals?.target != null ? getEffectiveCalorieBudget(todayMeals.target, todayAdjustment) : null
+  // Real numbers for the slim nutrition row (Whoop-mockup match) and the
+  // hero ring's second half — what she's actually logged today, not what
+  // the plan merely intends. foodLoggedToday also feeds the ring below.
+  const loggedCalories = (foodRows || []).reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
+  const loggedProtein = (foodRows || []).reduce((sum, r) => sum + (Number(r.protein_g) || 0), 0)
+  const calRemaining = calBudget != null ? Math.max(0, calBudget - loggedCalories) : null
+  const foodLoggedToday = (foodRows || []).length > 0
 
   // She told Coach Asa she's eating out today (an ad-hoc chat approval, not a
   // pre-scheduled plan day) — the fixed meal list below is now irrelevant, she's
@@ -115,6 +132,9 @@ export default async function TodayView() {
   // already go today"). logged_on was already being selected for doneRows —
   // this was one filter away, not a new query.
   const workoutDoneToday = (doneRows || []).some((r) => r.logged_on === todayIso && (r.measurements as { workout?: boolean } | null)?.workout)
+  // The hero ring's real "1/2" — two genuine today-specific wins (workout,
+  // real logged food), not an arbitrary made-up score.
+  const dailyScore = (workoutDoneToday ? 1 : 0) + (foodLoggedToday ? 1 : 0)
   // Real gap found live: this card (the one the bottom-tab nav actually lands
   // on) had zero focus-area awareness, same class of bug as /plan's dashboard
   // card and /plan/workout — a chat-approved or cold-start-built "focus on
@@ -156,23 +176,21 @@ export default async function TodayView() {
   const showWorkoutAction = dipMoves.length > 0 && patternAssessment.signals.includes('workout_dip')
   const structuralMessage = messageForStructural(structuralAssessment)
 
-  // For You page — page field is the dashboard's own forest ground
-  // (#021F16), same as /plan itself, so the two pages read as one
-  // continuous app. Real course-correction, live: the cards themselves went
-  // through a "Gold Flip" recolor first (matching a gold-mustard mockup Asa
-  // picked), but he then asked for that gold treatment to be scoped to ONLY
-  // the calorie budget card (FoodLog.tsx, left as gold on purpose) — every
-  // other card here reverts to the dashboard's own actual card style
-  // (emerald gradient, gold border/glow, white text) instead, so this page
-  // matches /plan's real boxes, not a page-wide gold reskin.
-  const ACCENT = '#E5A93C'
-  const INK = '#021F16'
-  const CARD_BG = 'linear-gradient(135deg, #0d3a2a, #044A34 60%, #08281d)'
-  const CARD_BORDER = '1px solid rgba(229,169,60,0.4)'
-  const CARD_GLOW = '0 0 16px -4px rgba(229,169,60,0.4)'
+  // For You page — recolored to match the exact Option A mockup Asa picked
+  // (a real published comparison of 3 real-app-inspired directions): a
+  // near-black forest ground, flat dark cards with a thin border instead of
+  // the previous gold-glow gradient treatment, gold reserved for accents and
+  // the one hero ring. Real course-correction, live — the page background
+  // and card treatment below are a direct, literal match to that mockup's
+  // own palette, not an approximation of it.
+  const ACCENT = '#c9a84c'
+  const INK = '#1c1509'
+  const CARD_BG = '#12241a'
+  const CARD_BORDER = '1px solid #24402f'
+  const CARD_GLOW = 'none'
   const CARD_TEXT = '#ffffff'
-  const CARD_MUTED = 'rgba(237,231,218,0.65)'
-  const CARD_ACCENT = '#E5A93C'
+  const CARD_MUTED = 'rgba(232,223,200,0.62)'
+  const CARD_ACCENT = '#c9a84c'
   // Simplify pass: every card on this page repeated this same three-property
   // style object by hand — the actual friction that made scoping the gold
   // recolor to just the budget card require several rounds of careful
@@ -180,10 +198,10 @@ export default async function TodayView() {
   const cardStyle = { background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }
 
   return (
-    <div className="min-h-[100dvh] px-4 py-6" style={{ background: '#021F16' }}>
+    <div className="min-h-[100dvh] px-4 py-6" style={{ background: '#0b1712' }}>
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between gap-3 mb-4">
-          <Link href="/plan" className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all" style={{ background: '#0d3a2a', border: `1px solid rgba(229,169,60,0.4)`, color: ACCENT }}>← Home</Link>
+          <Link href="/plan" className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all" style={{ background: CARD_BG, border: CARD_BORDER, color: ACCENT }}>← Home</Link>
           <ClientMenu firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
         </div>
         <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1" style={{ color: ACCENT }}>{weekdayLabel}</p>
@@ -206,37 +224,40 @@ export default async function TodayView() {
 
           {/* Layout-simplify pass (Option A, Asa's pick from 3 real-app-inspired
               mockups — Whoop's "one score" move): compress today into one
-              glanceable ring + one sentence naming exactly what's next,
-              instead of a separate elaborate workout card further down the
-              page repeating information the ring/sentence already carries.
-              workoutDoneToday is a real, today-specific signal (see above),
-              not the cumulative rotation counter. */}
-          <section className="rounded-2xl p-6" style={cardStyle}>
+              glanceable ring + one sentence naming exactly what's next.
+              Real gap found live: this first pass still boxed the ring in
+              the same bordered/glowing card style as every other section —
+              Whoop (and the approved mockup) never puts its hero score in a
+              box, it's the one thing on the screen that's deliberately NOT a
+              card, floating directly on the background, bigger than
+              anything else here. workoutDoneToday is a real, today-specific
+              signal (see above), not the cumulative rotation counter. */}
+          <section className="flex flex-col items-center text-center py-2">
             {todayWorkout ? (
-              <div className="flex flex-col items-center text-center">
-                <div className="relative w-32 h-32 mb-4">
+              <>
+                <div className="relative w-48 h-48 mb-5">
                   <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transform: 'rotate(-90deg)' }}>
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="9" />
-                    <circle cx="50" cy="50" r="42" fill="none" stroke={CARD_ACCENT} strokeWidth="9" strokeLinecap="round"
-                      strokeDasharray={`${2 * Math.PI * 42}`} strokeDashoffset={`${workoutDoneToday ? 0 : 2 * Math.PI * 42 * 0.78}`} />
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
+                    <circle cx="50" cy="50" r="45" fill="none" stroke={CARD_ACCENT} strokeWidth="6" strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 45}`} strokeDashoffset={`${2 * Math.PI * 45 * (1 - dailyScore / 2)}`} />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <p className="text-2xl font-bold" style={{ color: CARD_TEXT, fontFamily: 'Georgia, "Times New Roman", ui-serif, serif' }}>{workoutDoneToday ? 'Done' : 'Today'}</p>
-                    {!workoutDoneToday && <p className="text-[10px] uppercase tracking-wider font-semibold mt-0.5" style={{ color: CARD_MUTED }}>not started</p>}
+                    <p className="text-4xl font-bold" style={{ color: CARD_TEXT, fontFamily: 'Georgia, "Times New Roman", ui-serif, serif' }}>{dailyScore}/2</p>
+                    <p className="text-[10px] uppercase tracking-wider font-semibold mt-1" style={{ color: CARD_MUTED }}>done today</p>
                   </div>
                 </div>
-                <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>
+                <p className="font-semibold" style={{ color: CARD_TEXT }}>
                   {workoutDoneToday ? 'You already showed up today.' : <>Next: <span style={{ color: CARD_ACCENT }}>{todayWorkout.title}</span></>}
                 </p>
                 {!workoutDoneToday && todayAdjustment?.workoutChange && (
                   <p className="text-[11px] mt-1 font-semibold" style={{ color: CARD_ACCENT }}>Adjusted: {todayAdjustment.workoutChange.toMinutes ? `${todayAdjustment.workoutChange.toMinutes}-min ` : ''}{todayAdjustment.workoutChange.swapTo || 'adapted for today'}</p>
                 )}
                 {!workoutDoneToday && (
-                  <Link href="/plan/workout" className="luf-pulse mt-4 w-full inline-flex items-center justify-center gap-1.5 px-4 py-3 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.02] transition-transform" style={{ background: CARD_ACCENT, color: INK }}>▶ Start workout</Link>
+                  <Link href="/plan/workout" className="luf-pulse mt-5 w-full max-w-xs inline-flex items-center justify-center gap-1.5 px-4 py-3.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.02] transition-transform" style={{ background: CARD_ACCENT, color: INK }}>▶ Start workout</Link>
                 )}
-              </div>
+              </>
             ) : (
-              <div className="text-center">
+              <div className="rounded-2xl p-5 w-full" style={cardStyle}>
                 <p className="font-semibold mb-1" style={{ color: CARD_TEXT }}>We hit a snag building your workout</p>
                 <p className="text-sm mb-3" style={{ color: CARD_MUTED }}>Shouldn&apos;t take more than a second to fix.</p>
                 <RebuildPlanButton />
@@ -258,20 +279,25 @@ export default async function TodayView() {
             </Link>
           )}
 
-          {/* Food log — the heartbeat of the daily view. Budget = TODAY'S calorie target
-              (workout days higher, rest days lower); the app already knows which day this is.
-              Layout-simplify pass (Option A, Asa's pick): the old standalone "today's
-              meals" card merged into this one as a single status row instead of a
-              second full card saying nearly the same thing the budget ring already
-              implies — fewer full-width blocks to scroll past, same information. */}
-          <FoodLog
-            planned={planned} budget={calBudget} dayType={todayMeals?.dayType ?? null}
-            mealStatus={
-              eatingOutToday ? { kind: 'eatingOut' }
-                : todayMeals ? { kind: 'planned', totalProtein: todayMeals.totalProtein }
-                : { kind: 'empty', isSunday: mealIdx > 5 }
-            }
-          />
+          {/* Layout-simplify pass (Option A, Asa's pick — exact mockup match):
+              the full FoodLog card (budget ring, protein bar, inline search/
+              voice/AI-estimate logging, entry list) moved to its own screen
+              (/plan/nutrition, "Meal Prep" below) — nothing in it was cut,
+              it just isn't a second full card competing with the hero ring
+              for the top of this page anymore. This is the one-line glance
+              the mockup showed in its place, real numbers, not a guess. */}
+          <Link href="/plan/nutrition" className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-colors" style={cardStyle}>
+            {eatingOutToday ? (
+              <span className="text-sm font-semibold" style={{ color: CARD_TEXT }}>Eating out today — see exactly what to order</span>
+            ) : todayMeals ? (
+              <>
+                <span className="text-sm" style={{ color: CARD_TEXT }}>{calRemaining != null ? `${calRemaining} cal left today` : "Today's meals"}</span>
+                <span className="text-sm font-bold shrink-0" style={{ color: CARD_ACCENT }}>{Math.max(0, (todayMeals.totalProtein || 0) - loggedProtein)}g protein to go</span>
+              </>
+            ) : (
+              <span className="text-sm" style={{ color: CARD_MUTED }}>{mealIdx > 5 ? 'Sunday — no cook plan, log whatever you have.' : 'No meal plan yet — tap to build one.'}</span>
+            )}
+          </Link>
 
           {/* Moved here from /plan's dashboard (2026-08-12 redesign) — infrequent,
               only renders itself when she's actually eligible. Kept as its own card,
@@ -288,16 +314,26 @@ export default async function TodayView() {
               and the intake nudges are load-bearing for real personalization,
               see the needsRequiredTier note above) — only the visual weight drops. */}
           <div className="flex flex-wrap gap-2">
-            <Link href="/plan/coach" className="inline-flex items-center gap-2 rounded-full pl-3.5 pr-4 py-2.5 text-xs font-semibold transition-colors" style={{ background: 'rgba(229,169,60,0.1)', border: '1px solid rgba(229,169,60,0.3)', color: CARD_ACCENT }}>
+            <Link href="/plan/coach" className="inline-flex items-center gap-2 rounded-full pl-3.5 pr-4 py-2.5 text-xs font-semibold transition-colors" style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', color: CARD_ACCENT }}>
               <ChatIcon /> Coach Asa
             </Link>
+            {/* Real decision, live: viewing today's real meal plan and logging
+                food used to be two separate things (a full budget card plus a
+                standalone "Log food" pill pointing at the same card) — folded
+                into one seamless destination instead. Nothing about FoodLog's
+                own logging tools changed, this pill is just the one door into
+                all of it now, matching Coach Asa/Goal as the third real
+                one-tap link this page needs, not a fourth. */}
+            <Link href="/plan/nutrition" className="inline-flex items-center gap-2 rounded-full pl-3.5 pr-4 py-2.5 text-xs font-semibold transition-colors" style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', color: CARD_ACCENT }}>
+              <MealIcon /> Meal Prep
+            </Link>
             {needsRequiredTier && (
-              <Link href="/plan/intake" className="inline-flex items-center gap-2 rounded-full pl-3.5 pr-4 py-2.5 text-xs font-semibold transition-colors" style={{ background: 'rgba(229,169,60,0.1)', border: '1px solid rgba(229,169,60,0.3)', color: CARD_ACCENT }}>
+              <Link href="/plan/intake" className="inline-flex items-center gap-2 rounded-full pl-3.5 pr-4 py-2.5 text-xs font-semibold transition-colors" style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', color: CARD_ACCENT }}>
                 <TargetIcon /> Set your real goal
               </Link>
             )}
             {needsOptionalTier && (
-              <Link href="/plan/intake?tier=optional" className="inline-flex items-center gap-2 rounded-full pl-3.5 pr-4 py-2.5 text-xs font-semibold transition-colors" style={{ background: 'rgba(229,169,60,0.1)', border: '1px solid rgba(229,169,60,0.3)', color: CARD_ACCENT }}>
+              <Link href="/plan/intake?tier=optional" className="inline-flex items-center gap-2 rounded-full pl-3.5 pr-4 py-2.5 text-xs font-semibold transition-colors" style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', color: CARD_ACCENT }}>
                 <TargetIcon /> Fine-tune your plan
               </Link>
             )}
