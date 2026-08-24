@@ -69,6 +69,19 @@ export async function middleware(request: NextRequest) {
   // Redirect unauthenticated users away from protected routes
   const protectedRoutes = ['/content', '/admin', '/plan']
   if (protectedRoutes.some(route => pathname.startsWith(route)) && !user) {
+    // Real gap found live: this fired for a genuinely fresh visitor hitting
+    // /plan/today directly (no session at all, not even anonymous — e.g. a
+    // shared/direct link) BEFORE the page's own code ever ran, sending her
+    // to a forced /login screen — contradicting the app's own "no signup
+    // wall" anonymous-access design that every other entry point already
+    // honors via /try. Scoped to just this one page (not the rest of
+    // /plan, and never /admin or /content, which must keep requiring a
+    // real account) since that's what was actually asked for.
+    if (pathname === '/plan/today') {
+      const tryUrl = new URL('/try', request.url)
+      tryUrl.searchParams.set('to', pathname)
+      return NextResponse.redirect(tryUrl)
+    }
     const redirectUrl = new URL('/login', request.url)
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
