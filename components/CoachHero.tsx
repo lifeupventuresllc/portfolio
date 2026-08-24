@@ -327,7 +327,23 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
           )}
         </div>
       ) : messages.length === 0 ? (
-        <p className="text-ink text-lg leading-snug font-medium text-balance mb-5">{greeting}</p>
+        // ChatGPT-style landing treatment (Asa's spec, matched to the reference
+        // screenshot) — this is the box she actually sees first, not the
+        // separate /plan/coach page. `greeting` is already personalized/
+        // contextual (it changes based on what's done today), which is a real
+        // upgrade over a static "What are you working on?" — kept as the
+        // headline, just given the bigger, bolder treatment the reference
+        // has, plus the same "suggestion pill" pattern below it.
+        <div className="text-center py-2">
+          <p className="text-ink text-xl leading-snug font-bold text-balance mb-4">{greeting}</p>
+          <button
+            onClick={() => send('What can Coach Asa do?')}
+            disabled={sending}
+            className="inline-block bg-charcoal/5 border border-smoke/30 text-ink/50 text-xs font-semibold px-4 py-2 rounded-full hover:border-gold/50 hover:text-gold transition-colors disabled:opacity-40"
+          >
+            What can Coach Asa do?
+          </button>
+        </div>
       ) : (
         <div className="space-y-2 pr-1">
           {messages.map((m, i) => (
@@ -442,8 +458,22 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
         </button>
       )}
 
-      {/* talk right here — no page jump */}
-      <form onSubmit={(e) => { e.preventDefault(); send(input) }} className="flex gap-2 items-end">
+      {/* talk right here — no page jump. Unified pill (Asa's ChatGPT-reference
+          spec), same swap-on-typing pattern as /plan/coach's composer: the
+          note-memo mic stays docked on the left (its own distinct capability,
+          not a "+" menu item since there are no quick-signal chips here to
+          hide behind one), the quick-talk mic sits on the right and swaps to
+          a send-arrow the moment there's real text — reusing
+          DeepgramVoiceInput's className/activeClassName so both mic buttons
+          restyle into this pill without forking any transcription logic. */}
+      <form onSubmit={(e) => { e.preventDefault(); send(input) }} className="flex items-center gap-1 bg-charcoal/5 border border-smoke/30 rounded-full pl-1.5 pr-1.5 py-1.5">
+        <DeepgramVoiceInput
+          source="coach_hero" icon={<NoteIcon />} idleLabel="Record a longer memo"
+          onInterim={(t) => { setRecordingMemo(true); setInput(t) }}
+          onResult={(t) => { setRecordingMemo(false); setInput(t) }}
+          className="h-9 w-9 rounded-full text-ink/40 hover:text-gold"
+          activeClassName="h-9 w-9 rounded-full bg-red-500/90 text-white luf-glow scale-105"
+        />
         <textarea
           ref={textareaRef}
           rows={1}
@@ -458,22 +488,26 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
           placeholder="Talk to me about your day…"
           autoComplete="off" autoCorrect="on" enterKeyHint="send" inputMode="text"
           style={{ maxHeight: TEXTAREA_MAX_HEIGHT }}
-          className="flex-1 resize-none bg-charcoal/5 border border-smoke/30 rounded-2xl px-4 py-3 text-base text-ink placeholder:text-ink/35 focus:border-gold/60 focus:outline-none overflow-y-auto"
+          className="flex-1 resize-none bg-transparent px-1.5 py-1.5 text-base text-ink placeholder:text-ink/35 focus:outline-none overflow-y-auto"
         />
-        {/* Deepgram Nova-3, not the browser's built-in recognition — see
-            components/DeepgramVoiceInput.tsx. Deliberately no auto-send:
-            she reviews/edits the transcript like anything she typed, which
-            matters now that a low-confidence read gets flagged instead of
-            silently sent as-is. */}
-        <DeepgramVoiceInput source="coach_hero" idleLabel="Talk to Coach Asa" onInterim={setInput} onResult={setInput} />
-        <DeepgramVoiceInput
-          source="coach_hero" icon={<NoteIcon />} idleLabel="Record a longer memo"
-          onInterim={(t) => { setRecordingMemo(true); setInput(t) }}
-          onResult={(t) => { setRecordingMemo(false); setInput(t) }}
-        />
-        <button type="submit" disabled={sending || !input.trim()} className="h-12 w-12 shrink-0 rounded-full bg-gold text-obsidian flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform">{sending ? <span className="text-lg font-bold">…</span> : <SendIcon />}</button>
+        {input.trim() ? (
+          <button type="submit" disabled={sending} aria-label="Send" className="shrink-0 h-9 w-9 rounded-full bg-gold text-obsidian flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform">
+            {sending ? <span className="text-sm font-bold leading-none">…</span> : <SendIcon />}
+          </button>
+        ) : (
+          // Deepgram Nova-3, not the browser's built-in recognition — see
+          // components/DeepgramVoiceInput.tsx. Deliberately no auto-send:
+          // she reviews/edits the transcript like anything she typed, which
+          // matters now that a low-confidence read gets flagged instead of
+          // silently sent as-is.
+          <DeepgramVoiceInput
+            source="coach_hero" idleLabel="Talk to Coach Asa" onInterim={setInput} onResult={setInput}
+            className="h-9 w-9 rounded-full bg-gold text-obsidian"
+            activeClassName="h-9 w-9 rounded-full bg-red-500/90 text-white luf-glow scale-105"
+          />
+        )}
       </form>
-      <p className="text-ink/25 text-[10px] mt-1.5">tap to talk · tap for a longer voice memo</p>
+      <p className="text-ink/25 text-[10px] mt-1.5 text-center">tap to talk · left mic for a longer voice memo</p>
       </div>
 
       <Celebration trigger={perfectDay} message={winAffirmation('allDone')} dedupeKey={`perfectday-${today}`} />
