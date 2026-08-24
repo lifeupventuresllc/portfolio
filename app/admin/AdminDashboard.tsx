@@ -512,6 +512,12 @@ export default function AdminDashboard({ userRole }: { userRole: string }) {
             </span>
           )}
           <a
+            href="/admin/clients"
+            className="px-4 py-2 bg-charcoal border border-gold/50 text-gold rounded-lg text-sm font-semibold hover:bg-gold/10 whitespace-nowrap"
+          >
+            👥 Clients
+          </a>
+          <a
             href="/admin/daily-10"
             className="px-4 py-2 bg-charcoal border border-gold/50 text-gold rounded-lg text-sm font-semibold hover:bg-gold/10 whitespace-nowrap"
           >

@@ -36,7 +36,9 @@ function activityStatus(lastActiveAt: string | null): { label: string; tone: 'ac
   const days = (Date.now() - new Date(lastActiveAt).getTime()) / 86400000
   if (days < 1) return { label: 'active today', tone: 'active' }
   if (days < 2) return { label: 'active yesterday', tone: 'active' }
-  if (days < 3) return { label: `active ${Math.floor(days)}d ago`, tone: 'quiet' }
+  // Label and tone must agree — found while verifying this: "active 2d ago"
+  // read as green/good when it was actually styled amber/quiet, contradicting
+  // itself on the one screen this whole feature exists to make trustworthy.
   return { label: `quiet ${Math.floor(days)}d`, tone: 'quiet' }
 }
 
