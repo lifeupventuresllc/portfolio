@@ -58,9 +58,9 @@ export default async function ClientsPage() {
           <Link href="/admin" className="text-ivory/40 text-xs hover:text-gold">← Admin</Link>
           <Link href="/admin/checkins" className="text-ivory/40 text-xs hover:text-gold">Check-in queue →</Link>
         </div>
-        <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Coach CRM</p>
-        <h1 className="text-3xl font-bold text-white mb-2">Your clients</h1>
-        <p className="text-ivory/50 text-sm mb-8">Everyone you coach, in one place. Tap a client to see their whole picture.</p>
+        <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Users</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Active users</h1>
+        <p className="text-ivory/50 text-sm mb-8">Everyone on the platform, in one place. Tap anyone to see their whole picture.</p>
         <ClientRoster rows={rows} />
       </div>
     </div>

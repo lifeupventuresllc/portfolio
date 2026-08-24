@@ -44,12 +44,22 @@ function activityStatus(lastActiveAt: string | null): { label: string; tone: 'ac
 
 export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
   const [q, setQ] = useState('')
-  const [filter, setFilter] = useState<'all' | 'attention' | 'active' | 'beta' | 'quiet'>('all')
+  // Defaults to 'active' (not 'all') — Asa's explicit call, moving from a
+  // coaching-CRM framing to a platform-of-active-users one: the first thing
+  // this page shows should be real active users, not a raw signup list.
+  const [filter, setFilter] = useState<'all' | 'attention' | 'active' | 'beta' | 'quiet'>('active')
 
   const needsAttention = (r: RosterRow) => r.pending > 0 || !r.intakeDone || r.hasNegativeFeedback
   // Inner Circle pays for priority same-day replies — a pending check-in from her
   // shouldn't sit buried behind everyone else's. Real sort, not just a badge.
   const isPriority = (r: RosterRow) => r.tier === 'inner_circle' && r.pending > 0
+  // "Active" now means real app usage (opened the app in the last 7 days),
+  // not subscription/enrollment status — r.status answered a different
+  // question (is the account still enrolled) that stopped being the point
+  // once the product moved from coaching clients to a platform of active
+  // users. Same last_active_at signal as the per-row badge, just a wider
+  // 7-day window here since this is the headline filter, not a granular label.
+  const isActive = (r: RosterRow) => !!r.lastActiveAt && (Date.now() - new Date(r.lastActiveAt).getTime()) / 86400000 < 7
   // "Gone quiet" — a real, already-completed intake with no real app activity
   // in 3+ days. Distinct from "no intake" (never started) — this is someone
   // who WAS using it and stopped, exactly who a beta tester follow-up should
@@ -58,7 +68,7 @@ export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
   const counts = useMemo(() => ({
     all: rows.length,
     attention: rows.filter(needsAttention).length,
-    active: rows.filter((r) => r.status === 'active').length,
+    active: rows.filter(isActive).length,
     beta: rows.filter((r) => r.isBeta).length,
     quiet: rows.filter(isQuiet).length,
   }), [rows])
@@ -66,7 +76,7 @@ export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
   const shown = useMemo(() => rows
     .filter((r) => {
       if (filter === 'attention' && !needsAttention(r)) return false
-      if (filter === 'active' && r.status !== 'active') return false
+      if (filter === 'active' && !isActive(r)) return false
       if (filter === 'beta' && !r.isBeta) return false
       if (filter === 'quiet' && !isQuiet(r)) return false
       const hay = `${r.name || ''} ${r.email || ''}`.toLowerCase()
