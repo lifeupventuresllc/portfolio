@@ -30,7 +30,7 @@ function MicIcon() {
 // recoverable if she sees it before it goes out, which matters more now
 // that low-confidence results are actually possible to detect and flag.
 export default function DeepgramVoiceInput({
-  onResult, onInterim, idleLabel = 'Talk to Coach Asa', icon, source,
+  onResult, onInterim, idleLabel = 'Talk to Coach Asa', icon, source, className, activeClassName,
 }: {
   onResult: (text: string) => void
   onInterim?: (text: string) => void
@@ -39,6 +39,13 @@ export default function DeepgramVoiceInput({
   // Written to voice_transcripts.source for later review — which surface a
   // given recording came from.
   source: 'coach_hero' | 'operator_chat' | 'voice_test'
+  // Full replacement for the idle/listening button classes — lets a caller
+  // (e.g. OperatorChat's unified pill composer) reshape this into whatever
+  // circular/pill button its own layout needs without forking the actual
+  // transcription logic. Omit either to keep the original look (CoachHero's
+  // two call sites rely on that default and pass neither).
+  className?: string
+  activeClassName?: string
 }) {
   const [flag, setFlag] = useState<string | null>(null)
   const [supported, setSupported] = useState(true)
@@ -83,7 +90,7 @@ export default function DeepgramVoiceInput({
         type="button"
         onClick={toggle}
         aria-label={listening ? 'Stop and use this' : idleLabel}
-        className={`shrink-0 h-10 w-10 rounded-xl flex items-center justify-center transition-all ${listening ? 'bg-red-500/90 text-white luf-glow scale-105' : 'bg-obsidian/60 border border-smoke text-ivory/70 hover:border-gold/50'}`}
+        className={`shrink-0 flex items-center justify-center transition-all ${listening ? (activeClassName ?? 'h-10 w-10 rounded-xl bg-red-500/90 text-white luf-glow scale-105') : (className ?? 'h-10 w-10 rounded-xl bg-obsidian/60 border border-smoke text-ivory/70 hover:border-gold/50')}`}
       >
         {listening ? (
           <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" /><span className="relative inline-flex rounded-full h-3 w-3 bg-white" /></span>
