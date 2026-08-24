@@ -186,7 +186,7 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
   }
 
   return (
-    <div className={`relative max-h-full flex flex-col overflow-hidden border border-gold/40 shadow-sm p-5 ${maximized ? '' : 'rounded-[2.25rem]'}`} style={{ background: '#0d3a2a' }}>
+    <div className={`relative max-h-full flex flex-col overflow-hidden border border-gold/40 shadow-sm p-4 ${maximized ? '' : 'rounded-[2rem]'}`} style={{ background: '#0d3a2a' }}>
       {/* Everything that can grow (identity + the quiz/greeting/message thread)
           lives in the scrollable top region; the input stays pinned at the
           bottom, same shape as any standard chat UI — see the footer region
@@ -213,34 +213,24 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
           footer content follows, while still letting the region shrink
           below its full content height so it isn't the old unbounded-growth
           bug in a different form. */}
-      <div className="flex-1 min-h-[90px] overflow-y-auto -mx-5 px-5 pb-2">
+      <div className="flex-1 min-h-[60px] overflow-y-auto -mx-4 px-4 pb-1.5">
       {/* identity — a person, not a tool. No avatar glyph (Asa's call) — just
           the name and line, ChatGPT-plain. */}
-      <div className="leading-tight mb-3">
+      <div className="leading-tight mb-2">
         <p className="text-white text-sm font-semibold">Coach</p>
         <p className="text-gold/80 text-[10px] uppercase tracking-[0.18em] font-semibold">I&apos;m right here with you</p>
       </div>
 
       {messages.length === 0 ? (
-        // ChatGPT-style landing treatment (Asa's spec, matched to the reference
-        // screenshot) — this is the box she actually sees first, not the
-        // separate /plan/coach page. `greeting` is already personalized/
-        // contextual (it changes based on what's done today), which is a real
-        // upgrade over a static "What are you working on?" — kept compact
-        // (Asa's call: "smaller, think ChatGPT") rather than the earlier
-        // bigger/bolder treatment. Recolored onto the card's own emerald
-        // background (Asa's call, matching the dashboard's Jewel-Box
-        // palette) instead of white, which was the one surface on this whole
-        // page that didn't.
-        <div className="text-center py-1">
-          <p className="text-white text-base leading-snug font-bold text-balance mb-3">{greeting}</p>
-          <button
-            onClick={() => send('What can Coach do?')}
-            disabled={sending}
-            className="inline-block bg-black/15 border border-gold/20 text-ivory/60 text-xs font-semibold px-3.5 py-1.5 rounded-full hover:border-gold/50 hover:text-gold transition-colors disabled:opacity-40"
-          >
-            What can Coach do?
-          </button>
+        // ChatGPT-style landing treatment (Asa's spec) — this is the box she
+        // actually sees first, not the separate /plan/coach page. `greeting`
+        // is already personalized/contextual (it changes based on what's
+        // done today). Real ChatGPT-size, per Asa's repeated call: no
+        // suggestion pill anymore (one less element competing for height),
+        // tight spacing, recolored onto the card's own emerald background
+        // instead of white.
+        <div className="text-center py-0.5">
+          <p className="text-white text-base leading-snug font-bold text-balance mb-2">{greeting}</p>
           {/* Moved in from CoachOrbLauncher's old "closed" state now that
               there's no more open/closed modal — same gating logic (never
               shown once a real conversation's started, so it can't read as
