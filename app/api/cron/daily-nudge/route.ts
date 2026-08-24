@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { sendPush, pushConfigured, type StoredSub } from '@/lib/push'
 import { localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
+import { streakFrom } from '@/lib/streak'
 
 // Daily reminder: nudge anyone who opted into push and hasn't shown up today.
 // Layer 1 of the primary feature ("the app that already knows you"): this is
@@ -46,6 +47,22 @@ export async function GET(request: NextRequest) {
       title: 'Your workout’s waiting 💪🏽',
       body: "Even 20 minutes counts. Tap to start today's session — your plan's ready.",
       url: '/plan',
+    }
+
+    // Loss aversion beats a generic invitation once there's something real to
+    // lose — but only when nothing's actually wrong (a dip below always wins;
+    // never guilt someone who's already struggling over a number). Same
+    // streakFrom + same '__daily__' dates already fetched above (shownByEnrollment)
+    // as the dashboard chip and every other streak surface — one true number.
+    if (s.enrollment_id) {
+      const current = streakFrom(shownByEnrollment.get(s.enrollment_id as string) || new Set(), localToday)
+      if (current >= 2) {
+        payload = {
+          title: `Don't lose your ${current}-day streak`,
+          body: "One tap keeps it alive — today's session is ready.",
+          url: '/plan',
+        }
+      }
     }
 
     let assessment: Awaited<ReturnType<typeof assessLifePattern>> | null = null

@@ -7,11 +7,13 @@ import ClientMenu from '@/components/ClientMenu'
 import RebuildPlanButton from '@/components/RebuildPlanButton'
 import MondayMemo from '@/components/MondayMemo'
 import LevelUpNudge from '@/components/LevelUpNudge'
+import StreakChip from '@/components/StreakChip'
 import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday } from '@/lib/fos/effective-plan'
+import { streakFrom, milestoneMoment } from '@/lib/streak'
 import { shortVersionFor } from '@/lib/workout-short'
 import { LIVE_CALL } from '@/lib/live-call'
 import { pickFocusDayIndex, type WorkoutProgram, type FocusArea } from '@/lib/workout'
@@ -44,6 +46,13 @@ function MealIcon() {
     </svg>
   )
 }
+function FlameIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2.5c1.2 2.3-1 3.6-1 6 0 1.4 1 2.3 2.2 2.3S15 9.7 14.4 8c1.8 1.4 3.1 3.9 3.1 6.3A5.5 5.5 0 0 1 12 20a5.5 5.5 0 0 1-5.5-5.7c0-3.4 2.2-5.6 3.3-7.1.6-.9.9-2 .9-3.2S11.6 1.8 12 2.5Z" />
+    </svg>
+  )
+}
 
 export default async function TodayView() {
   const supabase = createClient()
@@ -71,7 +80,7 @@ export default async function TodayView() {
   const todayIso = localDateISO(tz)
   const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }, { data: foodRows }] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
-    svc.from('challenge_nutrition_plans').select('meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
+    svc.from('challenge_nutrition_plans').select('meals, calories, protein_g').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('measurements, logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
     svc.from('challenge_intake').select('form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
@@ -104,8 +113,19 @@ export default async function TodayView() {
     ? (nutritionPlan.meals as WeekPlan) : null
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
 
+  // Real bug found live (verification agent, screenshot): this used to only
+  // ever read todayMeals.target, so anyone without a WEEKLY meal plan built
+  // showed "No meal plan yet" even with a real calorie/protein goal already
+  // set and food already logged — because that goal lives as flat columns on
+  // challenge_nutrition_plans (calories, protein_g), the exact same fallback
+  // /api/plan/food-log's own loadTarget() already reads for FoodLog's ring.
+  // This page needs the same fallback so it never disagrees with FoodLog.
+  const flatCalTarget = Number(nutritionPlan?.calories) || null
+  const flatProteinTarget = Number(nutritionPlan?.protein_g) || null
+  const baseCalTarget = todayMeals?.target ?? flatCalTarget ?? undefined
+  const baseProteinTarget = todayMeals?.totalProtein ?? flatProteinTarget ?? undefined
   // Coach Asa adjusted today's calories? Reflect it in the budget — same as /plan's dashboard.
-  const calBudget = todayMeals?.target != null ? getEffectiveCalorieBudget(todayMeals.target, todayAdjustment) : null
+  const calBudget = baseCalTarget != null ? getEffectiveCalorieBudget(baseCalTarget, todayAdjustment) : null
   // Real numbers for the slim nutrition row (Whoop-mockup match) and the
   // hero ring's second half — what she's actually logged today, not what
   // the plan merely intends. foodLoggedToday also feeds the ring below.
@@ -135,6 +155,18 @@ export default async function TodayView() {
   // The hero ring's real "1/2" — two genuine today-specific wins (workout,
   // real logged food), not an arbitrary made-up score.
   const dailyScore = (workoutDoneToday ? 1 : 0) + (foodLoggedToday ? 1 : 0)
+  // The investment loop the app was missing: a real, banked number that makes
+  // NOT coming back today feel like a loss. Reuses the exact same streak
+  // definition already driving the dashboard chip, Monday memo, dip detection,
+  // and leaderboard (see lib/streak.ts) — doneRows above is already every
+  // '__daily__' row with no date filter, the same universe streakFrom expects
+  // everywhere else. Never a second, drifting streak number.
+  const checkinDates = new Set((doneRows || []).map((r) => r.logged_on as string))
+  const currentStreak = streakFrom(checkinDates, todayIso)
+  // The genuinely new piece: a real, varying message on the exact day a
+  // milestone lands, instead of the identical static confirmation every day
+  // gets today regardless of how long a streak she's actually built.
+  const streakMoment = milestoneMoment(currentStreak, enrollment.id as string)
   // Real gap found live: this card (the one the bottom-tab nav actually lands
   // on) had zero focus-area awareness, same class of bug as /plan's dashboard
   // card and /plan/workout — a chat-approved or cold-start-built "focus on
@@ -204,10 +236,30 @@ export default async function TodayView() {
           <Link href="/plan" className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all" style={{ background: CARD_BG, border: CARD_BORDER, color: ACCENT }}>← Home</Link>
           <ClientMenu firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
         </div>
-        <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1" style={{ color: ACCENT }}>{weekdayLabel}</p>
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <p className="text-xs font-semibold tracking-[0.25em] uppercase" style={{ color: ACCENT }}>{weekdayLabel}</p>
+          {/* The always-visible half of the streak loop — banked progress she'd
+              see, and feel the loss of, every single time she opens this page,
+              not just on a milestone day. Reuses the same chip already live on
+              the dashboard (same /api/plan/daily streak, same component) rather
+              than a second hand-rolled counter — one true streak, everywhere. */}
+          <StreakChip />
+        </div>
         <h1 className="font-bold mb-6" style={{ color: '#ffffff', fontFamily: 'Georgia, "Times New Roman", ui-serif, serif', fontSize: 'clamp(1.75rem, 6vw, 2.25rem)' }}>Today{hasRealName ? `, ${firstName}` : ''}</h1>
 
         <div className="space-y-6">
+          {/* Variable reward — fires only on the exact day a real milestone lands
+              (see lib/streak.ts), pulling one of several real lines instead of a
+              single fixed "nice job," so a personal record doesn't read as a
+              form letter. This is the piece the app had zero of before: every
+              completion produced the identical static confirmation regardless
+              of how long a streak she'd actually built. */}
+          {streakMoment && (
+            <div className="rounded-2xl px-5 py-4 flex items-center gap-3" style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.4)' }}>
+              <span style={{ color: ACCENT }}><FlameIcon /></span>
+              <p className="text-sm font-semibold" style={{ color: CARD_TEXT }}>{streakMoment}</p>
+            </div>
+          )}
           {/* The primary feature, live: one unified read across everything she does,
               not a stack of separate cards. This leads, ahead of everything else —
               the smaller ask comes first. */}
@@ -289,10 +341,12 @@ export default async function TodayView() {
           <Link href="/plan/nutrition" className="flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-colors" style={cardStyle}>
             {eatingOutToday ? (
               <span className="text-sm font-semibold" style={{ color: CARD_TEXT }}>Eating out today — see exactly what to order</span>
-            ) : todayMeals ? (
+            ) : baseCalTarget != null ? (
               <>
                 <span className="text-sm" style={{ color: CARD_TEXT }}>{calRemaining != null ? `${calRemaining} cal left today` : "Today's meals"}</span>
-                <span className="text-sm font-bold shrink-0" style={{ color: CARD_ACCENT }}>{Math.max(0, (todayMeals.totalProtein || 0) - loggedProtein)}g protein to go</span>
+                {baseProteinTarget != null && (
+                  <span className="text-sm font-bold shrink-0" style={{ color: CARD_ACCENT }}>{Math.max(0, baseProteinTarget - loggedProtein)}g protein to go</span>
+                )}
               </>
             ) : (
               <span className="text-sm" style={{ color: CARD_MUTED }}>{mealIdx > 5 ? 'Sunday — no cook plan, log whatever you have.' : 'No meal plan yet — tap to build one.'}</span>

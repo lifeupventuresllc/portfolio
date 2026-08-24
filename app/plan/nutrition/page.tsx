@@ -34,7 +34,7 @@ export default async function NutritionPage() {
   const todayIso = localDateISO(tz)
   const mealIdx = localMondayIndex(tz)
   const [{ data: nutritionPlan }, todayAdjustment] = await Promise.all([
-    svc.from('challenge_nutrition_plans').select('meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
+    svc.from('challenge_nutrition_plans').select('meals, calories').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
   ])
 
@@ -42,7 +42,11 @@ export default async function NutritionPage() {
     ? (nutritionPlan.meals as WeekPlan) : null
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
   const planned: PlannedItem[] = (todayMeals?.meals || []).map((m) => ({ slot: m.slot, name: m.name, cal: m.cal, protein: m.protein, carbs: m.carbs, fat: m.fat }))
-  const calBudget = todayMeals?.target != null ? getEffectiveCalorieBudget(todayMeals.target, todayAdjustment) : null
+  // Same fallback as /plan/today and /api/plan/food-log's own loadTarget() —
+  // a real calorie goal can exist as a flat column here with no weekly meals
+  // JSON at all (e.g. set without ever building a full week of meals).
+  const baseCalTarget = todayMeals?.target ?? (Number(nutritionPlan?.calories) || undefined)
+  const calBudget = baseCalTarget != null ? getEffectiveCalorieBudget(baseCalTarget, todayAdjustment) : null
   const eatingOutToday = isEatingOutToday(todayMeals?.eatOut, todayAdjustment)
 
   return (
