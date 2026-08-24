@@ -50,7 +50,7 @@ function SendIcon() {
   )
 }
 
-export default function CoachHero({ firstName, hasPlan = true, maximized = false }: { firstName: string; hasPlan?: boolean; maximized?: boolean }) {
+export default function CoachHero({ firstName, hasPlan = true, maximized = false, hasRealName = true }: { firstName: string; hasPlan?: boolean; maximized?: boolean; hasRealName?: boolean }) {
   const router = useRouter()
   const [workoutDone, setWorkoutDone] = useState(false)
   const [nutri, setNutri] = useState<{ protein: number; target: number } | null>(null)
@@ -150,14 +150,21 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
 
   // Leads with her name every time now (was worked in mid-sentence) — Asa's
   // explicit call, same "always address her by name" standard as the chat.
+  // Real bug found live: every one of these is a vocative "{firstName}, ..."
+  // construction — the exact shape that breaks with the 'there' guest
+  // fallback ("there, how's your day looking?" reads as broken, unlike the
+  // idiomatic "Hey there"). hasRealName drops the name-prefix entirely
+  // instead, capitalizing what follows so it still reads as a real sentence.
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+  const lead = (rest: string) => hasRealName ? `${firstName}, ${rest}` : cap(rest)
   let greeting: string
-  if (perfectDay) greeting = `${firstName}, you've handled everything today. Proud of you.`
+  if (perfectDay) greeting = lead("you've handled everything today. Proud of you.")
   else if (!workoutDone && !nutritionDone) greeting = proteinLeft != null
-    ? `${firstName}, how's your day looking? You've still got your workout and ${proteinLeft}g of protein — tell me what's going on and I'll fit it in.`
-    : `${firstName}, how's your day looking? Tell me what's going on and I'll build today around you.`
-  else if (!workoutDone && nutritionDone) greeting = `${firstName}, nutrition's handled — just your workout left. Short on time? Tell me and I'll adjust it.`
-  else if (proteinLeft != null && proteinLeft > 0) greeting = `${firstName}, workout's done — ${proteinLeft}g of protein to go. Want a quick idea? Just tell me.`
-  else greeting = `${firstName}, how are you feeling today? Tell me what's going on — and how's the app been working for you so far?`
+    ? lead(`how's your day looking? You've still got your workout and ${proteinLeft}g of protein — tell me what's going on and I'll fit it in.`)
+    : lead("how's your day looking? Tell me what's going on and I'll build today around you.")
+  else if (!workoutDone && nutritionDone) greeting = lead("nutrition's handled — just your workout left. Short on time? Tell me and I'll adjust it.")
+  else if (proteinLeft != null && proteinLeft > 0) greeting = lead(`workout's done — ${proteinLeft}g of protein to go. Want a quick idea? Just tell me.`)
+  else greeting = lead("how are you feeling today? Tell me what's going on — and how's the app been working for you so far?")
 
   async function send(text: string) {
     const msg = text.trim(); if (!msg || sending) return
@@ -192,7 +199,7 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
   // instantly, no API round-trip needed since there's nothing to accept/reject.
   function stickWithPlan() {
     setPending(null)
-    setMessages((m) => [...m, { role: 'user', content: "I'll stick with my current plan." }, { role: 'operator', content: `${firstName}, sounds good — sticking with what's already working. No changes.` }])
+    setMessages((m) => [...m, { role: 'user', content: "I'll stick with my current plan." }, { role: 'operator', content: `${hasRealName ? `${firstName}, ` : ''}Sounds good — sticking with what's already working. No changes.` }])
   }
 
   async function decide(status: 'approved' | 'modified' | 'rejected') {
@@ -274,7 +281,7 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
           she's never forced to answer the check-in just to keep her existing plan. */}
       {!ctxDone && messages.length === 0 ? (
         <div className="mb-5 space-y-3">
-          <p className="text-ink text-lg leading-snug font-medium text-balance">{firstName}, how&apos;s today looking?</p>
+          <p className="text-ink text-lg leading-snug font-medium text-balance">{hasRealName ? `${firstName}, ` : ''}How&apos;s today looking?</p>
 
           {!showCheckin ? (
             <>

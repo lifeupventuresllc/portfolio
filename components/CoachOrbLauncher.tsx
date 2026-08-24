@@ -46,7 +46,7 @@ function MinimizeIcon() {
 // in-progress draft text and the whole conversation are exactly where she
 // left them if she reopens — no localStorage hack needed, React just never
 // throws the component away.
-export default function CoachOrbLauncher({ firstName, hasPlan }: { firstName: string; hasPlan: boolean }) {
+export default function CoachOrbLauncher({ firstName, hasPlan, hasRealName = true }: { firstName: string; hasPlan: boolean; hasRealName?: boolean }) {
   const [open, setOpen] = useState(false)
   // Real ask, live: the fixed middle-band panel meant a longer reply always
   // needed scrolling, and there was no way to just take the whole screen for
@@ -188,7 +188,7 @@ export default function CoachOrbLauncher({ firstName, hasPlan }: { firstName: st
             >
               <ExitIcon />
             </button>
-            <CoachHero firstName={firstName} hasPlan={hasPlan} maximized={maximized} />
+            <CoachHero firstName={firstName} hasPlan={hasPlan} maximized={maximized} hasRealName={hasRealName} />
           </div>
         </div>
       </div>,

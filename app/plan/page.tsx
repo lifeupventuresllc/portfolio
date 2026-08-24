@@ -52,6 +52,11 @@ export default async function PlanDashboard() {
   }
 
   const firstName = (enrollment?.name || user.email?.split('@')[0] || 'there').split(' ')[0]
+  // Same real bug as /plan/today and /plan/workout's "Today, there"/"That's
+  // done, there" — "there" only reads naturally in an idiomatic "Hey there,"
+  // never in a vocative "{name}, how's today looking?" (CoachHero's
+  // daily-context greeting). Found live on a fresh guest session.
+  const hasRealName = !!(enrollment?.name || user.email)
 
   const shell = (children: React.ReactNode, menu: React.ReactNode = null, selfTalk?: string) => (
     <div className="min-h-[100dvh] px-4 py-6" style={{ background: '#021F16' }}>
@@ -213,7 +218,7 @@ export default async function PlanDashboard() {
         )}
       </Link>
 
-      <CoachOrbLauncher firstName={firstName} hasPlan={hasPlan} />
+      <CoachOrbLauncher firstName={firstName} hasPlan={hasPlan} hasRealName={hasRealName} />
 
       {hasPlan && (
         <>
