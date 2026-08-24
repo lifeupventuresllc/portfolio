@@ -8,9 +8,12 @@ import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
 import { useLiveRefresh, localTodayISO, broadcastRefresh } from '@/lib/useLiveRefresh'
 import { winAffirmation } from '@/lib/affirmations'
 
-// The living centerpiece of the home screen. She talks to Coach Asa RIGHT HERE — no
-// page jump. Warm, minimal, alive: a gold "A" avatar, a personal greeting, and an
-// inline conversation. Approving a change refreshes the supporting cards on the spot.
+// The living centerpiece of the home screen. She talks to Coach RIGHT HERE — no
+// page jump. A personal greeting and an inline conversation, ChatGPT-simple:
+// no separate quiz UI — "how's today looking," any injuries, what she has
+// time for, all just flow through typed/spoken replies in the chat itself,
+// same as everything else here. Approving a change refreshes the supporting
+// cards on the spot.
 type Msg = { role: 'user' | 'operator'; content: string }
 type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home'; injuryBodyPart?: string; focusOverride?: ('core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders')[] }
 
@@ -21,16 +24,6 @@ function joinAreas(areas: string[]): string {
 }
 type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string; eatingOut?: boolean }
 type Adjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionChange?: NutritionChange }
-
-// The 4 proactive daily-context questions — Coach Asa asks these FIRST, every
-// morning, instead of waiting for her to type. Answers go to /api/plan/daily-context,
-// which plans DIRECTLY from the structured fields (not a synthesized sentence run
-// through regex matching) — that's what actually swaps today's workout to a home/gym
-// track based on where she says she is, instead of just producing a cosmetic label.
-const FEELING = [{ v: 'great', l: 'Great' }, { v: 'okay', l: 'Okay' }, { v: 'tired', l: 'Tired' }, { v: 'stressed', l: 'Stressed' }]
-const TIME = [{ v: 'short', l: '15-20 min' }, { v: 'normal', l: 'About 45 min' }, { v: 'plenty', l: 'Plenty of time' }]
-const WHERE = [{ v: 'home', l: 'Home' }, { v: 'gym', l: 'Gym' }, { v: 'traveling', l: 'Traveling' }]
-const GOAL = [{ v: 'push', l: 'Push hard' }, { v: 'showup', l: 'Just show up' }, { v: 'recover', l: 'Recover' }]
 
 function NoteIcon() {
   return (
@@ -91,53 +84,6 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
   // Only scroll when the message COUNT (or a new card) changes, instantly —
   // not on every keystroke/render — so it never jumps while she's typing.
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' }) }, [messages.length, pending, justApproved, justBuilt, quickReplies])
-
-  // Daily context quiz — shown once per day until she's answered (or already talked today).
-  // Pre-selected with the most common answer for each so "Build my day" is tappable
-  // immediately — she can accept the defaults in ONE tap, or override any field first.
-  // Same 4 structured fields hit the backend either way — this only removes friction
-  // from the front end, the planForDailyContext richness behind it is unchanged.
-  const [ctxDone, setCtxDone] = useState(true) // default true so it never flashes before the client check runs
-  const [feeling, setFeeling] = useState<string | null>('okay')
-  const [time, setTime] = useState<string | null>('normal')
-  const [where, setWhere] = useState<string | null>('home')
-  const [goal, setGoal] = useState<string | null>('showup')
-  // Collapsed by default: one tap accepts today's guessed defaults — same 4 fields
-  // still reach the backend either way, she just doesn't have to look at 14 buttons
-  // to get there. "Adjust" reveals the full picker only when something's actually different.
-  const [ctxExpanded, setCtxExpanded] = useState(false)
-  // Most prominent option of all: skip the check-in entirely, no API call, no chance
-  // of even a default-driven adjustment (e.g. a track swap) touching today's plan.
-  // Hidden behind this until she actively says she wants to look at/adjust today.
-  const [showCheckin, setShowCheckin] = useState(false)
-
-  useEffect(() => {
-    try { setCtxDone(localStorage.getItem('luf_daily_context') === today) } catch { /* noop */ }
-  }, [today])
-
-  // The most prominent bypass of all — no adjustment, no API call, today's plan
-  // stays exactly as already scheduled. Marks the check-in done for the day same
-  // as answering it, so it won't nag her again until tomorrow.
-  function stickWithWorkout() {
-    try { localStorage.setItem('luf_daily_context', today) } catch { /* noop */ }
-    setCtxDone(true)
-  }
-
-  async function submitContext() {
-    if (!feeling || !time || !where || !goal) return
-    try { localStorage.setItem('luf_daily_context', today) } catch { /* noop */ }
-    setCtxDone(true)
-    setSending(true)
-    const userSummary = `Feeling ${feeling} · ${time === 'short' ? '15-20 min' : time === 'plenty' ? 'plenty of time' : '~45 min'} · ${where} · ${goal === 'push' ? 'push hard' : goal === 'recover' ? 'recover' : 'just show up'}`
-    setMessages((m) => [...m, { role: 'user', content: userSummary }])
-    try {
-      const r = await fetch('/api/plan/daily-context', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ feeling, time, where, goal }) })
-      const d = await r.json().catch(() => ({}))
-      setMessages((m) => [...m, { role: 'operator', content: d?.reply || "Got it — let's build today around you." }])
-      if (d?.adjustment) setPending(d.adjustment as Adjustment)
-    } catch { setMessages((m) => [...m, { role: 'operator', content: "I couldn't reach your plan just now — try that again in a sec." }]) }
-    setSending(false)
-  }
 
   useLiveRefresh(() => {
     fetch('/api/plan/daily').then((r) => r.json()).then((d) => setWorkoutDone(!!d?.today?.workout)).catch(() => {})
@@ -268,73 +214,14 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
           below its full content height so it isn't the old unbounded-growth
           bug in a different form. */}
       <div className="flex-1 min-h-[110px] overflow-y-auto -mx-6 px-6 pb-3">
-      {/* identity — a person, not a tool */}
-      <div className="flex items-center gap-2.5 mb-4">
-        <span className="h-9 w-9 rounded-full bg-gold text-obsidian font-bold flex items-center justify-center text-lg shadow-lg shadow-gold/20">A</span>
-        <div className="leading-tight">
-          <p className="text-ink text-sm font-semibold">Coach</p>
-          <p className="text-gold/80 text-[10px] uppercase tracking-[0.18em] font-semibold">I&apos;m right here with you</p>
-        </div>
+      {/* identity — a person, not a tool. No avatar glyph (Asa's call) — just
+          the name and line, ChatGPT-plain. */}
+      <div className="leading-tight mb-4">
+        <p className="text-ink text-sm font-semibold">Coach</p>
+        <p className="text-gold/80 text-[10px] uppercase tracking-[0.18em] font-semibold">I&apos;m right here with you</p>
       </div>
 
-      {/* proactive daily check-in — asked FIRST, every morning, before anything else.
-          "Stick with today's workout" is the most prominent thing here on purpose —
-          she's never forced to answer the check-in just to keep her existing plan. */}
-      {!ctxDone && messages.length === 0 ? (
-        <div className="mb-5 space-y-3">
-          <p className="text-ink text-lg leading-snug font-medium text-balance">{hasRealName ? `${firstName}, ` : ''}How&apos;s today looking?</p>
-
-          {!showCheckin ? (
-            <>
-              <button onClick={stickWithWorkout}
-                className="w-full bg-gold text-obsidian px-6 py-3.5 font-bold text-xs uppercase tracking-wider rounded-2xl active:scale-95 transition-transform">
-                Stick with today&apos;s workout
-              </button>
-              <button onClick={() => setShowCheckin(true)} className="w-full text-center text-ink/50 text-xs hover:text-gold transition-colors">How&apos;s your day going? Tell me →</button>
-            </>
-          ) : !ctxExpanded ? (
-            <>
-              <p className="text-ink/40 text-xs -mt-1">I&apos;ve guessed a normal day — build it, or tell me what&apos;s different.</p>
-              <div className="flex gap-1.5 flex-wrap">
-                {[FEELING.find((o) => o.v === feeling), TIME.find((o) => o.v === time), WHERE.find((o) => o.v === where), GOAL.find((o) => o.v === goal)].map((o) => o && (
-                  <span key={o.v} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-charcoal/90 border border-smoke text-ivory/70">{o.l}</span>
-                ))}
-              </div>
-              <button onClick={submitContext} disabled={sending}
-                className="w-full bg-gold text-obsidian px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-2xl disabled:opacity-40 active:scale-95 transition-transform">
-                {sending ? 'Building your day…' : 'Build my day →'}
-              </button>
-              <button onClick={() => setCtxExpanded(true)} className="w-full text-center text-ink/40 text-xs hover:text-gold transition-colors">Something different today? Adjust →</button>
-            </>
-          ) : (
-            <>
-              <p className="text-ink/40 text-xs -mt-1">Tap anything that&apos;s different, then build it.</p>
-              {[
-                { label: 'Feeling', opts: FEELING, val: feeling, set: setFeeling },
-                { label: 'Time you have', opts: TIME, val: time, set: setTime },
-                { label: 'Where you are', opts: WHERE, val: where, set: setWhere },
-                { label: "Today's goal", opts: GOAL, val: goal, set: setGoal },
-              ].map((row) => (
-                <div key={row.label}>
-                  <p className="text-gold/80 text-[10px] uppercase tracking-wider font-semibold mb-1.5">{row.label}</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {row.opts.map((o) => (
-                      <button key={o.v} type="button" onClick={() => row.set(o.v)}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${row.val === o.v ? 'bg-gold text-obsidian scale-[1.03]' : 'bg-charcoal/90 border border-smoke text-ivory/70 hover:border-gold/50'}`}>
-                        {o.l}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <button onClick={submitContext} disabled={!feeling || !time || !where || !goal || sending}
-                className="w-full bg-gold text-obsidian px-6 py-3 font-bold text-xs uppercase tracking-wider rounded-2xl disabled:opacity-40 active:scale-95 transition-transform">
-                {sending ? 'Building your day…' : 'Build my day →'}
-              </button>
-            </>
-          )}
-        </div>
-      ) : messages.length === 0 ? (
+      {messages.length === 0 ? (
         // ChatGPT-style landing treatment (Asa's spec, matched to the reference
         // screenshot) — this is the box she actually sees first, not the
         // separate /plan/coach page. `greeting` is already personalized/
