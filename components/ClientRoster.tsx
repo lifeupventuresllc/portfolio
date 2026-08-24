@@ -111,7 +111,7 @@ export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-white font-semibold text-sm truncate">
-                  {r.name || r.email?.split('@')[0] || 'Client'}
+                  {r.name || r.email?.split('@')[0] || 'Guest (no name yet)'}
                   {r.tier === 'inner_circle' && <span className="ml-2 text-[9px] bg-gold/15 text-gold px-2 py-0.5 rounded-full uppercase tracking-wider">Inner Circle</span>}
                   {r.isBeta && <span className="ml-2 text-[9px] bg-blue-500/15 text-blue-300 px-2 py-0.5 rounded-full uppercase tracking-wider">🎁 Beta</span>}
                 </p>
