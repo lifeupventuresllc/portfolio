@@ -4,6 +4,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { COMMUNITY_URL } from '@/lib/bonuses'
 import { getLeaderboard } from '@/lib/leaderboard'
 import PostBox from '@/components/PostBox'
+import ProviderMatchTeaser from '@/components/ProviderMatchTeaser'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,6 +45,8 @@ export default async function Community() {
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">The Curve Collective</p>
         <h1 className="text-3xl font-bold text-white mb-2">You&apos;re not doing this alone, {firstName} 💛</h1>
         <p className="text-ivory/60 text-sm mb-6">Our private circle of women walking it out together. Share a win, ask a question, cheer each other on.</p>
+
+        <ProviderMatchTeaser />
 
         {linked && (
           <a href={COMMUNITY_URL} target="_blank" rel="noopener noreferrer" className="block text-center bg-charcoal border border-gold/30 rounded-2xl py-3 mb-5 text-gold font-semibold text-sm hover:bg-gold/5">
