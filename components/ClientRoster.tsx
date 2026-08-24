@@ -15,6 +15,7 @@ export type RosterRow = {
   createdAt: string
   isBeta: boolean // comped $0 enrollment (e.g. a beta-test promo code)
   hasNegativeFeedback: boolean // submitted a 👎 quick-feedback
+  lastActiveAt: string | null // real app-usage signal, any /plan/* page load
 }
 
 function ago(s: string | null): string {
@@ -25,19 +26,39 @@ function ago(s: string | null): string {
   return `checked in ${days}d ago`
 }
 
+// The pre-beta-launch "one thing" (2026-08-24): a real answer to "how do we
+// even measure active users," using the last_active_at signal that was
+// already being tracked but never surfaced anywhere. active = opened the
+// app in the last 24h; quiet = has a real history but nothing in 3+ days
+// (worth a check-in during a beta); never = signed up, never actually opened it.
+function activityStatus(lastActiveAt: string | null): { label: string; tone: 'active' | 'quiet' | 'never' } {
+  if (!lastActiveAt) return { label: 'never opened the app', tone: 'never' }
+  const days = (Date.now() - new Date(lastActiveAt).getTime()) / 86400000
+  if (days < 1) return { label: 'active today', tone: 'active' }
+  if (days < 2) return { label: 'active yesterday', tone: 'active' }
+  if (days < 3) return { label: `active ${Math.floor(days)}d ago`, tone: 'quiet' }
+  return { label: `quiet ${Math.floor(days)}d`, tone: 'quiet' }
+}
+
 export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
   const [q, setQ] = useState('')
-  const [filter, setFilter] = useState<'all' | 'attention' | 'active' | 'beta'>('all')
+  const [filter, setFilter] = useState<'all' | 'attention' | 'active' | 'beta' | 'quiet'>('all')
 
   const needsAttention = (r: RosterRow) => r.pending > 0 || !r.intakeDone || r.hasNegativeFeedback
   // Inner Circle pays for priority same-day replies — a pending check-in from her
   // shouldn't sit buried behind everyone else's. Real sort, not just a badge.
   const isPriority = (r: RosterRow) => r.tier === 'inner_circle' && r.pending > 0
+  // "Gone quiet" — a real, already-completed intake with no real app activity
+  // in 3+ days. Distinct from "no intake" (never started) — this is someone
+  // who WAS using it and stopped, exactly who a beta tester follow-up should
+  // target first.
+  const isQuiet = (r: RosterRow) => r.intakeDone && (!r.lastActiveAt || (Date.now() - new Date(r.lastActiveAt).getTime()) / 86400000 >= 3)
   const counts = useMemo(() => ({
     all: rows.length,
     attention: rows.filter(needsAttention).length,
     active: rows.filter((r) => r.status === 'active').length,
     beta: rows.filter((r) => r.isBeta).length,
+    quiet: rows.filter(isQuiet).length,
   }), [rows])
 
   const shown = useMemo(() => rows
@@ -45,6 +66,7 @@ export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
       if (filter === 'attention' && !needsAttention(r)) return false
       if (filter === 'active' && r.status !== 'active') return false
       if (filter === 'beta' && !r.isBeta) return false
+      if (filter === 'quiet' && !isQuiet(r)) return false
       const hay = `${r.name || ''} ${r.email || ''}`.toLowerCase()
       return hay.includes(q.toLowerCase())
     })
@@ -65,6 +87,7 @@ export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
         {chip('attention', '⚠ Needs you', counts.attention)}
         {chip('active', 'Active', counts.active)}
         {counts.beta > 0 && chip('beta', '🎁 Beta testers', counts.beta)}
+        {counts.quiet > 0 && chip('quiet', 'Gone quiet', counts.quiet)}
       </div>
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or email…"
         className="w-full px-4 py-3 bg-obsidian border border-smoke rounded-xl text-white text-sm mb-4 focus:outline-none focus:border-gold" />
@@ -83,6 +106,11 @@ export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
                 <p className="text-ivory/40 text-xs truncate">{r.email} · {ago(r.lastCheckin)}</p>
               </div>
               <div className="flex items-center gap-2 flex-none">
+                {(() => { const a = activityStatus(r.lastActiveAt); return (
+                  <span className={`text-[10px] px-2 py-1 rounded-full font-semibold whitespace-nowrap ${a.tone === 'active' ? 'bg-emerald-500/15 text-emerald-400' : a.tone === 'quiet' ? 'bg-amber-500/15 text-amber-400' : 'bg-ivory/10 text-ivory/40'}`}>
+                    {a.label}
+                  </span>
+                ) })()}
                 {isPriority(r) && <span className="text-[10px] bg-gold/20 text-gold px-2 py-1 rounded-full font-semibold whitespace-nowrap">⚡ reply today</span>}
                 {r.hasNegativeFeedback && <span className="text-[10px] bg-red-500/15 text-red-400 px-2 py-1 rounded-full font-semibold whitespace-nowrap">👎 feedback</span>}
                 {r.pending > 0 && <span className="text-[10px] bg-red-500/15 text-red-400 px-2 py-1 rounded-full font-semibold whitespace-nowrap">{r.pending} to reply</span>}

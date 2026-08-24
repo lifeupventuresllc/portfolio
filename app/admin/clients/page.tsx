@@ -9,7 +9,7 @@ export default async function ClientsPage() {
 
   const [{ data: enrollments }, { data: checkins }, { data: feedback }] = await Promise.all([
     svc.from('challenge_enrollments')
-      .select('id, name, email, tier, status, intake_completed, created_at, amount')
+      .select('id, name, email, tier, status, intake_completed, created_at, amount, last_active_at')
       .order('created_at', { ascending: false }),
     svc.from('challenge_checkins').select('enrollment_id, status, submitted_at'),
     svc.from('challenge_progress').select('enrollment_id, measurements').eq('note', '__feedback__'),
@@ -43,6 +43,11 @@ export default async function ClientsPage() {
       createdAt: e.created_at as string,
       isBeta: e.amount === 0,
       hasNegativeFeedback: negativeFeedback.has(e.id as string),
+      // Real app-usage signal, not just subscription status — updated on
+      // every /plan/* page load (see components/TrackAppOpen.tsx). This is
+      // the "how do we even measure active users" answer: the one thing
+      // before beta launch (2026-08-24) was making this actually visible.
+      lastActiveAt: (e.last_active_at as string) || null,
     }
   })
 
