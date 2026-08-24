@@ -5,7 +5,7 @@ import ClientMenu from '@/components/ClientMenu'
 import CaloriesTodayCard from '@/components/CaloriesTodayCard'
 import WorkoutStatusCard from '@/components/WorkoutStatusCard'
 import StreakChip from '@/components/StreakChip'
-import CoachOrbLauncher from '@/components/CoachOrbLauncher'
+import CoachHero from '@/components/CoachHero'
 import FeedbackCard from '@/components/FeedbackCard'
 import GoalProgressBar from '@/components/GoalProgressBar'
 import WeeklyCheckinPrompt from '@/components/WeeklyCheckinPrompt'
@@ -218,7 +218,18 @@ export default async function PlanDashboard() {
         )}
       </Link>
 
-      <CoachOrbLauncher firstName={firstName} hasPlan={hasPlan} hasRealName={hasRealName} />
+      {/* One step, not two — Asa's explicit call comparing directly against
+          ChatGPT: the real chat lives right here, always, not behind a
+          "tap to open" launcher/modal. CoachHero already works standalone
+          (it's the same component the old modal rendered), so this is a
+          removal of a wrapping layer, not a rebuild — every existing
+          capability (daily-context quiz, quick replies, approve/reject
+          adjustment cards, cold-start build → "view my new workout" links)
+          comes along unchanged. h-full inside CoachHero needs a real height
+          from this wrapper to size against. */}
+      <div className="h-[65vh] min-h-[460px] max-h-[640px]">
+        <CoachHero firstName={firstName} hasPlan={hasPlan} hasRealName={hasRealName} />
+      </div>
 
       {hasPlan && (
         <>
@@ -243,8 +254,8 @@ export default async function PlanDashboard() {
           </div>
         </>
       )}
-      {/* The "no plan yet" companion message now lives inside CoachOrbLauncher
-          itself (shown only while the chat is closed) — having it as a
+      {/* The "no plan yet" companion message now lives inside CoachHero itself
+          (shown only before a real conversation starts) — having it as a
           separate always-visible card here meant it kept insisting "no plan
           built yet" directly underneath an active, in-progress build
           conversation, which read as the app not noticing what it just asked

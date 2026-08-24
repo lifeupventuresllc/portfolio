@@ -248,18 +248,19 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
           edge-to-edge without the parent's own p-6 clipping its scrollbar.
           min-h-0 is required, not decorative — a flex item's default
           min-height is `auto` (won't shrink below its content), so once the
-          shorter 50vh panel (see components/CoachOrbLauncher.tsx) plus a real
-          recommendation card in the shrink-0 footer below together exceed the
-          available height, this region would refuse to shrink and get
-          silently clipped by the parent's overflow-hidden instead — the
-          message thread would render but be invisible. Found live: sending
-          "build me an arm workout" produced a real reply + a real
-          recommendation card, but the chat bubble showing that reply was
-          fully clipped, not just scrolled off-screen. A bare min-h-0 alone
-          technically fixes the clipping (nothing overflows the rounded card
-          anymore) but can still squeeze this region down to ~0px whenever
-          the footer's recommendation card is tall relative to the 50vh
-          panel — which defeats the actual point of a real, named-exercise
+          fixed-height wrapper this renders inside (see app/plan/page.tsx)
+          plus a real recommendation card in the shrink-0 footer below
+          together exceed the available height, this region would refuse to
+          shrink and get silently clipped by the parent's overflow-hidden
+          instead — the message thread would render but be invisible. Found
+          live: sending "build me an arm workout" produced a real reply + a
+          real recommendation card, but the chat bubble showing that reply
+          was fully clipped, not just scrolled off-screen. A bare min-h-0
+          alone technically fixes the clipping (nothing overflows the
+          rounded card anymore) but can still squeeze this region down to
+          ~0px whenever the footer's recommendation card is tall relative to
+          the wrapper's height — which defeats the actual point of a real,
+          named-exercise
           reply if she can never see the sentence it's written in. The
           explicit min-height below guarantees at least a couple of lines of
           the latest exchange stay visible/scrollable no matter how much
@@ -350,6 +351,20 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
           >
             What can Coach Asa do?
           </button>
+          {/* Moved in from CoachOrbLauncher's old "closed" state now that
+              there's no more open/closed modal — same gating logic (never
+              shown once a real conversation's started, so it can't read as
+              the app ignoring an in-progress build), just keyed off
+              messages.length === 0 instead of the modal being closed. The
+              chat-build path above already gets her there conversationally;
+              this is still the direct form-fill alternative for anyone who'd
+              rather not type it out. */}
+          {!hasPlan && (
+            <Link href="/plan/intake" className="block bg-charcoal/5 border border-smoke/30 rounded-2xl p-4 text-center mt-4 hover:border-gold/40 transition-colors">
+              <p className="text-ink font-semibold text-sm mb-0.5">No plan built yet</p>
+              <p className="text-ink/50 text-xs">Tell me what you&apos;re looking for above, or tap here to build your real plan.</p>
+            </Link>
+          )}
         </div>
       ) : (
         <div className="space-y-2 pr-1">

@@ -21,8 +21,8 @@ import type { WeekPlan } from '@/lib/meal-plan'
 
 export const dynamic = 'force-dynamic'
 
-// Plain outline glyphs, never emoji — standing style rule (see CoachOrbLauncher's
-// ExitIcon for the same stroke/weight convention this matches).
+// Plain outline glyphs, never emoji — standing style rule (same stroke/weight
+// convention as CoachHero's SendIcon/NoteIcon).
 function ChatIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
