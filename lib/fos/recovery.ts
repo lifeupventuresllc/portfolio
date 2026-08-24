@@ -72,19 +72,28 @@ function recoverBase(signal: LifeSignal, normalMinutes = 45, dayOffset = 0): Rec
     case 'time_crunch': {
       const m = Math.max(10, Math.min(signal.minutes, normalMinutes))
       return {
-        message: `${m} minutes is enough — let's do the highest-impact ${m}-minute version today so you keep your momentum. Your progress stays protected. Want me to lock it in?`,
-        workoutChange: { fromMinutes: normalMinutes, toMinutes: m, swapTo: 'high-impact express', reason: `only ${signal.minutes} min available` },
+        // Real gap found live: "highest-impact express version" / swapTo
+        // labels like this used to imply a genuinely different workout
+        // STYLE, but the only thing that actually happens downstream (see
+        // trimStepsToTarget in lib/workout-steps.ts, the sole consumer of
+        // toMinutes) is trimming her existing rotation day's exercise list
+        // to fit the time budget — same day, same exercises, just fewer of
+        // them. The chat promise and the delivered workout could visibly
+        // disagree (e.g. still showing a full leg day). Wording now matches
+        // what's real, not what would be nice to eventually build.
+        message: `${m} minutes is enough — I'll trim today down to fit, keeping what matters most. Your progress stays protected. Want me to lock it in?`,
+        workoutChange: { fromMinutes: normalMinutes, toMinutes: m, swapTo: 'trimmed to fit', reason: `only ${signal.minutes} min available` },
       }
     }
     case 'exhausted':
       return {
-        message: `Rough day — I hear you. Let's drop today to a short, gentle session so you still move without wrecking yourself. Rest is part of the plan, not a break from it. Sound good?`,
-        workoutChange: { toMinutes: 20, swapTo: 'light mobility + short circuit', reason: 'low energy' },
+        message: `Rough day — I hear you. Let's trim today down to something short so you still move without wrecking yourself. Rest is part of the plan, not a break from it. Sound good?`,
+        workoutChange: { toMinutes: 20, swapTo: 'shortened session', reason: 'low energy' },
       }
     case 'poor_sleep':
       return {
-        message: `You didn't sleep well, so let's keep today lighter and hold your protein steady to help you recover. The goal doesn't change — just today's path. Want me to set that up?`,
-        workoutChange: { toMinutes: 25, swapTo: 'lower-intensity', reason: 'poor sleep' },
+        message: `You didn't sleep well, so let's trim today down and hold your protein steady to help you recover. The goal doesn't change — just today's path. Want me to set that up?`,
+        workoutChange: { toMinutes: 25, swapTo: 'shortened session', reason: 'poor sleep' },
         nutritionChange: { calorieDelta: 0, reason: 'protect recovery' },
       }
     case 'schedule_change':
@@ -100,9 +109,9 @@ function recoverBase(signal: LifeSignal, normalMinutes = 45, dayOffset = 0): Rec
     case 'missed':
       return {
         message: signal.days <= 1
-          ? `Life happened — that's all. You're not starting over; you're continuing. Want an easy re-entry session today?`
-          : `A few days off doesn't erase your progress. We don't start over here — we pick the path back up. Want me to make today an easy re-entry so it feels good to be back?`,
-        workoutChange: { toMinutes: 20, swapTo: 'easy re-entry', reason: 'returning after a break' },
+          ? `Life happened — that's all. You're not starting over; you're continuing. Want a shorter session today to ease back in?`
+          : `A few days off doesn't erase your progress. We don't start over here — we pick the path back up. Want me to trim today down so it feels good to be back?`,
+        workoutChange: { toMinutes: 20, swapTo: 'shortened session', reason: 'returning after a break' },
       }
     case 'craving': {
       const picks = cravingSnackPicks(dayOffset)
@@ -114,8 +123,8 @@ function recoverBase(signal: LifeSignal, normalMinutes = 45, dayOffset = 0): Rec
     }
     case 'stressed':
       return {
-        message: `Stress is real, and today doesn't have to be perfect — it just has to be something. I kept today short and simple so you're not adding pressure on top of pressure. One small win still counts.`,
-        workoutChange: { toMinutes: 20, swapTo: 'light mobility + short circuit', reason: 'high stress' },
+        message: `Stress is real, and today doesn't have to be perfect — it just has to be something. I trimmed today down so you're not adding pressure on top of pressure. One small win still counts.`,
+        workoutChange: { toMinutes: 20, swapTo: 'shortened session', reason: 'high stress' },
       }
     case 'injury': {
       const part = signal.bodyPart.replace('_', ' ')
@@ -147,7 +156,11 @@ export function planForDailyContext(ctx: DailyContext, normalMinutes = 45): Reco
   let toMinutes: number | undefined
   if (wantsShort) toMinutes = 20
   else if (wantsLight) toMinutes = 25
-  const swapTo = wantsLight ? 'light mobility + short circuit' : wantsShort ? 'high-impact express' : undefined
+  // Honest label, not an implied different workout style — see the
+  // time_crunch/exhausted/etc cases above for why: the only real mechanism
+  // downstream is trimming her existing rotation day (trimStepsToTarget),
+  // never an actual content/style swap, so the label shouldn't claim one.
+  const swapTo = (wantsLight || wantsShort) ? 'shortened session' : undefined
   const trackOverride: 'gym' | 'home' | undefined = ctx.where === 'home' ? 'home' : ctx.where === 'gym' ? 'gym' : undefined
 
   const messages: string[] = []
