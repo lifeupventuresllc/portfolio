@@ -186,7 +186,7 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
   }
 
   return (
-    <div className={`relative max-h-full flex flex-col overflow-hidden border border-gold/40 bg-white shadow-sm p-6 ${maximized ? '' : 'rounded-[2.25rem]'}`}>
+    <div className={`relative max-h-full flex flex-col overflow-hidden border border-gold/40 shadow-sm p-5 ${maximized ? '' : 'rounded-[2.25rem]'}`} style={{ background: '#0d3a2a' }}>
       {/* Everything that can grow (identity + the quiz/greeting/message thread)
           lives in the scrollable top region; the input stays pinned at the
           bottom, same shape as any standard chat UI — see the footer region
@@ -213,11 +213,11 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
           footer content follows, while still letting the region shrink
           below its full content height so it isn't the old unbounded-growth
           bug in a different form. */}
-      <div className="flex-1 min-h-[110px] overflow-y-auto -mx-6 px-6 pb-3">
+      <div className="flex-1 min-h-[90px] overflow-y-auto -mx-5 px-5 pb-2">
       {/* identity — a person, not a tool. No avatar glyph (Asa's call) — just
           the name and line, ChatGPT-plain. */}
-      <div className="leading-tight mb-4">
-        <p className="text-ink text-sm font-semibold">Coach</p>
+      <div className="leading-tight mb-3">
+        <p className="text-white text-sm font-semibold">Coach</p>
         <p className="text-gold/80 text-[10px] uppercase tracking-[0.18em] font-semibold">I&apos;m right here with you</p>
       </div>
 
@@ -226,15 +226,18 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
         // screenshot) — this is the box she actually sees first, not the
         // separate /plan/coach page. `greeting` is already personalized/
         // contextual (it changes based on what's done today), which is a real
-        // upgrade over a static "What are you working on?" — kept as the
-        // headline, just given the bigger, bolder treatment the reference
-        // has, plus the same "suggestion pill" pattern below it.
-        <div className="text-center py-2">
-          <p className="text-ink text-xl leading-snug font-bold text-balance mb-4">{greeting}</p>
+        // upgrade over a static "What are you working on?" — kept compact
+        // (Asa's call: "smaller, think ChatGPT") rather than the earlier
+        // bigger/bolder treatment. Recolored onto the card's own emerald
+        // background (Asa's call, matching the dashboard's Jewel-Box
+        // palette) instead of white, which was the one surface on this whole
+        // page that didn't.
+        <div className="text-center py-1">
+          <p className="text-white text-base leading-snug font-bold text-balance mb-3">{greeting}</p>
           <button
             onClick={() => send('What can Coach do?')}
             disabled={sending}
-            className="inline-block bg-charcoal/5 border border-smoke/30 text-ink/50 text-xs font-semibold px-4 py-2 rounded-full hover:border-gold/50 hover:text-gold transition-colors disabled:opacity-40"
+            className="inline-block bg-black/15 border border-gold/20 text-ivory/60 text-xs font-semibold px-3.5 py-1.5 rounded-full hover:border-gold/50 hover:text-gold transition-colors disabled:opacity-40"
           >
             What can Coach do?
           </button>
@@ -247,9 +250,9 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
               this is still the direct form-fill alternative for anyone who'd
               rather not type it out. */}
           {!hasPlan && (
-            <Link href="/plan/intake" className="block bg-charcoal/5 border border-smoke/30 rounded-2xl p-4 text-center mt-4 hover:border-gold/40 transition-colors">
-              <p className="text-ink font-semibold text-sm mb-0.5">No plan built yet</p>
-              <p className="text-ink/50 text-xs">Tell me what you&apos;re looking for above, or tap here to build your real plan.</p>
+            <Link href="/plan/intake" className="block bg-black/15 border border-gold/20 rounded-2xl p-3.5 text-center mt-3 hover:border-gold/40 transition-colors">
+              <p className="text-white font-semibold text-sm mb-0.5">No plan built yet</p>
+              <p className="text-ivory/55 text-xs">Tell me what you&apos;re looking for above, or tap here to build your real plan.</p>
             </Link>
           )}
         </div>
@@ -257,7 +260,7 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
         <div className="space-y-2 pr-1">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[86%] rounded-2xl px-3.5 py-2 text-sm leading-snug ${m.role === 'user' ? 'bg-gold text-obsidian font-medium rounded-br-sm' : 'bg-charcoal/90 border border-smoke text-ivory/90 rounded-bl-sm'}`}>{m.content}</div>
+              <div className={`max-w-[86%] rounded-2xl px-3.5 py-2 text-sm leading-snug ${m.role === 'user' ? 'bg-gold text-obsidian font-medium rounded-br-sm' : 'bg-black/20 border border-gold/15 text-ivory/90 rounded-bl-sm'}`}>{m.content}</div>
             </div>
           ))}
         </div>
@@ -362,7 +365,7 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
           user pass over a live screenshot. */}
       {!pending && hasPlan && (
         <button onClick={stickWithPlan} disabled={sending}
-          className="w-full text-center bg-charcoal/5 border border-smoke/30 text-ink/50 hover:text-gold hover:border-gold/40 px-4 py-2 rounded-xl text-xs font-semibold mb-2 transition-colors disabled:opacity-40">
+          className="w-full text-center bg-black/15 border border-gold/20 text-ivory/55 hover:text-gold hover:border-gold/40 px-4 py-2 rounded-xl text-xs font-semibold mb-2 transition-colors disabled:opacity-40">
           Stick with my current plan
         </button>
       )}
@@ -375,12 +378,12 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
           a send-arrow the moment there's real text — reusing
           DeepgramVoiceInput's className/activeClassName so both mic buttons
           restyle into this pill without forking any transcription logic. */}
-      <form onSubmit={(e) => { e.preventDefault(); send(input) }} className="flex items-center gap-1 bg-charcoal/5 border border-smoke/30 rounded-full pl-1.5 pr-1.5 py-1.5">
+      <form onSubmit={(e) => { e.preventDefault(); send(input) }} className="flex items-center gap-1 bg-black/15 border border-gold/20 rounded-full pl-1.5 pr-1.5 py-1.5">
         <DeepgramVoiceInput
           source="coach_hero" icon={<NoteIcon />} idleLabel="Record a longer memo"
           onInterim={(t) => { setRecordingMemo(true); setInput(t) }}
           onResult={(t) => { setRecordingMemo(false); setInput(t) }}
-          className="h-9 w-9 rounded-full text-ink/40 hover:text-gold"
+          className="h-9 w-9 rounded-full text-ivory/45 hover:text-gold"
           activeClassName="h-9 w-9 rounded-full bg-red-500/90 text-white luf-glow scale-105"
         />
         <textarea
@@ -397,7 +400,7 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
           placeholder="Talk to me about your day…"
           autoComplete="off" autoCorrect="on" enterKeyHint="send" inputMode="text"
           style={{ maxHeight: TEXTAREA_MAX_HEIGHT }}
-          className="flex-1 resize-none bg-transparent px-1.5 py-1.5 text-base text-ink placeholder:text-ink/35 focus:outline-none overflow-y-auto"
+          className="flex-1 resize-none bg-transparent px-1.5 py-1.5 text-base text-white placeholder:text-ivory/35 focus:outline-none overflow-y-auto"
         />
         {input.trim() ? (
           <button type="submit" disabled={sending} aria-label="Send" className="shrink-0 h-9 w-9 rounded-full bg-gold text-obsidian flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform">
@@ -416,7 +419,7 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
           />
         )}
       </form>
-      <p className="text-ink/25 text-[10px] mt-1.5 text-center">tap to talk · left mic for a longer voice memo</p>
+      <p className="text-ivory/35 text-[10px] mt-1.5 text-center">tap to talk · left mic for a longer voice memo</p>
       </div>
 
       <Celebration trigger={perfectDay} message={winAffirmation('allDone')} dedupeKey={`perfectday-${today}`} />
