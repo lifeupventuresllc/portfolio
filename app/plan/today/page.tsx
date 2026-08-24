@@ -57,7 +57,13 @@ function FlameIcon() {
 export default async function TodayView() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login?redirect=/plan/today')
+  // Real gap found live: a totally fresh visitor (no session at all, not
+  // even anonymous — e.g. a direct/shared link to this exact page) hit a
+  // login wall here, contradicting the app's own "no signup wall" anonymous-
+  // access design (see /try, the real bootstrap for every other entry
+  // point). Route through the same anonymous-session flow instead of
+  // demanding a real account just to see this page.
+  if (!user) redirect('/try?to=/plan/today')
 
   const svc = createServiceClient()
   let { data: enrollment } = await svc.from('challenge_enrollments').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).maybeSingle()
