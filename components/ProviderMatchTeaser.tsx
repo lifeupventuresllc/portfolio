@@ -1,20 +1,16 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 
 // Beta fake-door test (Asa's call, 2026-08-23): no real matching engine or
 // provider backend yet — just gauging whether users actually want this before
 // building it out. Location is local state only, nothing persisted; "Get
-// matched" just confirms interest inline. Real photos of actual trainers/
-// nutritionists to come — PersonIcon is a stand-in until Asa drops real ones in.
-function PersonIcon() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" />
-    </svg>
-  )
-}
+// matched" just confirms interest inline. Option B (Asa's pick from the
+// published mockup comparison, "Hero + List") — the split-photo hero is the
+// one thing this section needed to not read as "a random directory": it has
+// to say, in as few words as possible, that this is HER budget and HER goals
+// driving who she sees, not a generic list of whoever signed up.
 function PinIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -25,8 +21,8 @@ function PinIcon() {
 }
 
 const PROVIDERS = [
-  { role: 'Personal Trainer', blurb: 'Matched to your goals, your schedule, and how you actually like to train.' },
-  { role: 'Nutritionist', blurb: 'Matched to your diet, your budget, and the way you actually eat.' },
+  { role: 'Personal Trainer', blurb: 'Matched to your goals, your schedule, and how you actually like to train.', photo: '/images/community/trainer.jpg' },
+  { role: 'Nutritionist', blurb: 'Matched to your diet, your budget, and the way you actually eat.', photo: '/images/community/nutritionist.jpg' },
 ] as const
 
 export default function ProviderMatchTeaser() {
@@ -34,37 +30,48 @@ export default function ProviderMatchTeaser() {
   const [requested, setRequested] = useState<Set<string>>(new Set())
 
   return (
-    <div className="bg-charcoal border border-gold/30 rounded-2xl p-5 mb-5">
-      <p className="text-gold text-xs font-semibold tracking-[0.2em] uppercase mb-1">New — beta</p>
-      <h2 className="text-white text-lg font-bold mb-1.5">Find your people</h2>
-      <p className="text-ivory/60 text-sm mb-4">
-        We already know your goals, your diet, and your budget — tell us where you are and we&apos;ll connect you with a real personal trainer or nutritionist nearby who actually fits.
-      </p>
+    <div className="mb-5">
+      {/* The split-photo hero — real people, not icons, is the whole point:
+          this reads as "real specialists," not "a form." */}
+      <div className="relative rounded-2xl overflow-hidden h-40 mb-3">
+        <div className="absolute inset-0 flex">
+          <div className="relative w-1/2 h-full"><Image src="/images/community/trainer.jpg" alt="" fill sizes="50vw" className="object-cover brightness-[0.55]" /></div>
+          <div className="relative w-1/2 h-full"><Image src="/images/community/nutritionist.jpg" alt="" fill sizes="50vw" className="object-cover brightness-[0.55]" /></div>
+        </div>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+          <p className="text-gold text-[10px] font-bold tracking-[0.2em] uppercase mb-1.5">New — beta</p>
+          <p className="text-white font-bold leading-snug text-[15px]" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>
+            Based on your goals and your budget — real specialists near you, not random ones.
+          </p>
+        </div>
+      </div>
 
-      <label className="block mb-4">
-        <span className="text-ivory/50 text-xs font-semibold tracking-wide uppercase mb-1.5 flex items-center gap-1"><PinIcon /> Your city or zip</span>
+      <label className="block mb-3">
+        <span className="text-ivory/50 text-xs font-semibold tracking-wide uppercase mb-1.5 flex items-center gap-1"><PinIcon /> Find people where you&apos;re at</span>
         <input
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           placeholder="e.g. Los Angeles, CA"
-          className="w-full bg-obsidian border border-smoke rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none"
+          className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none"
         />
       </label>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-2">
         {PROVIDERS.map((p) => {
           const done = requested.has(p.role)
           return (
-            <div key={p.role} className="bg-obsidian border border-smoke rounded-xl p-3.5 flex flex-col items-center text-center">
-              <div className="w-14 h-14 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center text-gold mb-2.5">
-                <PersonIcon />
+            <div key={p.role} className="flex items-center gap-3 bg-charcoal border border-smoke rounded-xl px-3 py-2.5">
+              <div className="relative w-11 h-11 rounded-full overflow-hidden border-[1.5px] border-gold/50 shrink-0">
+                <Image src={p.photo} alt={p.role} fill sizes="44px" className="object-cover" />
               </div>
-              <p className="text-white text-sm font-semibold mb-1">{p.role}</p>
-              <p className="text-ivory/50 text-[11px] leading-snug mb-3">{p.blurb}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-semibold">{p.role}</p>
+                <p className="text-ivory/50 text-[11px] leading-snug truncate">{p.blurb}</p>
+              </div>
               <button
                 onClick={() => setRequested((s) => new Set(s).add(p.role))}
                 disabled={done}
-                className={`w-full text-[11px] font-bold uppercase tracking-wide rounded-lg py-2 transition-colors ${done ? 'bg-transparent border border-gold/30 text-gold/70' : 'bg-gold text-obsidian hover:opacity-90'}`}
+                className={`shrink-0 text-[11px] font-bold uppercase tracking-wide rounded-lg px-3 py-2 transition-colors whitespace-nowrap ${done ? 'bg-transparent border border-gold/30 text-gold/70' : 'bg-gold text-obsidian hover:opacity-90'}`}
               >
                 {done ? "You're on the list" : 'Get matched'}
               </button>
