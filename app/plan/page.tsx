@@ -225,9 +225,14 @@ export default async function PlanDashboard() {
           removal of a wrapping layer, not a rebuild — every existing
           capability (daily-context quiz, quick replies, approve/reject
           adjustment cards, cold-start build → "view my new workout" links)
-          comes along unchanged. h-full inside CoachHero needs a real height
-          from this wrapper to size against. */}
-      <div className="h-[65vh] min-h-[460px] max-h-[640px]">
+          comes along unchanged. Real bug found live: a fixed 65vh height
+          forced this to full-screen size even with almost no content (just
+          the greeting + composer), leaving a huge dead white gap — "way too
+          large" on a real phone. max-h only (no min-height) lets the card
+          hug its actual content and stay small on a fresh visit, capping
+          and scrolling internally only once a real conversation grows past
+          it — CoachHero's own max-h-full picks this up (see there). */}
+      <div className="max-h-[70vh]">
         <CoachHero firstName={firstName} hasPlan={hasPlan} hasRealName={hasRealName} />
       </div>
 

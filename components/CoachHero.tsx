@@ -240,7 +240,7 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
   }
 
   return (
-    <div className={`relative h-full flex flex-col overflow-hidden border border-gold/40 bg-white shadow-sm p-6 ${maximized ? '' : 'rounded-[2.25rem]'}`}>
+    <div className={`relative max-h-full flex flex-col overflow-hidden border border-gold/40 bg-white shadow-sm p-6 ${maximized ? '' : 'rounded-[2.25rem]'}`}>
       {/* Everything that can grow (identity + the quiz/greeting/message thread)
           lives in the scrollable top region; the input stays pinned at the
           bottom, same shape as any standard chat UI — see the footer region
@@ -272,7 +272,7 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
       <div className="flex items-center gap-2.5 mb-4">
         <span className="h-9 w-9 rounded-full bg-gold text-obsidian font-bold flex items-center justify-center text-lg shadow-lg shadow-gold/20">A</span>
         <div className="leading-tight">
-          <p className="text-ink text-sm font-semibold">Coach Asa</p>
+          <p className="text-ink text-sm font-semibold">Coach</p>
           <p className="text-gold/80 text-[10px] uppercase tracking-[0.18em] font-semibold">I&apos;m right here with you</p>
         </div>
       </div>
@@ -345,11 +345,11 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
         <div className="text-center py-2">
           <p className="text-ink text-xl leading-snug font-bold text-balance mb-4">{greeting}</p>
           <button
-            onClick={() => send('What can Coach Asa do?')}
+            onClick={() => send('What can Coach do?')}
             disabled={sending}
             className="inline-block bg-charcoal/5 border border-smoke/30 text-ink/50 text-xs font-semibold px-4 py-2 rounded-full hover:border-gold/50 hover:text-gold transition-colors disabled:opacity-40"
           >
-            What can Coach Asa do?
+            What can Coach do?
           </button>
           {/* Moved in from CoachOrbLauncher's old "closed" state now that
               there's no more open/closed modal — same gating logic (never
@@ -523,7 +523,7 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
           // matters now that a low-confidence read gets flagged instead of
           // silently sent as-is.
           <DeepgramVoiceInput
-            source="coach_hero" idleLabel="Talk to Coach Asa" onInterim={setInput} onResult={setInput}
+            source="coach_hero" idleLabel="Talk to Coach" onInterim={setInput} onResult={setInput}
             className="h-9 w-9 rounded-full bg-gold text-obsidian"
             activeClassName="h-9 w-9 rounded-full bg-red-500/90 text-white luf-glow scale-105"
           />
