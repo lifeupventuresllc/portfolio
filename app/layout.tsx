@@ -19,13 +19,17 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.asaluke.io'),
   title: {
-    default: 'Life-Up Fitness by Asa Luke',
+    // Asa's call, part of the rebrand alongside the new crown/leaf icon —
+    // the tab/share title drops "Life-Up Fitness by Asa Luke" for just the
+    // new name. Descriptive copy (description/keywords/siteName below) is
+    // left as-is — this is the name change specifically, not a copy rewrite.
+    default: 'Epaira',
     template: '%s | Asa Luke',
   },
   description: 'Custom workouts, done-for-you meals, and daily coaching — the app that decides for you. Life-Up Fitness by Asa Luke.',
   keywords: ['fitness coaching', 'workout app', 'meal plan app', 'personal training', 'weight loss app', 'Life-Up Fitness', 'Asa Luke', 'Los Angeles'],
   openGraph: {
-    title: 'Life-Up Fitness by Asa Luke',
+    title: 'Epaira',
     description: 'Custom workouts, done-for-you meals, and daily coaching — the app that decides for you.',
     url: 'https://www.asaluke.io',
     siteName: 'Asa Luke',
@@ -34,11 +38,11 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Life-Up Fitness by Asa Luke',
+    title: 'Epaira',
     description: 'Custom workouts, done-for-you meals, and daily coaching — the app that decides for you.',
   },
   manifest: '/manifest.webmanifest',
-  appleWebApp: { capable: true, title: 'Life-Up Fitness', statusBarStyle: 'black-translucent' },
+  appleWebApp: { capable: true, title: 'Epaira', statusBarStyle: 'black-translucent' },
   icons: {
     icon: [{ url: '/favicon.png', sizes: '32x32', type: 'image/png' }, { url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
