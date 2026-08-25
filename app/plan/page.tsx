@@ -67,13 +67,16 @@ export default async function PlanDashboard() {
           <p className="text-[#E5A93C] text-xs font-semibold tracking-[0.25em] uppercase">Life-Up Fitness</p>
           <div className="flex items-center gap-2">
             {/* Real fix, live feedback (beta feedback Priority 1, 2026-08-25):
-                "these are priority fixes, nothing should be hidden behind
-                other features" — editing preferences used to require opening
-                the ☰ menu, scrolling to "Extras," then picking one of two
-                separate links. One visible icon, one tap, right on the
-                dashboard, straight into everything editable in one flow
-                (see /plan/intake's edit=true handling). */}
-            <Link href="/plan/intake?edit=true" aria-label="Settings — edit your preferences" className="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center hover:border-gold/60 transition-colors">
+                seeing an icon isn't the same as understanding what it does —
+                and the first version reopened the FULL intake wizard
+                starting at "what's your name," re-asking things that rarely
+                change before ever reaching goal/style, the two things she
+                actually asked to update. Links straight to /plan/preferences
+                now: goal + focus + workout style ONLY, nothing else re-asked,
+                with an unmistakable headline the moment it opens ("What do
+                you want to work on?") so what just happened is obvious
+                without needing the icon alone to explain it. */}
+            <Link href="/plan/preferences" aria-label="Update your goals and workout style" title="Update your goals and workout style" className="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center hover:border-gold/60 transition-colors">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EDE7DA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3" />
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
