@@ -83,6 +83,13 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
         { href: '/plan/jumpstart', label: '7-Day Jump Start', icon: '⚡' },
         { href: '/plan/reset', label: '21-Day Habit Reset', icon: '🔁' },
         { href: '/plan/intake', label: 'My profile & stats', icon: '👤' },
+        // Real gap found live (beta feedback Priority 1, 2026-08-25): the
+        // optional tier (target weight, experience, training style, days/
+        // week, cook days, postpartum, other info) only ever had an edit
+        // link shown as a one-time "fine-tune your plan" nudge that
+        // disappeared for good the moment she completed it once — after
+        // that, training style specifically had no way back in at all.
+        { href: '/plan/intake?tier=optional', label: 'Training style & extras', icon: '🎯' },
         { href: '/plan/feedback', label: 'Send feedback', icon: '💬' },
       ],
     },
