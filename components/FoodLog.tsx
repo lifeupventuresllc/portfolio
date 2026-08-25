@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Ring from '@/components/Ring'
 import VoiceButton from '@/components/VoiceButton'
 import SessionExpiredNotice from '@/components/SessionExpiredNotice'
+import { pieceWeightFor } from '@/lib/food-portions'
 
 type SearchFood = {
   name: string; brand: string | null; servings: number; serving_label: string | null
@@ -91,13 +92,32 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
   // actually had (oz or grams) instead of always logging a flat 100g serving.
   const [picking, setPicking] = useState<SearchFood | null>(null)
   const [qty, setQty] = useState('100')
-  const [unit, setUnit] = useState<'g' | 'oz'>('g')
-  const grams = unit === 'oz' ? (Number(qty) || 0) * 28.3495 : (Number(qty) || 0)
+  const [unit, setUnit] = useState<'g' | 'oz' | 'piece'>('g')
+  // Real fix for "2 eggs = 0 calories" (beta feedback Priority 2, 2026-08-25):
+  // USDA results are always per-100g, and there was previously no way to log
+  // by count at all — someone typing "2" meaning "2 eggs" was actually
+  // logging 2 grams. See lib/food-portions.ts for why a curated table, not a
+  // USDA API lookup (their /food/{fdcId} detail endpoint 404s under our key).
+  const piece = picking ? pieceWeightFor(picking.name) : null
+  // The moment a new food is picked, default straight to "1 piece" for any
+  // food we have a real gram-weight for — the safe default that makes the
+  // original bug impossible to hit by accident, not just possible to avoid.
+  useEffect(() => {
+    if (!picking) return
+    const p = pieceWeightFor(picking.name)
+    if (p) { setUnit('piece'); setQty('1') } else { setUnit('g'); setQty('100') }
+  }, [picking])
+  const grams = unit === 'piece' ? (Number(qty) || 0) * (piece?.grams || 0) : unit === 'oz' ? (Number(qty) || 0) * 28.3495 : (Number(qty) || 0)
   const scale = grams > 0 ? grams / 100 : 0
   const scaled = picking ? {
     calories: Math.round(picking.calories * scale), protein_g: Math.round(picking.protein_g * scale),
     carbs_g: Math.round(picking.carbs_g * scale), fats_g: Math.round(picking.fats_g * scale),
   } : null
+  // Safety net (Priority 2's explicit ask): a real portion should never save
+  // as a silent 0 — catches any food this table doesn't cover, or a genuine
+  // typo, without blocking an actually-zero-calorie food (grams === 0, or the
+  // food itself is genuinely ~0 kcal/100g, e.g. black coffee/water).
+  const zeroCalorieWarning = !!(picking && scaled && grams > 0 && scaled.calories === 0 && picking.calories > 0)
 
   async function runSearch(query: string) {
     const text = query.trim()
@@ -124,7 +144,12 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
 
   async function confirmLogFood() {
     if (!picking || !scaled) return
-    const label = unit === 'oz' ? `${qty}oz` : `${qty}g`
+    // Never let a real portion silently save as 0 calories (Priority 2's
+    // explicit ask) — this can only fire for a food outside the piece table
+    // above logged in an implausibly tiny gram amount; a genuinely
+    // zero-calorie food (grams === 0 or picking.calories === 0) still saves fine.
+    if (zeroCalorieWarning) return
+    const label = unit === 'piece' ? `${qty} ${piece?.label}${Number(qty) === 1 ? '' : 's'}` : unit === 'oz' ? `${qty}oz` : `${qty}g`
     await post({
       name: picking.brand ? `${picking.name} (${picking.brand})` : picking.name, meal: searchMeal, servings: 1,
       serving_label: label, calories: scaled.calories, protein_g: scaled.protein_g, carbs_g: scaled.carbs_g, fats_g: scaled.fats_g,
@@ -296,7 +321,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
                 <p className="text-ivory/35 text-[10px] px-0.5">Don&apos;t see your exact brand? Pick the generic one at the top — macros are close across brands unless you know yours specifically.</p>
               )}
               {results.map((f, i) => (
-                <button key={i} onClick={() => { if (f.source === 'usda') { setPicking(f); setQty('100'); setUnit('g') } else { logEstimatedFood(f) } }} disabled={saving} className="w-full text-left flex items-center gap-2 bg-charcoal border border-smoke rounded-lg px-3 py-2 hover:border-gold/50 transition-colors disabled:opacity-50">
+                <button key={i} onClick={() => { if (f.source === 'usda') { setPicking(f) } else { logEstimatedFood(f) } }} disabled={saving} className="w-full text-left flex items-center gap-2 bg-charcoal border border-smoke rounded-lg px-3 py-2 hover:border-gold/50 transition-colors disabled:opacity-50">
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-xs font-medium truncate">{f.name}{f.brand ? <span className="text-ivory/40"> · {f.brand}</span> : null}</p>
                     <p className="text-ivory/40 text-[10px]">{f.source === 'usda' ? 'per 100g' : `${f.servings} ${f.serving_label || 'serving'}`} · {f.calories} cal · {f.protein_g}P · {f.carbs_g}C · {f.fats_g}F</p>
@@ -314,14 +339,20 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
               <div className="flex gap-2 items-center">
                 <input value={qty} onChange={(e) => setQty(e.target.value)} inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="w-24 bg-obsidian border border-smoke rounded-lg px-3 py-2 text-white text-sm focus:border-gold/60 outline-none" />
                 <div className="flex rounded-lg overflow-hidden border border-smoke">
-                  {(['g', 'oz'] as const).map((u) => (
-                    <button key={u} onClick={() => setUnit(u)} className={`px-3 py-2 text-xs font-bold uppercase ${unit === u ? 'bg-gold text-obsidian' : 'bg-obsidian text-ivory/50'}`}>{u}</button>
+                  {/* "piece" only offered when we have a real, verified gram
+                      weight for this food (see lib/food-portions.ts) — never
+                      a fabricated conversion for something we don't know. */}
+                  {(piece ? ['piece', 'g', 'oz'] : ['g', 'oz'] as const).map((u) => (
+                    <button key={u} onClick={() => setUnit(u as 'g' | 'oz' | 'piece')} className={`px-3 py-2 text-xs font-bold uppercase ${unit === u ? 'bg-gold text-obsidian' : 'bg-obsidian text-ivory/50'}`}>{u === 'piece' ? (piece?.label || 'piece') : u}</button>
                   ))}
                 </div>
               </div>
               <p className="text-ivory/50 text-xs">{scaled.calories} cal · {scaled.protein_g}g protein · {scaled.carbs_g}g carbs · {scaled.fats_g}g fat</p>
+              {zeroCalorieWarning && (
+                <p className="text-amber-400 text-xs font-semibold">That works out to 0 calories — double-check the quantity before logging.</p>
+              )}
               <div className="flex gap-2">
-                <button onClick={confirmLogFood} disabled={saving || grams <= 0} className="flex-1 bg-gold text-obsidian py-2.5 font-bold text-xs uppercase tracking-wider rounded-lg disabled:opacity-50">{saving ? 'Logging…' : 'Log it'}</button>
+                <button onClick={confirmLogFood} disabled={saving || grams <= 0 || zeroCalorieWarning} className="flex-1 bg-gold text-obsidian py-2.5 font-bold text-xs uppercase tracking-wider rounded-lg disabled:opacity-50">{saving ? 'Logging…' : 'Log it'}</button>
                 <button onClick={() => setPicking(null)} className="px-4 py-2.5 text-ivory/50 text-xs font-semibold hover:text-white">Cancel</button>
               </div>
             </div>
