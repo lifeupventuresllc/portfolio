@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getTimezone, localDateISO } from '@/lib/localdate'
-import { getNextAction, getOpenAction, markActionCompleted, markActionSkipped, markActionSuperseded, type ResolveFailureReason } from '@/lib/next-action'
+import { getNextAction, resolveCurrentAction, markActionCompleted, markActionSkipped, markActionSuperseded, parseNextActionSignal, type ResolveFailureReason } from '@/lib/next-action'
 
 // The Next Action engine's one door in and out (2026-08-25 spec). GET
 // returns the single current instruction — today's open row if one exists
@@ -33,30 +33,7 @@ function statusFor(reason: ResolveFailureReason) {
 export async function GET() {
   const { user, enrollment } = await resolve()
   if (!user || !enrollment) return NextResponse.json({ error: 'not enrolled' }, { status: 404 })
-  const enrollmentId = enrollment.id as string
-  const tz = getTimezone()
-  const today = localDateISO(tz)
-
-  const open = await getOpenAction(enrollmentId)
-  if (open) {
-    // Real gap a blind review caught: comparing shown_at to a literal
-    // `${today}T00:00:00Z` treats a LOCAL calendar date as a UTC instant —
-    // for any non-UTC timezone that's wrong by the zone's offset, so an
-    // instruction shown late yesterday (local time) could still read as
-    // "today," or the first hours of a real new local day could miss it.
-    // Comparing two values computed through the same localDateISO is
-    // timezone-safe regardless of offset or DST.
-    if (localDateISO(tz, new Date(open.shown_at)) === today) {
-      return NextResponse.json({ logId: open.id, kind: open.kind, actionKey: open.action_key, instruction: open.instruction, score: open.score })
-    }
-    // Genuinely stale — the calendar day changed under her without her ever
-    // acting on it. That's a real "my day changed" disruption, just one she
-    // didn't trigger herself, so it's handled the same way: supersede, then
-    // hand her exactly one fresh instruction for today.
-    await markActionSuperseded(open.id, enrollmentId)
-  }
-
-  const result = await getNextAction(enrollmentId, today)
+  const result = await resolveCurrentAction(enrollment.id as string)
   return NextResponse.json(result)
 }
 
@@ -67,8 +44,24 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
   const logId = body?.logId as string | undefined
-  const action = body?.action as 'done' | 'skip' | 'day_changed' | undefined
+  const action = body?.action as 'done' | 'skip' | 'day_changed' | 'message' | undefined
   if (!logId || !action) return NextResponse.json({ error: 'logId and action required' }, { status: 400 })
+
+  // Prompt 5's NL/voice access point — she can question or redirect the
+  // current instruction in her own words instead of tapping a button. Still
+  // routes through the exact same recommendation layer as every other path
+  // (getNextAction): the LLM only ever extracts signals here, never decides.
+  if (action === 'message') {
+    const message = body?.message as string | undefined
+    if (!message || !message.trim()) return NextResponse.json({ error: 'message required' }, { status: 400 })
+    const signal = await parseNextActionSignal(message)
+    const hasSignal = !!signal.energy || !!signal.minutesAvailable || !!signal.dayChanged || typeof signal.eatingOut === 'boolean'
+    if (!hasSignal) return NextResponse.json({ changed: false })
+    const outcome = await markActionSuperseded(logId, enrollmentId)
+    if (!outcome.ok) return NextResponse.json({ error: outcome.reason }, { status: statusFor(outcome.reason) })
+    const result = await getNextAction(enrollmentId, localDateISO(getTimezone()), { energy: signal.energy, minutesAvailable: signal.minutesAvailable, eatingOut: signal.eatingOut })
+    return NextResponse.json({ changed: true, ...result })
+  }
 
   if (action === 'done') {
     const outcome = await markActionCompleted(logId, enrollmentId)

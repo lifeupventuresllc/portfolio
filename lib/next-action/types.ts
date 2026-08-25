@@ -34,6 +34,39 @@ export type UserStateSnapshot = {
   // High risk nudges energy down and biases toward the smallest real win.
   isDip: boolean
   dipRiskBand: 'low' | 'medium' | 'high'
+
+  // ---- Goal-alignment layer (prompt 6) ----
+  // Her stated goal — every candidate/instruction gets calculated against
+  // THIS, even when the visible action is minimized for low capacity.
+  goal: 'lose' | 'gain' | 'maintain'
+  // True only when she was actually shown a workout action today (via THIS
+  // engine) and explicitly skipped it — a real signal, never guessed from
+  // time of day. Drives the calorie-burn adjustment below.
+  workoutSkippedToday: boolean
+  // True when a workout adjustment is on file for today (e.g. a cardio
+  // swap) — treated as a partial, not full, burn reduction.
+  workoutReducedToday: boolean
+  // Calories already invisibly subtracted from calorieBudget above because
+  // an expected burn didn't happen — kept here only for audit/debugging,
+  // never shown to her.
+  workoutBurnAdjustment: number
+  // A real "I'm eating out" signal — either the plan's own schedule or an
+  // explicit disruption she just reported (see index.ts's overrides).
+  eatingOutToday: boolean
+  // The single real order picked from the app's existing Escape Plan
+  // system (lib/escape-plan.ts) for right now — null only when eatingOutToday
+  // is false, or the picker genuinely had nothing to offer.
+  eatingOutPick: { restaurant: string; order: string; cal: number; protein: number; carbs: number; fat: number } | null
+}
+
+// Ephemeral, single-call overrides derived from an explicit signal (a
+// structured "day changed" tap, or an LLM-parsed natural-language message) —
+// never persisted as her new baseline. Passed straight into getUserState;
+// unset fields fall back to whatever's actually on file.
+export type StateOverrides = {
+  energy?: EnergyLevel
+  minutesAvailable?: number
+  eatingOut?: boolean
 }
 
 export type ActionCandidate = {

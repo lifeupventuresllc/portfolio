@@ -12,6 +12,7 @@ import WeeklyCheckinPrompt from '@/components/WeeklyCheckinPrompt'
 import VerifyEmailBanner from '@/components/VerifyEmailBanner'
 import AnonymousSessionBanner from '@/components/AnonymousSessionBanner'
 import TimezoneSync from '@/components/TimezoneSync'
+import NextActionCard from '@/components/NextActionCard'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
 import { localDateISO, localMondayIndex, localDayNumber, addDaysISO } from '@/lib/localdate'
@@ -224,6 +225,13 @@ export default async function PlanDashboard() {
           one dominant focus, everything else secondary. */}
 
       {checkinDue && <WeeklyCheckinPrompt firstName={firstName} todayIso={todayIso} />}
+
+      {/* Prompt 1's Next Action engine (2026-08-25 spec) — the zero-decision
+          entry point, surfaced first, above even the workout hero. Only
+          shown once there's a real plan to compute it from; the full
+          circle (Done / "my day changed" / free-text redirect) lives at
+          /plan/next, this is just the always-visible teaser. */}
+      {hasPlan && <NextActionCard compact />}
 
       <Link href="/plan/workout" className="relative block rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(229,169,60,0.22)', height: 300 }}>
         <img src={pickDashboardPhoto()} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'saturate(1.05) contrast(1.03)' }} />

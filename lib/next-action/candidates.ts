@@ -22,15 +22,32 @@ export function buildCandidates(state: UserStateSnapshot): ActionCandidate[] {
   const candidates: ActionCandidate[] = []
 
   if (state.workoutCandidate && !state.workoutDoneToday) {
-    candidates.push({
-      kind: 'workout',
-      actionKey: `workout:${state.workoutCandidate.title}`,
-      instruction: `Do today's workout: ${state.workoutCandidate.title}.`,
-      estMinutes: 30,
-    })
+    let instruction = `Do today's workout: ${state.workoutCandidate.title}.`
+    // Goal-alignment layer (prompt 6): logging an off-track/over-budget day
+    // feeds back into the workout side too — but only when it actually
+    // matters for HER stated goal. More food eaten isn't a problem to solve
+    // for a 'gain' goal, so this nudge is fat-loss-specific, not universal.
+    // This adjusts the copy only — it never rewrites her stored program —
+    // bounded, invisible-to-her-as-math, and reversible day to day.
+    if (state.goal === 'lose' && state.calorieBudget != null && state.caloriesLoggedToday > state.calorieBudget) {
+      instruction += ' Keep it shorter today if you need to — a lighter version still fully counts.'
+    }
+    candidates.push({ kind: 'workout', actionKey: `workout:${state.workoutCandidate.title}`, instruction, estMinutes: 30 })
   }
 
-  if (state.calorieBudget != null && state.caloriesLoggedToday < state.calorieBudget) {
+  // Eating out replaces the generic meal-log reminder entirely — a real
+  // location signal means she needs ONE specific order, not a reminder to
+  // log something later (prompt 6's single-selection requirement). Uses the
+  // app's real Escape Plan pick (state.eatingOutPick), not a synthetic list.
+  if (state.eatingOutToday && state.eatingOutPick) {
+    const p = state.eatingOutPick
+    candidates.push({
+      kind: 'location',
+      actionKey: `location:${p.restaurant}:${p.order}`,
+      instruction: `At the restaurant, order: ${p.restaurant} — ${p.order} (about ${p.cal} cal, ${p.protein}g protein).`,
+      estMinutes: 2,
+    })
+  } else if (state.calorieBudget != null && state.caloriesLoggedToday < state.calorieBudget) {
     const remaining = Math.max(0, state.calorieBudget - state.caloriesLoggedToday)
     candidates.push({
       kind: 'meal',
