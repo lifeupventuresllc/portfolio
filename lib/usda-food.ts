@@ -67,7 +67,21 @@ export async function usdaSearchWithMacros(query: string, limit = 6): Promise<Fo
   if (!res.ok) return []
   const data = await res.json().catch(() => null)
   const foods = Array.isArray(data?.foods) ? data.foods : []
-  const mapped = foods.map((f: Record<string, unknown>) => toResult(f))
+  // Real bug found live (beta feedback Priority 2, 2026-08-25): some USDA
+  // records — verified live, e.g. "Lunchmeat, chicken breast, sliced" for the
+  // query "chicken breast" — have every macro genuinely blank in USDA's own
+  // database (calories/protein/carbs/fats all exactly 0), not a real
+  // zero-calorie food. Left in, one of these could rank as the TOP "chicken
+  // breast" result and get logged before anyone even touches quantity —
+  // no unit-conversion bug involved, USDA's own data is just empty for that
+  // specific entry. All-four-zero is not a real food's nutrition signature
+  // (a genuinely zero-calorie food like water/black coffee still isn't also
+  // exactly zero protein/carbs/fat in USDA's data), so it's a safe, honest
+  // filter — drop these before they're ever offered, don't just hope she
+  // notices, since the top-of-list default is exactly what routinely gets
+  // tapped fastest.
+  const hasRealData = (f: FoodResult) => f.calories > 0 || f.protein_g > 0 || f.carbs_g > 0 || f.fats_g > 0
+  const mapped = foods.map((f: Record<string, unknown>) => toResult(f)).filter(hasRealData)
   // Guarantee ONE generic result up front (a safe default when her exact brand isn't
   // listed) WITHOUT burying every branded match behind it — the old "all generics,
   // then all branded, then slice" approach could push a highly-relevant branded match
