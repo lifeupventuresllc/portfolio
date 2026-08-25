@@ -58,7 +58,7 @@ export default async function WorkoutWeekPage() {
   }
 
   const days = program.track === 'home' ? (program.home?.days || []).map((d) => ({ title: d.title, muscles: undefined as string | undefined }))
-    : (program.gymDays || []).map((d) => ({ title: d.title, muscles: d.muscles }))
+    : (program.gymDays || []).map((d) => ({ title: d.title, muscles: d.muscles?.join(', ') }))
   const numDays = days.length || 1
   const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
   const todayIdx = completed % numDays
