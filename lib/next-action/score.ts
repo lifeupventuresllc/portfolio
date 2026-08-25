@@ -17,6 +17,10 @@ const KIND_BASE: Record<ActionCandidate['kind'], number> = {
   meal: 50,
   fallback: 20,
   location: 55,
+  // Never actually built as a scored candidate (lib/next-action/reward.ts
+  // injects it after scoring, replacing whatever won) — present only so
+  // the map stays exhaustive over ActionKind.
+  reward_question: 0,
 }
 
 // A real, already-observed dip (lib/fos/pattern.ts) or a low energy signal

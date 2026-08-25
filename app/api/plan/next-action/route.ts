@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getTimezone, localDateISO } from '@/lib/localdate'
-import { getNextAction, resolveCurrentAction, markActionCompleted, markActionSkipped, markActionSuperseded, parseNextActionSignal, type ResolveFailureReason } from '@/lib/next-action'
+import { getNextAction, getOpenAction, resolveCurrentAction, markActionCompleted, markActionSkipped, markActionSuperseded, parseNextActionSignal, recordStatedPreference, type ResolveFailureReason } from '@/lib/next-action'
 
 // The Next Action engine's one door in and out (2026-08-25 spec). GET
 // returns the single current instruction — today's open row if one exists
@@ -55,9 +55,26 @@ export async function POST(req: NextRequest) {
     const message = body?.message as string | undefined
     if (!message || !message.trim()) return NextResponse.json({ error: 'message required' }, { status: 400 })
     const signal = await parseNextActionSignal(message)
+
+    // Reward profile source #2 (explicit) — captured from ANY message that
+    // clearly states something she values, independent of whether this
+    // happens to be answering a reward_question. Never blocks the rest of
+    // this handler if it fails.
+    if (signal.statedPreference) {
+      await recordStatedPreference(enrollmentId, user.id, signal.statedPreference.label, signal.statedPreference.category).catch(() => {})
+    }
+
+    // A reward_question's answer is a natural conversational reply — it
+    // rarely also states an energy level or a minutes number, so requiring
+    // one of those (like every other redirect) would leave the question
+    // stuck open forever once she'd already answered it.
+    const open = await getOpenAction(enrollmentId)
+    const answeringRewardQuestion = open?.id === logId && open.kind === 'reward_question'
+
     const hasSignal = !!signal.energy || !!signal.minutesAvailable || !!signal.dayChanged || typeof signal.eatingOut === 'boolean'
-    if (!hasSignal) return NextResponse.json({ changed: false })
-    const outcome = await markActionSuperseded(logId, enrollmentId)
+    if (!hasSignal && !answeringRewardQuestion) return NextResponse.json({ changed: false })
+
+    const outcome = answeringRewardQuestion ? await markActionCompleted(logId, enrollmentId) : await markActionSuperseded(logId, enrollmentId)
     if (!outcome.ok) return NextResponse.json({ error: outcome.reason }, { status: statusFor(outcome.reason) })
     const result = await getNextAction(enrollmentId, localDateISO(getTimezone()), { energy: signal.energy, minutesAvailable: signal.minutesAvailable, eatingOut: signal.eatingOut })
     return NextResponse.json({ changed: true, ...result })

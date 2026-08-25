@@ -7,7 +7,10 @@
 // never a menu. See lib/next-action/index.ts for the entry point.
 
 export type EnergyLevel = 'low' | 'normal' | 'high' | 'unknown'
-export type ActionKind = 'workout' | 'meal' | 'fallback' | 'location'
+// 'reward_question' (prompt 7) is never a scored candidate — it's an
+// occasional replacement the reward system swaps in on top of whatever
+// normally would have won, when it has nothing usable yet to reward with.
+export type ActionKind = 'workout' | 'meal' | 'fallback' | 'location' | 'reward_question'
 
 export type UserStateSnapshot = {
   enrollmentId: string

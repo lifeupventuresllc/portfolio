@@ -4,12 +4,14 @@ import { getUserState } from './state'
 import { buildCandidates } from './candidates'
 import { scoreCandidates } from './score'
 import { humanizeInstruction } from './llm'
+import { isRewardEligible, pickRewardOrQuestion, pickRewardQuestion, recordRewardOffered, weaveRewardDeterministic, type RewardPreference } from './reward'
 import type { NextActionResult, StateOverrides } from './types'
 
 export { getUserState } from './state'
 export { buildCandidates } from './candidates'
 export { scoreCandidates } from './score'
 export { humanizeInstruction, parseNextActionSignal, type ParsedSignal } from './llm'
+export { recordStatedPreference } from './reward'
 export type * from './types'
 
 type OpenRow = { id: string; kind: string; action_key: string; instruction: string; display_text: string | null; score: number; shown_at: string }
@@ -58,12 +60,47 @@ export async function getNextAction(enrollmentId: string, todayISO: string, over
   const candidates = buildCandidates(state)
   const scored = await scoreCandidates(candidates, state)
   const winner = scored[0]
-  // Prompt 5's LLM half — reworded once, at creation, and stored so every
-  // later fetch of this same open row shows identical wording (see 034's
-  // migration comment). Falls back to the deterministic text untouched if
-  // the LLM isn't configured or the call fails; the decision itself never
-  // depends on this succeeding.
-  const displayText = await humanizeInstruction(winner.instruction, { energy: state.energy })
+
+  // Reward system (prompt 7) — considered only AFTER the normal winner is
+  // already decided, so a reward always rides along with whatever already
+  // fits her real constraints today, instead of replacing them with an
+  // unrelated treat. Eligibility reads consistency only (reward.ts), never
+  // this candidate's size or score.
+  let kind = winner.kind
+  let actionKey = winner.actionKey
+  let baseInstruction = winner.instruction
+  let isReward = false
+  let rewardPreferenceId: string | null = null
+  let rewardLabel: string | undefined
+
+  if (await isRewardEligible(enrollmentId, todayISO, state.dipRiskBand)) {
+    isReward = true
+    const decision = await pickRewardOrQuestion(enrollmentId)
+    if (decision.type === 'question') {
+      // Replaces the normal winner outright for this one turn — the
+      // question itself becomes her single instruction; the real action
+      // resumes as soon as she answers (see route.ts's message handler).
+      kind = 'reward_question'
+      actionKey = 'reward:question'
+      baseInstruction = pickRewardQuestion()
+    } else {
+      rewardPreferenceId = await recordRewardOffered(enrollmentId, state.userId, decision.preference)
+      rewardLabel = decision.preference.label
+    }
+  }
+
+  // Prompt 5's LLM half — reworded (and, when a reward was picked, woven
+  // in) once at creation, then stored so every later fetch of this same
+  // open row shows identical wording (see 034's migration comment).
+  const humanized = kind === 'reward_question' ? baseInstruction : await humanizeInstruction(baseInstruction, { energy: state.energy, reward: rewardLabel })
+  // humanizeInstruction returns its input completely unchanged whenever the
+  // LLM isn't configured or the call failed — so if a reward was picked but
+  // the returned text is identical to the un-woven base, the weave never
+  // actually happened. Guarantee it lands anyway via the deterministic
+  // fallback rather than silently dropping it.
+  const displayText = (rewardLabel && humanized === baseInstruction)
+    ? weaveRewardDeterministic(baseInstruction, { id: rewardPreferenceId || '', label: rewardLabel, category: 'other', source: 'explicit' } as RewardPreference)
+    : humanized
 
   const svc = createServiceClient()
   const { data: row, error } = await svc
@@ -71,14 +108,16 @@ export async function getNextAction(enrollmentId: string, todayISO: string, over
     .insert({
       enrollment_id: enrollmentId,
       user_id: state.userId,
-      kind: winner.kind,
-      action_key: winner.actionKey,
-      instruction: winner.instruction,
+      kind,
+      action_key: actionKey,
+      instruction: baseInstruction,
       display_text: displayText,
       energy_context: state.energy,
       minutes_available: state.minutesAvailable,
       score: winner.score,
       source: 'rule',
+      is_reward: isReward,
+      reward_preference_id: rewardPreferenceId,
     })
     .select('id')
     .single()
@@ -91,7 +130,7 @@ export async function getNextAction(enrollmentId: string, todayISO: string, over
     throw error
   }
 
-  return { logId: row.id as string, kind: winner.kind, actionKey: winner.actionKey, instruction: displayText, score: winner.score }
+  return { logId: row.id as string, kind, actionKey, instruction: displayText, score: winner.score }
 }
 
 // The one shared "what's her instruction right now" resolver — today's real
