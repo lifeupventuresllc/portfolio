@@ -24,28 +24,56 @@ const REWORD_TOOL = {
 
 // `reward`, when present, is prompt 7's weaving requirement: the reward
 // must land as genuinely part of the ONE instruction, not a second sentence
-// that reads like a separate offer. Passing it here (rather than string-
-// concatenating elsewhere) lets the model actually integrate it into the
-// day's real action instead of bolting it on.
+// that reads like a separate offer.
+//
+// Real bug caught live (2026-08-25, direct production test): the earlier
+// version put the "how to weave this in" directive INSIDE the user-message
+// content, mixed in with the raw instruction text as one blob. Against
+// Haiku, that occasionally produced an echo failure — the model returned
+// the directive sentence itself as the "reworded" text instead of following
+// it, and that verbatim internal prompt text nearly reached a real user.
+// Fixed by moving all "how" guidance into the system prompt (instructions
+// channel) and keeping the user message to plain labeled data only — plus a
+// sanitize() safety net below so a similar echo can never reach her even if
+// it recurs, regardless of root cause.
+function sanitizeReworded(text: string, instruction: string, reward?: string): string | null {
+  const t = text.trim()
+  if (!t) return null
+  const lower = t.toLowerCase()
+  // Telltale fragments from our own system prompt / this function's doc —
+  // if the model echoed instructions back, they show up verbatim here.
+  const leakMarkers = ['integrated part', 'not a second offer', 'reword', 'system prompt', 'weave this in']
+  if (leakMarkers.some((m) => lower.includes(m))) return null
+  // A real rewording stays in the same ballpark length as the source
+  // content; an echo of the full directive text runs much longer.
+  const sourceLen = instruction.length + (reward?.length || 0)
+  if (t.length > sourceLen * 3 + 80) return null
+  return t
+}
+
 export async function humanizeInstruction(instruction: string, context: { energy: string; reward?: string }): Promise<string> {
   if (!anthropicConfigured() || !instruction.trim()) return instruction
   try {
     const client = new Anthropic()
-    const rewardLine = context.reward
-      ? `\nAlso weave this in as a genuine, integrated part of the SAME instruction — not a second offer, not a question, not framed as earned-by-effort, just something that naturally belongs in her day today: ${context.reward}`
+    const rewardGuidance = context.reward
+      ? ' A reward is included below — weave it in as a genuine, integrated part of the same instruction, not a second offer or a question, and never frame it as something earned by effort. Just make it read like it naturally belongs in her day today.'
       : ''
+    const userContent = context.reward
+      ? `Energy today: ${context.energy}\nInstruction: ${instruction}\nReward to include: ${context.reward}`
+      : `Energy today: ${context.energy}\nInstruction to reword: ${instruction}`
     const msg = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 200,
       system:
-        "You rewrite ONE fitness-coaching instruction so it reads warm and human, like a supportive coach speaking directly to her — never robotic, never a status report. Keep the exact same real content: same food/workout/action, same numbers, nothing invented or dropped. You are only adjusting tone and phrasing. One or two short sentences, max. No emoji unless the original had one. If today's energy is low, keep the tone extra gentle and low-pressure.",
+        "You rewrite ONE fitness-coaching instruction so it reads warm and human, like a supportive coach speaking directly to her — never robotic, never a status report. Keep the exact same real content: same food/workout/action, same numbers, nothing invented or dropped. You are only adjusting tone and phrasing. One or two short sentences, max. No emoji unless the original had one. If today's energy is low, keep the tone extra gentle and low-pressure." + rewardGuidance,
       tools: [REWORD_TOOL],
       tool_choice: { type: 'tool', name: 'reword_instruction' },
-      messages: [{ role: 'user', content: `Energy today: ${context.energy}\nInstruction to reword: ${instruction}${rewardLine}` }],
+      messages: [{ role: 'user', content: userContent }],
     })
     const block = msg.content.find((b) => b.type === 'tool_use')
     const text = block && block.type === 'tool_use' ? (block.input as { text?: string }).text : null
-    return text && text.trim() ? text.trim() : instruction
+    if (!text) return instruction
+    return sanitizeReworded(text, instruction, context.reward) ?? instruction
   } catch {
     return instruction
   }
