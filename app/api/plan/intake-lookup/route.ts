@@ -42,9 +42,27 @@ export async function GET() {
   if (!intake) return NextResponse.json({ found: false })
 
   const formData = (intake.form_data || {}) as Record<string, unknown>
+  // Real gap found alongside the multi-select fix: training_style/goals/
+  // training_styles all live in form_data, but this endpoint never surfaced
+  // any of them — training_style silently reset to blank on every reopen,
+  // same class of bug this whole endpoint exists to fix for age/weight/goal.
   return NextResponse.json({
     found: true,
     name: enrollment.name || '',
-    intake: { ...intake, injuries: formData.injuries || [], focus_area: formData.focus_area || 'overall' },
+    intake: {
+      ...intake,
+      injuries: formData.injuries || [],
+      focus_area: formData.focus_area || 'overall',
+      training_style: formData.training_style || 'none',
+      // Arrays are the real source of truth going forward (multi-select) —
+      // fall back to wrapping the single legacy value for an intake row
+      // saved before this existed, so a returning user's prior single
+      // choice still shows as selected instead of reverting to nothing.
+      goals: Array.isArray(formData.goals) ? formData.goals : [intake.goal].filter(Boolean),
+      training_styles: Array.isArray(formData.training_styles) ? formData.training_styles : [formData.training_style].filter((v) => v && v !== 'none'),
+      cook_days_per_week: formData.cook_days_per_week ?? 2,
+      postpartum: !!formData.postpartum,
+      other_info: formData.other_info || '',
+    },
   })
 }

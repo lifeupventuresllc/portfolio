@@ -40,6 +40,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No challenge enrollment found for your account.' }, { status: 404 })
     }
 
+    // Real multi-select support (Priority 1, 2026-08-25 beta feedback) — the
+    // form now sends `goals`/`training_styles` arrays; derive the single
+    // legacy value every existing calculation still expects from the first
+    // (top-priority) selection, same as buildInitialPlans does internally.
+    const goals: string[] = Array.isArray(body.goals) && body.goals.length ? body.goals : (body.goal ? [body.goal] : [])
+    const trainingStyles: string[] = Array.isArray(body.training_styles) ? body.training_styles : (body.training_style && body.training_style !== 'none' ? [body.training_style] : [])
+    const primaryGoal = (goals[0] || body.goal || 'lose') as 'lose' | 'gain' | 'maintain'
+    const primaryTrainingStyle = trainingStyles[0] || body.training_style || 'none'
+
     const { targets } = await buildInitialPlans({
       enrollmentId: enrollment.id,
       userId: user.id,
@@ -48,7 +57,8 @@ export async function POST(request: NextRequest) {
       sex: (body.sex === 'male' ? 'male' : body.sex === 'other' ? 'other' : 'female'),
       height_in: Number(body.height_in),
       weight_lbs: Number(body.weight_lbs),
-      goal: body.goal,
+      goal: primaryGoal,
+      goals,
       target_lbs: Number(body.target_lbs) || 10,
       activity_level: body.activity_level,
       experience_level: body.experience_level,
@@ -61,7 +71,8 @@ export async function POST(request: NextRequest) {
       cook_days_per_week: Number(body.cook_days_per_week) || 2,
       injuries: (Array.isArray(body.injuries) ? body.injuries : []) as Injury[],
       postpartum: !!body.postpartum,
-      training_style: body.training_style || 'none',
+      training_style: primaryTrainingStyle,
+      training_styles: trainingStyles,
       other_info: body.other_info || '',
       focus_area: body.focus_area || 'overall',
       // She may have only done the required tier (name/goal/focus/body) so far — once

@@ -30,6 +30,14 @@ export interface PlanBuildInput {
   height_in: number
   weight_lbs: number
   goal: 'lose' | 'gain' | 'maintain'
+  // Real multi-select goal support (e.g. "lose fat AND tone/build") — `goal`
+  // above stays the single derived value every existing calorie/workout
+  // calculation already keys off (goals[0], her top priority when she
+  // selects more than one), so nothing downstream needs to change type.
+  // `goals` is the real source of truth for display/editing. Optional so
+  // Coach Asa's chat build and Quickstart (neither ever offer multi-select)
+  // keep working unchanged.
+  goals?: string[]
   target_lbs: number
   activity_level: Activity
   experience_level: 'beginner' | 'intermediate' | 'advanced'
@@ -43,6 +51,9 @@ export interface PlanBuildInput {
   injuries?: Injury[]
   postpartum?: boolean
   training_style?: TrainingStyle
+  // Same pattern as goals above — training_style stays the single derived
+  // value (training_styles[0]) the workout generator already expects.
+  training_styles?: string[]
   other_info?: string
   focus_area?: FocusArea
   // A live chat ask for multiple areas at once ("arms, legs, and core") —
@@ -114,6 +125,13 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
       injuries: inp.injuries ?? [],
       postpartum: !!inp.postpartum,
       training_style: inp.training_style || 'none',
+      // Real multi-select capture (Priority 1, 2026-08-25 beta feedback) —
+      // goal/training_style above stay single-value for the generation code
+      // below, derived as the first entry (her top priority when she picks
+      // more than one). These arrays are the actual source of truth the
+      // Settings/intake UI reads back for editing.
+      goals: inp.goals?.length ? inp.goals : [inp.goal],
+      training_styles: inp.training_styles?.length ? inp.training_styles : (inp.training_style && inp.training_style !== 'none' ? [inp.training_style] : []),
       other_info: inp.other_info || '',
       focus_area: inp.focus_area || 'overall',
       optional_completed: optionalCompleted,

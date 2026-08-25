@@ -95,11 +95,20 @@ function ConversationalIntakeInner() {
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState<'fwd' | 'back'>('fwd')
   const [f, setF] = useState({
-    name: '', goal: '', focus_area: '', age: '', sex: 'female', heightFt: '5', heightIn: '4', weight_lbs: '',
+    name: '', focus_area: '', age: '', sex: 'female', heightFt: '5', heightIn: '4', weight_lbs: '',
     target_lbs: '', activity_level: '', experience_level: '', training_location: '',
     days_per_week: '', cook_days_per_week: '', weekly_food_budget: '', food_preferences: '', dislikes_allergies: '',
-    postpartum: '', training_style: '', other_info: '',
+    postpartum: '', other_info: '',
   })
+  // Real multi-select support (Priority 1, 2026-08-25 beta feedback) — she can
+  // genuinely want more than one goal at once ("lose fat AND tone/build"), and
+  // more than one training style. Arrays, not a single string; order reflects
+  // priority (first-picked = primary, same as everywhere downstream that
+  // still needs one value — see lib/plan-builder.ts).
+  const [goals, setGoals] = useState<string[]>([])
+  const [trainingStyles, setTrainingStyles] = useState<string[]>([])
+  const toggleGoal = (v: string) => setGoals((a) => (a.includes(v) ? a.filter((x) => x !== v) : [...a, v]))
+  const primaryGoal = goals[0] || ''
   const [injuries, setInjuries] = useState<string[]>([])
   const [phase, setPhase] = useState<'quiz' | 'building' | 'done'>('quiz')
   const [targets, setTargets] = useState<Targets | null>(null)
@@ -123,10 +132,10 @@ function ConversationalIntakeInner() {
       heightIn: b.height_in ? String((b.height_in as number) % 12) : s.heightIn,
       weight_lbs: b.weight_lbs ? String(b.weight_lbs) : s.weight_lbs,
       target_lbs: b.goal_weight_lbs ? String(b.goal_weight_lbs) : s.target_lbs,
-      goal: (b.goal as string) || s.goal,
       activity_level: ACTIVITY_MAP[b.activity as string] || s.activity_level,
       days_per_week: b.workout_days ? String(b.workout_days) : s.days_per_week,
     }))
+    if (b.goal) setGoals((g) => (g.length ? g : [b.goal as string]))
     setCarriedFromBlueprint(true)
   }
 
@@ -148,34 +157,26 @@ function ConversationalIntakeInner() {
     }
   }
 
-  // Seamless blueprint→app conversion — if she already did the free Calorie Blueprint,
-  // pull her answers forward instead of making her retype her name/age/height/weight/goal.
+  // Real gap found live (Priority 1, 2026-08-25 beta feedback — "can't go back
+  // and change my preferences"): this used to only ever pull her real existing
+  // intake forward for the OPTIONAL-tier deep link (?tier=optional). Reopening
+  // the REQUIRED tier — the one with goal/focus/body/location, the fields she
+  // actually asked to revisit — always started from a blank form, silently
+  // defaulted to the CALORIE BLUEPRINT lead-magnet data if she'd ever done that
+  // (irrelevant once she's a real member with her own real answers), or just
+  // blank otherwise. One effect now, tried in the right priority order: her
+  // own real saved intake first (covers either tier, goal/training_style/focus
+  // included), the free-Blueprint carryover only as a fallback for someone who
+  // genuinely has no real intake yet.
   useEffect(() => {
-    if (startInOptional) return // she already has a plan — the effect below handles this case instead
-    fetch('/api/plan/blueprint-lookup').then((r) => r.json()).then((d) => {
-      if (!d?.found || !d.blueprint) return
-      applyBlueprint(d.blueprint)
-    }).catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Real bug found+fixed: the optional-tier deep link (/plan/today's "Fine-tune
-  // your plan" nudge → here with ?tier=optional) is a fresh page load, so `f`
-  // starts entirely empty — the optional tier's own questions (target/experience/
-  // training_style/days/cook/postpartum/other) never ask age/weight/goal/etc, but
-  // build()'s `if (!f.age || !f.weight_lbs)` guard still fires on submit with no
-  // field anywhere on screen to satisfy it. Live-verified dead end: fill out all 7
-  // optional questions, tap "Update my plan," get stuck on "I just need your age
-  // and weight to get your numbers right" forever. Worse, even without that guard,
-  // submitting would've silently overwritten her real stored stats/goal/food
-  // answers with blanks (buildInitialPlans does a full-row update, not a partial
-  // merge). Pull her real existing intake row forward here, same pattern as the
-  // blueprint carryover above, so an optional-tier submission only ever changes
-  // what she's actually asked on these screens.
-  useEffect(() => {
-    if (!startInOptional) return
     fetch('/api/plan/intake-lookup').then((r) => r.json()).then((d) => {
-      if (!d?.found || !d.intake) return
+      if (!d?.found || !d.intake) {
+        // No real intake yet — try the free Calorie Blueprint carryover instead.
+        fetch('/api/plan/blueprint-lookup').then((r2) => r2.json()).then((d2) => {
+          if (d2?.found && d2.blueprint) applyBlueprint(d2.blueprint)
+        }).catch(() => {})
+        return
+      }
       const i = d.intake
       setF((s) => ({
         ...s,
@@ -185,18 +186,22 @@ function ConversationalIntakeInner() {
         heightFt: i.height_in ? String(Math.floor(i.height_in / 12)) : s.heightFt,
         heightIn: i.height_in ? String(i.height_in % 12) : s.heightIn,
         weight_lbs: i.weight_lbs != null ? String(i.weight_lbs) : s.weight_lbs,
-        goal: i.goal || s.goal,
         target_lbs: i.target_lbs != null ? String(i.target_lbs) : s.target_lbs,
         activity_level: i.activity_level || s.activity_level,
         experience_level: i.experience_level || s.experience_level,
         training_location: i.training_location || s.training_location,
         days_per_week: i.days_per_week ? String(i.days_per_week) : s.days_per_week,
+        cook_days_per_week: i.cook_days_per_week != null ? String(i.cook_days_per_week) : s.cook_days_per_week,
         weekly_food_budget: i.weekly_food_budget != null ? String(i.weekly_food_budget) : s.weekly_food_budget,
         food_preferences: i.food_preferences || s.food_preferences,
         dislikes_allergies: i.dislikes_allergies || s.dislikes_allergies,
         focus_area: i.focus_area || s.focus_area,
+        postpartum: i.postpartum ? 'yes' : s.postpartum,
+        other_info: i.other_info || s.other_info,
       }))
       if (Array.isArray(i.injuries)) setInjuries(i.injuries)
+      if (Array.isArray(i.goals) && i.goals.length) setGoals(i.goals)
+      if (Array.isArray(i.training_styles) && i.training_styles.length) setTrainingStyles(i.training_styles)
     }).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -244,13 +249,13 @@ function ConversationalIntakeInner() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: f.name, age: Number(f.age), sex: f.sex, height_in, weight_lbs: Number(f.weight_lbs),
-          goal: f.goal || 'lose', target_lbs: Number(f.target_lbs) || null, focus_area: f.focus_area || 'overall',
+          goal: primaryGoal || 'lose', goals, target_lbs: Number(f.target_lbs) || null, focus_area: f.focus_area || 'overall',
           activity_level: f.activity_level || 'moderate', experience_level: f.experience_level || 'beginner',
           training_location: f.training_location || 'gym', days_per_week: Number(f.days_per_week) || 3,
           cook_days_per_week: Number(f.cook_days_per_week) || 2, weekly_food_budget: Number(f.weekly_food_budget) || null,
           food_preferences: f.food_preferences, dislikes_allergies: f.dislikes_allergies,
           injuries, injuries_limitations: '', postpartum: f.postpartum === 'yes',
-          training_style: f.training_style || 'none', other_info: f.other_info,
+          training_style: trainingStyles[0] || 'none', training_styles: trainingStyles, other_info: f.other_info,
           refining,
         }),
       })
@@ -436,14 +441,19 @@ function ConversationalIntakeInner() {
 
             {s === 'goal' && (<>
               <LQ>What are we doing together, {firstName}?</LQ>
-              <LHint>Pick the one that&apos;s calling your name.</LHint>
-              <div className="space-y-3">
+              {/* Multi-select (Priority 1, 2026-08-25 beta feedback) — a real,
+                  common goal is "lose fat AND tone/build," which the old
+                  single-select + auto-advance couldn't express at all. Tap
+                  toggles, explicit Continue (same pattern as the injuries
+                  step) instead of advancing on the first tap. */}
+              <LHint>Tap all that apply.</LHint>
+              <div className="space-y-3 mb-6">
                 {[
                   { v: 'lose', l: '🔥 Lose fat', d: 'Lean out, keep your curves', img: '/images/onboarding/goal-lose.jpg' },
                   { v: 'gain', l: '💪🏽 Build & tone', d: 'Add shape and strength', img: '/images/onboarding/goal-gain.jpg' },
                   { v: 'maintain', l: '⚖️ Maintain', d: 'Hold steady, feel great', img: '/images/onboarding/goal-maintain.jpg' },
                 ].map((o) => (
-                  <button key={o.v} onClick={() => pick('goal', o.v)} className={`${lopt(f.goal === o.v)} !flex items-center justify-between gap-4 !py-4`}>
+                  <button key={o.v} onClick={() => { hapticTap(); toggleGoal(o.v) }} className={`${lopt(goals.includes(o.v))} !flex items-center justify-between gap-4 !py-4`}>
                     <span>
                       <span className="block text-lg">{o.l}</span><span className="block text-sm font-normal mt-0.5 text-ink/40">{o.d}</span>
                     </span>
@@ -453,6 +463,7 @@ function ConversationalIntakeInner() {
                   </button>
                 ))}
               </div>
+              <button onClick={next} disabled={!goals.length} className={lPrimaryBtn} style={!goals.length ? { opacity: 0.4 } : undefined}>Continue →</button>
             </>)}
 
             {s === 'focus' && (<>
@@ -593,9 +604,9 @@ function ConversationalIntakeInner() {
           {s === 'target' && (() => {
             const delta = f.target_lbs ? Number(f.target_lbs) : 10
             const startW = Number(f.weight_lbs) || 0
-            const goalW = f.goal === 'gain' ? startW + delta : startW - delta
+            const goalW = primaryGoal === 'gain' ? startW + delta : startW - delta
             return (<>
-              <Q>How much are we {f.goal === 'gain' ? 'building' : 'shifting'}?</Q>
+              <Q>How much are we {primaryGoal === 'gain' ? 'building' : 'shifting'}?</Q>
               <Hint>Drag to your number — ballpark is perfect, we adjust as you go.</Hint>
               <div className="flex items-center justify-between mb-5">
                 <div className="text-center">
@@ -615,7 +626,7 @@ function ConversationalIntakeInner() {
                 onChange={(e) => { hapticTap(6); set('target_lbs', e.target.value) }}
                 className="w-full accent-gold mb-2"
               />
-              <p className="text-center text-ivory/50 text-sm mb-8">{delta} lbs {f.goal === 'gain' ? 'to build' : 'to lose'}</p>
+              <p className="text-center text-ivory/50 text-sm mb-8">{delta} lbs {primaryGoal === 'gain' ? 'to build' : 'to lose'}</p>
               <button onClick={next} className={primaryBtn}>Continue →</button>
               <button onClick={() => { set('target_lbs', ''); next() }} className="w-full text-center text-ivory/40 text-xs mt-4 hover:text-gold transition-colors">Not sure — you tell me →</button>
             </>)
@@ -635,19 +646,25 @@ function ConversationalIntakeInner() {
 
           {s === 'training_style' && (<>
             <Q>What&apos;s your training style?</Q>
-            <Hint>This shapes how I build your finisher — no wrong answer.</Hint>
-            <div className="space-y-3">
+            {/* Multi-select (Priority 1, 2026-08-25 beta feedback) — same
+                pattern as the goal step. "No strong preference" is mutually
+                exclusive with real styles (picking it clears any real style
+                selected, and picking a real style clears it) since it isn't
+                a genuine additional preference. */}
+            <Hint>Tap all that apply — no wrong answer.</Hint>
+            <div className="space-y-3 mb-6">
               {[
                 { v: 'compound', l: '🔗 Full body / compound movements', d: 'Moves that work multiple muscles each rep' },
                 { v: 'split', l: '🎯 Split / one muscle group at a time', d: 'Focused, isolated work per day' },
                 { v: 'cardio', l: '🏃🏽 Cardio-first', d: 'Heart rate up, calorie burn' },
                 { v: 'none', l: '🤷🏽 No strong preference', d: "I'll trust your programming" },
               ].map((o) => (
-                <button key={o.v} onClick={() => pick('training_style', o.v)} className={opt(f.training_style === o.v)}>
-                  <span className="block">{o.l}</span><span className={`block text-xs font-normal mt-0.5 ${f.training_style === o.v ? 'text-gold/70' : 'text-ivory/40'}`}>{o.d}</span>
+                <button key={o.v} onClick={() => { hapticTap(); setTrainingStyles((a) => o.v === 'none' ? ['none'] : (a.includes(o.v) ? a.filter((x) => x !== o.v) : [...a.filter((x) => x !== 'none'), o.v])) }} className={opt(trainingStyles.includes(o.v))}>
+                  <span className="block">{o.l}</span><span className={`block text-xs font-normal mt-0.5 ${trainingStyles.includes(o.v) ? 'text-gold/70' : 'text-ivory/40'}`}>{o.d}</span>
                 </button>
               ))}
             </div>
+            <button onClick={next} disabled={!trainingStyles.length} className={primaryBtn}>Continue →</button>
           </>)}
 
           {s === 'days' && (<>
