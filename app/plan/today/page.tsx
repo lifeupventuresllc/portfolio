@@ -54,7 +54,7 @@ function FlameIcon() {
   )
 }
 
-export default async function TodayView() {
+export default async function TodayView({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   // Real gap found live: a totally fresh visitor (no session at all, not
@@ -179,8 +179,16 @@ export default async function TodayView() {
   // my X" request never showed up here either. Same resolved-focus logic as
   // those two surfaces: an approved override wins, else (only before her
   // first completed workout) her freshly-stored focus preference.
+  //
+  // Real gap found live (beta feedback Priority 1, 2026-08-25): "I changed
+  // my preferences and it still shows a Full Body day" — this is the FIRST
+  // page she lands on after saving, and had the same completed===0-only
+  // restriction as /plan/workout. /plan/preferences redirects here with
+  // ?focusUpdated=1 for exactly this one visit so the change is actually
+  // visible right away, same fix as there.
+  const focusJustUpdated = searchParams?.focusUpdated === '1'
   const effectiveFocusArea = todayAdjustment?.workoutChange?.focusOverride
-    || (completed === 0 && intakeFormData?.focus_area && intakeFormData.focus_area !== 'overall' ? intakeFormData.focus_area : undefined)
+    || ((completed === 0 || focusJustUpdated) && intakeFormData?.focus_area && intakeFormData.focus_area !== 'overall' ? intakeFormData.focus_area : undefined)
   // Simplify pass (5-step algorithm run against this whole page): this used to
   // compute "today's day" twice — once here via plain rotation for the dip-
   // pattern's suggested moves, once inside getEffectiveTodayWorkout via

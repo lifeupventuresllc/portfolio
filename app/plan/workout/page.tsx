@@ -28,7 +28,7 @@ function consistentWeeksStreak(loggedDates: Set<string>, plannedPerWeek: number,
   return streak
 }
 
-export default async function WorkoutSession() {
+export default async function WorkoutSession({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login?redirect=/plan/workout')
@@ -161,7 +161,21 @@ export default async function WorkoutSession() {
   // once she's actually progressing through her week, real rotation takes
   // over same as always; this is purely about her first landing matching
   // what the chat she just came from told her.
-  else if (completed === 0) {
+  //
+  // Real gap found live (beta feedback Priority 1, 2026-08-25): the SAME
+  // problem, from a different source — saving a new permanent focus_area
+  // via /plan/preferences regenerates the program correctly, but "did it
+  // affect my workout?" still showed whatever plain rotation happened to
+  // land on (a Full Body day, unrelated to what she'd just picked), since
+  // `completed === 0` is false for anyone who's already done even one
+  // workout. She just told the app what she wants to focus on — the very
+  // next session she opens should reflect that, not "eventually, whenever
+  // rotation happens to get there." /plan/preferences redirects here with
+  // ?focusUpdated=1 specifically so this one visit jumps to the matching
+  // day; every visit after that goes back to normal rotation (real variety
+  // across her week is still the point — this isn't "pin every day to one
+  // focus forever," just "the change I just asked for should be visible now").
+  else if (completed === 0 || searchParams?.focusUpdated === '1') {
     const storedFocusArea = (intake?.form_data as { focus_area?: FocusArea } | null)?.focus_area
     if (storedFocusArea && storedFocusArea !== 'overall') startDay = pickFocusDayIndex(program, storedFocusArea)
   }

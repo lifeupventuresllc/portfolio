@@ -69,7 +69,14 @@ export default function PreferencesForm({ current }: { current: Current }) {
       const data = await res.json()
       if (!data.success) throw new Error(data.error || 'Failed to save')
       setSaved(true)
-      router.refresh()
+      // Real gap found live (beta feedback Priority 1, 2026-08-25): "I saved
+      // my preferences and my workout still shows a Full Body day" — a plain
+      // refresh left her right here, not looking at the thing that was
+      // supposed to change, and the destination pages only ever jumped to a
+      // focus-matching day before her FIRST-EVER completed workout. Navigate
+      // straight to the actual workout with a real signal (?focusUpdated=1)
+      // so what she just asked for is visible immediately, not "eventually."
+      setTimeout(() => router.push('/plan/today?focusUpdated=1'), 700)
     } catch {
       setError("Couldn't save just now — try again in a sec.")
     } finally {
