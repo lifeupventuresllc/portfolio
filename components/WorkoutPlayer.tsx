@@ -195,7 +195,12 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
     <div className="max-w-lg mx-auto flex flex-col min-h-[86vh]">
       {/* Header: today's session + day switcher + back to week */}
       <div className="flex items-center justify-between gap-3 mb-3">
-        <button onClick={() => router.push('/plan')} className="text-ivory/50 hover:text-gold text-xs font-semibold">← My week</button>
+        {/* Real gap found live (beta feedback Priority 10, 2026-08-25): this
+            said "My week" but only ever went back to the dashboard — no real
+            week view existed. Now points at an actual one (app/plan/workout/
+            week), the direct proof that a saved preference change reshapes
+            the whole week, not just today. */}
+        <button onClick={() => router.push('/plan/workout/week')} className="text-ivory/50 hover:text-gold text-xs font-semibold">← My week</button>
         <button onClick={() => setSwitching((s) => !s)} className="text-center">
           <p className="text-gold text-[10px] font-semibold tracking-[0.2em] uppercase">
             {targetMinutes ? 'Shortened for today' : "Today's session"} · about {estimateWorkoutMinutes(steps)} min
