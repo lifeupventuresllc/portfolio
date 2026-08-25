@@ -65,7 +65,22 @@ export default async function PlanDashboard() {
         {user.is_anonymous ? <AnonymousSessionBanner /> : (!user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />)}
         <div className="flex items-center justify-between mb-4 px-1 pt-2">
           <p className="text-[#E5A93C] text-xs font-semibold tracking-[0.25em] uppercase">Life-Up Fitness</p>
-          {menu}
+          <div className="flex items-center gap-2">
+            {/* Real fix, live feedback (beta feedback Priority 1, 2026-08-25):
+                "these are priority fixes, nothing should be hidden behind
+                other features" — editing preferences used to require opening
+                the ☰ menu, scrolling to "Extras," then picking one of two
+                separate links. One visible icon, one tap, right on the
+                dashboard, straight into everything editable in one flow
+                (see /plan/intake's edit=true handling). */}
+            <Link href="/plan/intake?edit=true" aria-label="Settings — edit your preferences" className="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center hover:border-gold/60 transition-colors">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EDE7DA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+              </svg>
+            </Link>
+            {menu}
+          </div>
         </div>
 
         <div

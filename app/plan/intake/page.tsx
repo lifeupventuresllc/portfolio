@@ -73,6 +73,14 @@ function ConversationalIntakeInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const startInOptional = searchParams.get('tier') === 'optional'
+  // Real fix, live feedback (beta feedback Priority 1, 2026-08-25): "nothing
+  // should be hidden behind other features" — editing used to mean picking
+  // between two separate links (required tier vs. "tier=optional") with no
+  // way to reach both without knowing they're two different things. The
+  // dashboard's Settings icon links here with edit=true; the required tier's
+  // last step chains straight into the optional questions instead of ending,
+  // so one entry point reaches everything in one sitting.
+  const editMode = searchParams.get('edit') === 'true'
 
   // Anonymous-access, Phase 1: an anonymous session has no password to log
   // back in with, so the existing unconditional "Sign out" button would
@@ -575,7 +583,11 @@ function ConversationalIntakeInner() {
               <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Dislikes / allergies</label>
               <input value={f.dislikes_allergies} onChange={(e) => set('dislikes_allergies', e.target.value)} placeholder="e.g. no mushrooms, dairy-free" className={`${linput} mb-6`} autoCorrect="off" spellCheck={false} />
               {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
-              <button onClick={() => build(false)} className={lPrimaryBtn}>✨ Build my plan</button>
+              {editMode ? (
+                <button onClick={() => { setTier('optional'); setStep(0) }} className={lPrimaryBtn}>Continue →</button>
+              ) : (
+                <button onClick={() => build(false)} className={lPrimaryBtn}>✨ Build my plan</button>
+              )}
             </>)}
           </Screen>
         </div>
