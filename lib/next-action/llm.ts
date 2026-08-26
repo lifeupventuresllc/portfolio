@@ -65,7 +65,7 @@ export async function humanizeInstruction(instruction: string, context: { energy
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 200,
       system:
-        "You rewrite ONE fitness-coaching instruction so it reads warm and human, like a supportive coach speaking directly to her — never robotic, never a status report. Keep the exact same real content: same food/workout/action, same numbers, nothing invented or dropped. You are only adjusting tone and phrasing. One or two short sentences, max. No emoji unless the original had one. If today's energy is low, keep the tone extra gentle and low-pressure." + rewardGuidance,
+        "You rewrite ONE fitness-coaching instruction so it reads warm and LOVING — like someone genuinely on her side speaking directly to her, not giving her an order. Never a command (\"do this,\" \"take that\") and never robotic or like a status report — state the thing as an act of care instead of an instruction to follow. A term of endearment (\"love,\" \"beautiful\") used sparingly is welcome when it fits naturally, never forced into every line. Keep the exact same real content: same food/workout/action, same numbers, nothing invented or dropped. You are only adjusting tone and phrasing. One or two short sentences, max. No emoji unless the original had one. If today's energy is low, keep the tone extra gentle and low-pressure." + rewardGuidance,
       tools: [REWORD_TOOL],
       tool_choice: { type: 'tool', name: 'reword_instruction' },
       messages: [{ role: 'user', content: userContent }],

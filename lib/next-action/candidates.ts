@@ -5,12 +5,17 @@ import type { ActionCandidate, UserStateSnapshot } from './types'
 // least one safe candidate to fall back to. Ranking among these (which one
 // wins) is entirely the scorer's job via completionRate, not this list's —
 // these all start equal here on purpose.
+// Phrasing note (Asa's live-testing feedback, 2026-08-26): earlier copy read
+// as a command ("Do X," "Take X") — like an order, not a coach on her side.
+// Went through soft-nudge → uplifting → encouraging options live with Asa;
+// landed on "loving" — warm, affectionate, states the thing as care rather
+// than an instruction to follow.
 const FALLBACKS: { key: string; instruction: string; minutes: number }[] = [
-  { key: 'water', instruction: 'Drink a full glass of water right now.', minutes: 1 },
-  { key: 'breath_checkin', instruction: 'Take 5 slow breaths and check in with how you feel.', minutes: 2 },
-  { key: 'stretch', instruction: 'Do one long stretch, hold it for 30 seconds.', minutes: 2 },
-  { key: 'short_walk', instruction: 'Take a 5-minute walk, anywhere.', minutes: 5 },
-  { key: 'stillness', instruction: 'Sit still for 5 minutes, no phone.', minutes: 5 },
+  { key: 'water', instruction: 'A glass of water for you, beautiful — you deserve the care.', minutes: 1 },
+  { key: 'breath_checkin', instruction: '5 slow breaths, love — just check in with yourself.', minutes: 2 },
+  { key: 'stretch', instruction: 'One long stretch — be gentle with yourself today.', minutes: 2 },
+  { key: 'short_walk', instruction: 'A 5-minute walk — just you and some fresh air.', minutes: 5 },
+  { key: 'stillness', instruction: '5 minutes of stillness, love — just for you, no phone.', minutes: 5 },
 ]
 
 // Builds every real option worth scoring right now — never a menu shown to
@@ -22,7 +27,7 @@ export function buildCandidates(state: UserStateSnapshot): ActionCandidate[] {
   const candidates: ActionCandidate[] = []
 
   if (state.workoutCandidate && !state.workoutDoneToday) {
-    let instruction = `Do today's workout: ${state.workoutCandidate.title}.`
+    let instruction = `${state.workoutCandidate.title} today, love — your body's worth it.`
     // Goal-alignment layer (prompt 6): logging an off-track/over-budget day
     // feeds back into the workout side too — but only when it actually
     // matters for HER stated goal. More food eaten isn't a problem to solve
@@ -30,7 +35,7 @@ export function buildCandidates(state: UserStateSnapshot): ActionCandidate[] {
     // This adjusts the copy only — it never rewrites her stored program —
     // bounded, invisible-to-her-as-math, and reversible day to day.
     if (state.goal === 'lose' && state.calorieBudget != null && state.caloriesLoggedToday > state.calorieBudget) {
-      instruction += ' Keep it shorter today if you need to — a lighter version still fully counts.'
+      instruction += ' Keep it shorter today if you need to, love — a lighter version still fully counts.'
     }
     candidates.push({ kind: 'workout', actionKey: `workout:${state.workoutCandidate.title}`, instruction, estMinutes: 30 })
   }
@@ -44,7 +49,7 @@ export function buildCandidates(state: UserStateSnapshot): ActionCandidate[] {
     candidates.push({
       kind: 'location',
       actionKey: `location:${p.restaurant}:${p.order}`,
-      instruction: `At the restaurant, order: ${p.restaurant} — ${p.order} (about ${p.cal} cal, ${p.protein}g protein).`,
+      instruction: `At the restaurant, love: ${p.restaurant} — ${p.order} (about ${p.cal} cal, ${p.protein}g protein).`,
       estMinutes: 2,
     })
   } else if (state.calorieBudget != null && state.caloriesLoggedToday < state.calorieBudget) {
@@ -52,7 +57,7 @@ export function buildCandidates(state: UserStateSnapshot): ActionCandidate[] {
     candidates.push({
       kind: 'meal',
       actionKey: 'meal:log_next',
-      instruction: `Log your next meal — you have about ${remaining} calories left today.`,
+      instruction: `About ${remaining} calories left today — you're taking care of you.`,
       estMinutes: 3,
     })
   }

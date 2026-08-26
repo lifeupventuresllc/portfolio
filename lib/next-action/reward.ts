@@ -165,5 +165,5 @@ export function pickRewardQuestion(): string {
 // reward still lands as part of the one instruction either way, never
 // silently dropped.
 export function weaveRewardDeterministic(baseInstruction: string, preference: RewardPreference): string {
-  return `${baseInstruction} And after that — ${preference.label}, because you've kept showing up.`
+  return `${baseInstruction} And after that — ${preference.label}, love. You've kept showing up, and you deserve it.`
 }
