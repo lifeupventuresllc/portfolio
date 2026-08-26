@@ -2,25 +2,15 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import ClientMenu from '@/components/ClientMenu'
-import CaloriesTodayCard from '@/components/CaloriesTodayCard'
-import WorkoutStatusCard from '@/components/WorkoutStatusCard'
 import StreakChip from '@/components/StreakChip'
-import CoachHero from '@/components/CoachHero'
-import FeedbackCard from '@/components/FeedbackCard'
 import GoalProgressBar from '@/components/GoalProgressBar'
-import WeeklyCheckinPrompt from '@/components/WeeklyCheckinPrompt'
 import VerifyEmailBanner from '@/components/VerifyEmailBanner'
 import AnonymousSessionBanner from '@/components/AnonymousSessionBanner'
 import TimezoneSync from '@/components/TimezoneSync'
 import NextActionCard from '@/components/NextActionCard'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
-import { localDateISO, localMondayIndex, localDayNumber, addDaysISO } from '@/lib/localdate'
-import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { getEffectiveTodayWorkout, getEffectiveCalorieBudget } from '@/lib/fos/effective-plan'
-import { pickDashboardPhoto } from '@/lib/dashboard-photos'
-import type { WorkoutProgram, FocusArea } from '@/lib/workout'
-import type { WeekPlan } from '@/lib/meal-plan'
+import { localDateISO, localDayNumber, addDaysISO } from '@/lib/localdate'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,11 +43,6 @@ export default async function PlanDashboard() {
   }
 
   const firstName = (enrollment?.name || user.email?.split('@')[0] || 'there').split(' ')[0]
-  // Same real bug as /plan/today and /plan/workout's "Today, there"/"That's
-  // done, there" — "there" only reads naturally in an idiomatic "Hey there,"
-  // never in a vocative "{name}, how's today looking?" (CoachHero's
-  // daily-context greeting). Found live on a fresh guest session.
-  const hasRealName = !!(enrollment?.name || user.email)
 
   const shell = (children: React.ReactNode, menu: React.ReactNode = null, selfTalk?: string) => (
     <div className="min-h-[100dvh] px-4 py-6" style={{ background: '#021F16' }}>
@@ -132,39 +117,15 @@ export default async function PlanDashboard() {
 
   const todayIso = localDateISO()
   const consistencyWindowStart = addDaysISO(todayIso, -13) // 14 days incl. today, ~2 weeks
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }, { data: latestCheckin }, { data: foodLogRows }] = hasPlan
+  const [{ data: doneRows }, { data: intakeRow }, { data: latestCheckin }, { data: foodLogRows }] = hasPlan
     ? await Promise.all([
-        svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
-        svc.from('challenge_nutrition_plans').select('calories, meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
         svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
-        getApprovedTodayAdjustment(enrollment.id as string, todayIso),
         svc.from('challenge_intake').select('weight_lbs, target_lbs, goal, days_per_week, form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
         svc.from('challenge_checkins').select('weight_lbs, submitted_at').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('submitted_at', { ascending: false }).limit(1).maybeSingle(),
         svc.from('challenge_food_log').select('logged_on').eq('enrollment_id', enrollment.id).gte('logged_on', consistencyWindowStart),
       ])
-    : [{ data: null }, { data: null }, { data: null }, null, { data: null }, { data: null }, { data: null }] as const
+    : [{ data: null }, { data: null }, { data: null }, { data: null }] as const
 
-  const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
-    ? (nutritionPlan.meals as WeekPlan) : null
-
-  // ── TODAY at a glance — powers the simple home dashboard (workout · calories · meals) ──
-  // All day-boundaries use the user's LOCAL day (their timezone), not UTC.
-  const mealIdx = localMondayIndex() // Mon=0 … Sat=5, Sun=6
-  const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
-  const baseCalBudget = (todayMeals?.target && todayMeals.target > 0) ? todayMeals.target : (Number(nutritionPlan?.calories) || 0)
-  const calBudget = getEffectiveCalorieBudget(baseCalBudget, todayAdjustment)
-  const todayDayType = todayMeals?.dayType ?? null
-
-  const program = (workoutPlan?.plan as WorkoutProgram) || null
-  const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
-  // Same resolved-focus logic as app/plan/workout/page.tsx: an approved chat
-  // override wins, otherwise (only before her first completed workout) her
-  // freshly-stored focus preference — so this card matches what Coach Asa
-  // just told her, not a plain unrelated rotation day.
-  const storedFocusArea = (intakeRow?.form_data as { focus_area?: FocusArea } | null)?.focus_area
-  const effectiveFocusArea = todayAdjustment?.workoutChange?.focusOverride
-    || (completed === 0 && storedFocusArea && storedFocusArea !== 'overall' ? storedFocusArea : undefined)
-  const todayWorkout = getEffectiveTodayWorkout(program, completed, todayAdjustment, effectiveFocusArea)
   const affirmation = affirmationForDay(localDayNumber())
 
   // Real gap found+fixed same session as the calorie-target one: Quickstart
@@ -204,33 +165,17 @@ export default async function PlanDashboard() {
   const nutritionDaysLogged = new Set((foodLogRows || []).map((r) => r.logged_on as string)).size
   const nutritionConsistencyPct = Math.min(100, Math.round((nutritionDaysLogged / 14) * 100))
 
-  // Did she already finish today's workout? (server truth for the workout ring's ✅ state)
-  const workoutDoneToday = (doneRows || []).some(
-    (r) => (r as { logged_on?: string }).logged_on === todayIso && (r.measurements as { workout?: boolean } | null)?.workout
-  )
-
-  // Weekly check-in nudge — the goal bar above and Coach Asa's pace-aware replies
-  // both depend on real weigh-ins, and nothing was ever prompting her for one (the
-  // checkin page is fully opt-in). Due every 7 days from her last real weigh-in, or
-  // from enrollment start if she's never checked in — matches the checkin page's
-  // own "check in with me every week" copy, not a new cadence invented here.
-  const lastCheckinAt = (latestCheckin?.submitted_at as string | undefined) || (enrollment.started_at as string | undefined)
-  const daysSinceCheckin = lastCheckinAt ? Math.floor((Date.parse(todayIso) - Date.parse(lastCheckinAt)) / 86400000) : 0
-  const checkinDue = hasPlan && daysSinceCheckin >= 7
-
+  // Asa's explicit call, 2026-08-25, after reviewing the real mockup: this
+  // page IS the Next Action circle now — not the circle plus the old
+  // dashboard content underneath it. Chat (CoachHero), the workout photo
+  // hero, the workout/calorie status cards, the weekly check-in prompt, and
+  // the feedback card are NOT deleted — every one of them is still one tap
+  // away from the hamburger menu (ClientMenu already links to /plan/coach,
+  // /plan/workout, /plan/checkin, /plan/feedback, etc.) — they're just no
+  // longer part of the landing view, exactly matching the approved mockup:
+  // greeting + self-talk (in shell(), above) + circle + progress, nothing else.
   return shell(
     <div className="space-y-4">
-      {/* Real photography — a person, not just numbers, right under her name
-          and self-talk. Coach Asa's launcher sits directly below it as the
-          one dominant focus, everything else secondary. */}
-
-      {checkinDue && <WeeklyCheckinPrompt firstName={firstName} todayIso={todayIso} />}
-
-      {/* Prompt 1's Next Action engine — now the dashboard's primary surface
-          (Asa's call, 2026-08-25: "this is the new dashboard"), full-size,
-          with real progress right underneath it (same layout as the
-          approved mockup: circle → Done/day-changed → progress). Only
-          shown once there's a real plan to compute it from. */}
       {hasPlan && (
         <>
           <NextActionCard />
@@ -245,53 +190,6 @@ export default async function PlanDashboard() {
           )}
         </>
       )}
-
-      <Link href="/plan/workout" className="relative block rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(229,169,60,0.22)', height: 300 }}>
-        <img src={pickDashboardPhoto()} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'saturate(1.05) contrast(1.03)' }} />
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,0) 40%, rgba(2,31,22,0.75) 100%)' }} />
-        {hasPlan && todayWorkout?.title && (
-          <div className="absolute bottom-0 left-0 right-0 p-4">
-            <p className="text-[#E5A93C] text-[10px] uppercase tracking-wider font-semibold mb-0.5">Today&apos;s workout</p>
-            <p className="text-white font-bold text-lg leading-tight">{todayWorkout.title}</p>
-          </div>
-        )}
-      </Link>
-
-      {/* One step, not two — Asa's explicit call comparing directly against
-          ChatGPT: the real chat lives right here, always, not behind a
-          "tap to open" launcher/modal. CoachHero already works standalone
-          (it's the same component the old modal rendered), so this is a
-          removal of a wrapping layer, not a rebuild — every existing
-          capability (daily-context quiz, quick replies, approve/reject
-          adjustment cards, cold-start build → "view my new workout" links)
-          comes along unchanged. Real bug found live: a fixed 65vh height
-          forced this to full-screen size even with almost no content (just
-          the greeting + composer), leaving a huge dead white gap — "way too
-          large" on a real phone. max-h only (no min-height) lets the card
-          hug its actual content and stay small on a fresh visit, capping
-          and scrolling internally only once a real conversation grows past
-          it — CoachHero's own max-h-full picks this up (see there). */}
-      <div className="max-h-[70vh]">
-        <CoachHero firstName={firstName} hasPlan={hasPlan} hasRealName={hasRealName} />
-      </div>
-
-      {/* GoalProgressBar itself now renders right under NextActionCard, near
-          the top (see above) — this block keeps only what didn't move. */}
-      {hasPlan && (
-        <div className="grid grid-cols-2 gap-3.5">
-          <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} compact />
-          <CaloriesTodayCard budget={calBudget} dayType={todayDayType} compact />
-        </div>
-      )}
-      {/* The "no plan yet" companion message now lives inside CoachHero itself
-          (shown only before a real conversation starts) — having it as a
-          separate always-visible card here meant it kept insisting "no plan
-          built yet" directly underneath an active, in-progress build
-          conversation, which read as the app not noticing what it just asked
-          her. Found via a first-time-user pass over a live screenshot. */}
-
-      {/* Persistent feedback surface — always here, not just a popup */}
-      <FeedbackCard />
     </div>,
     <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />,
     affirmation
