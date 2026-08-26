@@ -226,12 +226,25 @@ export default async function PlanDashboard() {
 
       {checkinDue && <WeeklyCheckinPrompt firstName={firstName} todayIso={todayIso} />}
 
-      {/* Prompt 1's Next Action engine (2026-08-25 spec) — the zero-decision
-          entry point, surfaced first, above even the workout hero. Only
-          shown once there's a real plan to compute it from; the full
-          circle (Done / "my day changed" / free-text redirect) lives at
-          /plan/next, this is just the always-visible teaser. */}
-      {hasPlan && <NextActionCard compact />}
+      {/* Prompt 1's Next Action engine — now the dashboard's primary surface
+          (Asa's call, 2026-08-25: "this is the new dashboard"), full-size,
+          with real progress right underneath it (same layout as the
+          approved mockup: circle → Done/day-changed → progress). Only
+          shown once there's a real plan to compute it from. */}
+      {hasPlan && (
+        <>
+          <NextActionCard />
+          {statsProvided ? (
+            <GoalProgressBar startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} workoutConsistencyPct={workoutConsistencyPct} nutritionConsistencyPct={nutritionConsistencyPct} />
+          ) : (
+            <Link href="/plan/intake" className="block rounded-[2rem] p-5" style={{ background: '#083023', border: '1px solid rgba(229,169,60,0.3)' }}>
+              <p className="text-[#E5A93C] text-[10px] uppercase tracking-wider font-semibold mb-1">Your progress</p>
+              <p className="text-white font-bold text-lg">Add your starting weight & goal</p>
+              <p className="text-white/50 text-sm mt-0.5">90 seconds — then this fills in with your real numbers, not a placeholder.</p>
+            </Link>
+          )}
+        </>
+      )}
 
       <Link href="/plan/workout" className="relative block rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(229,169,60,0.22)', height: 300 }}>
         <img src={pickDashboardPhoto()} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'saturate(1.05) contrast(1.03)' }} />
@@ -262,28 +275,13 @@ export default async function PlanDashboard() {
         <CoachHero firstName={firstName} hasPlan={hasPlan} hasRealName={hasRealName} />
       </div>
 
+      {/* GoalProgressBar itself now renders right under NextActionCard, near
+          the top (see above) — this block keeps only what didn't move. */}
       {hasPlan && (
-        <>
-          {statsProvided ? (
-            <GoalProgressBar startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} workoutConsistencyPct={workoutConsistencyPct} nutritionConsistencyPct={nutritionConsistencyPct} />
-          ) : (
-            // Same blank-state principle as the calorie card fix — no starting
-            // weight/goal on file yet (Quickstart-origin), so there's nothing
-            // real to plot. Same visual shape as GoalProgressBar's own card so
-            // the layout doesn't jump once she sets her real stats.
-            <Link href="/plan/intake" className="block rounded-[2rem] p-5" style={{ background: '#083023', border: '1px solid rgba(229,169,60,0.3)' }}>
-              <p className="text-[#E5A93C] text-[10px] uppercase tracking-wider font-semibold mb-1">Your progress</p>
-              <p className="text-white font-bold text-lg">Add your starting weight & goal</p>
-              <p className="text-white/50 text-sm mt-0.5">90 seconds — then this fills in with your real numbers, not a placeholder.</p>
-            </Link>
-          )}
-
-          {/* Supporting, side by side — workout (left) · nutrition (right) */}
-          <div className="grid grid-cols-2 gap-3.5">
-            <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} compact />
-            <CaloriesTodayCard budget={calBudget} dayType={todayDayType} compact />
-          </div>
-        </>
+        <div className="grid grid-cols-2 gap-3.5">
+          <WorkoutStatusCard title={todayWorkout?.title ?? null} muscles={todayWorkout?.muscles} doneTodayServer={workoutDoneToday} adjusted={todayAdjustment?.workoutChange ?? null} compact />
+          <CaloriesTodayCard budget={calBudget} dayType={todayDayType} compact />
+        </div>
       )}
       {/* The "no plan yet" companion message now lives inside CoachHero itself
           (shown only before a real conversation starts) — having it as a

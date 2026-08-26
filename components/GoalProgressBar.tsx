@@ -56,11 +56,27 @@ export default function GoalProgressBar({
         {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} to go` : moved > 0 ? ' · goal reached' : ''}
       </p>
 
-      <div className="relative h-3 rounded-full overflow-visible mb-2" style={{ background: '#021F16', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #044A34, #0f7a53)', boxShadow: '0 0 16px 1px rgba(229,169,60,0.4)' }} />
+      <div className="relative h-3 rounded-full overflow-visible mb-4" style={{ background: '#021F16', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #044A34, #0f7a53, #E9A0A0)', boxShadow: '0 0 16px 1px rgba(229,169,60,0.4)' }} />
         {TICKS.map((t) => (
           <div key={t} className="absolute top-0 bottom-0 w-px" style={{ left: `${t}%`, background: 'rgba(2,31,22,0.6)' }} />
         ))}
+        {/* Position marker — a real person on the track, not just an
+            abstract fill edge. Faces forward into the direction of
+            progress (mirrored, since the emoji glyph itself faces left).
+            Asa's call, 2026-08-25. */}
+        <span
+          aria-hidden
+          className="absolute flex items-center justify-center rounded-full transition-all duration-700"
+          style={{
+            left: `${pct}%`, top: '50%', transform: 'translate(-50%, -50%) scaleX(-1)',
+            width: 30, height: 30, fontSize: 20,
+            background: 'radial-gradient(circle, rgba(233,160,160,0.35), transparent 70%)',
+            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))',
+          }}
+        >
+          🏃🏿‍♀️
+        </span>
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-white/40">
