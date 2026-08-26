@@ -168,11 +168,11 @@ export type ResolveOutcome = { ok: true } | { ok: false; reason: ResolveFailureR
 // assumed from the migration's policy), and hasn't already been resolved
 // (acting twice on the same row, e.g. skip after done, previously produced
 // silent self-contradictory state).
-async function resolveOwnedOpenRow(logId: string, enrollmentId: string, column: 'completed_at' | 'skipped_at' | 'superseded_at'): Promise<ResolveOutcome> {
+async function resolveOwnedOpenRow(logId: string, enrollmentId: string, column: 'completed_at' | 'skipped_at' | 'superseded_at'): Promise<ResolveOutcome & { kind?: string; userId?: string }> {
   const svc = createServiceClient()
   const { data: existing } = await svc
     .from('next_action_log')
-    .select('enrollment_id, completed_at, skipped_at, superseded_at')
+    .select('enrollment_id, user_id, kind, completed_at, skipped_at, superseded_at')
     .eq('id', logId)
     .maybeSingle()
   if (!existing || existing.enrollment_id !== enrollmentId) return { ok: false, reason: 'not_found' }
@@ -184,14 +184,45 @@ async function resolveOwnedOpenRow(logId: string, enrollmentId: string, column: 
     .eq('id', logId)
     .select('id')
   if (error || !data || data.length === 0) return { ok: false, reason: 'update_failed' }
-  return { ok: true }
+  return { ok: true, kind: existing.kind as string, userId: existing.user_id as string }
+}
+
+// Done closes the Feedback Loop row AND counts today for the streak — the
+// dashboard's StreakChip and the Next Action circle sit on the same screen,
+// so a tap that doesn't move the chip reads as broken even though the log
+// row itself was written correctly. Reuses '__daily__' / streakFrom (see
+// lib/streak.ts) rather than inventing a second definition of "showed up."
+async function recordDailyCheckIn(enrollmentId: string, userId: string, kind: string) {
+  const svc = createServiceClient()
+  const today = localDateISO(getTimezone())
+  const flag = kind === 'workout' ? 'workout' : kind === 'meal' || kind === 'location' ? 'nutrition' : null
+
+  const { data: existing } = await svc
+    .from('challenge_progress')
+    .select('id, measurements')
+    .eq('enrollment_id', enrollmentId)
+    .eq('note', '__daily__')
+    .eq('logged_on', today)
+    .maybeSingle()
+
+  // OR the new flag into whatever's already there — a second Done later the
+  // same day (a workout action, then a meal one) must never erase the first.
+  const measurements = { ...(existing?.measurements as Record<string, unknown> || {}), ...(flag ? { [flag]: true } : {}) }
+  if (existing) {
+    await svc.from('challenge_progress').update({ measurements }).eq('id', existing.id)
+  } else {
+    await svc.from('challenge_progress').insert({ enrollment_id: enrollmentId, user_id: userId, logged_on: today, note: '__daily__', measurements })
+  }
 }
 
 // Feedback Loop writes (prompt 4's third system) — every real interaction
 // closes the loop on the shown instruction so the next call's completion-
 // rate scoring reflects it immediately, not after some batch job.
-export function markActionCompleted(logId: string, enrollmentId: string): Promise<ResolveOutcome> {
-  return resolveOwnedOpenRow(logId, enrollmentId, 'completed_at')
+export async function markActionCompleted(logId: string, enrollmentId: string): Promise<ResolveOutcome> {
+  const outcome = await resolveOwnedOpenRow(logId, enrollmentId, 'completed_at')
+  if (!outcome.ok) return outcome
+  await recordDailyCheckIn(enrollmentId, outcome.userId!, outcome.kind!).catch(() => {})
+  return { ok: true }
 }
 
 export function markActionSkipped(logId: string, enrollmentId: string): Promise<ResolveOutcome> {
