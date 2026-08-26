@@ -25,12 +25,24 @@ const EXPANSION_ROUTE: Partial<Record<ActionKind, string>> = {
 // Minimal ambient TS surface for the Web Speech API — not in lib.dom.d.ts by
 // default, and only ever touched behind a feature-detect below.
 type SpeechRecognitionLike = {
-  lang: string; interimResults: boolean; maxAlternatives: number
+  lang: string; interimResults: boolean; maxAlternatives: number; continuous: boolean
   onresult: ((e: { results: { length: number; [i: number]: { isFinal: boolean; [j: number]: { transcript: string } } } }) => void) | null
   onend: (() => void) | null
-  onerror: (() => void) | null
+  onerror: ((e: { error: string }) => void) | null
   start: () => void
   stop: () => void
+}
+
+// Real, human-readable reasons instead of the mic just silently going dark
+// (Asa's live-testing report, 2026-08-26: "keeps getting cut on and off and
+// nothing comes through" — the actual cause was errors being swallowed with
+// no feedback at all).
+const VOICE_ERROR_MESSAGES: Record<string, string> = {
+  'not-allowed': "Mic access is blocked — check your browser's site settings.",
+  'service-not-allowed': "Mic access is blocked — check your browser's site settings.",
+  'no-speech': "Didn't catch that — tap the mic and try again.",
+  'audio-capture': 'No microphone found on this device.',
+  network: 'Connection dropped — tap the mic to try again.',
 }
 
 export default function NextActionCard() {
@@ -44,6 +56,7 @@ export default function NextActionCard() {
   const [note, setNote] = useState<string | null>(null)
   const [listening, setListening] = useState(false)
   const [voiceSupported, setVoiceSupported] = useState(false)
+  const [voiceError, setVoiceError] = useState<string | null>(null)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -143,10 +156,17 @@ export default function NextActionCard() {
     hapticTap()
     setShowMessage(true)
     setMessage('')
+    setVoiceError(null)
     const recognition = new Ctor()
     recognition.lang = 'en-US'
     recognition.interimResults = true
     recognition.maxAlternatives = 1
+    // Real bug caught live (2026-08-26): "the mic keeps cutting on and off."
+    // Without `continuous`, recognition stops at the FIRST brief pause in
+    // speech — completely normal mid-sentence — which reads as the mic
+    // randomly dying. `continuous: true` keeps it listening through natural
+    // pauses until she stops it herself or a real error ends it.
+    recognition.continuous = true
     recognition.onresult = (e) => {
       let finalTranscript = ''
       let interimTranscript = ''
@@ -160,7 +180,14 @@ export default function NextActionCard() {
       if (finalTranscript) sendMessage(finalTranscript)
     }
     recognition.onend = () => setListening(false)
-    recognition.onerror = () => setListening(false)
+    // The other real bug: errors (mic permission denied, no speech heard, a
+    // dropped connection) were silently swallowed — she'd just see it go
+    // dark with zero explanation, indistinguishable from "nothing happened."
+    recognition.onerror = (e) => {
+      setListening(false)
+      if (e.error === 'aborted') return // she stopped it herself — not an error worth surfacing
+      setVoiceError(VOICE_ERROR_MESSAGES[e.error] || "Voice input hit a snag — tap the mic to try again.")
+    }
     recognitionRef.current = recognition
     setListening(true)
     recognition.start()
@@ -267,6 +294,7 @@ export default function NextActionCard() {
 
       {note && <p className="text-ivory/50 text-[11px] text-center mb-2" style={{ fontFamily: 'var(--font-poppins)' }}>{note}</p>}
       {listening && <p className="text-[#E9A0A0] text-[11px] text-center mb-2 font-semibold" style={{ fontFamily: 'var(--font-poppins)' }}>Listening…</p>}
+      {voiceError && <p className="text-[#E9A0A0] text-[11px] text-center mb-2 font-semibold" style={{ fontFamily: 'var(--font-poppins)' }}>{voiceError}</p>}
 
       {/* Small on purpose — the circle is the one thing on this screen;
           these are just the escape hatches, not a second focal point. */}
