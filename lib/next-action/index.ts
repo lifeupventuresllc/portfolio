@@ -14,10 +14,20 @@ export { humanizeInstruction, parseNextActionSignal, type ParsedSignal } from '.
 export { recordStatedPreference } from './reward'
 export type * from './types'
 
-type FoodLogData = { restaurant: string; order: string; cal: number; protein: number; carbs: number; fat: number; slot: string | null }
-type OpenRow = { id: string; kind: string; action_key: string; instruction: string; display_text: string | null; score: number; shown_at: string; food_log_data: FoodLogData | null }
+type OpenRow = { id: string; kind: string; action_key: string; instruction: string; display_text: string | null; score: number; shown_at: string }
 
-const OPEN_ROW_COLUMNS = 'id, kind, action_key, instruction, display_text, score, shown_at, food_log_data'
+const OPEN_ROW_COLUMNS = 'id, kind, action_key, instruction, display_text, score, shown_at'
+
+// action_key for a 'location' kind is always `location:{restaurant}:{order}`
+// (see candidates.ts) — parsed back out here so a page refresh can still
+// carry the restaurant through to the /plan/eating-out expansion link
+// without a DB round trip for it. Restaurant names in the curated data
+// never contain a colon, so splitting on ':' is safe.
+function restaurantFromActionKey(kind: string, actionKey: string): string | undefined {
+  if (kind !== 'location') return undefined
+  const parts = actionKey.split(':')
+  return parts.length >= 2 ? parts[1] : undefined
+}
 
 // The single unresolved instruction for this enrollment, if one exists.
 // There's a DB-level guarantee behind this (see 033's partial unique index)
@@ -40,7 +50,7 @@ export async function getOpenAction(enrollmentId: string): Promise<Omit<OpenRow,
     .maybeSingle()
   if (!data) return null
   const row = data as OpenRow
-  return { id: row.id, kind: row.kind, action_key: row.action_key, instruction: row.display_text || row.instruction, score: row.score, shown_at: row.shown_at, food_log_data: row.food_log_data }
+  return { id: row.id, kind: row.kind, action_key: row.action_key, instruction: row.display_text || row.instruction, score: row.score, shown_at: row.shown_at }
 }
 
 // The entry point: everything known about her right now → exactly one
@@ -110,15 +120,6 @@ export async function getNextAction(enrollmentId: string, todayISO: string, over
     ? weaveRewardDeterministic(baseInstruction, { id: rewardPreferenceId || '', label: rewardLabel, category: 'other', source: 'explicit' } as RewardPreference)
     : humanized
 
-  // Carried on the row itself for kind 'location' (2026-08-26) — the exact
-  // real order the circle decided on, so completing it can log those exact
-  // calories/macros into her real food log later (see markActionCompleted)
-  // instead of the suggestion being disconnected from what actually counts
-  // toward her day. Null for every other kind — nothing else needs it.
-  const foodLogData = kind === 'location' && state.eatingOutPick
-    ? { restaurant: state.eatingOutPick.restaurant, order: state.eatingOutPick.order, cal: state.eatingOutPick.cal, protein: state.eatingOutPick.protein, carbs: state.eatingOutPick.carbs, fat: state.eatingOutPick.fat, slot: state.eatingOutSlot }
-    : null
-
   const svc = createServiceClient()
   const { data: row, error } = await svc
     .from('next_action_log')
@@ -135,7 +136,6 @@ export async function getNextAction(enrollmentId: string, todayISO: string, over
       source: 'rule',
       is_reward: isReward,
       reward_preference_id: rewardPreferenceId,
-      food_log_data: foodLogData,
     })
     .select('id')
     .single()
@@ -145,7 +145,7 @@ export async function getNextAction(enrollmentId: string, todayISO: string, over
       const existing = await getOpenAction(enrollmentId)
       if (existing) return {
         logId: existing.id, kind: existing.kind as NextActionResult['kind'], actionKey: existing.action_key, instruction: existing.instruction, score: existing.score,
-        restaurant: existing.food_log_data?.restaurant, mealSlot: (existing.food_log_data?.slot as NextActionResult['mealSlot']) ?? undefined,
+        restaurant: restaurantFromActionKey(existing.kind, existing.action_key),
       }
     }
     throw error
@@ -174,7 +174,7 @@ export async function resolveCurrentAction(enrollmentId: string): Promise<NextAc
     if (localDateISO(tz, new Date(open.shown_at)) === today) {
       return {
         logId: open.id, kind: open.kind as NextActionResult['kind'], actionKey: open.action_key, instruction: open.instruction, score: open.score,
-        restaurant: open.food_log_data?.restaurant, mealSlot: (open.food_log_data?.slot as NextActionResult['mealSlot']) ?? undefined,
+        restaurant: restaurantFromActionKey(open.kind, open.action_key),
       }
     }
     // Stale from a prior local day she never acted on — a real day-changed
@@ -195,11 +195,11 @@ export type ResolveOutcome = { ok: true } | { ok: false; reason: ResolveFailureR
 // assumed from the migration's policy), and hasn't already been resolved
 // (acting twice on the same row, e.g. skip after done, previously produced
 // silent self-contradictory state).
-async function resolveOwnedOpenRow(logId: string, enrollmentId: string, column: 'completed_at' | 'skipped_at' | 'superseded_at'): Promise<ResolveOutcome & { kind?: string; userId?: string; foodLogData?: FoodLogData | null }> {
+async function resolveOwnedOpenRow(logId: string, enrollmentId: string, column: 'completed_at' | 'skipped_at' | 'superseded_at'): Promise<ResolveOutcome & { kind?: string; userId?: string }> {
   const svc = createServiceClient()
   const { data: existing } = await svc
     .from('next_action_log')
-    .select('enrollment_id, user_id, kind, completed_at, skipped_at, superseded_at, food_log_data')
+    .select('enrollment_id, user_id, kind, completed_at, skipped_at, superseded_at')
     .eq('id', logId)
     .maybeSingle()
   if (!existing || existing.enrollment_id !== enrollmentId) return { ok: false, reason: 'not_found' }
@@ -211,33 +211,7 @@ async function resolveOwnedOpenRow(logId: string, enrollmentId: string, column: 
     .eq('id', logId)
     .select('id')
   if (error || !data || data.length === 0) return { ok: false, reason: 'update_failed' }
-  return { ok: true, kind: existing.kind as string, userId: existing.user_id as string, foodLogData: existing.food_log_data as FoodLogData | null }
-}
-
-// The "accurately track the suggested food option" piece (2026-08-26, Asa's
-// ask): completing a location (eating-out) action used to only flip the
-// daily nutrition check-in flag — the real calories/macros she was just
-// told to order never actually landed in challenge_food_log, so her
-// "remaining calories today" for the REST of the day stayed wrong. This
-// writes the exact real order the circle showed her (never a re-estimate)
-// as a real food-log row the moment she confirms she did it.
-async function logEatenSuggestion(enrollmentId: string, userId: string, pick: FoodLogData) {
-  const svc = createServiceClient()
-  const today = localDateISO(getTimezone())
-  await svc.from('challenge_food_log').insert({
-    enrollment_id: enrollmentId,
-    user_id: userId,
-    logged_on: today,
-    meal: pick.slot ? pick.slot.toLowerCase() : null,
-    name: `${pick.restaurant}: ${pick.order}`,
-    brand: pick.restaurant,
-    servings: 1,
-    calories: pick.cal,
-    protein_g: pick.protein,
-    carbs_g: pick.carbs,
-    fats_g: pick.fat,
-    source: 'next_action',
-  })
+  return { ok: true, kind: existing.kind as string, userId: existing.user_id as string }
 }
 
 // Done closes the Feedback Loop row AND counts today for the streak — the
@@ -275,9 +249,6 @@ export async function markActionCompleted(logId: string, enrollmentId: string): 
   const outcome = await resolveOwnedOpenRow(logId, enrollmentId, 'completed_at')
   if (!outcome.ok) return outcome
   await recordDailyCheckIn(enrollmentId, outcome.userId!, outcome.kind!).catch(() => {})
-  if (outcome.kind === 'location' && outcome.foodLogData) {
-    await logEatenSuggestion(enrollmentId, outcome.userId!, outcome.foodLogData).catch(() => {})
-  }
   return { ok: true }
 }
 
