@@ -78,7 +78,16 @@ export default function NextActionCard() {
     setBusy(true)
     try {
       const res = await fetch('/api/plan/next-action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logId: action.logId, action: 'day_changed' }) })
-      if (res.ok) setAction(await res.json())
+      if (res.ok) {
+        setAction(await res.json())
+      } else {
+        // Real bug caught live, 2026-08-26: a stale logId (already resolved
+        // elsewhere — another tab, a real day-boundary auto-supersede, a
+        // race) made this a silent no-op forever, with zero visible feedback,
+        // until a manual page reload. Refetch the real current action
+        // instead of leaving the tap looking like it did nothing.
+        await load()
+      }
     } finally {
       setBusy(false)
     }
