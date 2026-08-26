@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { hapticTap } from '@/lib/haptics'
 
@@ -26,7 +26,7 @@ const EXPANSION_ROUTE: Partial<Record<ActionKind, string>> = {
 // default, and only ever touched behind a feature-detect below.
 type SpeechRecognitionLike = {
   lang: string; interimResults: boolean; maxAlternatives: number
-  onresult: ((e: { results: { [i: number]: { [j: number]: { transcript: string } } } }) => void) | null
+  onresult: ((e: { results: { length: number; [i: number]: { isFinal: boolean; [j: number]: { transcript: string } } } }) => void) | null
   onend: (() => void) | null
   onerror: (() => void) | null
   start: () => void
@@ -45,6 +45,19 @@ export default function NextActionCard() {
   const [listening, setListening] = useState(false)
   const [voiceSupported, setVoiceSupported] = useState(false)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+
+  // Auto-grow the transcript box to fit whatever's in it — a long voice
+  // transcript (or a long typed message) must stay fully visible, never
+  // clipped or side-scrolling in a fixed-height field, same as any normal
+  // AI chat box (Asa's ask, 2026-08-26). Re-runs on every change, including
+  // the live interim-transcript updates while she's still talking.
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [message, showMessage])
 
   useEffect(() => {
     const w = window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike }
@@ -115,19 +128,36 @@ export default function NextActionCard() {
   // everything else in this engine already uses — never a separate voice-
   // only flow. Falls back to opening the text box on unsupported browsers
   // instead of a dead button.
+  //
+  // Real bug caught live (2026-08-26): the first version sent the final
+  // transcript straight to the API with nothing ever shown on screen — she
+  // had no way to see what it heard, or confirm before it acted. Fixed:
+  // interimResults is on and every result (partial or final) is written
+  // into the visible text box AS she talks, same as normal phone dictation.
+  // Only the final result actually submits.
   const startVoice = () => {
     if (busy) return
     const w = window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike }
     const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition
     if (!Ctor) { setShowMessage(true); return }
     hapticTap()
+    setShowMessage(true)
+    setMessage('')
     const recognition = new Ctor()
     recognition.lang = 'en-US'
-    recognition.interimResults = false
+    recognition.interimResults = true
     recognition.maxAlternatives = 1
     recognition.onresult = (e) => {
-      const transcript = e.results[0]?.[0]?.transcript
-      if (transcript) sendMessage(transcript)
+      let finalTranscript = ''
+      let interimTranscript = ''
+      for (let i = 0; i < e.results.length; i++) {
+        const result = e.results[i]
+        const transcript = result[0]?.transcript || ''
+        if (result.isFinal) finalTranscript += transcript
+        else interimTranscript += transcript
+      }
+      setMessage(finalTranscript || interimTranscript)
+      if (finalTranscript) sendMessage(finalTranscript)
     }
     recognition.onend = () => setListening(false)
     recognition.onerror = () => setListening(false)
@@ -255,13 +285,19 @@ export default function NextActionCard() {
       </div>
 
       {showMessage && (
-        <div className="mt-3 flex items-center gap-2" style={{ fontFamily: 'var(--font-poppins)' }}>
-          <input
+        <div className="mt-3 flex items-end gap-2" style={{ fontFamily: 'var(--font-poppins)' }}>
+          {/* A textarea, not a single-line input — Asa's ask, 2026-08-26:
+              the full transcript must stay visible no matter how long it
+              gets, like any normal AI chat box, never clipped or side-
+              scrolling. Height grows with content via the effect above. */}
+          <textarea
+            ref={textareaRef}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') sendMessage() }}
+            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
             placeholder={voiceSupported ? "Tell it what's going on…" : "Voice isn't supported on this browser — type here…"}
-            className="flex-1 bg-black/20 border border-white/15 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-ivory/30 focus:outline-none focus:border-gold/60"
+            rows={1}
+            className="flex-1 bg-black/20 border border-white/15 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-ivory/30 focus:outline-none focus:border-gold/60 resize-none max-h-60 overflow-y-auto"
           />
           <button onClick={() => sendMessage()} disabled={busy || !message.trim()} className="bg-white/10 border border-white/20 text-white text-sm font-semibold px-4 py-2.5 rounded-xl disabled:opacity-40">
             Send
