@@ -9,6 +9,7 @@ import MondayMemo from '@/components/MondayMemo'
 import LevelUpNudge from '@/components/LevelUpNudge'
 import StreakChip from '@/components/StreakChip'
 import TrendCard from '@/components/TrendCard'
+import { getProgressScoreTrend } from '@/lib/progress-score'
 import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
@@ -85,7 +86,7 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
 
   const tz = getTimezone()
   const todayIso = localDateISO(tz)
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }, { data: foodRows }, { data: progressRows }] = await Promise.all([
+  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }, { data: foodRows }, trendPoints] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('meals, calories, protein_g').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('measurements, logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
@@ -96,9 +97,9 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
     // here server-side so the glance row never has to wait on a second
     // client fetch just to show "X cal left."
     svc.from('challenge_food_log').select('calories, protein_g').eq('enrollment_id', enrollment.id).eq('logged_on', todayIso),
-    // Same weight history the Check-In page's ProgressChart already reads —
-    // one more real trend, this time surfaced here too (Asa's call, 2026-08-26).
-    svc.from('challenge_progress').select('weight_lbs, created_at').eq('enrollment_id', enrollment.id).order('created_at', { ascending: true }),
+    // Weighted, lifetime progress trend (Asa's call, 2026-08-26: "everything
+    // counts towards their goal" — not just weigh-ins) — see lib/progress-score.ts.
+    getProgressScoreTrend(enrollment.id as string),
   ])
   // Moved here from /plan's dashboard (2026-08-12 redesign) — one-time invite into
   // the profile pass(es) she skipped to get here fast. Disappears for good once done.
@@ -143,12 +144,6 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   const loggedProtein = (foodRows || []).reduce((sum, r) => sum + (Number(r.protein_g) || 0), 0)
   const calRemaining = calBudget != null ? Math.max(0, calBudget - loggedCalories) : null
   const foodLoggedToday = (foodRows || []).length > 0
-
-  // Same weight-history shape ProgressChart already builds on the Check-In
-  // page — one source of real numbers, two places it's visible.
-  const trendPoints = (progressRows || [])
-    .filter((p) => p.weight_lbs != null)
-    .map((p) => ({ label: new Date(p.created_at as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), weight: Number(p.weight_lbs) }))
 
   // She told Coach Asa she's eating out today (an ad-hoc chat approval, not a
   // pre-scheduled plan day) — the fixed meal list below is now irrelevant, she's
