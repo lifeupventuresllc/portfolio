@@ -79,6 +79,64 @@ export async function humanizeInstruction(instruction: string, context: { energy
   }
 }
 
+const RESTAURANT_ORDER_TOOL = {
+  name: 'record_order',
+  description: 'Record a single recommended order for this specific restaurant.',
+  input_schema: {
+    type: 'object' as const,
+    additionalProperties: false,
+    properties: {
+      order: { type: 'string' },
+      calories: { type: 'integer' },
+      protein_g: { type: 'integer' },
+      carbs_g: { type: 'integer' },
+      fats_g: { type: 'integer' },
+    },
+    required: ['order', 'calories', 'protein_g', 'carbs_g', 'fats_g'],
+  },
+}
+
+export type RestaurantOrder = { restaurant: string; order: string; cal: number; protein: number; carbs: number; fat: number }
+
+// Prompt 6's "single best-fitting eating-out selection," made restaurant-
+// aware (2026-08-26 fix): the curated Escape Plan list (lib/escape-plan.ts)
+// only covers a small fixed set of chains and picks by time-of-day/weight
+// class, with zero awareness of which restaurant she actually named — a
+// real gap Asa caught live ("I'm at Taco Bell" could still surface an
+// unrelated restaurant). This generates ONE realistic order for the EXACT
+// chain she named, fit to her real remaining calories, same estimate-not-
+// lookup spirit as lib/food-estimate.ts. Falls back to null on any failure
+// so the caller can fall back to the curated list rather than blocking.
+export async function generateRestaurantOrder(restaurantName: string, remainingCalories: number): Promise<RestaurantOrder | null> {
+  if (!anthropicConfigured() || !restaurantName.trim()) return null
+  try {
+    const client = new Anthropic()
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      system:
+        "You're a nutrition coach picking ONE real, ready-to-order menu item (or a simple realistic modification of one — e.g. \"no rice, extra chicken\") from a specific real restaurant chain, fitting as close as possible to a stated remaining calorie budget for the day without going over by much, while keeping protein reasonably high. Only recommend real items/modifications that chain plausibly offers. Give your best realistic calorie/macro estimate — you're estimating, not looking up an exact menu, so keep the numbers realistic and rounded.",
+      tools: [RESTAURANT_ORDER_TOOL],
+      tool_choice: { type: 'tool', name: 'record_order' },
+      messages: [{ role: 'user', content: `Restaurant: ${restaurantName}\nRemaining calories today: about ${Math.round(remainingCalories)}` }],
+    })
+    const block = msg.content.find((b) => b.type === 'tool_use')
+    if (!block || block.type !== 'tool_use') return null
+    const input = block.input as { order?: string; calories?: number; protein_g?: number; carbs_g?: number; fats_g?: number }
+    if (!input.order || !input.order.trim()) return null
+    return {
+      restaurant: restaurantName,
+      order: input.order.trim(),
+      cal: Math.round(Number(input.calories) || 0),
+      protein: Math.round(Number(input.protein_g) || 0),
+      carbs: Math.round(Number(input.carbs_g) || 0),
+      fat: Math.round(Number(input.fats_g) || 0),
+    }
+  } catch {
+    return null
+  }
+}
+
 const SIGNAL_TOOL = {
   name: 'record_signal',
   description: "Record structured signals extracted from her message about right now.",
@@ -90,6 +148,12 @@ const SIGNAL_TOOL = {
       minutes_available: { type: 'integer' },
       day_changed: { type: 'boolean' },
       eating_out: { type: 'boolean' },
+      // The actual restaurant/chain name, ONLY when she names one explicitly
+      // ("I'm at Taco Bell") — omitted for a bare "I'm eating out" with no
+      // place named. Real gap fixed 2026-08-26: this used to be thrown away,
+      // so the engine's eating-out pick had no idea which restaurant she
+      // was actually at and could suggest a completely unrelated one.
+      restaurant_name: { type: 'string' },
       // Reward profile, source #2 (explicit statement) — prompt 7. Only
       // filled when she's clearly saying something she personally enjoys or
       // finds relaxing/rewarding, whether volunteered or in answer to a
@@ -108,6 +172,7 @@ export type ParsedSignal = {
   minutesAvailable?: number
   dayChanged?: boolean
   eatingOut?: boolean
+  restaurantName?: string
   statedPreference?: { label: string; category: 'nutrition' | 'fitness' | 'recovery' | 'other' }
 }
 
@@ -123,19 +188,20 @@ export async function parseNextActionSignal(message: string): Promise<ParsedSign
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 200,
       system:
-        "Read a short message she just sent about her day, right now. Extract ONLY what's clearly and explicitly stated, never infer or guess: her current energy/capacity level (low/normal/high) if she said something about how she's feeling or how much she can do, how many minutes she has available if she gave an actual number, whether she's saying her day or plans changed/got disrupted, whether she's saying she's eating out / at a restaurant right now, and — separately — whether she's naming something she personally enjoys, finds relaxing, or considers a treat (a favorite snack, a type of movement she likes, a way she likes to unwind). For that last one, only fill it in when she's clearly describing something SHE values, in her own words, as a short label (a few words), plus which of nutrition/fitness/recovery/other it best fits. Omit any field she didn't actually address — an empty result is correct and expected for a message that doesn't touch any of these.",
+        "Read a short message she just sent about her day, right now. Extract ONLY what's clearly and explicitly stated, never infer or guess: her current energy/capacity level (low/normal/high) if she said something about how she's feeling or how much she can do, how many minutes she has available if she gave an actual number, whether she's saying her day or plans changed/got disrupted, whether she's saying she's eating out / at a restaurant right now, the SPECIFIC restaurant or chain name if she names one (omit if she just says she's eating out with no place named), and — separately — whether she's naming something she personally enjoys, finds relaxing, or considers a treat (a favorite snack, a type of movement she likes, a way she likes to unwind). For that last one, only fill it in when she's clearly describing something SHE values, in her own words, as a short label (a few words), plus which of nutrition/fitness/recovery/other it best fits. Omit any field she didn't actually address — an empty result is correct and expected for a message that doesn't touch any of these.",
       tools: [SIGNAL_TOOL],
       tool_choice: { type: 'tool', name: 'record_signal' },
       messages: [{ role: 'user', content: message }],
     })
     const block = msg.content.find((b) => b.type === 'tool_use')
     if (!block || block.type !== 'tool_use') return {}
-    const input = block.input as { energy?: string; minutes_available?: number; day_changed?: boolean; eating_out?: boolean; stated_preference_label?: string; stated_preference_category?: string }
+    const input = block.input as { energy?: string; minutes_available?: number; day_changed?: boolean; eating_out?: boolean; restaurant_name?: string; stated_preference_label?: string; stated_preference_category?: string }
     const result: ParsedSignal = {}
     if (input.energy === 'low' || input.energy === 'normal' || input.energy === 'high') result.energy = input.energy
     if (typeof input.minutes_available === 'number' && input.minutes_available > 0) result.minutesAvailable = Math.round(input.minutes_available)
     if (typeof input.day_changed === 'boolean') result.dayChanged = input.day_changed
     if (typeof input.eating_out === 'boolean') result.eatingOut = input.eating_out
+    if (input.restaurant_name && input.restaurant_name.trim()) result.restaurantName = input.restaurant_name.trim()
     if (input.stated_preference_label && input.stated_preference_label.trim()) {
       const category = input.stated_preference_category
       result.statedPreference = {

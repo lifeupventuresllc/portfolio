@@ -147,6 +147,17 @@ export default function NextActionCard() {
     )
   }
 
+  // Real bug caught live (2026-08-26): a longer instruction (e.g. a
+  // restaurant + specific order) got visually cut off inside the fixed-size
+  // circle. The base template was shortened separately (candidates.ts), but
+  // this is the safety net for whatever length actually shows up — shrink
+  // to fit rather than clip, since there's no scrolling inside a circle.
+  const instructionFontSize = action.instruction.length > 110
+    ? 'clamp(11px, 3vw, 13px)'
+    : action.instruction.length > 70
+      ? 'clamp(13px, 3.6vw, 15px)'
+      : 'clamp(15px, 4.2vw, 18px)'
+
   return (
     <div className="rounded-3xl p-6" style={{ background: cardBg, border: '1.5px solid #E5A93C', boxShadow: '0 0 30px -6px rgba(229,169,60,0.3)' }}>
       <p className="text-[#E5A93C] text-[10px] uppercase tracking-[0.25em] font-bold mb-1" style={{ fontFamily: 'var(--font-poppins)' }}>Right now</p>
@@ -195,7 +206,7 @@ export default function NextActionCard() {
               WebkitMaskImage: 'radial-gradient(circle, transparent 66%, black 67%, black 100%)',
             }}
           />
-          <span className="relative font-semibold leading-snug px-9" style={{ zIndex: 2, color: '#0a2417', fontFamily: 'var(--font-poppins)', fontSize: 'clamp(15px, 4.2vw, 18px)' }}>{action.instruction}</span>
+          <span className="relative font-semibold leading-snug px-9" style={{ zIndex: 2, color: '#0a2417', fontFamily: 'var(--font-poppins)', fontSize: instructionFontSize }}>{action.instruction}</span>
           {/* Real Deepgram voice pipeline (same one Coach Asa's chat uses) —
               not a separate implementation. stopPropagation keeps a mic tap
               from also triggering the circle's own expand() navigation. */}

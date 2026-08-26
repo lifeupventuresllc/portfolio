@@ -70,6 +70,10 @@ export type StateOverrides = {
   energy?: EnergyLevel
   minutesAvailable?: number
   eatingOut?: boolean
+  // The specific restaurant/chain she named, if any (2026-08-26 fix) — when
+  // present, the eating-out pick is generated for THIS exact place instead
+  // of a generic curated-list match unrelated to where she actually is.
+  eatingOutRestaurant?: string
 }
 
 export type ActionCandidate = {

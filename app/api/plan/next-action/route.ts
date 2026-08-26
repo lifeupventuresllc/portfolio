@@ -71,12 +71,19 @@ export async function POST(req: NextRequest) {
     const open = await getOpenAction(enrollmentId)
     const answeringRewardQuestion = open?.id === logId && open.kind === 'reward_question'
 
-    const hasSignal = !!signal.energy || !!signal.minutesAvailable || !!signal.dayChanged || typeof signal.eatingOut === 'boolean'
+    const hasSignal = !!signal.energy || !!signal.minutesAvailable || !!signal.dayChanged || typeof signal.eatingOut === 'boolean' || !!signal.restaurantName
     if (!hasSignal && !answeringRewardQuestion) return NextResponse.json({ changed: false })
 
     const outcome = answeringRewardQuestion ? await markActionCompleted(logId, enrollmentId) : await markActionSuperseded(logId, enrollmentId)
     if (!outcome.ok) return NextResponse.json({ error: outcome.reason }, { status: statusFor(outcome.reason) })
-    const result = await getNextAction(enrollmentId, localDateISO(getTimezone()), { energy: signal.energy, minutesAvailable: signal.minutesAvailable, eatingOut: signal.eatingOut })
+    // A named restaurant always implies she's eating out, even if the model
+    // didn't separately flag eating_out=true for some reason.
+    const result = await getNextAction(enrollmentId, localDateISO(getTimezone()), {
+      energy: signal.energy,
+      minutesAvailable: signal.minutesAvailable,
+      eatingOut: signal.eatingOut || (signal.restaurantName ? true : undefined),
+      eatingOutRestaurant: signal.restaurantName,
+    })
     return NextResponse.json({ changed: true, ...result })
   }
 

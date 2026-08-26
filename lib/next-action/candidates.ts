@@ -49,7 +49,11 @@ export function buildCandidates(state: UserStateSnapshot): ActionCandidate[] {
     candidates.push({
       kind: 'location',
       actionKey: `location:${p.restaurant}:${p.order}`,
-      instruction: `At the restaurant, love: ${p.restaurant} — ${p.order} (about ${p.cal} cal, ${p.protein}g protein).`,
+      // Kept short on purpose (2026-08-26 fix) — the full calorie/protein
+      // detail was pushing the circle's visible text past what fits;
+      // the macro breakdown is still there if she taps through to
+      // /plan/eating-out (prompt 3's expansion routing).
+      instruction: `At ${p.restaurant}, love: ${p.order}.`,
       estMinutes: 2,
     })
   } else if (state.calorieBudget != null && state.caloriesLoggedToday < state.calorieBudget) {

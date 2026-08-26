@@ -7,6 +7,7 @@ import { assessLifePattern } from '@/lib/fos/pattern'
 import { currentWeekNumber, getTimezone, localDateISO, localMondayIndex, localHourNumber } from '@/lib/localdate'
 import type { WeekPlan } from '@/lib/meal-plan'
 import { weightClassFor, budgetTierFromWeekly, pickForNow, type FastFoodMeal } from '@/lib/escape-plan'
+import { generateRestaurantOrder, type RestaurantOrder } from './llm'
 import type { UserStateSnapshot, EnergyLevel, StateOverrides } from './types'
 
 // Deliberately a flat, documented estimate, not a per-person calculation —
@@ -93,23 +94,31 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
   const eatingOutToday = overrides.eatingOut ?? isEatingOutToday(todayMeals?.eatOut, todayAdjustment)
 
-  // Prompt 6's "return only ONE selection" — reuses the app's real, already-
-  // shipped Escape Plan picker (lib/escape-plan.ts, /plan/eating-out) rather
-  // than inventing a second, generic (non-restaurant) list. pickForNow
-  // itself narrows to a couple of real options for the current meal slot;
-  // this engine takes only the first as ITS one answer — the full
-  // alternative still lives on /plan/eating-out for anyone who expands into
-  // it (prompt 3's supporting-detail-screen routing).
-  let eatingOutPick: FastFoodMeal | null = null
+  // Prompt 6's "return only ONE selection." Two sources, tried in order:
+  // 1. A real restaurant she actually named (2026-08-26 fix) — generated
+  //    live for THAT exact chain (lib/next-action/llm.ts) rather than
+  //    served from a small fixed list with no idea where she really is.
+  //    Real gap Asa caught live: saying "I'm at Taco Bell" could still
+  //    surface an unrelated restaurant, because the old path only ever
+  //    knew a bare yes/no "eating out" flag, never the place itself.
+  // 2. The app's existing Escape Plan picker (lib/escape-plan.ts,
+  //    /plan/eating-out) as a general fallback when no specific
+  //    restaurant was named, or the live generation failed.
+  const remainingCalories = calorieBudget != null ? Math.max(0, calorieBudget - caloriesLoggedToday) : 500
+  let eatingOutPick: FastFoodMeal | RestaurantOrder | null = null
   if (eatingOutToday) {
-    const wc = weightClassFor(Number(intake?.weight_lbs) || 170)
-    const epochDays = Math.floor(new Date(`${todayISO}T00:00:00Z`).getTime() / 86400000)
-    const hour = localHourNumber(tz)
-    const nowSlot: FastFoodMeal['slot'] = hour < 11 ? 'Breakfast' : hour < 15 ? 'Lunch' : hour < 20 ? 'Dinner' : 'Snack'
-    const budgetTier = budgetTierFromWeekly(Number(intake?.weekly_food_budget) || null)
-    const remaining = calorieBudget != null ? Math.max(0, calorieBudget - caloriesLoggedToday) : undefined
-    const picks = pickForNow(wc, nowSlot, budgetTier, epochDays, remaining)
-    eatingOutPick = picks[0] || null
+    if (overrides.eatingOutRestaurant) {
+      eatingOutPick = await generateRestaurantOrder(overrides.eatingOutRestaurant, remainingCalories)
+    }
+    if (!eatingOutPick) {
+      const wc = weightClassFor(Number(intake?.weight_lbs) || 170)
+      const epochDays = Math.floor(new Date(`${todayISO}T00:00:00Z`).getTime() / 86400000)
+      const hour = localHourNumber(tz)
+      const nowSlot: FastFoodMeal['slot'] = hour < 11 ? 'Breakfast' : hour < 15 ? 'Lunch' : hour < 20 ? 'Dinner' : 'Snack'
+      const budgetTier = budgetTierFromWeekly(Number(intake?.weekly_food_budget) || null)
+      const picks = pickForNow(wc, nowSlot, budgetTier, epochDays, calorieBudget != null ? remainingCalories : undefined)
+      eatingOutPick = picks[0] || null
+    }
   }
 
   // energyPatterns is a free-form bag (see fos/types.ts) — the only shape
