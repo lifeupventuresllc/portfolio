@@ -192,6 +192,29 @@ export function pickForNow(wc: WeightClass, slot: FastFoodMeal['slot'], budgetTi
   return second ? [first, second] : [first]
 }
 
+/** The Next Action engine's restaurant-aware pick (2026-08-26) — Asa's
+ * explicit call: no AI-estimated calories driving this decision, real
+ * curated data only. Searches this weight class's REAL curated orders for
+ * one matching the restaurant she actually named, narrowed to the current
+ * meal slot so sizing is automatically realistic (a curated breakfast entry
+ * is already a breakfast-appropriate portion — never "use up the whole
+ * day's calories in one sitting," which an ungrounded target-calories
+ * request could do). Returns null (not a guess) when that exact restaurant
+ * isn't in the curated set for this slot — the caller falls back to
+ * pickForNow's real-but-generic pick rather than fabricating one. */
+export function pickForRestaurant(wc: WeightClass, restaurantName: string, slot: FastFoodMeal['slot'], remainingCal?: number): FastFoodMeal | null {
+  const needle = restaurantName.trim().toLowerCase()
+  if (!needle) return null
+  const candidates = wc.days
+    .flatMap((d) => d.meals)
+    .filter((m) => m.slot === slot && (m.restaurant.toLowerCase().includes(needle) || needle.includes(m.restaurant.toLowerCase())))
+  if (candidates.length === 0) return null
+  if (remainingCal != null && remainingCal > 0) {
+    return [...candidates].sort((a, b) => Math.abs(a.cal - remainingCal) - Math.abs(b.cal - remainingCal))[0]
+  }
+  return candidates[0]
+}
+
 /** No API/OAuth needed — DoorDash's public search URL, not order automation. */
 export function doordashSearchUrl(restaurant: string): string {
   return `https://www.doordash.com/search/store/${encodeURIComponent(restaurant)}/`

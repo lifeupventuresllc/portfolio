@@ -79,63 +79,17 @@ export async function humanizeInstruction(instruction: string, context: { energy
   }
 }
 
-const RESTAURANT_ORDER_TOOL = {
-  name: 'record_order',
-  description: 'Record a single recommended order for this specific restaurant.',
-  input_schema: {
-    type: 'object' as const,
-    additionalProperties: false,
-    properties: {
-      order: { type: 'string' },
-      calories: { type: 'integer' },
-      protein_g: { type: 'integer' },
-      carbs_g: { type: 'integer' },
-      fats_g: { type: 'integer' },
-    },
-    required: ['order', 'calories', 'protein_g', 'carbs_g', 'fats_g'],
-  },
-}
-
-export type RestaurantOrder = { restaurant: string; order: string; cal: number; protein: number; carbs: number; fat: number }
-
-// Prompt 6's "single best-fitting eating-out selection," made restaurant-
-// aware (2026-08-26 fix): the curated Escape Plan list (lib/escape-plan.ts)
-// only covers a small fixed set of chains and picks by time-of-day/weight
-// class, with zero awareness of which restaurant she actually named — a
-// real gap Asa caught live ("I'm at Taco Bell" could still surface an
-// unrelated restaurant). This generates ONE realistic order for the EXACT
-// chain she named, fit to her real remaining calories, same estimate-not-
-// lookup spirit as lib/food-estimate.ts. Falls back to null on any failure
-// so the caller can fall back to the curated list rather than blocking.
-export async function generateRestaurantOrder(restaurantName: string, remainingCalories: number): Promise<RestaurantOrder | null> {
-  if (!anthropicConfigured() || !restaurantName.trim()) return null
-  try {
-    const client = new Anthropic()
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 300,
-      system:
-        "You're a nutrition coach picking ONE real, ready-to-order menu item (or a simple realistic modification of one — e.g. \"no rice, extra chicken\") from a specific real restaurant chain, fitting as close as possible to a stated remaining calorie budget for the day without going over by much, while keeping protein reasonably high. Only recommend real items/modifications that chain plausibly offers. Give your best realistic calorie/macro estimate — you're estimating, not looking up an exact menu, so keep the numbers realistic and rounded.",
-      tools: [RESTAURANT_ORDER_TOOL],
-      tool_choice: { type: 'tool', name: 'record_order' },
-      messages: [{ role: 'user', content: `Restaurant: ${restaurantName}\nRemaining calories today: about ${Math.round(remainingCalories)}` }],
-    })
-    const block = msg.content.find((b) => b.type === 'tool_use')
-    if (!block || block.type !== 'tool_use') return null
-    const input = block.input as { order?: string; calories?: number; protein_g?: number; carbs_g?: number; fats_g?: number }
-    if (!input.order || !input.order.trim()) return null
-    return {
-      restaurant: restaurantName,
-      order: input.order.trim(),
-      cal: Math.round(Number(input.calories) || 0),
-      protein: Math.round(Number(input.protein_g) || 0),
-      carbs: Math.round(Number(input.carbs_g) || 0),
-      fat: Math.round(Number(input.fats_g) || 0),
-    }
-  } catch {
-    return null
-  }
-}
+// NOTE: an earlier version of this file had a generateRestaurantOrder()
+// here — asked the AI to invent a plausible order/calories for whatever
+// restaurant she named. Removed 2026-08-26, Asa's explicit call: "we don't
+// want estimates, we [won't base a] decision off that." Checked live
+// whether USDA's database (already used elsewhere in this app for real
+// food macros) could substitute a genuine per-restaurant lookup instead —
+// confirmed it has no real restaurant-chain menu data at all (that's not
+// what USDA FoodData Central is for). The only honest source available is
+// the app's own curated Escape Plan data (lib/escape-plan.ts's new
+// pickForRestaurant), which is what lib/next-action/state.ts uses now —
+// real curated numbers only, never an AI guess, for this decision.
 
 const SIGNAL_TOOL = {
   name: 'record_signal',

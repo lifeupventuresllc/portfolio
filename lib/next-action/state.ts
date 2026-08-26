@@ -6,8 +6,7 @@ import { getApprovedTodayAdjustment, getProfile } from '@/lib/fos/context'
 import { assessLifePattern } from '@/lib/fos/pattern'
 import { currentWeekNumber, getTimezone, localDateISO, localMondayIndex, localHourNumber } from '@/lib/localdate'
 import type { WeekPlan } from '@/lib/meal-plan'
-import { weightClassFor, budgetTierFromWeekly, pickForNow, type FastFoodMeal } from '@/lib/escape-plan'
-import { generateRestaurantOrder, type RestaurantOrder } from './llm'
+import { weightClassFor, budgetTierFromWeekly, pickForNow, pickForRestaurant, type FastFoodMeal } from '@/lib/escape-plan'
 import type { UserStateSnapshot, EnergyLevel, StateOverrides } from './types'
 
 // Deliberately a flat, documented estimate, not a per-person calculation —
@@ -94,29 +93,37 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
   const eatingOutToday = overrides.eatingOut ?? isEatingOutToday(todayMeals?.eatOut, todayAdjustment)
 
-  // Prompt 6's "return only ONE selection." Two sources, tried in order:
-  // 1. A real restaurant she actually named (2026-08-26 fix) — generated
-  //    live for THAT exact chain (lib/next-action/llm.ts) rather than
-  //    served from a small fixed list with no idea where she really is.
-  //    Real gap Asa caught live: saying "I'm at Taco Bell" could still
-  //    surface an unrelated restaurant, because the old path only ever
-  //    knew a bare yes/no "eating out" flag, never the place itself.
-  // 2. The app's existing Escape Plan picker (lib/escape-plan.ts,
-  //    /plan/eating-out) as a general fallback when no specific
-  //    restaurant was named, or the live generation failed.
+  // Prompt 6's "return only ONE selection." Real curated data ONLY — Asa's
+  // explicit call, 2026-08-26: "we don't want estimates, we won't [base a]
+  // decision off that." An earlier version asked the AI to invent a
+  // plausible order/macros for whatever restaurant she named; checked
+  // directly against USDA's database live (it has zero real restaurant-
+  // chain menu data — that's not what it's for) confirmed there's no real
+  // per-restaurant nutrition source available here, so real curated data
+  // (lib/escape-plan.ts) is the only honest source — and it's already
+  // sized per meal-slot, which also fixes a second real gap Asa caught:
+  // an ungrounded target could try to spend her ENTIRE day's remaining
+  // calories on a single breakfast. Two sources, tried in order:
+  // 1. A real curated entry actually matching the restaurant she named,
+  //    narrowed to the current meal slot for realistic sizing.
+  // 2. The existing generic Escape Plan pick (still real curated data,
+  //    just not guaranteed to be her exact restaurant) when either she
+  //    didn't name one, or that one isn't in the curated set for this slot.
   const remainingCalories = calorieBudget != null ? Math.max(0, calorieBudget - caloriesLoggedToday) : 500
-  let eatingOutPick: FastFoodMeal | RestaurantOrder | null = null
+  let eatingOutPick: FastFoodMeal | null = null
   if (eatingOutToday) {
+    const wc = weightClassFor(Number(intake?.weight_lbs) || 170)
+    const epochDays = Math.floor(new Date(`${todayISO}T00:00:00Z`).getTime() / 86400000)
+    const hour = localHourNumber(tz)
+    const nowSlot: FastFoodMeal['slot'] = hour < 11 ? 'Breakfast' : hour < 15 ? 'Lunch' : hour < 20 ? 'Dinner' : 'Snack'
+    const budgetTier = budgetTierFromWeekly(Number(intake?.weekly_food_budget) || null)
+    const targetCal = calorieBudget != null ? remainingCalories : undefined
+
     if (overrides.eatingOutRestaurant) {
-      eatingOutPick = await generateRestaurantOrder(overrides.eatingOutRestaurant, remainingCalories)
+      eatingOutPick = pickForRestaurant(wc, overrides.eatingOutRestaurant, nowSlot, targetCal)
     }
     if (!eatingOutPick) {
-      const wc = weightClassFor(Number(intake?.weight_lbs) || 170)
-      const epochDays = Math.floor(new Date(`${todayISO}T00:00:00Z`).getTime() / 86400000)
-      const hour = localHourNumber(tz)
-      const nowSlot: FastFoodMeal['slot'] = hour < 11 ? 'Breakfast' : hour < 15 ? 'Lunch' : hour < 20 ? 'Dinner' : 'Snack'
-      const budgetTier = budgetTierFromWeekly(Number(intake?.weekly_food_budget) || null)
-      const picks = pickForNow(wc, nowSlot, budgetTier, epochDays, calorieBudget != null ? remainingCalories : undefined)
+      const picks = pickForNow(wc, nowSlot, budgetTier, epochDays, targetCal)
       eatingOutPick = picks[0] || null
     }
   }
