@@ -60,6 +60,12 @@ export type UserStateSnapshot = {
   // system (lib/escape-plan.ts) for right now — null only when eatingOutToday
   // is false, or the picker genuinely had nothing to offer.
   eatingOutPick: { restaurant: string; order: string; cal: number; protein: number; carbs: number; fat: number } | null
+  // The meal slot actually used to pick it — either the one she explicitly
+  // named (overrides.eatingOutMealSlot) or, when she didn't say, the one
+  // inferred from the current local hour. Carried forward so the
+  // /plan/eating-out expansion screen sizes to the SAME slot she meant,
+  // not whatever the clock says by the time she taps through.
+  eatingOutSlot: 'Breakfast' | 'Lunch' | 'Snack' | 'Dinner' | null
 }
 
 // Ephemeral, single-call overrides derived from an explicit signal (a
@@ -74,6 +80,11 @@ export type StateOverrides = {
   // present, the eating-out pick is generated for THIS exact place instead
   // of a generic curated-list match unrelated to where she actually is.
   eatingOutRestaurant?: string
+  // The meal she actually named (2026-08-26 fix, second gap on the same
+  // report) — "give me a snack idea" at 1pm must size like a snack, not
+  // whatever the clock alone would infer (Lunch). Only ever set from an
+  // explicit word in her own message; time-of-day remains the fallback.
+  eatingOutMealSlot?: 'Breakfast' | 'Lunch' | 'Snack' | 'Dinner'
 }
 
 export type ActionCandidate = {
@@ -97,4 +108,10 @@ export type NextActionResult = {
   actionKey: string
   instruction: string
   score: number
+  // Only populated for kind 'location' — lets the client pass the exact
+  // restaurant/slot the circle already decided on through to the
+  // /plan/eating-out expansion screen, so tapping through shows 2 real
+  // options for THAT place/meal instead of the generic rotating picks.
+  restaurant?: string
+  mealSlot?: 'Breakfast' | 'Lunch' | 'Snack' | 'Dinner'
 }

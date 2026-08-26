@@ -12,7 +12,7 @@ import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
 // lives here too: tapping the instruction (not the buttons) opens the
 // supporting screen the engine already decided on — never a menu.
 type ActionKind = 'workout' | 'meal' | 'fallback' | 'location'
-type NextAction = { logId: string; kind: ActionKind; actionKey: string; instruction: string; score: number }
+type NextAction = { logId: string; kind: ActionKind; actionKey: string; instruction: string; score: number; restaurant?: string; mealSlot?: string }
 
 // The ONE destination per kind — fully determined by what the engine
 // decided, never a choice presented to her (prompt 3's core rule). Fallback
@@ -136,7 +136,18 @@ export default function NextActionCard() {
   const expand = () => {
     if (!action) return
     const dest = EXPANSION_ROUTE[action.kind]
-    if (dest) router.push(dest)
+    if (!dest) return
+    // Carry the exact restaurant/meal the circle already decided on into the
+    // expansion screen (2026-08-26) — "I'm at Taco Bell" must show 2 real
+    // Taco Bell options for the same meal, not the generic rotating picks.
+    if (action.kind === 'location' && (action.restaurant || action.mealSlot)) {
+      const params = new URLSearchParams()
+      if (action.restaurant) params.set('restaurant', action.restaurant)
+      if (action.mealSlot) params.set('slot', action.mealSlot)
+      router.push(`${dest}?${params.toString()}`)
+      return
+    }
+    router.push(dest)
   }
 
   // Cinematic emerald/gold treatment — Asa's final pick, 2026-08-26, after a

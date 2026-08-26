@@ -1,0 +1,11 @@
+-- 036: link the Next Action engine's eating-out pick to a real food-log
+-- entry (2026-08-26, Asa's ask: "accurately track the suggested food option
+-- ... and what calories she has for the day"). Completing a 'location'
+-- action used to only flip the daily nutrition check-in flag — the real
+-- calories/macros she was just told to order never landed in
+-- challenge_food_log, so her remaining-calories math for the rest of the
+-- day never actually reflected it. This column carries the EXACT real
+-- curated order (lib/escape-plan.ts) the circle showed her at the moment
+-- it was shown, so completing it can log those exact numbers — never a
+-- fresh estimate — into her real food log.
+alter table next_action_log add column if not exists food_log_data jsonb;

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { weightClassFor, budgetTierFromWeekly, pickForNow, doordashSearchUrl, priceTierFor, type FastFoodMeal } from '@/lib/escape-plan'
+import { weightClassFor, budgetTierFromWeekly, pickForNow, pickForRestaurant, doordashSearchUrl, priceTierFor, type FastFoodMeal } from '@/lib/escape-plan'
 import { localDateISO, localHourNumber, localMondayIndex } from '@/lib/localdate'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { getEffectiveCalorieBudget } from '@/lib/fos/effective-plan'
@@ -16,7 +16,9 @@ const SLOT_ICON: Record<string, string> = { Breakfast: '🌅', Lunch: '☀️', 
 // choose between "wing it" (breaks the plan, feeds the craving spiral) or "skip it"
 // (the forgot-to-eat pattern). This removes the decision entirely — one screen, no typing,
 // no searching: exactly what to order, already picked for her.
-export default async function EatingOutNow() {
+const VALID_SLOTS: FastFoodMeal['slot'][] = ['Breakfast', 'Lunch', 'Snack', 'Dinner']
+
+export default async function EatingOutNow({ searchParams }: { searchParams: { restaurant?: string; slot?: string } }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login?redirect=/plan/eating-out')
@@ -63,9 +65,19 @@ export default async function EatingOutNow() {
   // afford (her own stated weekly food budget from intake, not a new question) AND
   // to what actually fits her real remaining calories for today.
   const hour = localHourNumber()
-  const nowSlot: FastFoodMeal['slot'] = hour < 11 ? 'Breakfast' : hour < 15 ? 'Lunch' : hour < 20 ? 'Dinner' : 'Snack'
+  // The Next Action circle passes through the exact restaurant/slot it
+  // already decided on (2026-08-26) — landing here from "I'm at Taco Bell"
+  // must show 2 real Taco Bell options for the SAME meal, not the generic
+  // rotating picks re-derived from whatever the clock says by the time she
+  // taps through.
+  const requestedSlot = searchParams?.slot
+  const nowSlot: FastFoodMeal['slot'] = requestedSlot && VALID_SLOTS.includes(requestedSlot as FastFoodMeal['slot'])
+    ? (requestedSlot as FastFoodMeal['slot'])
+    : (hour < 11 ? 'Breakfast' : hour < 15 ? 'Lunch' : hour < 20 ? 'Dinner' : 'Snack')
   const budgetTier = budgetTierFromWeekly(Number(intake?.weekly_food_budget) || null)
-  const nowPicks = pickForNow(wc, nowSlot, budgetTier, epochDays, remainingCal > 0 ? remainingCal : undefined)
+  const targetCal = remainingCal > 0 ? remainingCal : undefined
+  const restaurantPicks = searchParams?.restaurant ? pickForRestaurant(wc, searchParams.restaurant, nowSlot, targetCal) : []
+  const nowPicks = restaurantPicks.length > 0 ? restaurantPicks : pickForNow(wc, nowSlot, budgetTier, epochDays, targetCal)
 
   return (
     <div className="min-h-[100dvh] bg-obsidian px-4 py-12">

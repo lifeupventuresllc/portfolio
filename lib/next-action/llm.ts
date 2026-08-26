@@ -108,6 +108,12 @@ const SIGNAL_TOOL = {
       // so the engine's eating-out pick had no idea which restaurant she
       // was actually at and could suggest a completely unrelated one.
       restaurant_name: { type: 'string' },
+      // Which meal she means, ONLY when her own words say so ("give me a
+      // snack idea," "what should I get for lunch") — never inferred from
+      // what time it happens to be right now. Real gap fixed 2026-08-26: a
+      // 1pm "snack" request was being sized as a Lunch portion because the
+      // engine only ever looked at the clock.
+      meal_slot: { type: 'string', enum: ['breakfast', 'lunch', 'snack', 'dinner'] },
       // Reward profile, source #2 (explicit statement) — prompt 7. Only
       // filled when she's clearly saying something she personally enjoys or
       // finds relaxing/rewarding, whether volunteered or in answer to a
@@ -127,6 +133,7 @@ export type ParsedSignal = {
   dayChanged?: boolean
   eatingOut?: boolean
   restaurantName?: string
+  mealSlot?: 'Breakfast' | 'Lunch' | 'Snack' | 'Dinner'
   statedPreference?: { label: string; category: 'nutrition' | 'fitness' | 'recovery' | 'other' }
 }
 
@@ -142,20 +149,24 @@ export async function parseNextActionSignal(message: string): Promise<ParsedSign
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 200,
       system:
-        "Read a short message she just sent about her day, right now. Extract ONLY what's clearly and explicitly stated, never infer or guess: her current energy/capacity level (low/normal/high) if she said something about how she's feeling or how much she can do, how many minutes she has available if she gave an actual number, whether she's saying her day or plans changed/got disrupted, whether she's saying she's eating out / at a restaurant right now, the SPECIFIC restaurant or chain name if she names one (omit if she just says she's eating out with no place named), and — separately — whether she's naming something she personally enjoys, finds relaxing, or considers a treat (a favorite snack, a type of movement she likes, a way she likes to unwind). For that last one, only fill it in when she's clearly describing something SHE values, in her own words, as a short label (a few words), plus which of nutrition/fitness/recovery/other it best fits. Omit any field she didn't actually address — an empty result is correct and expected for a message that doesn't touch any of these.",
+        "Read a short message she just sent about her day, right now. Extract ONLY what's clearly and explicitly stated, never infer or guess: her current energy/capacity level (low/normal/high) if she said something about how she's feeling or how much she can do, how many minutes she has available if she gave an actual number, whether she's saying her day or plans changed/got disrupted, whether she's saying she's eating out / at a restaurant right now, the SPECIFIC restaurant or chain name if she names one (omit if she just says she's eating out with no place named), which specific meal she means (breakfast/lunch/snack/dinner) ONLY if she actually says that word or something unambiguous like \"snack\" or \"for dinner\" — never guess this from what time it is, and — separately — whether she's naming something she personally enjoys, finds relaxing, or considers a treat (a favorite snack, a type of movement she likes, a way she likes to unwind). For that last one, only fill it in when she's clearly describing something SHE values, in her own words, as a short label (a few words), plus which of nutrition/fitness/recovery/other it best fits. Omit any field she didn't actually address — an empty result is correct and expected for a message that doesn't touch any of these.",
       tools: [SIGNAL_TOOL],
       tool_choice: { type: 'tool', name: 'record_signal' },
       messages: [{ role: 'user', content: message }],
     })
     const block = msg.content.find((b) => b.type === 'tool_use')
     if (!block || block.type !== 'tool_use') return {}
-    const input = block.input as { energy?: string; minutes_available?: number; day_changed?: boolean; eating_out?: boolean; restaurant_name?: string; stated_preference_label?: string; stated_preference_category?: string }
+    const input = block.input as { energy?: string; minutes_available?: number; day_changed?: boolean; eating_out?: boolean; restaurant_name?: string; meal_slot?: string; stated_preference_label?: string; stated_preference_category?: string }
     const result: ParsedSignal = {}
     if (input.energy === 'low' || input.energy === 'normal' || input.energy === 'high') result.energy = input.energy
     if (typeof input.minutes_available === 'number' && input.minutes_available > 0) result.minutesAvailable = Math.round(input.minutes_available)
     if (typeof input.day_changed === 'boolean') result.dayChanged = input.day_changed
     if (typeof input.eating_out === 'boolean') result.eatingOut = input.eating_out
     if (input.restaurant_name && input.restaurant_name.trim()) result.restaurantName = input.restaurant_name.trim()
+    if (input.meal_slot === 'breakfast') result.mealSlot = 'Breakfast'
+    else if (input.meal_slot === 'lunch') result.mealSlot = 'Lunch'
+    else if (input.meal_slot === 'snack') result.mealSlot = 'Snack'
+    else if (input.meal_slot === 'dinner') result.mealSlot = 'Dinner'
     if (input.stated_preference_label && input.stated_preference_label.trim()) {
       const category = input.stated_preference_category
       result.statedPreference = {

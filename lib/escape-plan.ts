@@ -14,6 +14,12 @@ export interface EscapeDay { day: number; total: number; meals: FastFoodMeal[] }
 export interface WeightClass {
   id: number; name: string; range: string; minLbs: number; maxLbs: number
   calTarget: string; proteinTarget: number; days: EscapeDay[]
+  // A wider pool of real, researched restaurant orders that widens WHICH
+  // chain can be matched (pickForRestaurant/pickForNow both search this too)
+  // without disturbing the 5-day "full day, for reference" view on
+  // /plan/eating-out, which only ever reads `days` — added 2026-08-26 per
+  // Asa's ask to cover more real restaurants than the original 5-day set.
+  extraOptions: FastFoodMeal[]
 }
 
 const m = (slot: FastFoodMeal['slot'], restaurant: string, order: string, cal: number, protein: number, carbs: number, fat: number): FastFoodMeal =>
@@ -52,6 +58,25 @@ const WC1: WeightClass = {
       m('Dinner', 'Taco Bell', 'Power Bowl with Chicken, light rice, no sour cream, extra chicken', 450, 45, 20, 16),
     ] },
   ],
+  extraOptions: [
+    m('Breakfast', "Dunkin'", 'Turkey Sausage Egg White & Cheese on English Muffin', 280, 20, 23, 12),
+    m('Breakfast', 'Panera', 'Avocado, Egg White & Spinach Breakfast Sandwich', 320, 15, 33, 15),
+    m('Lunch', 'KFC', '2pc Grilled Chicken Breast (skin off) + Green Beans', 350, 55, 10, 8),
+    m('Lunch', 'Jimmy John\'s', 'Turkey Tom Unwich (lettuce wrap, no mayo)', 260, 24, 9, 14),
+    m('Lunch', "Jersey Mike's", 'Turkey & Provolone Mini, mustard, extra veggies', 290, 22, 32, 8),
+    m('Lunch', 'Culver\'s', 'Grilled Chicken Sandwich, no mayo', 380, 34, 40, 9),
+    m('Lunch', 'Sweetgreen', 'Chicken + greens bowl, light dressing, no cheese', 420, 34, 32, 16),
+    m('Lunch', 'Qdoba', 'Chicken bowl, ½ rice, black beans, salsa, no cheese', 460, 38, 42, 13),
+    m('Snack', 'Firehouse Subs', 'Turkey mini sub, no mayo', 220, 16, 26, 6),
+    m('Snack', "Wingstop", '3 Lemon Pepper boneless wings, no ranch', 220, 17, 12, 12),
+    m('Dinner', 'Popeyes', '2pc Blackened Chicken Tenders + side salad, light dressing', 330, 42, 10, 12),
+    m('Dinner', 'Five Guys', 'Little Hamburger, lettuce wrap, no cheese, light fries shared', 420, 24, 20, 27),
+    m('Dinner', "Raising Cane's", '2 chicken fingers + coleslaw, sauce on side', 360, 27, 22, 18),
+    m('Dinner', 'Shake Shack', 'ShackBurger single, no cheese, no sauce', 340, 20, 26, 17),
+    m('Dinner', 'Domino\'s', '2 thin crust slices, grilled chicken topping', 320, 20, 28, 15),
+    m('Dinner', "Arby's", 'Roast Turkey Farmhouse Sandwich, no mayo, half', 300, 22, 32, 9),
+    m('Dinner', 'Sonic', 'Grilled Chicken Wrap, no ranch', 360, 22, 30, 17),
+  ],
 }
 
 const WC2: WeightClass = {
@@ -88,6 +113,25 @@ const WC2: WeightClass = {
       m('Dinner', 'Taco Bell', 'Power Bowl, double chicken, full rice, no sour cream', 680, 56, 40, 22),
     ] },
   ],
+  extraOptions: [
+    m('Breakfast', "Dunkin'", 'Turkey Sausage Egg White & Cheese Wrap + Greek Yogurt', 420, 30, 35, 18),
+    m('Breakfast', 'Panera', 'Avocado, Egg White & Spinach Sandwich + side of turkey bacon', 460, 28, 40, 20),
+    m('Lunch', 'KFC', '3pc Grilled Chicken Breast (skin off) + Green Beans + Corn', 520, 70, 25, 12),
+    m('Lunch', "Jimmy John's", 'Turkey Tom Unwich, double turkey, extra veggies', 400, 38, 15, 20),
+    m('Lunch', "Jersey Mike's", 'Turkey & Provolone Regular sub, mustard, extra veggies', 490, 34, 45, 14),
+    m('Lunch', "Culver's", 'Grilled Chicken Sandwich + side salad, light dressing', 540, 46, 44, 18),
+    m('Lunch', 'Sweetgreen', 'Double chicken + greens bowl, sweet potato, light dressing', 610, 52, 45, 22),
+    m('Lunch', 'Qdoba', 'Double chicken bowl, full rice, black beans, light cheese', 680, 58, 55, 20),
+    m('Snack', 'Firehouse Subs', 'Turkey medium sub half, no mayo', 300, 22, 30, 10),
+    m('Snack', 'Wingstop', '4 Lemon Pepper boneless wings, no ranch', 300, 23, 16, 16),
+    m('Dinner', 'Popeyes', '3pc Blackened Chicken Tenders + red beans and rice (½)', 560, 62, 30, 20),
+    m('Dinner', 'Five Guys', 'Cheeseburger, lettuce wrap, light fries shared', 650, 40, 30, 40),
+    m('Dinner', "Raising Cane's", '3 chicken fingers + coleslaw + Texas toast (½)', 600, 42, 40, 28),
+    m('Dinner', 'Shake Shack', 'ShackBurger single + fries shared (½)', 560, 26, 48, 30),
+    m('Dinner', "Domino's", '3 thin crust slices, grilled chicken topping', 500, 30, 42, 22),
+    m('Dinner', "Arby's", 'Roast Turkey Farmhouse Sandwich, no mayo, whole', 590, 42, 55, 18),
+    m('Dinner', 'Sonic', 'Grilled Chicken Wrap + side salad, light dressing', 540, 36, 40, 24),
+  ],
 }
 
 const WC3: WeightClass = {
@@ -123,6 +167,25 @@ const WC3: WeightClass = {
       m('Snack', 'Grab & go', 'Core Power Elite Shake (42g protein)', 240, 42, 6, 4),
       m('Dinner', 'Taco Bell', 'Power Bowl, double chicken, keep cheese, light rice, add black beans', 760, 60, 45, 27),
     ] },
+  ],
+  extraOptions: [
+    m('Breakfast', "Dunkin'", 'Turkey Sausage Egg White & Cheese Wrap + Greek Yogurt + banana', 560, 38, 50, 22),
+    m('Breakfast', 'Panera', 'Avocado, Egg White & Spinach Sandwich + turkey bacon + fruit cup', 580, 34, 50, 24),
+    m('Lunch', 'KFC', '4pc Grilled Chicken Breast (skin off) + Green Beans + Corn', 650, 92, 30, 15),
+    m('Lunch', "Jimmy John's", 'Turkey Tom Unwich, double turkey + side of chips shared', 540, 46, 30, 24),
+    m('Lunch', "Jersey Mike's", 'Turkey & Provolone Giant sub (½), mustard, extra veggies', 660, 46, 60, 18),
+    m('Lunch', "Culver's", 'Double Grilled Chicken Sandwich + side salad, light dressing', 700, 62, 48, 22),
+    m('Lunch', 'Sweetgreen', 'Double chicken + steak bowl, sweet potato, light dressing', 760, 64, 50, 28),
+    m('Lunch', 'Qdoba', 'Double chicken + steak bowl, full rice, black beans, cheese', 820, 68, 58, 26),
+    m('Snack', 'Firehouse Subs', 'Turkey medium sub, no mayo', 460, 32, 46, 14),
+    m('Snack', 'Wingstop', '6 Lemon Pepper boneless wings, no ranch', 440, 34, 24, 24),
+    m('Dinner', 'Popeyes', '4pc Blackened Chicken Tenders + red beans and rice', 700, 78, 40, 24),
+    m('Dinner', 'Five Guys', 'Bacon Cheeseburger, lettuce wrap, fries shared', 780, 48, 35, 48),
+    m('Dinner', "Raising Cane's", '4 chicken fingers + coleslaw + Texas toast', 760, 54, 50, 34),
+    m('Dinner', 'Shake Shack', 'SmokeShack + fries shared (½)', 720, 34, 52, 42),
+    m('Dinner', "Domino's", '4 thin crust slices, grilled chicken topping', 660, 40, 55, 28),
+    m('Dinner', "Arby's", 'Roast Turkey Farmhouse Sandwich, whole + side salad', 680, 48, 60, 22),
+    m('Dinner', 'Sonic', 'Grilled Chicken Wrap + Jr. side salad, light dressing', 640, 42, 46, 28),
   ],
 }
 
@@ -178,7 +241,7 @@ export function budgetTierFromWeekly(weeklyBudget: number | null | undefined): P
  * calories. When too few options genuinely fit (she has very little left), falls
  * back to the closest matches rather than silently ignoring calories altogether. */
 export function pickForNow(wc: WeightClass, slot: FastFoodMeal['slot'], budgetTier: PriceTier, epochDay: number, remainingCal?: number): FastFoodMeal[] {
-  const candidates = wc.days.flatMap((d) => d.meals.filter((m) => m.slot === slot))
+  const candidates = wc.days.flatMap((d) => d.meals.filter((m) => m.slot === slot)).concat(wc.extraOptions.filter((m) => m.slot === slot))
   if (candidates.length === 0) return []
   const withinBudget = candidates.filter((m) => TIER_RANK[priceTierFor(m.restaurant, m.order)] <= TIER_RANK[budgetTier])
   let pool = withinBudget.length >= 2 ? withinBudget : candidates
@@ -194,25 +257,31 @@ export function pickForNow(wc: WeightClass, slot: FastFoodMeal['slot'], budgetTi
 
 /** The Next Action engine's restaurant-aware pick (2026-08-26) — Asa's
  * explicit call: no AI-estimated calories driving this decision, real
- * curated data only. Searches this weight class's REAL curated orders for
- * one matching the restaurant she actually named, narrowed to the current
- * meal slot so sizing is automatically realistic (a curated breakfast entry
- * is already a breakfast-appropriate portion — never "use up the whole
- * day's calories in one sitting," which an ungrounded target-calories
- * request could do). Returns null (not a guess) when that exact restaurant
- * isn't in the curated set for this slot — the caller falls back to
- * pickForNow's real-but-generic pick rather than fabricating one. */
-export function pickForRestaurant(wc: WeightClass, restaurantName: string, slot: FastFoodMeal['slot'], remainingCal?: number): FastFoodMeal | null {
+ * curated data only. Searches this weight class's REAL curated orders
+ * (both the 5-day set AND the wider extraOptions pool, 2026-08-26) for ones
+ * matching the restaurant she actually named, narrowed to the current meal
+ * slot so sizing is automatically realistic (a curated breakfast entry is
+ * already a breakfast-appropriate portion — never "use up the whole day's
+ * calories in one sitting," which an ungrounded target-calories request
+ * could do). Returns up to 2 distinct real orders for that exact restaurant
+ * — same "never a bare single pick when a second real one exists" shape as
+ * pickForNow, so the /plan/eating-out expansion screen can show her a real
+ * choice even when she named a specific place. Empty array (not a guess)
+ * when that restaurant isn't in the curated set for this slot — the caller
+ * falls back to pickForNow's real-but-generic picks rather than
+ * fabricating one. */
+export function pickForRestaurant(wc: WeightClass, restaurantName: string, slot: FastFoodMeal['slot'], remainingCal?: number): FastFoodMeal[] {
   const needle = restaurantName.trim().toLowerCase()
-  if (!needle) return null
-  const candidates = wc.days
-    .flatMap((d) => d.meals)
+  if (!needle) return []
+  const candidates = wc.days.flatMap((d) => d.meals).concat(wc.extraOptions)
     .filter((m) => m.slot === slot && (m.restaurant.toLowerCase().includes(needle) || needle.includes(m.restaurant.toLowerCase())))
-  if (candidates.length === 0) return null
-  if (remainingCal != null && remainingCal > 0) {
-    return [...candidates].sort((a, b) => Math.abs(a.cal - remainingCal) - Math.abs(b.cal - remainingCal))[0]
-  }
-  return candidates[0]
+  if (candidates.length === 0) return []
+  const ranked = remainingCal != null && remainingCal > 0
+    ? [...candidates].sort((a, b) => Math.abs(a.cal - remainingCal) - Math.abs(b.cal - remainingCal))
+    : candidates
+  const first = ranked[0]
+  const second = ranked.find((c) => c.order !== first.order)
+  return second ? [first, second] : [first]
 }
 
 /** No API/OAuth needed — DoorDash's public search URL, not order automation. */

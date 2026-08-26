@@ -111,16 +111,21 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   //    didn't name one, or that one isn't in the curated set for this slot.
   const remainingCalories = calorieBudget != null ? Math.max(0, calorieBudget - caloriesLoggedToday) : 500
   let eatingOutPick: FastFoodMeal | null = null
+  let eatingOutSlot: FastFoodMeal['slot'] | null = null
   if (eatingOutToday) {
     const wc = weightClassFor(Number(intake?.weight_lbs) || 170)
     const epochDays = Math.floor(new Date(`${todayISO}T00:00:00Z`).getTime() / 86400000)
     const hour = localHourNumber(tz)
-    const nowSlot: FastFoodMeal['slot'] = hour < 11 ? 'Breakfast' : hour < 15 ? 'Lunch' : hour < 20 ? 'Dinner' : 'Snack'
+    // What SHE said takes priority over the clock (2026-08-26 fix) — a 1pm
+    // "give me a snack idea" must size like a snack, never get treated as
+    // Lunch just because that's what the hour alone would infer.
+    const nowSlot: FastFoodMeal['slot'] = overrides.eatingOutMealSlot ?? (hour < 11 ? 'Breakfast' : hour < 15 ? 'Lunch' : hour < 20 ? 'Dinner' : 'Snack')
+    eatingOutSlot = nowSlot
     const budgetTier = budgetTierFromWeekly(Number(intake?.weekly_food_budget) || null)
     const targetCal = calorieBudget != null ? remainingCalories : undefined
 
     if (overrides.eatingOutRestaurant) {
-      eatingOutPick = pickForRestaurant(wc, overrides.eatingOutRestaurant, nowSlot, targetCal)
+      eatingOutPick = pickForRestaurant(wc, overrides.eatingOutRestaurant, nowSlot, targetCal)[0] || null
     }
     if (!eatingOutPick) {
       const picks = pickForNow(wc, nowSlot, budgetTier, epochDays, targetCal)
@@ -156,5 +161,6 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     workoutBurnAdjustment,
     eatingOutToday,
     eatingOutPick,
+    eatingOutSlot,
   }
 }

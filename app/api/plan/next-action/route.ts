@@ -71,18 +71,23 @@ export async function POST(req: NextRequest) {
     const open = await getOpenAction(enrollmentId)
     const answeringRewardQuestion = open?.id === logId && open.kind === 'reward_question'
 
-    const hasSignal = !!signal.energy || !!signal.minutesAvailable || !!signal.dayChanged || typeof signal.eatingOut === 'boolean' || !!signal.restaurantName
+    const hasSignal = !!signal.energy || !!signal.minutesAvailable || !!signal.dayChanged || typeof signal.eatingOut === 'boolean' || !!signal.restaurantName || !!signal.mealSlot
     if (!hasSignal && !answeringRewardQuestion) return NextResponse.json({ changed: false })
 
     const outcome = answeringRewardQuestion ? await markActionCompleted(logId, enrollmentId) : await markActionSuperseded(logId, enrollmentId)
     if (!outcome.ok) return NextResponse.json({ error: outcome.reason }, { status: statusFor(outcome.reason) })
     // A named restaurant always implies she's eating out, even if the model
-    // didn't separately flag eating_out=true for some reason.
+    // didn't separately flag eating_out=true for some reason. A bare named
+    // meal ("a snack idea") does NOT by itself — she could be asking that
+    // from home — it only refines the SLOT once eating-out is otherwise true
+    // (her own schedule, an explicit eating_out signal, or a named
+    // restaurant), never forces the eating-out flow on its own.
     const result = await getNextAction(enrollmentId, localDateISO(getTimezone()), {
       energy: signal.energy,
       minutesAvailable: signal.minutesAvailable,
       eatingOut: signal.eatingOut || (signal.restaurantName ? true : undefined),
       eatingOutRestaurant: signal.restaurantName,
+      eatingOutMealSlot: signal.mealSlot,
     })
     return NextResponse.json({ changed: true, ...result })
   }
@@ -98,9 +103,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
   if (action === 'day_changed') {
+    // Grabbed BEFORE superseding, purely so the fresh pick below can skip
+    // re-serving this exact one (see index.ts's getNextAction) — the row
+    // itself is still closed out the same way regardless.
+    const closing = await getOpenAction(enrollmentId)
     const outcome = await markActionSuperseded(logId, enrollmentId)
     if (!outcome.ok) return NextResponse.json({ error: outcome.reason }, { status: statusFor(outcome.reason) })
-    const result = await getNextAction(enrollmentId, localDateISO(getTimezone()))
+    const result = await getNextAction(enrollmentId, localDateISO(getTimezone()), {}, closing?.action_key)
     return NextResponse.json(result)
   }
   return NextResponse.json({ error: 'unknown action' }, { status: 400 })
