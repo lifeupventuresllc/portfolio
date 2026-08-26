@@ -156,14 +156,25 @@ export default function NextActionCard() {
           as the one dominant thing on the card, not squeezed against the
           controls underneath. */}
       <div className="relative flex items-center justify-center py-8">
-        <button
-          onClick={expand}
-          disabled={!EXPANSION_ROUTE[action.kind]}
+        {/* Real bug caught live (2026-08-26): this was a <button>, and it
+            contains the Deepgram mic button below — a <button> nested
+            inside another <button> is invalid HTML5 (interactive content
+            can't contain interactive content). Browsers handle that
+            unpredictably, which is the actual reason the mic wasn't
+            reliably catching taps, not the transcription engine itself.
+            A div with the same click/keyboard behavior fixes this while
+            staying just as accessible. */}
+        <div
+          role={EXPANSION_ROUTE[action.kind] ? 'button' : undefined}
+          tabIndex={EXPANSION_ROUTE[action.kind] ? 0 : undefined}
+          onClick={EXPANSION_ROUTE[action.kind] ? expand : undefined}
+          onKeyDown={EXPANSION_ROUTE[action.kind] ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expand() } } : undefined}
           className="relative rounded-full flex items-center justify-center text-center active:scale-[0.98] transition-transform"
           style={{
             width: 'clamp(220px, 68vw, 300px)', height: 'clamp(220px, 68vw, 300px)',
             background: 'conic-gradient(from 200deg, #E5A93C, #7fbf94, #0f7a53, #E5A93C)',
             boxShadow: '0 30px 50px -18px rgba(0,0,0,0.65)',
+            cursor: EXPANSION_ROUTE[action.kind] ? 'pointer' : 'default',
           }}
         >
           {/* Outer gold ring — hovers OUTSIDE the circle with a real gap
@@ -209,7 +220,7 @@ export default function NextActionCard() {
               }
             />
           </span>
-        </button>
+        </div>
       </div>
       <style>{`
         .nac-ring-breathe { animation: nac-ring-breathe 3.2s ease-in-out infinite; }
