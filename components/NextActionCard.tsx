@@ -178,25 +178,25 @@ export default function NextActionCard() {
           disabled={!EXPANSION_ROUTE[action.kind]}
           className="relative rounded-full flex items-center justify-center text-center active:scale-[0.98] transition-transform"
           style={{
-            width: 208, height: 208,
+            width: 'clamp(240px, 74vw, 340px)', height: 'clamp(240px, 74vw, 340px)',
             background: 'conic-gradient(from 210deg, #E5A93C, #f0c47e, #E9A0A0, #E5A93C)',
             boxShadow: '0 0 0 6px rgba(233,160,160,0.14), 0 20px 40px -16px rgba(0,0,0,0.5)',
           }}
         >
-          <span className="font-bold leading-snug px-7" style={{ color: '#1b1608', fontSize: 16 }}>{action.instruction}</span>
+          <span className="font-bold leading-snug px-9" style={{ color: '#1b1608', fontSize: 'clamp(16px, 4.6vw, 20px)' }}>{action.instruction}</span>
           <span
             onClick={(e) => { e.stopPropagation(); if (listening) { stopVoice() } else { startVoice() } }}
             role="button"
             aria-label={listening ? 'Stop listening' : 'Talk instead of typing'}
             className="absolute rounded-full flex items-center justify-center"
             style={{
-              bottom: 26, left: '50%', transform: 'translateX(-50%)', width: 34, height: 34,
+              bottom: 32, left: '50%', transform: 'translateX(-50%)', width: 38, height: 38,
               background: listening ? 'rgba(233,160,160,0.9)' : 'rgba(255,255,255,0.22)',
               border: '1px solid rgba(255,255,255,0.4)',
               animation: listening ? 'nac-pulse 1.2s ease-in-out infinite' : undefined,
             }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1b1608" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1b1608" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
               <path d="M19 11a7 7 0 0 1-14 0" />
               <path d="M12 18v4" />
@@ -206,18 +206,20 @@ export default function NextActionCard() {
       </div>
       <style>{`@keyframes nac-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(233,160,160,0.5); } 50% { box-shadow: 0 0 0 10px rgba(233,160,160,0); } }`}</style>
 
-      {note && <p className="text-ivory/50 text-xs text-center mb-3">{note}</p>}
-      {listening && <p className="text-[#E9A0A0] text-xs text-center mb-3 font-semibold">Listening…</p>}
+      {note && <p className="text-ivory/50 text-[11px] text-center mb-2">{note}</p>}
+      {listening && <p className="text-[#E9A0A0] text-[11px] text-center mb-2 font-semibold">Listening…</p>}
 
-      <div className="flex flex-col gap-2.5">
-        <button onClick={markDone} disabled={busy} className="bg-gold text-obsidian py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl active:scale-95 transition-transform disabled:opacity-60">
+      {/* Small on purpose — the circle is the one thing on this screen;
+          these are just the escape hatches, not a second focal point. */}
+      <div className="flex flex-col items-center gap-1.5">
+        <button onClick={markDone} disabled={busy} className="bg-gold text-obsidian px-7 py-2 font-bold text-xs uppercase tracking-wider rounded-full active:scale-95 transition-transform disabled:opacity-60">
           {done ? 'Nice!' : 'Done'}
         </button>
         <div className="flex items-center justify-center gap-4">
-          <button onClick={dayChanged} disabled={busy} className="text-ivory/60 text-xs font-semibold py-2 disabled:opacity-60">
+          <button onClick={dayChanged} disabled={busy} className="text-ivory/50 text-[11px] font-semibold py-1.5 disabled:opacity-60">
             My day changed
           </button>
-          <button onClick={() => setShowMessage((s) => !s)} disabled={busy} className="text-ivory/60 text-xs font-semibold py-2 disabled:opacity-60">
+          <button onClick={() => setShowMessage((s) => !s)} disabled={busy} className="text-ivory/50 text-[11px] font-semibold py-1.5 disabled:opacity-60">
             Something else?
           </button>
         </div>
