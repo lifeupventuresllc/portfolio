@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { Playfair_Display, Poppins } from "next/font/google";
 import "./globals.css";
 import SiteChrome from "@/components/SiteChrome";
 import JsonLd, { organizationSchema } from "@/components/JsonLd";
@@ -15,6 +16,13 @@ const geistMono = localFont({
   variable: "--font-geist-mono",
   weight: "100 900",
 });
+// Next Action dashboard redesign (2026-08-26, Asa's pick after a live
+// mockup review): Playfair Display for her name/greeting, Poppins for the
+// rest of that screen's UI text — the fitness+beauty pairing he chose.
+// Scoped as CSS vars site-wide (cheap, same pattern as Geist above) but
+// only actually used on the /plan dashboard for now.
+const playfairDisplay = Playfair_Display({ subsets: ["latin"], weight: ["600", "700"], style: ["italic", "normal"], variable: "--font-playfair" });
+const poppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "700"], variable: "--font-poppins" });
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.asaluke.io'),
@@ -64,7 +72,7 @@ export default function RootLayout({
         <JsonLd data={organizationSchema} />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-obsidian min-h-[100dvh] flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${poppins.variable} antialiased bg-obsidian min-h-[100dvh] flex flex-col`}
       >
         <PWARegister />
         <SiteChrome>{children}</SiteChrome>

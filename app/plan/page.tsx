@@ -50,7 +50,7 @@ export default async function PlanDashboard() {
       <div className="max-w-3xl mx-auto">
         {user.is_anonymous ? <AnonymousSessionBanner /> : (!user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />)}
         <div className="flex items-center justify-between mb-4 px-1 pt-2">
-          <p className="text-[#E5A93C] text-xs font-semibold tracking-[0.25em] uppercase">Life-Up Fitness</p>
+          <p className="text-[#E5A93C] text-xs font-semibold tracking-[0.25em] uppercase" style={{ fontFamily: 'var(--font-poppins)' }}>Life-Up Fitness</p>
           <div className="flex items-center gap-2">
             {/* Real fix, live feedback (beta feedback Priority 1, 2026-08-25):
                 seeing an icon isn't the same as understanding what it does —
@@ -80,12 +80,12 @@ export default async function PlanDashboard() {
             boxShadow: '0 0 20px -6px rgba(229,169,60,0.35)',
           }}
         >
-          <h1 className="font-bold text-white leading-[1.02] tracking-tight mb-1" style={{ fontFamily: 'Georgia, "Times New Roman", ui-serif, serif', fontSize: 'clamp(2rem, 7vw, 2.5rem)' }}>Hey {firstName}</h1>
+          <h1 className="font-bold text-white leading-[1.02] tracking-tight mb-1" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontStyle: 'italic', fontSize: 'clamp(2rem, 7vw, 2.5rem)' }}>Hey {firstName}</h1>
           <div className="mb-2"><StreakChip /></div>
           {selfTalk && (
             <>
-              <p className="text-[#E5A93C] text-[9px] uppercase tracking-[0.22em] font-bold mb-1">Today&apos;s self-talk</p>
-              <p className="text-white text-[15px] leading-snug italic text-balance">&ldquo;{selfTalk}&rdquo;</p>
+              <p className="text-[#E5A93C] text-[9px] uppercase tracking-[0.22em] font-bold mb-1" style={{ fontFamily: 'var(--font-poppins)' }}>Today&apos;s self-talk</p>
+              <p className="text-white text-[15px] leading-snug italic text-balance" style={{ fontFamily: 'var(--font-poppins)' }}>&ldquo;{selfTalk}&rdquo;</p>
             </>
           )}
         </div>

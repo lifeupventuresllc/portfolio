@@ -33,7 +33,7 @@ export default function GoalProgressBar({
 }) {
   if (goal === 'maintain') {
     return (
-      <Link href="/plan/checkin" className="block rounded-2xl p-3" style={{ background: '#083023', border: '1px solid rgba(229,169,60,0.3)' }}>
+      <Link href="/plan/checkin" className="block rounded-2xl p-3" style={{ background: '#083023', border: '1px solid rgba(229,169,60,0.3)', fontFamily: 'var(--font-poppins)' }}>
         <p className="text-[#E5A93C] text-[9px] uppercase tracking-wider font-semibold mb-0.5">Your progress</p>
         <p className="text-white font-bold text-sm">Holding steady at {Math.round(currentWeight)} lbs</p>
         <p className="text-white/50 text-[11px] mt-0.5">Right around your goal of {Math.round(goalWeight)} lbs — consistency is the whole game now.</p>
@@ -50,7 +50,7 @@ export default function GoalProgressBar({
   const verb = goal === 'lose' ? 'down' : 'up'
 
   return (
-    <Link href="/plan/checkin" className="block rounded-2xl p-3" style={{ background: '#083023', border: '1px solid rgba(229,169,60,0.3)' }}>
+    <Link href="/plan/checkin" className="block rounded-2xl p-3" style={{ background: '#083023', border: '1px solid rgba(229,169,60,0.3)', fontFamily: 'var(--font-poppins)' }}>
       <div className="flex items-center justify-between mb-1.5">
         <p className="text-[#E5A93C] text-[9px] uppercase tracking-wider font-semibold">Your progress</p>
         <p className="text-white font-bold text-xs">
