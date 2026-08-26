@@ -245,7 +245,10 @@ export function pickForNow(wc: WeightClass, slot: FastFoodMeal['slot'], budgetTi
   if (candidates.length === 0) return []
   const withinBudget = candidates.filter((m) => TIER_RANK[priceTierFor(m.restaurant, m.order)] <= TIER_RANK[budgetTier])
   let pool = withinBudget.length >= 2 ? withinBudget : candidates
-  if (remainingCal != null && remainingCal > 0) {
+  // >= 0, not > 0 — see pickForRestaurant's comment: remainingCal===0 (she's
+  // already at budget) must still bias toward the smallest real option,
+  // not skip the whole calorie-fit step and return an arbitrary one.
+  if (remainingCal != null && remainingCal >= 0) {
     const fitsCalories = pool.filter((m) => m.cal <= remainingCal * 1.15)
     pool = fitsCalories.length >= 2 ? fitsCalories : [...pool].sort((a, b) => Math.abs(a.cal - remainingCal) - Math.abs(b.cal - remainingCal))
   }
@@ -270,13 +273,29 @@ export function pickForNow(wc: WeightClass, slot: FastFoodMeal['slot'], budgetTi
  * when that restaurant isn't in the curated set for this slot — the caller
  * falls back to pickForNow's real-but-generic picks rather than
  * fabricating one. */
+// Strips apostrophes/hyphens and collapses whitespace before comparing —
+// real bug caught under stress-testing (2026-08-26): voice transcription
+// (Deepgram/browser SpeechRecognition, which is what actually feeds this
+// restaurant name) almost never renders a possessive apostrophe or a
+// hyphen, so "mcdonalds", "wendys", "jimmy johns", and "chick fil a" were
+// all silently missing McDonald's/Wendy's/Jimmy John's/Chick-fil-A — 7 of
+// the curated restaurants use an apostrophe or hyphen in their stored name
+// — and falling back to the generic pick instead of the exact place she
+// said, defeating the point of this feature for those chains specifically.
+const normalizeRestaurant = (s: string) => s.toLowerCase().replace(/['’]/g, '').replace(/-/g, ' ').replace(/\s+/g, ' ').trim()
+
 export function pickForRestaurant(wc: WeightClass, restaurantName: string, slot: FastFoodMeal['slot'], remainingCal?: number): FastFoodMeal[] {
-  const needle = restaurantName.trim().toLowerCase()
+  const needle = normalizeRestaurant(restaurantName)
   if (!needle) return []
   const candidates = wc.days.flatMap((d) => d.meals).concat(wc.extraOptions)
-    .filter((m) => m.slot === slot && (m.restaurant.toLowerCase().includes(needle) || needle.includes(m.restaurant.toLowerCase())))
+    .filter((m) => m.slot === slot && (normalizeRestaurant(m.restaurant).includes(needle) || needle.includes(normalizeRestaurant(m.restaurant))))
   if (candidates.length === 0) return []
-  const ranked = remainingCal != null && remainingCal > 0
+  // >= 0, not > 0 (real gap caught under stress-testing) — when she's
+  // already at (or over) her calorie budget, remainingCal is exactly 0
+  // (state.ts clamps it there), and skipping the sort entirely returned
+  // whatever happened to be first in the data instead of genuinely
+  // steering toward the smallest real option available.
+  const ranked = remainingCal != null && remainingCal >= 0
     ? [...candidates].sort((a, b) => Math.abs(a.cal - remainingCal) - Math.abs(b.cal - remainingCal))
     : candidates
   const first = ranked[0]

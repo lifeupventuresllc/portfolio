@@ -218,12 +218,30 @@ async function resolveOwnedOpenRow(logId: string, enrollmentId: string, column: 
   if (!existing || existing.enrollment_id !== enrollmentId) return { ok: false, reason: 'not_found' }
   if (existing.completed_at || existing.skipped_at || existing.superseded_at) return { ok: false, reason: 'already_resolved' }
 
+  // .is(column, null) here (real race caught under stress-testing,
+  // 2026-08-26): the check above reads stale-by-the-time-it-matters state
+  // under concurrency — two near-simultaneous requests for the same logId
+  // (a double-tap, or a client retry after a slow response) could both pass
+  // that check before either writes. Without a guard on the write itself,
+  // both updates would "succeed" and both would go on to call
+  // logEatenSuggestion, double-inserting the same real order into her food
+  // log — corrupting the exact number this feature exists to keep accurate.
+  // Guarding the WHERE clause on the actual DB row makes only the first
+  // writer win; the loser sees 0 rows affected and is told the same
+  // already_resolved story a same-row retry would get anyway.
+  // All three columns guarded, not just `column` — closes the same race for
+  // two DIFFERENT actions on the same row too (e.g. "done" and "skip" both
+  // in flight at once), not only a same-action double-tap.
   const { data, error } = await svc
     .from('next_action_log')
     .update({ [column]: new Date().toISOString() })
     .eq('id', logId)
+    .is('completed_at', null)
+    .is('skipped_at', null)
+    .is('superseded_at', null)
     .select('id')
-  if (error || !data || data.length === 0) return { ok: false, reason: 'update_failed' }
+  if (error) return { ok: false, reason: 'update_failed' }
+  if (!data || data.length === 0) return { ok: false, reason: 'already_resolved' }
   return { ok: true, kind: existing.kind as string, userId: existing.user_id as string, foodLogData: existing.food_log_data as FoodLogData | null }
 }
 
