@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { hapticTap } from '@/lib/haptics'
+import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
 
 // Prompt 1's "Next Action" — the single-instruction circle, now the
 // dashboard's primary surface (Asa's call, 2026-08-25: "this is the new
@@ -22,29 +23,6 @@ const EXPANSION_ROUTE: Partial<Record<ActionKind, string>> = {
   location: '/plan/eating-out',
 }
 
-// Minimal ambient TS surface for the Web Speech API — not in lib.dom.d.ts by
-// default, and only ever touched behind a feature-detect below.
-type SpeechRecognitionLike = {
-  lang: string; interimResults: boolean; maxAlternatives: number; continuous: boolean
-  onresult: ((e: { results: { length: number; [i: number]: { isFinal: boolean; [j: number]: { transcript: string } } } }) => void) | null
-  onend: (() => void) | null
-  onerror: ((e: { error: string }) => void) | null
-  start: () => void
-  stop: () => void
-}
-
-// Real, human-readable reasons instead of the mic just silently going dark
-// (Asa's live-testing report, 2026-08-26: "keeps getting cut on and off and
-// nothing comes through" — the actual cause was errors being swallowed with
-// no feedback at all).
-const VOICE_ERROR_MESSAGES: Record<string, string> = {
-  'not-allowed': "Mic access is blocked — check your browser's site settings.",
-  'service-not-allowed': "Mic access is blocked — check your browser's site settings.",
-  'no-speech': "Didn't catch that — tap the mic and try again.",
-  'audio-capture': 'No microphone found on this device.',
-  network: 'Connection dropped — tap the mic to try again.',
-}
-
 export default function NextActionCard() {
   const router = useRouter()
   const [action, setAction] = useState<NextAction | null>(null)
@@ -54,10 +32,6 @@ export default function NextActionCard() {
   const [showMessage, setShowMessage] = useState(false)
   const [message, setMessage] = useState('')
   const [note, setNote] = useState<string | null>(null)
-  const [listening, setListening] = useState(false)
-  const [voiceSupported, setVoiceSupported] = useState(false)
-  const [voiceError, setVoiceError] = useState<string | null>(null)
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   // Auto-grow the transcript box to fit whatever's in it — a long voice
@@ -71,11 +45,6 @@ export default function NextActionCard() {
     el.style.height = 'auto'
     el.style.height = `${el.scrollHeight}px`
   }, [message, showMessage])
-
-  useEffect(() => {
-    const w = window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike }
-    setVoiceSupported(!!(w.SpeechRecognition || w.webkitSpeechRecognition))
-  }, [])
 
   const load = async () => {
     setLoading(true)
@@ -135,67 +104,21 @@ export default function NextActionCard() {
     }
   }
 
-  // Real voice input (2026-08-25: browser speech-to-text, not the deferred
-  // Deepgram pipeline — that needs an account/env vars that were never set
-  // up). Tapping the mic talks straight into the same message/NL path
-  // everything else in this engine already uses — never a separate voice-
-  // only flow. Falls back to opening the text box on unsupported browsers
-  // instead of a dead button.
-  //
-  // Real bug caught live (2026-08-26): the first version sent the final
-  // transcript straight to the API with nothing ever shown on screen — she
-  // had no way to see what it heard, or confirm before it acted. Fixed:
-  // interimResults is on and every result (partial or final) is written
-  // into the visible text box AS she talks, same as normal phone dictation.
-  // Only the final result actually submits.
-  const startVoice = () => {
-    if (busy) return
-    const w = window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike }
-    const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition
-    if (!Ctor) { setShowMessage(true); return }
-    hapticTap()
+  // Real voice input (2026-08-26 fix): the circle's mic used to run its own
+  // raw browser SpeechRecognition call — the exact same approach that used
+  // to cause "the mic cuts off mid-sentence" in Coach Asa's chat, before
+  // that was fixed by moving to a real Deepgram Nova-3 streaming pipeline
+  // (lib/voice/useDeepgramTranscription.ts, via components/DeepgramVoiceInput.tsx).
+  // Reusing that exact same proven component here instead of re-solving an
+  // already-solved problem worse. It manages its own mic/listening state
+  // and gracefully falls back to the plain browser API only if Deepgram
+  // isn't reachable — never a silent dead end.
+  const onVoiceInterim = (text: string) => {
     setShowMessage(true)
-    setMessage('')
-    setVoiceError(null)
-    const recognition = new Ctor()
-    recognition.lang = 'en-US'
-    recognition.interimResults = true
-    recognition.maxAlternatives = 1
-    // Real bug caught live (2026-08-26): "the mic keeps cutting on and off."
-    // Without `continuous`, recognition stops at the FIRST brief pause in
-    // speech — completely normal mid-sentence — which reads as the mic
-    // randomly dying. `continuous: true` keeps it listening through natural
-    // pauses until she stops it herself or a real error ends it.
-    recognition.continuous = true
-    recognition.onresult = (e) => {
-      let finalTranscript = ''
-      let interimTranscript = ''
-      for (let i = 0; i < e.results.length; i++) {
-        const result = e.results[i]
-        const transcript = result[0]?.transcript || ''
-        if (result.isFinal) finalTranscript += transcript
-        else interimTranscript += transcript
-      }
-      setMessage(finalTranscript || interimTranscript)
-      if (finalTranscript) sendMessage(finalTranscript)
-    }
-    recognition.onend = () => setListening(false)
-    // The other real bug: errors (mic permission denied, no speech heard, a
-    // dropped connection) were silently swallowed — she'd just see it go
-    // dark with zero explanation, indistinguishable from "nothing happened."
-    recognition.onerror = (e) => {
-      setListening(false)
-      if (e.error === 'aborted') return // she stopped it herself — not an error worth surfacing
-      setVoiceError(VOICE_ERROR_MESSAGES[e.error] || "Voice input hit a snag — tap the mic to try again.")
-    }
-    recognitionRef.current = recognition
-    setListening(true)
-    recognition.start()
+    setMessage(text)
   }
-
-  const stopVoice = () => {
-    recognitionRef.current?.stop()
-    setListening(false)
+  const onVoiceFinal = (text: string) => {
+    sendMessage(text)
   }
 
   // Tapping the instruction opens the one supporting screen the engine
@@ -262,28 +185,33 @@ export default function NextActionCard() {
             }}
           />
           <span className="relative font-semibold leading-snug px-9" style={{ zIndex: 2, color: '#0a2417', fontFamily: 'var(--font-poppins)', fontSize: 'clamp(15px, 4.2vw, 18px)' }}>{action.instruction}</span>
+          {/* Real Deepgram voice pipeline (same one Coach Asa's chat uses) —
+              not a separate implementation. stopPropagation keeps a mic tap
+              from also triggering the circle's own expand() navigation. */}
           <span
-            onClick={(e) => { e.stopPropagation(); if (listening) { stopVoice() } else { startVoice() } }}
-            role="button"
-            aria-label={listening ? 'Stop listening' : 'Talk instead of typing'}
-            className="absolute rounded-full flex items-center justify-center"
-            style={{
-              zIndex: 2, bottom: 28, left: '50%', transform: 'translateX(-50%)', width: 34, height: 34,
-              background: listening ? 'rgba(233,160,160,0.9)' : 'rgba(0,0,0,0.32)',
-              border: '1px solid rgba(255,255,255,0.35)',
-              animation: listening ? 'nac-pulse 1.2s ease-in-out infinite' : undefined,
-            }}
+            className="absolute"
+            style={{ zIndex: 2, bottom: 28, left: '50%', transform: 'translateX(-50%)' }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
-              <path d="M19 11a7 7 0 0 1-14 0" />
-              <path d="M12 18v4" />
-            </svg>
+            <DeepgramVoiceInput
+              source="next_action"
+              onInterim={onVoiceInterim}
+              onResult={onVoiceFinal}
+              idleLabel="Talk instead of typing"
+              className="w-[34px] h-[34px] rounded-full flex items-center justify-center bg-black/32 border border-white/35 text-white"
+              activeClassName="w-[34px] h-[34px] rounded-full flex items-center justify-center bg-[#E9A0A0] border border-white/40"
+              icon={
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
+                  <path d="M19 11a7 7 0 0 1-14 0" />
+                  <path d="M12 18v4" />
+                </svg>
+              }
+            />
           </span>
         </button>
       </div>
       <style>{`
-        @keyframes nac-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(233,160,160,0.5); } 50% { box-shadow: 0 0 0 10px rgba(233,160,160,0); } }
         .nac-ring-breathe { animation: nac-ring-breathe 3.2s ease-in-out infinite; }
         @keyframes nac-ring-breathe {
           0%, 100% { box-shadow: 0 0 20px 1px rgba(229,169,60,0.3); transform: scale(1); }
@@ -293,8 +221,6 @@ export default function NextActionCard() {
       `}</style>
 
       {note && <p className="text-ivory/50 text-[11px] text-center mb-2" style={{ fontFamily: 'var(--font-poppins)' }}>{note}</p>}
-      {listening && <p className="text-[#E9A0A0] text-[11px] text-center mb-2 font-semibold" style={{ fontFamily: 'var(--font-poppins)' }}>Listening…</p>}
-      {voiceError && <p className="text-[#E9A0A0] text-[11px] text-center mb-2 font-semibold" style={{ fontFamily: 'var(--font-poppins)' }}>{voiceError}</p>}
 
       {/* Small on purpose — the circle is the one thing on this screen;
           these are just the escape hatches, not a second focal point. */}
@@ -323,7 +249,7 @@ export default function NextActionCard() {
             value={message}
             onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-            placeholder={voiceSupported ? "Tell it what's going on…" : "Voice isn't supported on this browser — type here…"}
+            placeholder="Tell it what's going on…"
             rows={1}
             className="flex-1 bg-black/20 border border-white/15 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-ivory/30 focus:outline-none focus:border-gold/60 resize-none max-h-60 overflow-y-auto"
           />

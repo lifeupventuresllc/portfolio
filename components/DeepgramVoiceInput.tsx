@@ -38,7 +38,7 @@ export default function DeepgramVoiceInput({
   icon?: ReactNode
   // Written to voice_transcripts.source for later review — which surface a
   // given recording came from.
-  source: 'coach_hero' | 'operator_chat' | 'voice_test'
+  source: 'coach_hero' | 'operator_chat' | 'voice_test' | 'next_action'
   // Full replacement for the idle/listening button classes — lets a caller
   // (e.g. OperatorChat's unified pill composer) reshape this into whatever
   // circular/pill button its own layout needs without forking the actual
