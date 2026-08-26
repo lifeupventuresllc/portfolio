@@ -188,8 +188,10 @@ export default function NextActionCard() {
         >
           {/* Outer gold ring — hovers OUTSIDE the circle with a real gap
               (Asa's correction: a box-shadow ring blended into the edge
-              instead of reading as separate). A distinct element on purpose. */}
-          <span aria-hidden className="absolute rounded-full pointer-events-none" style={{ inset: -22, border: '2px solid #E5A93C', boxShadow: '0 0 24px 2px rgba(229,169,60,0.35)' }} />
+              instead of reading as separate). A distinct element on purpose.
+              Pulses gently on its own (glow + scale, never the text inside)
+              so the card reads as alive without moving what she's reading. */}
+          <span aria-hidden className="absolute rounded-full pointer-events-none nac-ring-breathe" style={{ inset: -22, border: '2px solid #E5A93C' }} />
           {/* Ridged inner texture — a thin sunburst ring just inside the
               circle's own edge, for a "dial" quality instead of a flat fill. */}
           <span
@@ -223,7 +225,15 @@ export default function NextActionCard() {
           </span>
         </button>
       </div>
-      <style>{`@keyframes nac-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(233,160,160,0.5); } 50% { box-shadow: 0 0 0 10px rgba(233,160,160,0); } }`}</style>
+      <style>{`
+        @keyframes nac-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(233,160,160,0.5); } 50% { box-shadow: 0 0 0 10px rgba(233,160,160,0); } }
+        .nac-ring-breathe { animation: nac-ring-breathe 3.2s ease-in-out infinite; }
+        @keyframes nac-ring-breathe {
+          0%, 100% { box-shadow: 0 0 20px 1px rgba(229,169,60,0.3); transform: scale(1); }
+          50% { box-shadow: 0 0 34px 6px rgba(229,169,60,0.55); transform: scale(1.025); }
+        }
+        @media (prefers-reduced-motion: reduce) { .nac-ring-breathe { animation: none; } }
+      `}</style>
 
       {note && <p className="text-ivory/50 text-[11px] text-center mb-2" style={{ fontFamily: 'var(--font-poppins)' }}>{note}</p>}
       {listening && <p className="text-[#E9A0A0] text-[11px] text-center mb-2 font-semibold" style={{ fontFamily: 'var(--font-poppins)' }}>Listening…</p>}
