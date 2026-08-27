@@ -99,7 +99,24 @@ export default function NextActionCard() {
     setBusy(true)
     try {
       const res = await fetch('/api/plan/next-action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logId: action.logId, action: 'message', message: text }) })
-      const json = await res.json()
+      // Real bug caught live, 2026-08-27: a failed request (a stale logId
+      // from a superseded/expired action, a session hiccup, a transient
+      // server error) used to throw inside this try with no catch —
+      // `finally` still reset `busy`, but nothing else ran, so hitting Send
+      // visibly did NOTHING: no note, no instruction change, message still
+      // sitting in the box. From her side that reads as "it's broken," with
+      // zero signal about why. Now every failure path — a non-OK response,
+      // or the body not even being valid JSON — surfaces a real note
+      // instead of failing silently.
+      if (!res.ok) {
+        setNote(res.status === 409 ? "That instruction already moved on — pull up the newest one and try again." : 'Something went wrong sending that — try again.')
+        return
+      }
+      const json = await res.json().catch(() => null)
+      if (!json) {
+        setNote('Something went wrong sending that — try again.')
+        return
+      }
       if (json.changed && json.logId) {
         setAction(json)
         setNote(null)
@@ -108,6 +125,8 @@ export default function NextActionCard() {
       }
       setMessage('')
       setShowMessage(false)
+    } catch {
+      setNote('Something went wrong sending that — check your connection and try again.')
     } finally {
       setBusy(false)
     }
