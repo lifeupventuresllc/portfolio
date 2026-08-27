@@ -66,6 +66,20 @@ export type UserStateSnapshot = {
   // /plan/eating-out expansion screen sizes to the SAME slot she meant,
   // not whatever the clock says by the time she taps through.
   eatingOutSlot: 'Breakfast' | 'Lunch' | 'Snack' | 'Dinner' | null
+
+  // ---- Nutrition fallback candidates (Asa's ask, 2026-08-27) ----
+  // Real bodyweight on file, when she's completed intake — the water
+  // fallback's glass count is computed from THIS, never a guessed default.
+  weightLbs: number | null
+  // Her real stored protein target/logged-today, same source the cal/protein
+  // glance row on /plan/today already reads — never a separate number.
+  proteinBudget: number | null
+  proteinLoggedToday: number
+  // Her actual next real planned meal's name (from the stored weekly meal
+  // plan, matched to the current local hour's slot) — real data, never an
+  // invented meal. Null whenever no meal plan exists yet or today has no
+  // meal at that slot (e.g. Sunday's recovery day).
+  nextMealName: string | null
 }
 
 // Ephemeral, single-call overrides derived from an explicit signal (a

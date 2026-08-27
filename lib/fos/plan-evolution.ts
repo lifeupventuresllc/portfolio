@@ -1,5 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/server'
-import { addDaysISO } from '@/lib/localdate'
+import { addDaysISO, getTimezone, localDateISO } from '@/lib/localdate'
 
 // ============================================================
 // Layer 1 Phase 5 — plan evolution. lib/fos/pattern.ts catches ACUTE dips
@@ -15,11 +15,24 @@ import { addDaysISO } from '@/lib/localdate'
 const STRUCTURAL_WINDOW_DAYS = 21
 const MIN_ACTIVE_DAYS = 6 // enough real data across 3 weeks to trust the read, not a brand-new user
 const DECLINE_COOLDOWN_DAYS = 10 // a real 21-day pattern doesn't vanish overnight — "not now" must mean it, not just "ask me again tomorrow"
+// Asa's call, 2026-08-27: 21 days isn't chosen for "habit formation" (that
+// popular number isn't well-supported research) — it's reused here purely
+// because it's already this system's bar for "a real sustained pattern, not
+// one rough week," same reasoning as every other signal below. 4 taps in
+// that window is the same bar track_mismatch already uses for "this has
+// become her real default, not an occasional exception."
+const KEEP_IT_SIMPLE_THRESHOLD = 4
 
 export type StructuralSignal =
   | { kind: 'workout_days_mismatch'; plannedPerWeek: number; recommendedPerWeek: number }
   | { kind: 'track_mismatch'; plannedTrack: 'home' | 'gym'; recommendedTrack: 'home' | 'gym' }
   | { kind: 'eating_out_structural'; weeklyRate: number }
+  // "Keep it simple" (the Next Action circle's disruption button) swapping
+  // out a real assigned WORKOUT this often isn't a bad week — it's her
+  // telling the app, over and over, that the workout itself is more than
+  // she actually wants right now. Recommends BOTH fewer days and an easier
+  // default session (Asa's explicit call — not either/or).
+  | { kind: 'workout_frequent_simplify'; timesSimplified: number; plannedPerWeek: number; recommendedPerWeek: number }
 
 export type StructuralAssessment = { hasRecommendation: boolean; signals: StructuralSignal[] }
 
@@ -27,7 +40,7 @@ export async function assessStructuralPattern(enrollmentId: string, todayISO: st
   const svc = createServiceClient()
   const windowStart = addDaysISO(todayISO, -(STRUCTURAL_WINDOW_DAYS - 1))
 
-  const [{ data: intake }, { data: workoutPlanRow }, { data: progressRows }, { data: adjustmentRows }, { data: foodRows }, { data: declineRows }] = await Promise.all([
+  const [{ data: intake }, { data: workoutPlanRow }, { data: progressRows }, { data: adjustmentRows }, { data: foodRows }, { data: declineRows }, { data: simplifyRows }] = await Promise.all([
     svc.from('challenge_intake').select('days_per_week').eq('enrollment_id', enrollmentId).maybeSingle(),
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollmentId).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('logged_on').eq('enrollment_id', enrollmentId).eq('note', '__daily__').gte('logged_on', windowStart),
@@ -35,6 +48,11 @@ export async function assessStructuralPattern(enrollmentId: string, todayISO: st
     svc.from('challenge_food_log').select('logged_on, source').eq('enrollment_id', enrollmentId).gte('logged_on', windowStart),
     svc.from('fos_events').select('payload').eq('enrollment_id', enrollmentId).eq('payload->>source', 'plan_evolution')
       .gte('occurred_on', addDaysISO(todayISO, -(DECLINE_COOLDOWN_DAYS - 1))),
+    // "Keep it simple" / day-changed disruptions on a real workout action —
+    // see the signal computation below for how this is narrowed to actual
+    // same-day taps, not next-day auto-rollover.
+    svc.from('next_action_log').select('shown_at, superseded_at').eq('enrollment_id', enrollmentId).eq('kind', 'workout')
+      .not('superseded_at', 'is', null).gte('shown_at', `${windowStart}T00:00:00Z`),
   ])
 
   // "Not now" has to actually mean it — suppress only the specific signal
@@ -88,15 +106,42 @@ export async function assessStructuralPattern(enrollmentId: string, todayISO: st
   const weeklyRate = eatOutDays / weeks
   if (weeklyRate >= 4) signals.push({ kind: 'eating_out_structural', weeklyRate: Math.round(weeklyRate * 10) / 10 })
 
+  // "Keep it simple" repeatedly swapping out a real assigned workout — same
+  // calendar day it was shown, so an intentional tap (the button, or a
+  // free-text redirect like "I'm exhausted") never gets confused with the
+  // ordinary next-day auto-supersede that fires whenever a stale, un-acted
+  // instruction just rolls over to a new day (that always spans two
+  // different calendar days, this never does). No new DB column needed —
+  // shown_at/superseded_at landing on the same local day is exactly the
+  // signal.
+  const tz = getTimezone()
+  const timesSimplified = (simplifyRows || []).filter((r) => {
+    const shown = localDateISO(tz, new Date(r.shown_at as string))
+    const superseded = localDateISO(tz, new Date(r.superseded_at as string))
+    return shown === superseded
+  }).length
+  if (plannedPerWeek > 0 && timesSimplified >= KEEP_IT_SIMPLE_THRESHOLD) {
+    const recommendedPerWeek = Math.max(2, plannedPerWeek - 1)
+    signals.push({ kind: 'workout_frequent_simplify', timesSimplified, plannedPerWeek, recommendedPerWeek })
+  }
+
   const activeSignals = signals.filter((s) => !declinedKinds.has(s.kind))
   return { hasRecommendation: activeSignals.length > 0, signals: activeSignals }
 }
 
 export function messageForStructural(a: StructuralAssessment): { title: string; body: string } | null {
   if (!a.hasRecommendation) return null
+  // Both workout signals can independently fire from different real data
+  // (raw completion rate vs. how often "Keep it simple" replaced the
+  // workout) — each with its own recommendedPerWeek. Rather than state two
+  // different day-counts in one sentence, the more specific, more directly-
+  // actioned-by-her signal wins the copy; the days-per-week change itself
+  // still applies from whichever signal is actually present.
+  const hasSimplifySignal = a.signals.some((s) => s.kind === 'workout_frequent_simplify')
   const parts: string[] = []
   for (const s of a.signals) {
-    if (s.kind === 'workout_days_mismatch') parts.push(`realistically training about ${s.recommendedPerWeek} days a week lately, not ${s.plannedPerWeek}`)
+    if (s.kind === 'workout_days_mismatch' && !hasSimplifySignal) parts.push(`realistically training about ${s.recommendedPerWeek} days a week lately, not ${s.plannedPerWeek}`)
+    if (s.kind === 'workout_frequent_simplify') parts.push(`choosing something simpler than your assigned workout ${s.timesSimplified} times these last 3 weeks`)
     if (s.kind === 'track_mismatch') parts.push(`mostly training ${s.recommendedTrack === 'home' ? 'at home' : 'at the gym'} instead of ${s.plannedTrack === 'home' ? 'at home' : 'at the gym'}`)
     if (s.kind === 'eating_out_structural') parts.push('eating out regularly now, not just once in a while')
   }

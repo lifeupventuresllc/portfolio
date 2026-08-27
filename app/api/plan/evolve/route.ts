@@ -59,9 +59,17 @@ export async function POST(request: NextRequest) {
   let daysPerWeek = Number(intake?.days_per_week) || 4
   let track = (((workoutPlanRow?.plan as WorkoutProgram | null)?.track) || 'home') as 'home' | 'gym'
   let workoutChanged = false
+  let reduceIntensity = false
   const daysMismatch = assessment.signals.find((s) => s.kind === 'workout_days_mismatch')
   const trackMismatch = assessment.signals.find((s) => s.kind === 'track_mismatch')
+  // Repeatedly choosing "Keep it simple" over her real assigned workout —
+  // Asa's explicit call, 2026-08-27: reduce BOTH the days and the intensity,
+  // not either/or. Takes precedence over the raw-completion-rate days
+  // number when both fire (same precedence messageForStructural already
+  // uses for the copy), since it's the more directly-actioned-by-her signal.
+  const simplifyMismatch = assessment.signals.find((s) => s.kind === 'workout_frequent_simplify')
   if (daysMismatch) { daysPerWeek = daysMismatch.recommendedPerWeek; workoutChanged = true }
+  if (simplifyMismatch) { daysPerWeek = simplifyMismatch.recommendedPerWeek; workoutChanged = true; reduceIntensity = true }
   if (trackMismatch) { track = trackMismatch.recommendedTrack; workoutChanged = true }
 
   // Only report a change as real once the mutation below actually runs —
@@ -69,7 +77,10 @@ export async function POST(request: NextRequest) {
   // from, so nothing is written and nothing should be claimed either.
   const changes: string[] = []
   if (workoutChanged && intake) {
-    const level = (intake.experience_level === 'advanced' ? 3 : intake.experience_level === 'intermediate' ? 2 : 1) as Level
+    let level = (intake.experience_level === 'advanced' ? 3 : intake.experience_level === 'intermediate' ? 2 : 1) as Level
+    let intensityChanged = false
+    if (reduceIntensity && level > 1) { level = (level - 1) as Level; intensityChanged = true }
+    const experienceLevel = level === 3 ? 'advanced' : level === 2 ? 'intermediate' : 'beginner'
     const goal = (intake.goal === 'gain' || intake.goal === 'maintain' ? intake.goal : 'lose') as 'lose' | 'gain' | 'maintain'
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
     const injuries = (Array.isArray((intake.form_data as { injuries?: Injury[] } | null)?.injuries) ? (intake.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
@@ -81,8 +92,13 @@ export async function POST(request: NextRequest) {
       daysPerWeek, weekNumber: 1, injuries, postpartum, trainingStyle, focusArea,
     })
     await svc.from('challenge_workout_plans').update({ plan: newProgram }).eq('enrollment_id', eid).eq('week_number', 1)
-    await svc.from('challenge_intake').update({ days_per_week: daysPerWeek }).eq('enrollment_id', eid)
-    if (daysMismatch) changes.push(`training days → ${daysMismatch.recommendedPerWeek}/week`)
+    // experience_level persists too (not just days_per_week) — a reduced
+    // intensity should hold for future weeks' regenerations, not just this
+    // one, same reasoning as why days_per_week is written back below.
+    await svc.from('challenge_intake').update({ days_per_week: daysPerWeek, ...(intensityChanged ? { experience_level: experienceLevel } : {}) }).eq('enrollment_id', eid)
+    if (simplifyMismatch) changes.push(`training days → ${simplifyMismatch.recommendedPerWeek}/week`)
+    else if (daysMismatch) changes.push(`training days → ${daysMismatch.recommendedPerWeek}/week`)
+    if (intensityChanged) changes.push('lighter default intensity')
     if (trackMismatch) changes.push(`track → ${trackMismatch.recommendedTrack}`)
   }
 

@@ -58,16 +58,46 @@ export function buildCandidates(state: UserStateSnapshot): ActionCandidate[] {
     })
   } else if (state.calorieBudget != null && state.caloriesLoggedToday < state.calorieBudget) {
     const remaining = Math.max(0, state.calorieBudget - state.caloriesLoggedToday)
+    // Names her actual next real meal from her stored plan when one exists
+    // (Asa's ask, 2026-08-27: "show their meals ... so they know what to
+    // eat," not just a number) — real data only, silently omitted (not a
+    // guess) on days with no meal plan or no meal at this slot.
+    const mealLine = state.nextMealName ? ` Up next: ${state.nextMealName}.` : ''
     candidates.push({
       kind: 'meal',
       actionKey: 'meal:log_next',
-      instruction: `About ${remaining} calories left today — you're taking care of you.`,
+      instruction: `About ${remaining} calories left today — you're taking care of you.${mealLine}`,
       estMinutes: 3,
     })
   }
 
   for (const f of FALLBACKS) {
+    // The water fallback gets a real, quantified target instead of a vague
+    // "a glass" whenever her real bodyweight is on file (Asa's ask,
+    // 2026-08-27) — same standard guideline (half bodyweight in oz) the
+    // wellness field generally uses, computed, never invented. Falls back
+    // to the original generic line for a brand-new account with no intake
+    // yet, same `fallback:water` action_key either way so her completion
+    // history for it never fragments.
+    if (f.key === 'water' && state.weightLbs) {
+      const glasses = Math.max(1, Math.round(state.weightLbs / 2 / 8))
+      candidates.push({ kind: 'fallback', actionKey: 'fallback:water', instruction: `${glasses} glasses of water for you today, love — you deserve the care.`, estMinutes: 1 })
+      continue
+    }
     candidates.push({ kind: 'fallback', actionKey: `fallback:${f.key}`, instruction: f.instruction, estMinutes: f.minutes })
+  }
+
+  // A second real, quantified nutrition fallback (Asa's ask, 2026-08-27) —
+  // same foundation-piece spirit as the calorie candidate above, just the
+  // protein side. Lives in the same fallback tier as water/stretch/walk so
+  // it's personalized by the exact same completion-rate mechanism, no new
+  // scoring logic needed. Omitted (not zeroed) whenever she has no real
+  // protein target yet, or she's already hit it today.
+  if (state.proteinBudget != null) {
+    const proteinRemaining = Math.max(0, state.proteinBudget - state.proteinLoggedToday)
+    if (proteinRemaining > 0) {
+      candidates.push({ kind: 'fallback', actionKey: 'fallback:protein', instruction: `${proteinRemaining}g protein left today, love — you're taking care of you.`, estMinutes: 2 })
+    }
   }
 
   return candidates

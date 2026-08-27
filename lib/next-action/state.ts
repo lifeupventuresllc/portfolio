@@ -30,9 +30,9 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     svc.from('challenge_enrollments').select('*').eq('id', enrollmentId).maybeSingle(),
     svc.from('challenge_intake').select('*').eq('enrollment_id', enrollmentId).maybeSingle(),
     svc.from('challenge_workout_plans').select('*').eq('enrollment_id', enrollmentId).eq('week_number', 1).maybeSingle(),
-    svc.from('challenge_nutrition_plans').select('calories, meals').eq('enrollment_id', enrollmentId).maybeSingle(),
+    svc.from('challenge_nutrition_plans').select('calories, protein_g, meals').eq('enrollment_id', enrollmentId).maybeSingle(),
     svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollmentId).eq('note', '__daily__').eq('logged_on', todayISO).maybeSingle(),
-    svc.from('challenge_food_log').select('calories').eq('enrollment_id', enrollmentId).eq('logged_on', todayISO),
+    svc.from('challenge_food_log').select('calories, protein_g').eq('enrollment_id', enrollmentId).eq('logged_on', todayISO),
     // Goal-alignment layer (prompt 6): was a workout action from THIS engine
     // shown and explicitly skipped today? That's a real signal to adjust
     // today's calorie assumption on — never guessed from the clock. Widened
@@ -83,6 +83,11 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   // into the one number the meal candidate reasons about.
   const calorieBudget = baseCalorieBudget != null ? Math.max(0, baseCalorieBudget - workoutBurnAdjustment) : null
   const caloriesLoggedToday = (foodToday || []).reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
+  // Same real protein target/logged-today pair the cal/protein glance row
+  // on /plan/today already reads — one source, two places it's used.
+  const proteinBudget = nutritionPlan?.protein_g != null ? Number(nutritionPlan.protein_g) : null
+  const proteinLoggedToday = (foodToday || []).reduce((sum, r) => sum + (Number(r.protein_g) || 0), 0)
+  const weightLbs = intake?.weight_lbs != null ? Number(intake.weight_lbs) : null
 
   // Same real source every other surface reads (see app/plan/today/page.tsx)
   // — a scheduled eat-out day in the stored weekly meal plan, OR an
@@ -92,6 +97,15 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const mealIdx = localMondayIndex(tz)
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
   const eatingOutToday = overrides.eatingOut ?? isEatingOutToday(todayMeals?.eatOut, todayAdjustment)
+
+  // Her real next planned meal, by the current local hour — same clock-
+  // based slot inference already used below for the eating-out pick (never
+  // asked, never guessed beyond what time it actually is). Real name from
+  // her real stored plan, never invented (Asa's ask, 2026-08-27: show what
+  // to actually eat, not just a calorie count).
+  const mealHour = localHourNumber(tz)
+  const nextMealSlot: 'BF' | 'LN' | 'DN' | 'SN' = mealHour < 11 ? 'BF' : mealHour < 15 ? 'LN' : mealHour < 20 ? 'DN' : 'SN'
+  const nextMealName = todayMeals?.meals.find((m) => m.slot === nextMealSlot)?.name ?? null
 
   // Prompt 6's "return only ONE selection." Real curated data ONLY — Asa's
   // explicit call, 2026-08-26: "we don't want estimates, we won't [base a]
@@ -162,5 +176,9 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     eatingOutToday,
     eatingOutPick,
     eatingOutSlot,
+    weightLbs,
+    proteinBudget,
+    proteinLoggedToday,
+    nextMealName,
   }
 }
