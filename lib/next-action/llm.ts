@@ -42,7 +42,17 @@ function sanitizeReworded(text: string, instruction: string, reward?: string): s
   const lower = t.toLowerCase()
   // Telltale fragments from our own system prompt / this function's doc —
   // if the model echoed instructions back, they show up verbatim here.
-  const leakMarkers = ['integrated part', 'not a second offer', 'reword', 'system prompt', 'weave this in']
+  // Real bug caught live, 2026-08-26: a PARTIAL echo slipped through this
+  // list — the model appended the user-message's own "Energy today: low"
+  // label straight onto the real instruction (e.g. "...just check in with
+  // yourself. Energy today: low"), with none of the phrases below present,
+  // so it read as legitimate warm copy while actually leaking raw input
+  // labels. Added the literal template fragments from userContent above —
+  // these can never appear in genuine reworded coaching copy.
+  const leakMarkers = [
+    'integrated part', 'not a second offer', 'reword', 'system prompt', 'weave this in',
+    'energy today:', 'instruction to reword:', 'reward to include:',
+  ]
   if (leakMarkers.some((m) => lower.includes(m))) return null
   // A real rewording stays in the same ballpark length as the source
   // content; an echo of the full directive text runs much longer.
