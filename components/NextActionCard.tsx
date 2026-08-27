@@ -23,6 +23,22 @@ const EXPANSION_ROUTE: Partial<Record<ActionKind, string>> = {
   location: '/plan/eating-out',
 }
 
+// "Keep it simple" (renamed from "My day changed," Asa's ask, 2026-08-27 —
+// the old label read as "give me a different workout," not "give me one
+// simplified thing, whatever kind it is") shows one of these inside the
+// circle, above the real instruction, right after she taps it — softens the
+// disruption moment instead of just silently swapping the text. Rotates so
+// regular use doesn't repeat the same line every time; purely decorative
+// (never sent to the server, never affects scoring).
+const ENCOURAGEMENTS = [
+  'One small step still counts, love.',
+  "You showed up — that's enough today.",
+  'Be gentle with yourself right now.',
+  'This still moves you forward.',
+  'No pressure — just this one thing.',
+  "Progress doesn't have to be big.",
+]
+
 export default function NextActionCard() {
   const router = useRouter()
   const [action, setAction] = useState<NextAction | null>(null)
@@ -32,6 +48,7 @@ export default function NextActionCard() {
   const [showMessage, setShowMessage] = useState(false)
   const [message, setMessage] = useState('')
   const [note, setNote] = useState<string | null>(null)
+  const [encouragement, setEncouragement] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   // Auto-grow the transcript box to fit whatever's in it — a long voice
@@ -51,6 +68,7 @@ export default function NextActionCard() {
     try {
       const res = await fetch('/api/plan/next-action')
       if (res.ok) setAction(await res.json())
+      setEncouragement(null)
     } finally {
       setLoading(false)
     }
@@ -80,6 +98,9 @@ export default function NextActionCard() {
       const res = await fetch('/api/plan/next-action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logId: action.logId, action: 'day_changed' }) })
       if (res.ok) {
         setAction(await res.json())
+        // Purely decorative, softens the disruption moment — never sent
+        // anywhere, never affects what the engine actually picked.
+        setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)])
       } else {
         // Real bug caught live, 2026-08-26: a stale logId (already resolved
         // elsewhere — another tab, a real day-boundary auto-supersede, a
@@ -120,6 +141,7 @@ export default function NextActionCard() {
       if (json.changed && json.logId) {
         setAction(json)
         setNote(null)
+        setEncouragement(null)
       } else {
         setNote("Got it — didn't need to change anything.")
       }
@@ -245,7 +267,12 @@ export default function NextActionCard() {
               WebkitMaskImage: 'radial-gradient(circle, transparent 66%, black 67%, black 100%)',
             }}
           />
-          <span className="relative font-semibold leading-snug px-9" style={{ zIndex: 2, color: '#0a2417', fontFamily: 'var(--font-poppins)', fontSize: instructionFontSize }}>{action.instruction}</span>
+          <span className="relative flex flex-col items-center px-9" style={{ zIndex: 2, fontFamily: 'var(--font-poppins)' }}>
+            {encouragement && (
+              <span className="font-semibold mb-1" style={{ color: 'rgba(10,36,23,0.7)', fontSize: 'clamp(10px, 2.6vw, 12px)' }}>{encouragement}</span>
+            )}
+            <span className="font-semibold leading-snug" style={{ color: '#0a2417', fontSize: instructionFontSize }}>{action.instruction}</span>
+          </span>
           {/* Real Deepgram voice pipeline (same one Coach Asa's chat uses) —
               not a separate implementation. stopPropagation keeps a mic tap
               from also triggering the circle's own expand() navigation. */}
@@ -291,7 +318,7 @@ export default function NextActionCard() {
         </button>
         <div className="flex items-center justify-center gap-4">
           <button onClick={dayChanged} disabled={busy} className="text-ivory/50 text-[11px] font-semibold py-1.5 disabled:opacity-60">
-            My day changed
+            Keep it simple
           </button>
           <button onClick={() => setShowMessage((s) => !s)} disabled={busy} className="text-ivory/50 text-[11px] font-semibold py-1.5 disabled:opacity-60">
             Something else?
