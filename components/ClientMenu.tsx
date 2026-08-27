@@ -7,38 +7,41 @@ import PushToggle from '@/components/PushToggle'
 import CalendarToggle from '@/components/CalendarToggle'
 import { createClient } from '@/lib/supabase/client'
 
-// The ☰ menu on the client home dashboard — keeps the home screen simple while
-// everything deeper lives one tap away: profile, meals + how-to, cookbook,
-// live calls, progress, previous weeks, community + extras.
+// The ☰ menu on the client home dashboard. Trimmed hard 2026-08-27 (Asa's
+// direct ask): this app exists to reduce willpower/decision fatigue — the
+// Next Action circle on the dashboard IS "the one thing" she should be
+// doing right now, not a menu of paths to choose between. Ran every item
+// that used to live here through that filter: cut anything that was either
+// a browsable library/alternate program (decision surface) or already
+// redundant with something the circle or bottom nav already does, kept
+// only what's a required account/support function or genuinely needed to
+// EXECUTE what's already been decided for her (what to cook, her real
+// profile data). Cut: Today (bottom nav's "For You" already goes here),
+// Away from home right now? (the circle handles this the moment she says
+// she's eating out), Today's workout (the circle already routes here when
+// it's the current action), Compound & HIIT (explicitly an optional
+// alternate path), Workout Plans library, The Cookbook (both browsable
+// libraries), My badges (not essential), 7-Day Jump Start / 21-Day Habit
+// Reset (alternate onboarding paths), The Curve Collective (community —
+// flagged as a real retention trade-off, not force-kept just because it
+// might matter, per her explicit "if it doesn't help, remove it, I don't
+// care" call).
 
 // Professional icon style (standing rule, memory: luf-professional-icon-style)
 // — never a literal emoji character in app UI, always a small monochrome SVG
 // that inherits the row's own text color via currentColor. Feather-style thin
 // stroke, matching the icons already established in BottomTabBar.tsx/
 // VoiceButton.tsx elsewhere in this app.
-type IconName =
-  | 'sun' | 'burger' | 'plate' | 'book' | 'dumbbell' | 'timer' | 'list'
-  | 'trending' | 'award' | 'chat' | 'video' | 'refresh' | 'users' | 'bolt'
-  | 'repeat' | 'user' | 'target' | 'mail' | 'logout'
+type IconName = 'plate' | 'trending' | 'chat' | 'video' | 'refresh' | 'user' | 'target' | 'mail' | 'logout'
 
 function MenuIcon({ name }: { name: IconName }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
   switch (name) {
-    case 'sun': return <svg {...common}><circle cx="12" cy="12" r="4" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></svg>
-    case 'burger': return <svg {...common}><path d="M4 8h16M4 16h16M3 12h18" /></svg>
     case 'plate': return <svg {...common}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /></svg>
-    case 'book': return <svg {...common}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z" /><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20" /></svg>
-    case 'dumbbell': return <svg {...common}><path d="M4 9v6M2 10v4M22 10v4M20 9v6M6 12h12" /></svg>
-    case 'timer': return <svg {...common}><circle cx="12" cy="13" r="8" /><path d="M12 9v4l3 2M10 2h4" /></svg>
-    case 'list': return <svg {...common}><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
     case 'trending': return <svg {...common}><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></svg>
-    case 'award': return <svg {...common}><circle cx="12" cy="8" r="5" /><path d="M8.5 12.5 7 21l5-3 5 3-1.5-8.5" /></svg>
     case 'chat': return <svg {...common}><path d="M21 12a8 8 0 1 1-3.3-6.5L21 4l-1 4.2A8 8 0 0 1 21 12Z" /></svg>
     case 'video': return <svg {...common}><rect x="2" y="6" width="14" height="12" rx="2" /><path d="M16 10l6-3v10l-6-3" /></svg>
     case 'refresh': return <svg {...common}><path d="M21 12a9 9 0 1 1-3-6.7" /><path d="M21 3v6h-6" /></svg>
-    case 'users': return <svg {...common}><circle cx="9" cy="8" r="3.2" /><path d="M2.5 19c.6-3 3-5 6.5-5s5.9 2 6.5 5" /><circle cx="17.5" cy="8.5" r="2.6" /><path d="M15.5 14.5c2.6.4 4.5 2.1 5 4.5" /></svg>
-    case 'bolt': return <svg {...common}><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" /></svg>
-    case 'repeat': return <svg {...common}><path d="M17 2l4 4-4 4" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v2a4 4 0 0 1-4 4H3" /></svg>
     case 'user': return <svg {...common}><circle cx="12" cy="8" r="4" /><path d="M4 20c1-4 4-6 8-6s7 2 8 6" /></svg>
     case 'target': return <svg {...common}><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4.2" /><circle cx="12" cy="12" r="0.6" fill="currentColor" /></svg>
     case 'mail': return <svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /></svg>
@@ -68,55 +71,10 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
 
   const sections: { title: string; items: Item[] }[] = [
     {
-      title: 'Today',
-      items: [
-        { href: '/plan/today', label: 'Today', icon: 'sun' },
-        { href: '/plan/eating-out', label: 'Away from home right now?', icon: 'burger' },
-      ],
-    },
-    {
-      title: 'Nutrition',
+      title: 'My Plan',
       items: [
         { href: '/plan/meals', label: 'My meals — what I’m cooking & how', icon: 'plate' },
-        { href: '/plan/library', label: 'The Cookbook', icon: 'book' },
-      ],
-    },
-    {
-      title: 'Training',
-      items: [
-        { href: '/plan/workout', label: 'Today’s workout', icon: 'dumbbell' },
-        { href: '/plan/compound', label: 'Compound & HIIT Full-Body (optional)', icon: 'timer' },
-        { href: '/plan/exercises', label: 'Workout Plans — every move', icon: 'list' },
-      ],
-    },
-    {
-      title: 'Progress',
-      items: [
         { href: '/plan/checkin', label: 'My progress & previous weeks', icon: 'trending' },
-        { href: '/plan/achievements', label: 'My badges', icon: 'award' },
-      ],
-    },
-    {
-      title: 'With Coach Asa',
-      items: [
-        { href: '/plan/coach', label: 'Tell Coach Asa about your day', icon: 'chat' },
-        liveUrl
-          ? { href: liveUrl, label: 'Live video call with Coach Asa', icon: 'video', external: true }
-          : callAccess === 'weekly'
-          ? { href: '/book', label: 'Book your weekly reset call', icon: 'video' }
-          : callAccess === 'monthly'
-          ? { href: '/book', label: 'Book your monthly call', icon: 'video' }
-          : { href: '/plan/checkin', label: 'Live with Coach Asa', icon: 'video' },
-        // Inner Circle exclusive — one-tap plan reset, no re-intake
-        ...(callAccess === 'weekly' ? [{ href: '/plan/life-reset', label: 'Life happened? Reset my plan', icon: 'refresh' as const }] : []),
-        { href: '/plan/community', label: 'The Curve Collective', icon: 'users' },
-      ],
-    },
-    {
-      title: 'Extras',
-      items: [
-        { href: '/plan/jumpstart', label: '7-Day Jump Start', icon: 'bolt' },
-        { href: '/plan/reset', label: '21-Day Habit Reset', icon: 'repeat' },
         { href: '/plan/intake', label: 'My profile & stats', icon: 'user' },
         // Real gap found live (beta feedback Priority 1, 2026-08-25): the
         // optional tier (target weight, experience, training style, days/
@@ -125,6 +83,27 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
         // disappeared for good the moment she completed it once — after
         // that, training style specifically had no way back in at all.
         { href: '/plan/intake?tier=optional', label: 'Training style & extras', icon: 'target' },
+      ],
+    },
+    {
+      title: 'Coach & Support',
+      items: [
+        // Labels de-branded from "Coach Asa" 2026-08-27 (Asa's call): the
+        // platform's talk-to-it assistant now lives inside the main circle
+        // itself, not a separate persona-named destination — this app is a
+        // platform connecting her to a coach/trainer, not a single named
+        // personal-trainer app anymore. Community-tab -> personal-trainer
+        // routing is a separate, larger platform build, not done here.
+        { href: '/plan/coach', label: 'Talk to your coach', icon: 'chat' },
+        liveUrl
+          ? { href: liveUrl, label: 'Live video call with your coach', icon: 'video', external: true }
+          : callAccess === 'weekly'
+          ? { href: '/book', label: 'Book your weekly reset call', icon: 'video' }
+          : callAccess === 'monthly'
+          ? { href: '/book', label: 'Book your monthly call', icon: 'video' }
+          : { href: '/plan/checkin', label: 'Live with your coach', icon: 'video' },
+        // Inner Circle exclusive — one-tap plan reset, no re-intake
+        ...(callAccess === 'weekly' ? [{ href: '/plan/life-reset', label: 'Life happened? Reset my plan', icon: 'refresh' as const }] : []),
         { href: '/plan/feedback', label: 'Send feedback', icon: 'mail' },
       ],
     },
