@@ -56,6 +56,14 @@ export type UserStateSnapshot = {
   // A real "I'm eating out" signal — either the plan's own schedule or an
   // explicit disruption she just reported (see index.ts's overrides).
   eatingOutToday: boolean
+  // True only when THIS call carried an explicit signal (a message she just
+  // sent, right now) — false when eatingOutToday came from the static
+  // weekly schedule instead. Real bug fixed 2026-08-27: without this
+  // distinction, saying "I'm at Chick-fil-A" live scored the exact same as
+  // a generic scheduled eat-out day, so a pending workout (higher base
+  // priority) kept winning anyway — the app told her to go do legs after
+  // she'd just said where she was and what she wanted right now.
+  eatingOutExplicit: boolean
   // The single real order picked from the app's existing Escape Plan
   // system (lib/escape-plan.ts) for right now — null only when eatingOutToday
   // is false, or the picker genuinely had nothing to offer.

@@ -44,6 +44,21 @@ function timeFitAdjustment(candidate: ActionCandidate, state: UserStateSnapshot)
   return candidate.estMinutes <= state.minutesAvailable ? 0 : -100
 }
 
+// Real bug fixed 2026-08-27: KIND_BASE alone gave workout (60) a higher
+// floor than location (55) — so telling it "I'm at Chick-fil-A right now,
+// give me a meal" still lost to a pending workout and produced a leg-day
+// instruction, flatly ignoring what she'd just said. A generic scheduled
+// eat-out day is one thing; an explicit, live, right-now disruption she
+// just typed or said is a different and stronger signal — same category as
+// workoutSkippedToday's calorie adjustment elsewhere in this engine, where
+// an explicit real-time report already outweighs a static default. +25 is
+// enough to clear workout's 5-point edge with real room to spare, without
+// being so large it can never lose to something even more urgent later.
+function explicitContextAdjustment(candidate: ActionCandidate, state: UserStateSnapshot): number {
+  if (candidate.kind === 'location' && state.eatingOutExplicit) return 25
+  return 0
+}
+
 // "Past completion rate for similar actions" (prompt 5) and the personalized
 // minimum-win ranking (prompt 2) are the SAME query: how often has SHE
 // actually finished this specific action_key, historically, vs. skipped it.
@@ -81,7 +96,7 @@ export async function scoreCandidates(candidates: ActionCandidate[], state: User
   return candidates
     .map((c) => {
       const completionRate = rates[c.actionKey] ?? 0
-      const score = KIND_BASE[c.kind] + energyAdjustment(c.kind, state) + timeFitAdjustment(c, state) + completionRate * COMPLETION_WEIGHT
+      const score = KIND_BASE[c.kind] + energyAdjustment(c.kind, state) + timeFitAdjustment(c, state) + explicitContextAdjustment(c, state) + completionRate * COMPLETION_WEIGHT
       return { ...c, completionRate, score }
     })
     .sort((a, b) => b.score - a.score)

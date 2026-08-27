@@ -97,6 +97,10 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const mealIdx = localMondayIndex(tz)
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
   const eatingOutToday = overrides.eatingOut ?? isEatingOutToday(todayMeals?.eatOut, todayAdjustment)
+  // Distinct from eatingOutToday itself — see types.ts. Only true when THIS
+  // call actually passed an explicit override, never inferred from the
+  // schedule fallback above.
+  const eatingOutExplicit = overrides.eatingOut === true
 
   // Her real next planned meal, by the current local hour — same clock-
   // based slot inference already used below for the eating-out pick (never
@@ -174,6 +178,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     workoutReducedToday,
     workoutBurnAdjustment,
     eatingOutToday,
+    eatingOutExplicit,
     eatingOutPick,
     eatingOutSlot,
     weightLbs,

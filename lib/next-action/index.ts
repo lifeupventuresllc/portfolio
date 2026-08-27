@@ -163,9 +163,16 @@ export async function getNextAction(enrollmentId: string, todayISO: string, over
     throw error
   }
 
+  // Real bug fixed 2026-08-27: these were attached unconditionally, so a
+  // winning WORKOUT candidate on a day she'd also mentioned a restaurant
+  // came back carrying restaurant/mealSlot fields that had nothing to do
+  // with the actual instruction shown — cosmetically wrong even after the
+  // scoring fix above, since eatingOutPick/eatingOutSlot can be populated
+  // in state without location actually being the winner.
   return {
     logId: row.id as string, kind, actionKey, instruction: displayText, score: winner.score,
-    restaurant: state.eatingOutPick?.restaurant, mealSlot: state.eatingOutSlot ?? undefined,
+    restaurant: kind === 'location' ? state.eatingOutPick?.restaurant : undefined,
+    mealSlot: kind === 'location' ? state.eatingOutSlot ?? undefined : undefined,
   }
 }
 
