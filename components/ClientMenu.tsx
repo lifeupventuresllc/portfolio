@@ -110,15 +110,23 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
       {open && (
         <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-0 h-[100dvh] w-[85%] max-w-xs bg-obsidian border-l border-smoke overflow-y-auto overscroll-contain luf-page">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-smoke">
+          <div className="absolute right-0 top-0 h-[100dvh] w-[85%] max-w-xs bg-obsidian border-l border-smoke flex flex-col luf-page">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-smoke shrink-0">
               <div>
                 <p className="text-gold text-[10px] uppercase tracking-[0.25em] font-semibold">Life-Up Fitness</p>
                 <p className="text-white font-bold">Hey {firstName} 👋</p>
               </div>
               <button onClick={() => setOpen(false)} aria-label="Close menu" className="text-ivory/50 hover:text-white text-2xl leading-none px-2">×</button>
             </div>
-            <nav className="px-3 py-3" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
+            {/* Real bug fixed 2026-08-27: Sign Out lived at the bottom of this
+                same scrolling list as every menu section, so on a long enough
+                list (six sections deep) it could scroll out of reach on some
+                phones — she reported not being able to reach it at all.
+                Pinning it in its own non-scrolling footer means it's always
+                tappable regardless of how long the section list above grows,
+                without depending on getting scroll mechanics exactly right
+                on every device. */}
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-3" style={{ WebkitOverflowScrolling: 'touch' }}>
               {sections.map((sec) => (
                 <div key={sec.title} className="mb-4">
                   <p className="text-ivory/35 text-[10px] uppercase tracking-wider font-semibold px-2 mb-1.5">{sec.title}</p>
@@ -143,13 +151,13 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
               <div className="px-2 pt-3 mt-1 border-t border-smoke">
                 <CalendarToggle />
               </div>
-              <div className="px-2 pt-3 mt-1 border-t border-smoke">
-                <button onClick={handleSignOut} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-charcoal transition-colors w-full text-left">
-                  <span className="text-lg">🚪</span>
-                  <span className="text-ivory/60 text-sm">Sign Out</span>
-                </button>
-              </div>
             </nav>
+            <div className="shrink-0 border-t border-smoke px-3 pt-2" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+              <button onClick={handleSignOut} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-charcoal transition-colors w-full text-left">
+                <span className="text-lg">🚪</span>
+                <span className="text-ivory/60 text-sm">Sign Out</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
