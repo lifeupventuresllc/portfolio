@@ -271,7 +271,12 @@ export default function NextActionCard() {
             {encouragement && (
               <span className="font-semibold mb-1" style={{ color: 'rgba(10,36,23,0.7)', fontSize: 'clamp(10px, 2.6vw, 12px)' }}>{encouragement}</span>
             )}
-            <span className="font-semibold leading-snug" style={{ color: '#0a2417', fontSize: instructionFontSize }}>{action.instruction}</span>
+            {/* Instruction font: Fraunces italic (2026-08-27, Asa's pick
+                after a published mockup comparison) — free equivalent of
+                TAN Aegean, warm editorial serif in place of the plain
+                Poppins used everywhere else on this card. Only this line,
+                not the encouragement/eyebrow text above it. */}
+            <span className="leading-snug" style={{ color: '#0a2417', fontSize: instructionFontSize, fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600 }}>{action.instruction}</span>
           </span>
           {/* Real Deepgram voice pipeline (same one Coach Asa's chat uses) —
               not a separate implementation. stopPropagation keeps a mic tap

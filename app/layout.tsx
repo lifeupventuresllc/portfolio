@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import { Playfair_Display, Poppins } from "next/font/google";
+import { Playfair_Display, Poppins, Fraunces } from "next/font/google";
 import "./globals.css";
 import SiteChrome from "@/components/SiteChrome";
 import JsonLd, { organizationSchema } from "@/components/JsonLd";
@@ -23,6 +23,11 @@ const geistMono = localFont({
 // only actually used on the /plan dashboard for now.
 const playfairDisplay = Playfair_Display({ subsets: ["latin"], weight: ["600", "700"], style: ["italic", "normal"], variable: "--font-playfair" });
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "700"], variable: "--font-poppins" });
+// Next Action circle's instruction font (2026-08-27, Asa's pick after a
+// published mockup comparison) — the free equivalent of TAN Aegean, a
+// premium font not available via Google Fonts. Warm, editorial serif,
+// used italic specifically inside the circle (components/NextActionCard.tsx).
+const fraunces = Fraunces({ subsets: ["latin"], weight: ["500", "600"], style: ["italic", "normal"], variable: "--font-fraunces" });
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.asaluke.io'),
@@ -72,7 +77,7 @@ export default function RootLayout({
         <JsonLd data={organizationSchema} />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${poppins.variable} antialiased bg-obsidian min-h-[100dvh] flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${poppins.variable} ${fraunces.variable} antialiased bg-obsidian min-h-[100dvh] flex flex-col`}
       >
         <PWARegister />
         <SiteChrome>{children}</SiteChrome>
