@@ -168,13 +168,22 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
               <div className="px-2 pt-3 mt-1 border-t border-smoke">
                 <CalendarToggle />
               </div>
+              {/* Real bug fixed 2026-08-27: pinning this to a separate
+                  footer BELOW a nav region forced to fill the full drawer
+                  height (`flex-1`) left the footer stranded past a wall of
+                  empty stretched space the moment the list got short (the
+                  menu trim, same session) -- almost invisible. Sign Out
+                  belongs back in the normal content flow, right after
+                  everything else, so it sits at natural distance from real
+                  content instead of past a void. Any leftover blank space
+                  from the shorter list now just falls harmlessly below it. */}
+              <div className="px-2 pt-3 mt-1 border-t border-smoke" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+                <button onClick={handleSignOut} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-charcoal transition-colors w-full text-left text-ivory/60">
+                  <MenuIcon name="logout" />
+                  <span className="text-sm">Sign Out</span>
+                </button>
+              </div>
             </nav>
-            <div className="shrink-0 border-t border-smoke px-3 pt-2" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-              <button onClick={handleSignOut} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-charcoal transition-colors w-full text-left text-ivory/60">
-                <MenuIcon name="logout" />
-                <span className="text-sm">Sign Out</span>
-              </button>
-            </div>
           </div>
         </div>
       )}
