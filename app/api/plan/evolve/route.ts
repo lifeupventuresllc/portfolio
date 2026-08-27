@@ -110,9 +110,27 @@ export async function POST(request: NextRequest) {
   // silently touching numbers that materially affect her fat-loss rate.
   const eatOutSignal = assessment.signals.find((s) => s.kind === 'eating_out_structural')
 
+  // Real bug caught live, 2026-08-27: approving used to write no
+  // `plan_evolution` marker at all, only the decline path did — so a
+  // count-based signal like workout_frequent_simplify kept re-firing off
+  // the EXACT SAME already-acted-on historical rows the very next time she
+  // opened the page, even though she'd just approved the change. The
+  // days/track mismatches happened to self-resolve (approving changes the
+  // stored plan those signals compare against), but a raw event-count
+  // never resets on its own. `approvedKinds` lets assessStructuralPattern
+  // only count next_action_log rows shown AFTER this exact moment for
+  // those specific kinds — same "resolved, don't ask again for the same
+  // evidence" idea the decline path already has, just for approval too.
   await svc.from('fos_events').insert({
     enrollment_id: eid, user_id: user.id, occurred_on: today, kind: 'adjustment',
     summary: `Plan evolved: ${changes.join(', ') || 'no workout change'}${eatOutSignal ? ', flagged nutrition for rebuild' : ''}`,
+    // A precise timestamp, not just `occurred_on` (a DATE column) — real bug
+    // caught immediately after writing the first version of this fix: a
+    // same-day comparison against a bare date string like "2026-08-27"
+    // never excludes a same-day ISO timestamp like "2026-08-27T16:51:...Z",
+    // since the shorter date string always sorts first. Approving something
+    // that happened minutes ago needs minute-level precision, not day-level.
+    payload: { source: 'plan_evolution', approvedKinds: assessment.signals.map((s) => s.kind), approvedAt: new Date().toISOString() },
   })
 
   const workoutPart = changes.length ? `Updated your workout — ${changes.join(', ')}.` : null

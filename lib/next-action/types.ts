@@ -76,9 +76,6 @@ export type UserStateSnapshot = {
   eatingOutSlot: 'Breakfast' | 'Lunch' | 'Snack' | 'Dinner' | null
 
   // ---- Nutrition fallback candidates (Asa's ask, 2026-08-27) ----
-  // Real bodyweight on file, when she's completed intake — the water
-  // fallback's glass count is computed from THIS, never a guessed default.
-  weightLbs: number | null
   // Her real stored protein target/logged-today, same source the cal/protein
   // glance row on /plan/today already reads — never a separate number.
   proteinBudget: number | null

@@ -40,14 +40,18 @@ export async function assessStructuralPattern(enrollmentId: string, todayISO: st
   const svc = createServiceClient()
   const windowStart = addDaysISO(todayISO, -(STRUCTURAL_WINDOW_DAYS - 1))
 
-  const [{ data: intake }, { data: workoutPlanRow }, { data: progressRows }, { data: adjustmentRows }, { data: foodRows }, { data: declineRows }, { data: simplifyRows }] = await Promise.all([
+  const [{ data: intake }, { data: workoutPlanRow }, { data: progressRows }, { data: adjustmentRows }, { data: foodRows }, { data: evolutionEvents }, { data: simplifyRows }] = await Promise.all([
     svc.from('challenge_intake').select('days_per_week').eq('enrollment_id', enrollmentId).maybeSingle(),
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollmentId).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('logged_on').eq('enrollment_id', enrollmentId).eq('note', '__daily__').gte('logged_on', windowStart),
     svc.from('fos_adjustments').select('workout_change').eq('enrollment_id', enrollmentId).eq('status', 'approved').gte('for_date', windowStart),
     svc.from('challenge_food_log').select('logged_on, source').eq('enrollment_id', enrollmentId).gte('logged_on', windowStart),
-    svc.from('fos_events').select('payload').eq('enrollment_id', enrollmentId).eq('payload->>source', 'plan_evolution')
-      .gte('occurred_on', addDaysISO(todayISO, -(DECLINE_COOLDOWN_DAYS - 1))),
+    // No date floor here — unlike the decline cooldown (a temporary "not
+    // now"), an approval's own reset-the-clock effect (see timesSimplified
+    // below) must hold for as long as the historical rows it approved
+    // against would otherwise still be in-window, not just 10 days.
+    svc.from('fos_events').select('occurred_on, payload').eq('enrollment_id', enrollmentId).eq('payload->>source', 'plan_evolution')
+      .order('occurred_on', { ascending: false }).limit(50),
     // "Keep it simple" / day-changed disruptions on a real workout action —
     // see the signal computation below for how this is narrowed to actual
     // same-day taps, not next-day auto-rollover.
@@ -57,11 +61,30 @@ export async function assessStructuralPattern(enrollmentId: string, todayISO: st
 
   // "Not now" has to actually mean it — suppress only the specific signal
   // kinds she declined, so declining one finding doesn't hide an unrelated
-  // one that comes up later.
+  // one that comes up later. Cooldown-scoped (a "not now" fades), unlike
+  // the approval lookup below.
+  const cooldownFloor = addDaysISO(todayISO, -(DECLINE_COOLDOWN_DAYS - 1))
   const declinedKinds = new Set<string>()
-  for (const row of declineRows || []) {
-    const kinds = (row.payload as { declinedKinds?: string[] } | null)?.declinedKinds
-    if (Array.isArray(kinds)) for (const k of kinds) declinedKinds.add(k)
+  // The most recent approval per signal kind, any time in the past — used
+  // to reset count-based signals (workout_frequent_simplify) so they only
+  // ever count evidence from AFTER she last acted on this exact finding,
+  // never the same rows that already got her a plan change.
+  const lastApprovedAt = new Map<string, string>()
+  for (const row of evolutionEvents || []) {
+    const payload = row.payload as { declinedKinds?: string[]; approvedKinds?: string[]; approvedAt?: string } | null
+    if ((row.occurred_on as string) >= cooldownFloor && Array.isArray(payload?.declinedKinds)) {
+      for (const k of payload!.declinedKinds!) declinedKinds.add(k)
+    }
+    // A real ISO timestamp (payload.approvedAt), never the bare `occurred_on`
+    // DATE column — a same-day comparison against just a date string can
+    // never exclude a same-day timestamp, since the shorter string always
+    // sorts first (real bug caught immediately after the first version of
+    // this fix shipped, live-tested before it ever reached production).
+    if (Array.isArray(payload?.approvedKinds) && payload?.approvedAt) {
+      for (const k of payload.approvedKinds) {
+        if (!lastApprovedAt.has(k)) lastApprovedAt.set(k, payload.approvedAt) // rows already sorted desc
+      }
+    }
   }
 
   const signals: StructuralSignal[] = []
@@ -115,7 +138,14 @@ export async function assessStructuralPattern(enrollmentId: string, todayISO: st
   // shown_at/superseded_at landing on the same local day is exactly the
   // signal.
   const tz = getTimezone()
+  // Real bug caught live, 2026-08-27: without this floor, approving this
+  // exact signal re-fired it the very next page load off the SAME
+  // already-acted-on rows — days/track mismatches self-resolve because
+  // approving changes the plan values those signals compare against, but a
+  // raw event count never resets on its own without this.
+  const simplifyApprovedAt = lastApprovedAt.get('workout_frequent_simplify')
   const timesSimplified = (simplifyRows || []).filter((r) => {
+    if (simplifyApprovedAt && (r.shown_at as string) <= simplifyApprovedAt) return false
     const shown = localDateISO(tz, new Date(r.shown_at as string))
     const superseded = localDateISO(tz, new Date(r.superseded_at as string))
     return shown === superseded

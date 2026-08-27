@@ -87,7 +87,6 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   // on /plan/today already reads — one source, two places it's used.
   const proteinBudget = nutritionPlan?.protein_g != null ? Number(nutritionPlan.protein_g) : null
   const proteinLoggedToday = (foodToday || []).reduce((sum, r) => sum + (Number(r.protein_g) || 0), 0)
-  const weightLbs = intake?.weight_lbs != null ? Number(intake.weight_lbs) : null
 
   // Same real source every other surface reads (see app/plan/today/page.tsx)
   // — a scheduled eat-out day in the stored weekly meal plan, OR an
@@ -181,7 +180,6 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     eatingOutExplicit,
     eatingOutPick,
     eatingOutSlot,
-    weightLbs,
     proteinBudget,
     proteinLoggedToday,
     nextMealName,

@@ -72,18 +72,13 @@ export function buildCandidates(state: UserStateSnapshot): ActionCandidate[] {
   }
 
   for (const f of FALLBACKS) {
-    // The water fallback gets a real, quantified target instead of a vague
-    // "a glass" whenever her real bodyweight is on file (Asa's ask,
-    // 2026-08-27) — same standard guideline (half bodyweight in oz) the
-    // wellness field generally uses, computed, never invented. Falls back
-    // to the original generic line for a brand-new account with no intake
-    // yet, same `fallback:water` action_key either way so her completion
-    // history for it never fragments.
-    if (f.key === 'water' && state.weightLbs) {
-      const glasses = Math.max(1, Math.round(state.weightLbs / 2 / 8))
-      candidates.push({ kind: 'fallback', actionKey: 'fallback:water', instruction: `${glasses} glasses of water for you today, love — you deserve the care.`, estMinutes: 1 })
-      continue
-    }
+    // Real bug caught live, 2026-08-27: a quantified daily total ("12
+    // glasses of water today") briefly replaced the plain line here — Asa's
+    // direct feedback: even though the number is real, seeing a whole-day
+    // total on a "keep it simple" tap breaks the one-tiny-thing feel every
+    // other fallback has (5 breaths, one stretch, a short walk — none of
+    // them show a cumulative target). Reverted to the same single, bite-
+    // sized framing as the rest of this list.
     candidates.push({ kind: 'fallback', actionKey: `fallback:${f.key}`, instruction: f.instruction, estMinutes: f.minutes })
   }
 
