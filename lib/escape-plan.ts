@@ -273,16 +273,24 @@ export function pickForNow(wc: WeightClass, slot: FastFoodMeal['slot'], budgetTi
  * when that restaurant isn't in the curated set for this slot — the caller
  * falls back to pickForNow's real-but-generic picks rather than
  * fabricating one. */
-// Strips apostrophes/hyphens and collapses whitespace before comparing —
-// real bug caught under stress-testing (2026-08-26): voice transcription
-// (Deepgram/browser SpeechRecognition, which is what actually feeds this
-// restaurant name) almost never renders a possessive apostrophe or a
-// hyphen, so "mcdonalds", "wendys", "jimmy johns", and "chick fil a" were
-// all silently missing McDonald's/Wendy's/Jimmy John's/Chick-fil-A — 7 of
-// the curated restaurants use an apostrophe or hyphen in their stored name
-// — and falling back to the generic pick instead of the exact place she
-// said, defeating the point of this feature for those chains specifically.
-const normalizeRestaurant = (s: string) => s.toLowerCase().replace(/['’]/g, '').replace(/-/g, ' ').replace(/\s+/g, ' ').trim()
+// Strips ALL punctuation and whitespace before comparing — real bug caught
+// under stress-testing (2026-08-26): voice transcription (Deepgram/browser
+// SpeechRecognition, which is what actually feeds this restaurant name)
+// almost never renders a possessive apostrophe or a hyphen, so "mcdonalds",
+// "wendys", "jimmy johns", and "chick fil a" were all silently missing
+// McDonald's/Wendy's/Jimmy John's/Chick-fil-A. A second pass caught a
+// narrower variant of the same problem: a fully run-together transcription
+// like "chickfila" (vs. "chick fil a") still failed even after the first
+// fix, since that only collapsed whitespace rather than removing it.
+// Switched to removing all non-alphanumeric characters, including spaces —
+// verified safe by exhaustively cross-checking every curated restaurant
+// name's fully-stripped form against every other one for accidental
+// substring collisions (none exist across the current 26+ names; a bare
+// short name always attaches to word boundaries in practice — "canes"
+// falls inside "raisingcanes" only for the correct restaurant, Raising
+// Cane's itself). Re-check this exhaustively if a new restaurant is ever
+// added whose stripped name could be a substring of another's.
+const normalizeRestaurant = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
 
 export function pickForRestaurant(wc: WeightClass, restaurantName: string, slot: FastFoodMeal['slot'], remainingCal?: number): FastFoodMeal[] {
   const needle = normalizeRestaurant(restaurantName)
