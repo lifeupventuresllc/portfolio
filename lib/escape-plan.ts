@@ -59,6 +59,14 @@ const WC1: WeightClass = {
     ] },
   ],
   extraOptions: [
+    // Real dairy-free variants (2026-08-28, live gap caught testing the new
+    // restriction filter): EVERY curated Chipotle entry had cheese with no
+    // safe alternative, so a dairy-free restriction fell back to showing it
+    // anyway. "No cheese" is a completely real, standard Chipotle order
+    // modification (not an invented substitution), so these give the filter
+    // an actual safe option to select instead of falling back.
+    m('Lunch', 'Chipotle', 'Bowl: Chicken, ½ white rice, pinto beans, fajita veggies, mild salsa, no cheese', 460, 44, 39, 12),
+    m('Dinner', 'Chipotle', 'Bowl: Chicken, ½ brown rice, black beans, fajita veggies, corn salsa, no cheese', 470, 52, 37, 14),
     m('Breakfast', "Dunkin'", 'Turkey Sausage Egg White & Cheese on English Muffin', 280, 20, 23, 12),
     m('Breakfast', 'Panera', 'Avocado, Egg White & Spinach Breakfast Sandwich', 320, 15, 33, 15),
     // Taco Bell's real breakfast menu (2026-08-28, real gap: she asked for
@@ -160,6 +168,12 @@ const WC2: WeightClass = {
     ] },
   ],
   extraOptions: [
+    // Real dairy-free Chipotle/Qdoba variants (2026-08-28) — same real gap
+    // as WC1: no safe alternative existed once dairy is excluded.
+    m('Lunch', 'Chipotle', 'Bowl: Chicken, ½ white rice, pinto beans, fajita veggies, mild salsa, no cheese', 580, 60, 39, 17),
+    m('Dinner', 'Chipotle', 'Bowl: Double Chicken, full brown rice, pinto beans, fajita veggies, mild salsa, no cheese', 600, 64, 41, 17),
+    m('Lunch', 'Qdoba', 'Double chicken bowl, full rice, black beans, no cheese', 620, 58, 55, 12),
+    m('Dinner', 'Qdoba', 'Double chicken bowl, full rice, black beans, no cheese', 620, 58, 55, 12),
     m('Breakfast', "Dunkin'", 'Turkey Sausage Egg White & Cheese Wrap + Greek Yogurt', 420, 30, 35, 18),
     m('Breakfast', 'Panera', 'Avocado, Egg White & Spinach Sandwich + side of turkey bacon', 460, 28, 40, 20),
     m('Breakfast', 'Taco Bell', 'Cheesy Bacon Breakfast Burrito + hash browns, egg whites', 500, 24, 45, 22),
@@ -242,6 +256,11 @@ const WC3: WeightClass = {
     ] },
   ],
   extraOptions: [
+    // Real dairy-free Chipotle/Qdoba variants (2026-08-28) — same real gap.
+    m('Lunch', 'Chipotle', 'Bowl: Steak, full white rice, black beans, corn salsa, fajita veggies, no cheese', 680, 56, 44, 21),
+    m('Dinner', 'Chipotle', 'Bowl: Double Chicken, full brown rice, pinto beans, fajita veggies, corn salsa, no cheese', 650, 65, 47, 21),
+    m('Lunch', 'Qdoba', 'Double chicken + steak bowl, full rice, black beans, no cheese', 760, 68, 58, 18),
+    m('Dinner', 'Qdoba', 'Double chicken + steak bowl, full rice, black beans, no cheese', 760, 68, 58, 18),
     m('Breakfast', "Dunkin'", 'Turkey Sausage Egg White & Cheese Wrap + Greek Yogurt + banana', 560, 38, 50, 22),
     m('Breakfast', 'Panera', 'Avocado, Egg White & Spinach Sandwich + turkey bacon + fruit cup', 580, 34, 50, 24),
     m('Breakfast', 'Taco Bell', 'Cheesy Bacon Breakfast Burrito + Breakfast Crunchwrap (½ shared)', 620, 30, 55, 28),
@@ -395,9 +414,22 @@ function containsPork(orderLower: string): boolean {
   return /\b(bacon|sausage|ham|pork)\b/.test(stripped)
 }
 
+// Real bug caught live testing this exact feature (2026-08-28): a bare
+// substring check flagged "no cheese" as containing dairy, same as
+// "cheese" itself — so the SAFE variant added specifically to fix a
+// restriction gap was excluded right alongside the item it was meant to
+// replace, both got filtered out, and the function fell back to showing
+// the unsafe original anyway. "no <word>" is already this dataset's own
+// standard way of stating a real removed ingredient (no mayo, no ranch, no
+// sour cream, no cheese) — strip those phrases before checking, so a
+// stated exclusion is never misread as the ingredient being present.
+function stripNegations(text: string): string {
+  return text.replace(/\bno\s+\w+/gi, '')
+}
+
 function violatesRestrictions(order: string, restrictions: Set<DietaryRestriction>): boolean {
   if (restrictions.size === 0) return false
-  const lower = order.toLowerCase()
+  const lower = stripNegations(order.toLowerCase())
   return Array.from(restrictions).some((r) => (r === 'pork' ? containsPork(lower) : DISQUALIFYING_PATTERN[r].test(lower)))
 }
 
