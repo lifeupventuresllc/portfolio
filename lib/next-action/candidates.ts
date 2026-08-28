@@ -22,10 +22,7 @@ const FALLBACKS: { key: string; instruction: string; minutes: number }[] = [
 // regardless of anything else being done, so the circle could never go
 // quiet — even on a day she'd genuinely finished her workout AND logged
 // real food, it kept nudging "one more small thing" (a glass of water, a
-// stretch) instead of ever just telling her she was done. Same "done for
-// today" definition /plan/today's own hero ring already uses (workout done
-// + at least one real food entry logged) — this can't disagree with what
-// she sees there.
+// stretch) instead of ever just telling her she was done.
 const COMPLETE_MESSAGES = [
   "You did it all today, love — every single thing. Rest now, you've more than earned it.",
   "That's everything for today, love. Go be proud of yourself tonight.",
@@ -34,13 +31,26 @@ const COMPLETE_MESSAGES = [
   "Nothing left to do today, love — you already gave it everything.",
 ]
 
+// Real bug fixed 2026-08-28 (Asa's live report): this used to fire off
+// caloriesLoggedToday > 0 — ANY single food entry — so logging one small
+// snack after a workout claimed "you did it all today, nothing left to do"
+// even with hundreds of real calories still in her budget, and hid the
+// actual remaining-calorie number underneath it. "Done" for nutrition now
+// means the same thing the meal candidate below means by "still has calories
+// left": she's used her real budget, not merely touched the log once. With
+// no known budget there's nothing to compare against, so a real entry still
+// counts (the old behavior, kept only for that one case).
+function nutritionDoneToday(state: UserStateSnapshot): boolean {
+  return state.calorieBudget != null ? state.caloriesLoggedToday >= state.calorieBudget : state.caloriesLoggedToday > 0
+}
+
 // Builds every real option worth scoring right now — never a menu shown to
 // her, just the input list the scorer picks exactly one winner from. A
 // candidate is only included if it's actually actionable today (no
 // double-counting a workout she's already done, no meal prompt once she's
 // already hit budget).
 export function buildCandidates(state: UserStateSnapshot): ActionCandidate[] {
-  if (state.workoutDoneToday && state.caloriesLoggedToday > 0) {
+  if (state.workoutDoneToday && nutritionDoneToday(state)) {
     const instruction = COMPLETE_MESSAGES[Math.floor(Math.random() * COMPLETE_MESSAGES.length)]
     return [{ kind: 'complete', actionKey: 'complete:done_for_today', instruction, estMinutes: 0 }]
   }

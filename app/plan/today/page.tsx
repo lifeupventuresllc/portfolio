@@ -143,7 +143,14 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   const loggedCalories = (foodRows || []).reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
   const loggedProtein = (foodRows || []).reduce((sum, r) => sum + (Number(r.protein_g) || 0), 0)
   const calRemaining = calBudget != null ? Math.max(0, calBudget - loggedCalories) : null
-  const foodLoggedToday = (foodRows || []).length > 0
+  // Real bug fixed 2026-08-28 (Asa's live report): this used to mean "logged
+  // ANY food today" — so one small snack lit up the ring's second half and
+  // the circle's "done for today" message even with most of her real budget
+  // still unspent. With a known budget, "done" now means she actually used
+  // it, matching the same real-completion definition the circle's terminal
+  // state uses (lib/next-action/candidates.ts's nutritionDoneToday). With no
+  // budget to compare against, a real entry still counts.
+  const foodLoggedToday = calBudget != null ? loggedCalories >= calBudget : (foodRows || []).length > 0
 
   // She told Coach Asa she's eating out today (an ad-hoc chat approval, not a
   // pre-scheduled plan day) — the fixed meal list below is now irrelevant, she's
