@@ -18,12 +18,33 @@ const FALLBACKS: { key: string; instruction: string; minutes: number }[] = [
   { key: 'stillness', instruction: '5 minutes of stillness, love — just for you, no phone.', minutes: 5 },
 ]
 
+// Real bug fixed 2026-08-28: the fallback pool below was ALWAYS available
+// regardless of anything else being done, so the circle could never go
+// quiet — even on a day she'd genuinely finished her workout AND logged
+// real food, it kept nudging "one more small thing" (a glass of water, a
+// stretch) instead of ever just telling her she was done. Same "done for
+// today" definition /plan/today's own hero ring already uses (workout done
+// + at least one real food entry logged) — this can't disagree with what
+// she sees there.
+const COMPLETE_MESSAGES = [
+  "You did it all today, love — every single thing. Rest now, you've more than earned it.",
+  "That's everything for today, love. Go be proud of yourself tonight.",
+  'Workout done, food logged — today is fully yours now. Well done, love.',
+  'You showed up for all of it today. Let yourself feel good about that, love.',
+  "Nothing left to do today, love — you already gave it everything.",
+]
+
 // Builds every real option worth scoring right now — never a menu shown to
 // her, just the input list the scorer picks exactly one winner from. A
 // candidate is only included if it's actually actionable today (no
 // double-counting a workout she's already done, no meal prompt once she's
 // already hit budget).
 export function buildCandidates(state: UserStateSnapshot): ActionCandidate[] {
+  if (state.workoutDoneToday && state.caloriesLoggedToday > 0) {
+    const instruction = COMPLETE_MESSAGES[Math.floor(Math.random() * COMPLETE_MESSAGES.length)]
+    return [{ kind: 'complete', actionKey: 'complete:done_for_today', instruction, estMinutes: 0 }]
+  }
+
   const candidates: ActionCandidate[] = []
 
   if (state.workoutCandidate && !state.workoutDoneToday) {

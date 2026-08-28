@@ -10,7 +10,13 @@ export type EnergyLevel = 'low' | 'normal' | 'high' | 'unknown'
 // 'reward_question' (prompt 7) is never a scored candidate — it's an
 // occasional replacement the reward system swaps in on top of whatever
 // normally would have won, when it has nothing usable yet to reward with.
-export type ActionKind = 'workout' | 'meal' | 'fallback' | 'location' | 'reward_question'
+// 'complete' (2026-08-28, Asa's ask): a real terminal state — she's already
+// done her workout AND logged real food today, so the engine has nothing
+// left to actually ask of her. Before this, the fallback pool (water,
+// stretch, etc.) ALWAYS had a candidate available, so the circle could
+// never go quiet even on a day she'd genuinely finished everything —
+// it kept nudging for one more small thing. See candidates.ts.
+export type ActionKind = 'workout' | 'meal' | 'fallback' | 'location' | 'reward_question' | 'complete'
 
 export type UserStateSnapshot = {
   enrollmentId: string

@@ -11,7 +11,7 @@ import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
 // label), just the one thing to do right now. Prompt 3's expansion routing
 // lives here too: tapping the instruction (not the buttons) opens the
 // supporting screen the engine already decided on — never a menu.
-type ActionKind = 'workout' | 'meal' | 'fallback' | 'location'
+type ActionKind = 'workout' | 'meal' | 'fallback' | 'location' | 'complete'
 type NextAction = { logId: string; kind: ActionKind; actionKey: string; instruction: string; score: number; restaurant?: string; mealSlot?: string }
 
 // The ONE destination per kind — fully determined by what the engine
@@ -335,15 +335,23 @@ export default function NextActionCard() {
       {note && <p className="text-ivory/50 text-[11px] text-center mb-2" style={{ fontFamily: 'var(--font-poppins)' }}>{note}</p>}
 
       {/* Small on purpose — the circle is the one thing on this screen;
-          these are just the escape hatches, not a second focal point. */}
+          these are just the escape hatches, not a second focal point.
+          "complete" (2026-08-28) hides Done/Keep it simple — there's
+          nothing left to mark done and nothing to simplify on a day she's
+          already finished everything; "Something else?" stays in case she
+          wants to add anything. */}
       <div className="flex flex-col items-center gap-1.5" style={{ fontFamily: 'var(--font-poppins)' }}>
-        <button onClick={markDone} disabled={busy} className="bg-gold text-obsidian px-7 py-2 font-bold text-xs uppercase tracking-wider rounded-full active:scale-95 transition-transform disabled:opacity-60">
-          {done ? 'Nice!' : 'Done'}
-        </button>
-        <div className="flex items-center justify-center gap-4">
-          <button onClick={dayChanged} disabled={busy} className="text-ivory/50 text-[11px] font-semibold py-1.5 disabled:opacity-60">
-            Keep it simple
+        {action.kind !== 'complete' && (
+          <button onClick={markDone} disabled={busy} className="bg-gold text-obsidian px-7 py-2 font-bold text-xs uppercase tracking-wider rounded-full active:scale-95 transition-transform disabled:opacity-60">
+            {done ? 'Nice!' : 'Done'}
           </button>
+        )}
+        <div className="flex items-center justify-center gap-4">
+          {action.kind !== 'complete' && (
+            <button onClick={dayChanged} disabled={busy} className="text-ivory/50 text-[11px] font-semibold py-1.5 disabled:opacity-60">
+              Keep it simple
+            </button>
+          )}
           <button onClick={() => setShowMessage((s) => !s)} disabled={busy} className="text-ivory/50 text-[11px] font-semibold py-1.5 disabled:opacity-60">
             Something else?
           </button>

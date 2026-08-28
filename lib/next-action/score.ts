@@ -21,6 +21,10 @@ const KIND_BASE: Record<ActionCandidate['kind'], number> = {
   // injects it after scoring, replacing whatever won) — present only so
   // the map stays exhaustive over ActionKind.
   reward_question: 0,
+  // Also never actually competes — candidates.ts returns it as the ONLY
+  // candidate on a day she's genuinely done, so nothing else is in the
+  // running for the scorer to weigh it against. Present for exhaustiveness.
+  complete: 0,
 }
 
 // A real, already-observed dip (lib/fos/pattern.ts) or a low energy signal
