@@ -86,7 +86,7 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
 
   const tz = getTimezone()
   const todayIso = localDateISO(tz)
-  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }, { data: foodRows }, trendPoints] = await Promise.all([
+  const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }, { data: foodRows }, trendPoints, { data: recentWorkoutActions }] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('meals, calories, protein_g').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('measurements, logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
@@ -100,6 +100,12 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
     // Weighted, lifetime progress trend (Asa's call, 2026-08-26: "everything
     // counts towards their goal" — not just weigh-ins) — see lib/progress-score.ts.
     getProgressScoreTrend(enrollment.id as string),
+    // Real gap found live (Asa's ask, 2026-08-28): "if she simplified her
+    // workout via the circle, this page shouldn't act like nothing
+    // happened." Same recent-workout-actions read next-action/state.ts
+    // already does for its own workoutSkippedToday — reused here, not
+    // duplicated logic, just a second consumer of the same real signal.
+    svc.from('next_action_log').select('shown_at, skipped_at, superseded_at').eq('enrollment_id', enrollment.id).eq('kind', 'workout').gte('shown_at', new Date(Date.now() - 2 * 86400000).toISOString()).order('shown_at', { ascending: false }),
   ])
   // Moved here from /plan's dashboard (2026-08-12 redesign) — one-time invite into
   // the profile pass(es) she skipped to get here fast. Disappears for good once done.
@@ -170,6 +176,13 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   // already go today"). logged_on was already being selected for doneRows —
   // this was one filter away, not a new query.
   const workoutDoneToday = (doneRows || []).some((r) => r.logged_on === todayIso && (r.measurements as { workout?: boolean } | null)?.workout)
+  // "Keep it simple" via the circle supersedes today's workout row rather
+  // than completing it — a deliberate, real choice, not the same as never
+  // showing up at all. Same today-local-date match as
+  // lib/next-action/state.ts's workoutSkippedToday (same underlying signal,
+  // a second real consumer of it here).
+  const todaysWorkoutAction = (recentWorkoutActions || []).find((r) => localDateISO(tz, new Date(r.shown_at as string)) === todayIso)
+  const workoutSimplifiedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)
   // The hero ring's real "1/2" — two genuine today-specific wins (workout,
   // real logged food), not an arbitrary made-up score.
   const dailyScore = (workoutDoneToday ? 1 : 0) + (foodLoggedToday ? 1 : 0)
@@ -181,6 +194,14 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   // everywhere else. Never a second, drifting streak number.
   const checkinDates = new Set((doneRows || []).map((r) => r.logged_on as string))
   const currentStreak = streakFrom(checkinDates, todayIso)
+  // Real gap found live (Asa's ask, 2026-08-28): a day she genuinely engaged
+  // with — did the simplified version, or logged some food — but hasn't hit
+  // either full "done," used to look IDENTICAL to a day she did nothing at
+  // all: a flat, unlit ring and a nag to start the very workout she already
+  // consciously chose to simplify. Effort she actually put in deserves to
+  // read differently from a blank day, without inflating dailyScore itself
+  // (that number still has to mean what it says — see bug #15).
+  const showedUpToday = checkinDates.has(todayIso) || workoutSimplifiedToday
   // The genuinely new piece: a real, varying message on the exact day a
   // milestone lands, instead of the identical static confirmation every day
   // gets today regardless of how long a streak she's actually built.
@@ -315,23 +336,51 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
               <>
                 <div className="relative w-48 h-48 mb-5">
                   <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transform: 'rotate(-90deg)' }}>
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
+                    {/* Real gap found live (Asa's ask, 2026-08-28): this track
+                        used to read identically on a day she genuinely
+                        engaged (simplified her workout, logged some food) and
+                        a day she did nothing at all — both flat, unlit gray.
+                        A dim accent tint (not the full solid arc dailyScore
+                        earns) gives real effort a visibly different look
+                        from a blank day, without claiming either slot is
+                        actually done. */}
+                    <circle cx="50" cy="50" r="45" fill="none" stroke={showedUpToday && dailyScore < 2 ? 'rgba(201,168,76,0.3)' : 'rgba(255,255,255,0.1)'} strokeWidth="6" />
                     <circle cx="50" cy="50" r="45" fill="none" stroke={CARD_ACCENT} strokeWidth="6" strokeLinecap="round"
                       strokeDasharray={`${2 * Math.PI * 45}`} strokeDashoffset={`${2 * Math.PI * 45 * (1 - dailyScore / 2)}`} />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <p className="text-4xl font-bold" style={{ color: CARD_TEXT, fontFamily: 'Georgia, "Times New Roman", ui-serif, serif' }}>{dailyScore}/2</p>
-                    <p className="text-[10px] uppercase tracking-wider font-semibold mt-1" style={{ color: CARD_MUTED }}>done today</p>
+                    <p className="text-[10px] uppercase tracking-wider font-semibold mt-1" style={{ color: CARD_MUTED }}>
+                      {dailyScore < 2 && showedUpToday ? 'showed up today' : 'done today'}
+                    </p>
                   </div>
                 </div>
                 <p className="font-semibold" style={{ color: CARD_TEXT }}>
-                  {workoutDoneToday ? 'You already showed up today.' : <>Next: <span style={{ color: CARD_ACCENT }}>{todayWorkout.title}</span></>}
+                  {workoutDoneToday
+                    ? 'You already showed up today.'
+                    : workoutSimplifiedToday
+                    // Real gap found live (Asa's ask, 2026-08-28): she
+                    // consciously kept today simple via the circle, but this
+                    // card — reading its own separate rotation, not the
+                    // circle's live decision — kept nagging her toward the
+                    // very workout she'd already chosen not to do, with a
+                    // pulsing "Start workout" CTA. Acknowledge the real
+                    // choice instead of contradicting it.
+                    ? 'You kept it simple today — that still counts.'
+                    : <>Next: <span style={{ color: CARD_ACCENT }}>{todayWorkout.title}</span></>}
                 </p>
-                {!workoutDoneToday && todayAdjustment?.workoutChange && (
+                {!workoutDoneToday && !workoutSimplifiedToday && todayAdjustment?.workoutChange && (
                   <p className="text-[11px] mt-1 font-semibold" style={{ color: CARD_ACCENT }}>Adjusted: {todayAdjustment.workoutChange.toMinutes ? `${todayAdjustment.workoutChange.toMinutes}-min ` : ''}{todayAdjustment.workoutChange.swapTo || 'adapted for today'}</p>
                 )}
-                {!workoutDoneToday && (
+                {!workoutDoneToday && !workoutSimplifiedToday && (
                   <Link href="/plan/workout" className="luf-pulse mt-5 w-full max-w-xs inline-flex items-center justify-center gap-1.5 px-4 py-3.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:scale-[1.02] transition-transform" style={{ background: CARD_ACCENT, color: INK }}>▶ Start workout</Link>
+                )}
+                {workoutSimplifiedToday && !workoutDoneToday && (
+                  // Quieter, optional — not the same insistent pulsing CTA a
+                  // day she hasn't engaged at all gets. Still real and
+                  // reachable, never removed outright (see bug #13: never
+                  // leave the real workout unreachable).
+                  <Link href="/plan/workout" className="mt-5 text-xs font-semibold underline underline-offset-2" style={{ color: CARD_MUTED }}>Still want to do it today?</Link>
                 )}
               </>
             ) : (
