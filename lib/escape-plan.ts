@@ -61,21 +61,67 @@ const WC1: WeightClass = {
   extraOptions: [
     m('Breakfast', "Dunkin'", 'Turkey Sausage Egg White & Cheese on English Muffin', 280, 20, 23, 12),
     m('Breakfast', 'Panera', 'Avocado, Egg White & Spinach Breakfast Sandwich', 320, 15, 33, 15),
+    // Taco Bell's real breakfast menu (2026-08-28, real gap: she asked for
+    // a Taco Bell breakfast option and got a silent substitute since only
+    // Lunch/Dinner existed) — genuinely different items from their
+    // lunch/dinner menu, not a duplicate.
+    m('Breakfast', 'Taco Bell', 'Cheesy Bacon Breakfast Burrito, egg whites', 350, 18, 32, 16),
+    // Same all-day menu chains (2026-08-28, widened per Asa's ask after
+    // Wingstop/Domino's/KFC misses): most quick-service places serve one
+    // real menu across Lunch and Dinner, not a different one per time of
+    // day — so the missing slot gets the SAME real order, never an
+    // invented dinner-specific dish. KFC/Popeyes/Wingstop/Firehouse/Jimmy
+    // John's/Jersey Mike's/Culver's/Sweetgreen/Qdoba/Domino's/Five Guys/
+    // Shake Shack/Sonic/Raising Cane's/Arby's/Panera all had only one of
+    // the two covered before this.
     m('Lunch', 'KFC', '2pc Grilled Chicken Breast (skin off) + Green Beans', 350, 55, 10, 8),
+    m('Dinner', 'KFC', '2pc Grilled Chicken Breast (skin off) + Green Beans', 350, 55, 10, 8),
     m('Lunch', 'Jimmy John\'s', 'Turkey Tom Unwich (lettuce wrap, no mayo)', 260, 24, 9, 14),
+    m('Dinner', 'Jimmy John\'s', 'Turkey Tom Unwich (lettuce wrap, no mayo)', 260, 24, 9, 14),
     m('Lunch', "Jersey Mike's", 'Turkey & Provolone Mini, mustard, extra veggies', 290, 22, 32, 8),
+    m('Dinner', "Jersey Mike's", 'Turkey & Provolone Mini, mustard, extra veggies', 290, 22, 32, 8),
     m('Lunch', 'Culver\'s', 'Grilled Chicken Sandwich, no mayo', 380, 34, 40, 9),
+    m('Dinner', 'Culver\'s', 'Grilled Chicken Sandwich, no mayo', 380, 34, 40, 9),
     m('Lunch', 'Sweetgreen', 'Chicken + greens bowl, light dressing, no cheese', 420, 34, 32, 16),
+    m('Dinner', 'Sweetgreen', 'Chicken + greens bowl, light dressing, no cheese', 420, 34, 32, 16),
     m('Lunch', 'Qdoba', 'Chicken bowl, ½ rice, black beans, salsa, no cheese', 460, 38, 42, 13),
+    m('Dinner', 'Qdoba', 'Chicken bowl, ½ rice, black beans, salsa, no cheese', 460, 38, 42, 13),
+    m('Lunch', 'Firehouse Subs', 'Turkey mini sub, no mayo', 220, 16, 26, 6),
     m('Snack', 'Firehouse Subs', 'Turkey mini sub, no mayo', 220, 16, 26, 6),
+    // Wingstop's real lunch/dinner menu (2026-08-28, real gap she hit
+    // directly) — only ever had a snack-sized wing order before.
+    m('Lunch', "Wingstop", '6 Lemon Pepper boneless wings, no ranch', 440, 34, 24, 24),
+    m('Dinner', "Wingstop", '6 Lemon Pepper boneless wings, no ranch', 440, 34, 24, 24),
     m('Snack', "Wingstop", '3 Lemon Pepper boneless wings, no ranch', 220, 17, 12, 12),
+    m('Lunch', 'Popeyes', '2pc Blackened Chicken Tenders + side salad, light dressing', 330, 42, 10, 12),
     m('Dinner', 'Popeyes', '2pc Blackened Chicken Tenders + side salad, light dressing', 330, 42, 10, 12),
+    m('Lunch', 'Five Guys', 'Little Hamburger, lettuce wrap, no cheese, light fries shared', 420, 24, 20, 27),
     m('Dinner', 'Five Guys', 'Little Hamburger, lettuce wrap, no cheese, light fries shared', 420, 24, 20, 27),
+    m('Lunch', "Raising Cane's", '2 chicken fingers + coleslaw, sauce on side', 360, 27, 22, 18),
     m('Dinner', "Raising Cane's", '2 chicken fingers + coleslaw, sauce on side', 360, 27, 22, 18),
+    m('Lunch', 'Shake Shack', 'ShackBurger single, no cheese, no sauce', 340, 20, 26, 17),
     m('Dinner', 'Shake Shack', 'ShackBurger single, no cheese, no sauce', 340, 20, 26, 17),
+    // Domino's real lunch menu (2026-08-28, real gap she hit directly) —
+    // only ever had a dinner-sized pizza order before.
+    m('Lunch', 'Domino\'s', '2 thin crust slices, grilled chicken topping', 320, 20, 28, 15),
     m('Dinner', 'Domino\'s', '2 thin crust slices, grilled chicken topping', 320, 20, 28, 15),
+    m('Lunch', "Arby's", 'Roast Turkey Farmhouse Sandwich, no mayo, half', 300, 22, 32, 9),
     m('Dinner', "Arby's", 'Roast Turkey Farmhouse Sandwich, no mayo, half', 300, 22, 32, 9),
+    m('Lunch', 'Sonic', 'Grilled Chicken Wrap, no ranch', 360, 22, 30, 17),
     m('Dinner', 'Sonic', 'Grilled Chicken Wrap, no ranch', 360, 22, 30, 17),
+    // Panera's real all-day sandwich menu, not just breakfast.
+    m('Lunch', 'Panera', 'Turkey Sandwich on whole grain, no mayo, half + cup of soup', 380, 26, 42, 10),
+    m('Dinner', 'Panera', 'Turkey Sandwich on whole grain, no mayo, half + cup of soup', 380, 26, 42, 10),
+    // Closing gaps on the ORIGINAL 5-day chains too (2026-08-28) — Subway
+    // had no real Lunch entry despite being THE quintessential lunch sub
+    // chain, McDonald's/Chick-fil-A/Burger King all had one-sided
+    // Lunch-or-Dinner coverage, and Wendy's had none at all in this class.
+    m('Lunch', 'Subway', '6" Oven Roasted Turkey on Wheat, double meat, 1 provolone, free veggies', 300, 34, 15, 12),
+    m('Dinner', "McDonald's", 'Grilled Chicken Sandwich + Side Salad, light Italian dressing', 460, 42, 32, 16),
+    m('Lunch', "Wendy's", 'Grilled Chicken Sandwich, no mayo + side salad, light dressing', 420, 38, 30, 14),
+    m('Dinner', "Wendy's", 'Grilled Chicken Sandwich, no mayo + side salad, light dressing', 420, 38, 30, 14),
+    m('Dinner', 'Chick-fil-A', 'Grilled Chicken Sandwich + Side Salad + Light Italian Dressing', 460, 37, 30, 18),
+    m('Lunch', 'Burger King', 'Whopper Jr. (no mayo) + Garden Salad (light Italian) + grilled chicken patty', 540, 55, 28, 26),
   ],
 }
 
@@ -116,21 +162,48 @@ const WC2: WeightClass = {
   extraOptions: [
     m('Breakfast', "Dunkin'", 'Turkey Sausage Egg White & Cheese Wrap + Greek Yogurt', 420, 30, 35, 18),
     m('Breakfast', 'Panera', 'Avocado, Egg White & Spinach Sandwich + side of turkey bacon', 460, 28, 40, 20),
+    m('Breakfast', 'Taco Bell', 'Cheesy Bacon Breakfast Burrito + hash browns, egg whites', 500, 24, 45, 22),
     m('Lunch', 'KFC', '3pc Grilled Chicken Breast (skin off) + Green Beans + Corn', 520, 70, 25, 12),
+    m('Dinner', 'KFC', '3pc Grilled Chicken Breast (skin off) + Green Beans + Corn', 520, 70, 25, 12),
     m('Lunch', "Jimmy John's", 'Turkey Tom Unwich, double turkey, extra veggies', 400, 38, 15, 20),
+    m('Dinner', "Jimmy John's", 'Turkey Tom Unwich, double turkey, extra veggies', 400, 38, 15, 20),
     m('Lunch', "Jersey Mike's", 'Turkey & Provolone Regular sub, mustard, extra veggies', 490, 34, 45, 14),
+    m('Dinner', "Jersey Mike's", 'Turkey & Provolone Regular sub, mustard, extra veggies', 490, 34, 45, 14),
     m('Lunch', "Culver's", 'Grilled Chicken Sandwich + side salad, light dressing', 540, 46, 44, 18),
+    m('Dinner', "Culver's", 'Grilled Chicken Sandwich + side salad, light dressing', 540, 46, 44, 18),
     m('Lunch', 'Sweetgreen', 'Double chicken + greens bowl, sweet potato, light dressing', 610, 52, 45, 22),
+    m('Dinner', 'Sweetgreen', 'Double chicken + greens bowl, sweet potato, light dressing', 610, 52, 45, 22),
     m('Lunch', 'Qdoba', 'Double chicken bowl, full rice, black beans, light cheese', 680, 58, 55, 20),
+    m('Dinner', 'Qdoba', 'Double chicken bowl, full rice, black beans, light cheese', 680, 58, 55, 20),
+    m('Lunch', 'Firehouse Subs', 'Turkey medium sub half, no mayo', 300, 22, 30, 10),
     m('Snack', 'Firehouse Subs', 'Turkey medium sub half, no mayo', 300, 22, 30, 10),
+    m('Lunch', 'Wingstop', '8 Lemon Pepper boneless wings, no ranch', 560, 44, 30, 30),
+    m('Dinner', 'Wingstop', '8 Lemon Pepper boneless wings, no ranch', 560, 44, 30, 30),
     m('Snack', 'Wingstop', '4 Lemon Pepper boneless wings, no ranch', 300, 23, 16, 16),
+    m('Lunch', 'Popeyes', '3pc Blackened Chicken Tenders + red beans and rice (½)', 560, 62, 30, 20),
     m('Dinner', 'Popeyes', '3pc Blackened Chicken Tenders + red beans and rice (½)', 560, 62, 30, 20),
+    m('Lunch', 'Five Guys', 'Cheeseburger, lettuce wrap, light fries shared', 650, 40, 30, 40),
     m('Dinner', 'Five Guys', 'Cheeseburger, lettuce wrap, light fries shared', 650, 40, 30, 40),
+    m('Lunch', "Raising Cane's", '3 chicken fingers + coleslaw + Texas toast (½)', 600, 42, 40, 28),
     m('Dinner', "Raising Cane's", '3 chicken fingers + coleslaw + Texas toast (½)', 600, 42, 40, 28),
+    m('Lunch', 'Shake Shack', 'ShackBurger single + fries shared (½)', 560, 26, 48, 30),
     m('Dinner', 'Shake Shack', 'ShackBurger single + fries shared (½)', 560, 26, 48, 30),
+    m('Lunch', "Domino's", '3 thin crust slices, grilled chicken topping', 500, 30, 42, 22),
     m('Dinner', "Domino's", '3 thin crust slices, grilled chicken topping', 500, 30, 42, 22),
+    m('Lunch', "Arby's", 'Roast Turkey Farmhouse Sandwich, no mayo, whole', 590, 42, 55, 18),
     m('Dinner', "Arby's", 'Roast Turkey Farmhouse Sandwich, no mayo, whole', 590, 42, 55, 18),
+    m('Lunch', 'Sonic', 'Grilled Chicken Wrap + side salad, light dressing', 540, 36, 40, 24),
     m('Dinner', 'Sonic', 'Grilled Chicken Wrap + side salad, light dressing', 540, 36, 40, 24),
+    m('Lunch', 'Panera', 'Turkey Sandwich on whole grain, no mayo + cup of soup', 520, 34, 50, 16),
+    m('Dinner', 'Panera', 'Turkey Sandwich on whole grain, no mayo + cup of soup', 520, 34, 50, 16),
+    // Closing gaps on the ORIGINAL 5-day chains too (2026-08-28).
+    m('Lunch', 'Subway', '6" Turkey on Wheat, double meat, extra veggies, no mayo', 400, 40, 35, 10),
+    m('Dinner', 'Subway', '6" Turkey on Wheat, double meat, extra veggies, no mayo', 400, 40, 35, 10),
+    m('Dinner', "McDonald's", 'Grilled Chicken Sandwich + Side Salad + Extra Grilled Patty + Apple Slices', 690, 50, 35, 20),
+    m('Lunch', "Wendy's", 'Grilled Chicken Wrap (2 wraps)', 620, 52, 33, 25),
+    m('Lunch', 'Chick-fil-A', 'Grilled Chicken Sandwich + Side Salad, light Italian dressing', 550, 45, 35, 20),
+    m('Dinner', 'Chick-fil-A', 'Grilled Chicken Sandwich + Side Salad, light Italian dressing', 550, 45, 35, 20),
+    m('Lunch', 'Burger King', 'Grilled Chicken Sandwich + Side Salad with dressing', 670, 60, 32, 28),
   ],
 }
 
@@ -171,21 +244,49 @@ const WC3: WeightClass = {
   extraOptions: [
     m('Breakfast', "Dunkin'", 'Turkey Sausage Egg White & Cheese Wrap + Greek Yogurt + banana', 560, 38, 50, 22),
     m('Breakfast', 'Panera', 'Avocado, Egg White & Spinach Sandwich + turkey bacon + fruit cup', 580, 34, 50, 24),
+    m('Breakfast', 'Taco Bell', 'Cheesy Bacon Breakfast Burrito + Breakfast Crunchwrap (½ shared)', 620, 30, 55, 28),
     m('Lunch', 'KFC', '4pc Grilled Chicken Breast (skin off) + Green Beans + Corn', 650, 92, 30, 15),
+    m('Dinner', 'KFC', '4pc Grilled Chicken Breast (skin off) + Green Beans + Corn', 650, 92, 30, 15),
     m('Lunch', "Jimmy John's", 'Turkey Tom Unwich, double turkey + side of chips shared', 540, 46, 30, 24),
+    m('Dinner', "Jimmy John's", 'Turkey Tom Unwich, double turkey + side of chips shared', 540, 46, 30, 24),
     m('Lunch', "Jersey Mike's", 'Turkey & Provolone Giant sub (½), mustard, extra veggies', 660, 46, 60, 18),
+    m('Dinner', "Jersey Mike's", 'Turkey & Provolone Giant sub (½), mustard, extra veggies', 660, 46, 60, 18),
     m('Lunch', "Culver's", 'Double Grilled Chicken Sandwich + side salad, light dressing', 700, 62, 48, 22),
+    m('Dinner', "Culver's", 'Double Grilled Chicken Sandwich + side salad, light dressing', 700, 62, 48, 22),
     m('Lunch', 'Sweetgreen', 'Double chicken + steak bowl, sweet potato, light dressing', 760, 64, 50, 28),
+    m('Dinner', 'Sweetgreen', 'Double chicken + steak bowl, sweet potato, light dressing', 760, 64, 50, 28),
     m('Lunch', 'Qdoba', 'Double chicken + steak bowl, full rice, black beans, cheese', 820, 68, 58, 26),
+    m('Dinner', 'Qdoba', 'Double chicken + steak bowl, full rice, black beans, cheese', 820, 68, 58, 26),
+    m('Lunch', 'Firehouse Subs', 'Turkey medium sub, no mayo', 460, 32, 46, 14),
     m('Snack', 'Firehouse Subs', 'Turkey medium sub, no mayo', 460, 32, 46, 14),
+    m('Lunch', 'Wingstop', '10 Lemon Pepper boneless wings, no ranch', 680, 54, 36, 36),
+    m('Dinner', 'Wingstop', '10 Lemon Pepper boneless wings, no ranch', 680, 54, 36, 36),
     m('Snack', 'Wingstop', '6 Lemon Pepper boneless wings, no ranch', 440, 34, 24, 24),
+    m('Lunch', 'Popeyes', '4pc Blackened Chicken Tenders + red beans and rice', 700, 78, 40, 24),
     m('Dinner', 'Popeyes', '4pc Blackened Chicken Tenders + red beans and rice', 700, 78, 40, 24),
+    m('Lunch', 'Five Guys', 'Bacon Cheeseburger, lettuce wrap, fries shared', 780, 48, 35, 48),
     m('Dinner', 'Five Guys', 'Bacon Cheeseburger, lettuce wrap, fries shared', 780, 48, 35, 48),
+    m('Lunch', "Raising Cane's", '4 chicken fingers + coleslaw + Texas toast', 760, 54, 50, 34),
     m('Dinner', "Raising Cane's", '4 chicken fingers + coleslaw + Texas toast', 760, 54, 50, 34),
+    m('Lunch', 'Shake Shack', 'SmokeShack + fries shared (½)', 720, 34, 52, 42),
     m('Dinner', 'Shake Shack', 'SmokeShack + fries shared (½)', 720, 34, 52, 42),
+    m('Lunch', "Domino's", '4 thin crust slices, grilled chicken topping', 660, 40, 55, 28),
     m('Dinner', "Domino's", '4 thin crust slices, grilled chicken topping', 660, 40, 55, 28),
+    m('Lunch', "Arby's", 'Roast Turkey Farmhouse Sandwich, whole + side salad', 680, 48, 60, 22),
     m('Dinner', "Arby's", 'Roast Turkey Farmhouse Sandwich, whole + side salad', 680, 48, 60, 22),
+    m('Lunch', 'Sonic', 'Grilled Chicken Wrap + Jr. side salad, light dressing', 640, 42, 46, 28),
     m('Dinner', 'Sonic', 'Grilled Chicken Wrap + Jr. side salad, light dressing', 640, 42, 46, 28),
+    m('Lunch', 'Panera', 'Turkey Sandwich on whole grain, no mayo + cup of soup + fruit cup', 640, 40, 58, 20),
+    m('Dinner', 'Panera', 'Turkey Sandwich on whole grain, no mayo + cup of soup + fruit cup', 640, 40, 58, 20),
+    // Closing gaps on the ORIGINAL 5-day chains too (2026-08-28).
+    m('Lunch', 'Subway', '6" Turkey on Wheat, double meat, extra veggies, add avocado, no mayo', 520, 45, 40, 16),
+    m('Dinner', 'Subway', '6" Turkey on Wheat, double meat, extra veggies, add avocado, no mayo', 520, 45, 40, 16),
+    m('Dinner', "McDonald's", 'Grilled Chicken Sandwich + extra grilled patty + Side Salad + Apple Slices', 720, 56, 40, 25),
+    m('Lunch', "Wendy's", 'Grilled Chicken Wrap (3 wraps)', 780, 68, 42, 30),
+    m('Dinner', "Wendy's", 'Grilled Chicken Wrap (3 wraps)', 780, 68, 42, 30),
+    m('Lunch', 'Chick-fil-A', 'Grilled Chicken Sandwich + Side Salad + extra grilled filet', 680, 58, 38, 24),
+    m('Dinner', 'Chick-fil-A', 'Grilled Chicken Sandwich + Side Salad + extra grilled filet', 680, 58, 38, 24),
+    m('Lunch', 'Burger King', 'Grilled Chicken Sandwich + Whopper Jr. (no mayo) + 4-pc nuggets + side salad', 750, 65, 35, 35),
   ],
 }
 
