@@ -114,6 +114,26 @@ export default function NextActionCard() {
     }
   }
 
+  // Shared by expand() (tapping the circle) and sendMessage/onVoiceFinal
+  // below (2026-08-27, Asa's ask: "do everything from the circle," no new
+  // buttons) — a location result is unambiguous, there's nothing else she'd
+  // want to do with it besides see the real order, so telling the circle
+  // "I'm eating out" now jumps straight to the picks screen on its own,
+  // cutting the extra "now tap the circle" step out of that one flow
+  // entirely without adding any new UI surface.
+  const goToExpansion = (a: NextAction) => {
+    const dest = EXPANSION_ROUTE[a.kind]
+    if (!dest) return
+    if (a.kind === 'location' && (a.restaurant || a.mealSlot)) {
+      const params = new URLSearchParams()
+      if (a.restaurant) params.set('restaurant', a.restaurant)
+      if (a.mealSlot) params.set('slot', a.mealSlot)
+      router.push(`${dest}?${params.toString()}`)
+      return
+    }
+    router.push(dest)
+  }
+
   const sendMessage = async (overrideText?: string) => {
     const text = (overrideText ?? message).trim()
     if (!action || busy || !text) return
@@ -142,6 +162,11 @@ export default function NextActionCard() {
         setAction(json)
         setNote(null)
         setEncouragement(null)
+        setMessage('')
+        setShowMessage(false)
+        // "I'm at Chick-fil-A" should land her straight on the real order,
+        // not back on the circle waiting for a second tap.
+        if (json.kind === 'location') { goToExpansion(json); return }
       } else {
         setNote("Got it — didn't need to change anything.")
       }
@@ -176,19 +201,7 @@ export default function NextActionCard() {
   // nothing to expand into, so the button is inert for those.
   const expand = () => {
     if (!action) return
-    const dest = EXPANSION_ROUTE[action.kind]
-    if (!dest) return
-    // Carry the exact restaurant/meal the circle already decided on into the
-    // expansion screen (2026-08-26) — "I'm at Taco Bell" must show 2 real
-    // Taco Bell options for the same meal, not the generic rotating picks.
-    if (action.kind === 'location' && (action.restaurant || action.mealSlot)) {
-      const params = new URLSearchParams()
-      if (action.restaurant) params.set('restaurant', action.restaurant)
-      if (action.mealSlot) params.set('slot', action.mealSlot)
-      router.push(`${dest}?${params.toString()}`)
-      return
-    }
-    router.push(dest)
+    goToExpansion(action)
   }
 
   // Cinematic emerald/gold treatment — Asa's final pick, 2026-08-26, after a
