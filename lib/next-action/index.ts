@@ -4,7 +4,7 @@ import { getUserState } from './state'
 import { buildCandidates } from './candidates'
 import { scoreCandidates } from './score'
 import { humanizeInstruction } from './llm'
-import { isRewardEligible, pickRewardOrQuestion, pickRewardQuestion, recordRewardOffered, weaveRewardDeterministic, type RewardPreference } from './reward'
+import { isRewardEligible, pickRewardOrQuestion, pickRewardQuestion, recordRewardOffered } from './reward'
 import type { NextActionResult, StateOverrides } from './types'
 
 export { getUserState } from './state'
@@ -108,18 +108,22 @@ export async function getNextAction(enrollmentId: string, todayISO: string, over
     }
   }
 
-  // Prompt 5's LLM half — reworded (and, when a reward was picked, woven
-  // in) once at creation, then stored so every later fetch of this same
-  // open row shows identical wording (see 034's migration comment).
-  const humanized = kind === 'reward_question' ? baseInstruction : await humanizeInstruction(baseInstruction, { energy: state.energy, reward: rewardLabel })
-  // humanizeInstruction returns its input completely unchanged whenever the
-  // LLM isn't configured or the call failed — so if a reward was picked but
-  // the returned text is identical to the un-woven base, the weave never
-  // actually happened. Guarantee it lands anyway via the deterministic
-  // fallback rather than silently dropping it.
-  const displayText = (rewardLabel && humanized === baseInstruction)
-    ? weaveRewardDeterministic(baseInstruction, { id: rewardPreferenceId || '', label: rewardLabel, category: 'other', source: 'explicit' } as RewardPreference)
-    : humanized
+  // Prompt 5's LLM half — reworded once at creation, then stored so every
+  // later fetch of this same open row shows identical wording (see 034's
+  // migration comment).
+  //
+  // Real design reversal, 2026-08-28 (Asa's direct call after seeing it
+  // live and not noticing anything happened): a reward used to be woven
+  // straight into this same instruction text ("...And after that — full
+  // workout, love."), by the ORIGINAL spec's explicit design — deliberately
+  // subtle, never exposed as a distinct moment. Asa wants the opposite: a
+  // real, visible celebration. `instruction`/`displayText` are now just the
+  // clean base task, never blended with reward text — `isReward`/
+  // `rewardLabel` below are returned as their OWN fields instead, and the
+  // client shows the celebration as a separate UI moment. This also
+  // retires weaveRewardDeterministic's reason for existing on this path —
+  // there's no text-weave left to have a fallback for.
+  const displayText = await humanizeInstruction(baseInstruction, { energy: state.energy })
 
   // Carried on the row itself for kind 'location' (2026-08-26, migration 036
   // applied) — the exact real order the circle decided on, so completing it
@@ -169,10 +173,20 @@ export async function getNextAction(enrollmentId: string, todayISO: string, over
   // with the actual instruction shown — cosmetically wrong even after the
   // scoring fix above, since eatingOutPick/eatingOutSlot can be populated
   // in state without location actually being the winner.
+  // Only true for a REAL reward (not the reward_question path, which is
+  // its own distinct instruction, not a celebration moment) — the client
+  // uses this to show the visible celebration Asa asked for. Only
+  // populated on this fresh-creation path; a page reload of the same
+  // still-open reward action won't re-derive it (would need a join back to
+  // reward_preferences for the label) — acceptable, since the point is
+  // catching the moment it happens, not guaranteeing it survives a reload.
+  const isActualReward = isReward && kind !== 'reward_question'
   return {
     logId: row.id as string, kind, actionKey, instruction: displayText, score: winner.score,
     restaurant: kind === 'location' ? state.eatingOutPick?.restaurant : undefined,
     mealSlot: kind === 'location' ? state.eatingOutSlot ?? undefined : undefined,
+    isReward: isActualReward || undefined,
+    rewardLabel: isActualReward ? rewardLabel : undefined,
   }
 }
 

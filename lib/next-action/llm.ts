@@ -22,10 +22,6 @@ const REWORD_TOOL = {
   },
 }
 
-// `reward`, when present, is prompt 7's weaving requirement: the reward
-// must land as genuinely part of the ONE instruction, not a second sentence
-// that reads like a separate offer.
-//
 // Real bug caught live (2026-08-25, direct production test): the earlier
 // version put the "how to weave this in" directive INSIDE the user-message
 // content, mixed in with the raw instruction text as one blob. Against
@@ -36,7 +32,7 @@ const REWORD_TOOL = {
 // channel) and keeping the user message to plain labeled data only — plus a
 // sanitize() safety net below so a similar echo can never reach her even if
 // it recurs, regardless of root cause.
-function sanitizeReworded(text: string, instruction: string, reward?: string): string | null {
+function sanitizeReworded(text: string, instruction: string): string | null {
   const t = text.trim()
   if (!t) return null
   const lower = t.toLowerCase()
@@ -49,33 +45,24 @@ function sanitizeReworded(text: string, instruction: string, reward?: string): s
   // so it read as legitimate warm copy while actually leaking raw input
   // labels. Added the literal template fragments from userContent above —
   // these can never appear in genuine reworded coaching copy.
-  const leakMarkers = [
-    'integrated part', 'not a second offer', 'reword', 'system prompt', 'weave this in',
-    'energy today:', 'instruction to reword:', 'reward to include:',
-  ]
+  const leakMarkers = ['integrated part', 'not a second offer', 'reword', 'system prompt', 'energy today:', 'instruction to reword:']
   if (leakMarkers.some((m) => lower.includes(m))) return null
   // A real rewording stays in the same ballpark length as the source
   // content; an echo of the full directive text runs much longer.
-  const sourceLen = instruction.length + (reward?.length || 0)
-  if (t.length > sourceLen * 3 + 80) return null
+  if (t.length > instruction.length * 3 + 80) return null
   return t
 }
 
-export async function humanizeInstruction(instruction: string, context: { energy: string; reward?: string }): Promise<string> {
+export async function humanizeInstruction(instruction: string, context: { energy: string }): Promise<string> {
   if (!anthropicConfigured() || !instruction.trim()) return instruction
   try {
     const client = new Anthropic()
-    const rewardGuidance = context.reward
-      ? ' A reward is included below — weave it in as a genuine, integrated part of the same instruction, not a second offer or a question, and never frame it as something earned by effort. Just make it read like it naturally belongs in her day today.'
-      : ''
-    const userContent = context.reward
-      ? `Energy today: ${context.energy}\nInstruction: ${instruction}\nReward to include: ${context.reward}`
-      : `Energy today: ${context.energy}\nInstruction to reword: ${instruction}`
+    const userContent = `Energy today: ${context.energy}\nInstruction to reword: ${instruction}`
     const msg = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 200,
       system:
-        "You rewrite ONE fitness-coaching instruction so it reads warm and LOVING — like someone genuinely on her side speaking directly to her, not giving her an order. Never a command (\"do this,\" \"take that\") and never robotic or like a status report — state the thing as an act of care instead of an instruction to follow. A term of endearment (\"love,\" \"beautiful\") used sparingly is welcome when it fits naturally, never forced into every line. Keep the exact same real content: same food/workout/action, same numbers, nothing invented or dropped. You are only adjusting tone and phrasing. One or two short sentences, max. No emoji unless the original had one. If today's energy is low, keep the tone extra gentle and low-pressure." + rewardGuidance,
+        "You rewrite ONE fitness-coaching instruction so it reads warm and LOVING — like someone genuinely on her side speaking directly to her, not giving her an order. Never a command (\"do this,\" \"take that\") and never robotic or like a status report — state the thing as an act of care instead of an instruction to follow. A term of endearment (\"love,\" \"beautiful\") used sparingly is welcome when it fits naturally, never forced into every line. Keep the exact same real content: same food/workout/action, same numbers, nothing invented or dropped. You are only adjusting tone and phrasing. One or two short sentences, max. No emoji unless the original had one. If today's energy is low, keep the tone extra gentle and low-pressure.",
       tools: [REWORD_TOOL],
       tool_choice: { type: 'tool', name: 'reword_instruction' },
       messages: [{ role: 'user', content: userContent }],
@@ -83,7 +70,7 @@ export async function humanizeInstruction(instruction: string, context: { energy
     const block = msg.content.find((b) => b.type === 'tool_use')
     const text = block && block.type === 'tool_use' ? (block.input as { text?: string }).text : null
     if (!text) return instruction
-    return sanitizeReworded(text, instruction, context.reward) ?? instruction
+    return sanitizeReworded(text, instruction) ?? instruction
   } catch {
     return instruction
   }

@@ -160,10 +160,3 @@ export function pickRewardQuestion(): string {
   return QUESTION_TEMPLATES[Math.floor(Math.random() * QUESTION_TEMPLATES.length)]
 }
 
-// Deterministic fallback weave for when the LLM isn't configured or fails —
-// humanizeInstruction (llm.ts) is the primary path; this guarantees the
-// reward still lands as part of the one instruction either way, never
-// silently dropped.
-export function weaveRewardDeterministic(baseInstruction: string, preference: RewardPreference): string {
-  return `${baseInstruction} And after that — ${preference.label}, love. You've kept showing up, and you deserve it.`
-}

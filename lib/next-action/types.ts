@@ -139,4 +139,13 @@ export type NextActionResult = {
   // options for THAT place/meal instead of the generic rotating picks.
   restaurant?: string
   mealSlot?: 'Breakfast' | 'Lunch' | 'Snack' | 'Dinner'
+  // Reward system (2026-08-28 refinement, Asa's direct call): the reward
+  // used to be silently woven into `instruction` itself ("...And after
+  // that — full workout, love."), by original design, specifically so it
+  // was never exposed as a distinct moment. Asa reversed that after seeing
+  // it live and not noticing anything had happened — she wants a real,
+  // visible celebration instead. `instruction` is the clean base task now;
+  // these two fields are what the client uses to show that separately.
+  isReward?: boolean
+  rewardLabel?: string
 }
