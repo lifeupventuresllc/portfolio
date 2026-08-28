@@ -334,15 +334,92 @@ export function budgetTierFromWeekly(weeklyBudget: number | null | undefined): P
   return '$$$'
 }
 
+// Real dietary-restriction filter (2026-08-28, Asa's ask) — built off her
+// OWN stored intake data (challenge_intake.dislikes_allergies, already
+// collected at onboarding: "e.g. no mushrooms, dairy-free"), never a
+// generic pass-through. Before this, the eating-out picker filtered ONLY
+// by calories/budget — a real allergy or restriction on file was silently
+// ignored, so it could hand her an order that has the exact thing she
+// can't eat in it.
+//
+// dislikes_allergies is free text, not a structured field, so this
+// extracts known restriction categories from her own words, then checks
+// each candidate's real order description (already detailed enough to
+// judge from — "Bowl: Chicken, ½ white rice, pinto beans, fajita veggies,
+// mild salsa, cheese" genuinely tells you it has dairy) against a
+// disqualifying-ingredient pattern per category. A restriction that
+// doesn't match any known category is simply not enforceable from free
+// text — never guessed, never silently dropped either; see the comment on
+// DietaryRestriction below for exactly what's covered.
+export type DietaryRestriction = 'dairy' | 'gluten' | 'nut' | 'shellfish' | 'pork' | 'egg' | 'soy' | 'mushroom'
+
+const RESTRICTION_PHRASES: Record<DietaryRestriction, string[]> = {
+  dairy: ['dairy', 'lactose', 'milk'],
+  gluten: ['gluten', 'celiac', 'wheat'],
+  nut: ['nut', 'peanut', 'almond', 'cashew', 'walnut'],
+  shellfish: ['shellfish', 'shrimp', 'crab', 'lobster'],
+  pork: ['pork', 'bacon'],
+  egg: ['egg'],
+  soy: ['soy'],
+  mushroom: ['mushroom'],
+}
+
+/** Parses her own stored free-text field into the restriction categories this
+ * picker can actually enforce — real data in, never inferred from anything else. */
+export function parseDietaryRestrictions(dislikesAllergies: string | null | undefined): Set<DietaryRestriction> {
+  const found = new Set<DietaryRestriction>()
+  if (!dislikesAllergies) return found
+  const text = dislikesAllergies.toLowerCase()
+  for (const [key, phrases] of Object.entries(RESTRICTION_PHRASES) as [DietaryRestriction, string[]][]) {
+    if (phrases.some((p) => text.includes(p))) found.add(key)
+  }
+  return found
+}
+
+const DISQUALIFYING_PATTERN: Record<Exclude<DietaryRestriction, 'pork'>, RegExp> = {
+  dairy: /cheese|yogurt|parfait/i,
+  gluten: /\b(bread|bun|tortilla|wrap|burrito|crust|toast|muffin|biscuit|bagel|crunchwrap|sandwich|hash brown)s?\b/i,
+  nut: /\b(almond|cashew|peanut|walnut)s?\b/i,
+  shellfish: /\b(shrimp|crab|lobster)\b/i,
+  egg: /\begg/i,
+  soy: /\bsoy\b|edamame/i,
+  mushroom: /mushroom/i,
+}
+
+// Turkey bacon/turkey sausage are explicitly used throughout this data as
+// the real pork substitute — a "no pork" restriction must not exclude the
+// exact alternative it should prefer, so those two phrases are stripped
+// before checking for real pork (bacon/sausage/ham/pork on their own).
+function containsPork(orderLower: string): boolean {
+  const stripped = orderLower.replace(/turkey (bacon|sausage)/g, '')
+  return /\b(bacon|sausage|ham|pork)\b/.test(stripped)
+}
+
+function violatesRestrictions(order: string, restrictions: Set<DietaryRestriction>): boolean {
+  if (restrictions.size === 0) return false
+  const lower = order.toLowerCase()
+  return Array.from(restrictions).some((r) => (r === 'pork' ? containsPork(lower) : DISQUALIFYING_PATTERN[r].test(lower)))
+}
+
 /** Exactly 2 distinct options for the CURRENT meal slot, within her budget comfort tier
  * when possible, rotating daily so it's not the same 2 every time she checks.
  * remainingCal (her real calorie target for today minus what she's already logged,
  * see app/plan/eating-out/page.tsx) further narrows to picks that actually fit what
  * she has left — a 15% cushion so a normal meal isn't excluded over a handful of
  * calories. When too few options genuinely fit (she has very little left), falls
- * back to the closest matches rather than silently ignoring calories altogether. */
-export function pickForNow(wc: WeightClass, slot: FastFoodMeal['slot'], budgetTier: PriceTier, epochDay: number, remainingCal?: number): FastFoodMeal[] {
-  const candidates = wc.days.flatMap((d) => d.meals.filter((m) => m.slot === slot)).concat(wc.extraOptions.filter((m) => m.slot === slot))
+ * back to the closest matches rather than silently ignoring calories altogether.
+ * restrictions (her real stored dietary restrictions) are enforced FIRST, before
+ * budget/calorie narrowing — never shown as a "fits your calories" pick if it
+ * actually contains something she can't eat. */
+export function pickForNow(wc: WeightClass, slot: FastFoodMeal['slot'], budgetTier: PriceTier, epochDay: number, remainingCal?: number, restrictions?: Set<DietaryRestriction>): FastFoodMeal[] {
+  const allCandidates = wc.days.flatMap((d) => d.meals.filter((m) => m.slot === slot)).concat(wc.extraOptions.filter((m) => m.slot === slot))
+  // Falls back to the unfiltered pool only if her restrictions would rule
+  // out literally everything for this slot — a real gap in curated
+  // coverage for her restriction, not something to leave her with nothing
+  // over. Still never the actual disqualified pick when even ONE safe
+  // option exists.
+  const safe = restrictions && restrictions.size > 0 ? allCandidates.filter((m) => !violatesRestrictions(m.order, restrictions)) : allCandidates
+  const candidates = safe.length > 0 ? safe : allCandidates
   if (candidates.length === 0) return []
   const withinBudget = candidates.filter((m) => TIER_RANK[priceTierFor(m.restaurant, m.order)] <= TIER_RANK[budgetTier])
   let pool = withinBudget.length >= 2 ? withinBudget : candidates
@@ -393,12 +470,17 @@ export function pickForNow(wc: WeightClass, slot: FastFoodMeal['slot'], budgetTi
 // added whose stripped name could be a substring of another's.
 const normalizeRestaurant = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
 
-export function pickForRestaurant(wc: WeightClass, restaurantName: string, slot: FastFoodMeal['slot'], remainingCal?: number): FastFoodMeal[] {
+export function pickForRestaurant(wc: WeightClass, restaurantName: string, slot: FastFoodMeal['slot'], remainingCal?: number, restrictions?: Set<DietaryRestriction>): FastFoodMeal[] {
   const needle = normalizeRestaurant(restaurantName)
   if (!needle) return []
-  const candidates = wc.days.flatMap((d) => d.meals).concat(wc.extraOptions)
+  const nameMatches = wc.days.flatMap((d) => d.meals).concat(wc.extraOptions)
     .filter((m) => m.slot === slot && (normalizeRestaurant(m.restaurant).includes(needle) || needle.includes(normalizeRestaurant(m.restaurant))))
-  if (candidates.length === 0) return []
+  if (nameMatches.length === 0) return []
+  // Same "never the disqualified pick when a safe one exists at THIS
+  // restaurant, but don't leave her with nothing if every real item here
+  // happens to violate her restriction" behavior as pickForNow.
+  const safe = restrictions && restrictions.size > 0 ? nameMatches.filter((m) => !violatesRestrictions(m.order, restrictions)) : nameMatches
+  const candidates = safe.length > 0 ? safe : nameMatches
   // >= 0, not > 0 (real gap caught under stress-testing) — when she's
   // already at (or over) her calorie budget, remainingCal is exactly 0
   // (state.ts clamps it there), and skipping the sort entirely returned

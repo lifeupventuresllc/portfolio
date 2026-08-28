@@ -6,7 +6,7 @@ import { getApprovedTodayAdjustment, getProfile } from '@/lib/fos/context'
 import { assessLifePattern } from '@/lib/fos/pattern'
 import { currentWeekNumber, getTimezone, localDateISO, localMondayIndex, localHourNumber } from '@/lib/localdate'
 import type { WeekPlan } from '@/lib/meal-plan'
-import { weightClassFor, budgetTierFromWeekly, pickForNow, pickForRestaurant, type FastFoodMeal } from '@/lib/escape-plan'
+import { weightClassFor, budgetTierFromWeekly, pickForNow, pickForRestaurant, parseDietaryRestrictions, type FastFoodMeal } from '@/lib/escape-plan'
 import type { UserStateSnapshot, EnergyLevel, StateOverrides } from './types'
 
 // Deliberately a flat, documented estimate, not a per-person calculation —
@@ -147,12 +147,15 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     eatingOutSlot = nowSlot
     const budgetTier = budgetTierFromWeekly(Number(intake?.weekly_food_budget) || null)
     const targetCal = calorieBudget != null ? remainingCalories : undefined
+    // Real dietary-restriction filter (2026-08-28, Asa's ask) — her own
+    // stored intake data, never a generic pass-through. See escape-plan.ts.
+    const restrictions = parseDietaryRestrictions(intake?.dislikes_allergies as string | null)
 
     if (overrides.eatingOutRestaurant) {
-      eatingOutPick = pickForRestaurant(wc, overrides.eatingOutRestaurant, nowSlot, targetCal)[0] || null
+      eatingOutPick = pickForRestaurant(wc, overrides.eatingOutRestaurant, nowSlot, targetCal, restrictions)[0] || null
     }
     if (!eatingOutPick) {
-      const picks = pickForNow(wc, nowSlot, budgetTier, epochDays, targetCal)
+      const picks = pickForNow(wc, nowSlot, budgetTier, epochDays, targetCal, restrictions)
       eatingOutPick = picks[0] || null
     }
   }

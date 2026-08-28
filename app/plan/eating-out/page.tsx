@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { weightClassFor, budgetTierFromWeekly, pickForNow, pickForRestaurant, doordashSearchUrl, priceTierFor, type FastFoodMeal } from '@/lib/escape-plan'
+import { weightClassFor, budgetTierFromWeekly, pickForNow, pickForRestaurant, parseDietaryRestrictions, doordashSearchUrl, priceTierFor, type FastFoodMeal } from '@/lib/escape-plan'
 import { localDateISO, localHourNumber, localMondayIndex } from '@/lib/localdate'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { getEffectiveCalorieBudget } from '@/lib/fos/effective-plan'
@@ -38,7 +38,7 @@ export default async function EatingOutNow({ searchParams }: { searchParams: { r
 
   const todayIso = localDateISO()
   const [{ data: intake }, { data: nutritionPlan }, { data: foodRows }, todayAdjustment] = await Promise.all([
-    svc.from('challenge_intake').select('weight_lbs, weekly_food_budget').eq('enrollment_id', enrollment.id).maybeSingle(),
+    svc.from('challenge_intake').select('weight_lbs, weekly_food_budget, dislikes_allergies').eq('enrollment_id', enrollment.id).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('calories, meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_food_log').select('calories').eq('enrollment_id', enrollment.id).eq('logged_on', todayIso),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
@@ -77,8 +77,11 @@ export default async function EatingOutNow({ searchParams }: { searchParams: { r
     : (hour < 11 ? 'Breakfast' : hour < 15 ? 'Lunch' : hour < 20 ? 'Dinner' : 'Snack')
   const budgetTier = budgetTierFromWeekly(Number(intake?.weekly_food_budget) || null)
   const targetCal = remainingCal > 0 ? remainingCal : undefined
-  const restaurantPicks = searchParams?.restaurant ? pickForRestaurant(wc, searchParams.restaurant, nowSlot, targetCal) : []
-  const nowPicks = restaurantPicks.length > 0 ? restaurantPicks : pickForNow(wc, nowSlot, budgetTier, epochDays, targetCal)
+  // Real dietary-restriction filter (2026-08-28, Asa's ask) — her own
+  // stored intake data, never a generic pass-through. See escape-plan.ts.
+  const restrictions = parseDietaryRestrictions(intake?.dislikes_allergies as string | null)
+  const restaurantPicks = searchParams?.restaurant ? pickForRestaurant(wc, searchParams.restaurant, nowSlot, targetCal, restrictions) : []
+  const nowPicks = restaurantPicks.length > 0 ? restaurantPicks : pickForNow(wc, nowSlot, budgetTier, epochDays, targetCal, restrictions)
 
   // Real bug fixed 2026-08-27: this page's own "I ordered this" logs the
   // real order she picked through its own long-standing path — completely
