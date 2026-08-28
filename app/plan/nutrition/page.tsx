@@ -52,7 +52,7 @@ export default async function NutritionPage() {
   return (
     <div className="min-h-[100dvh] px-4 py-6" style={{ background: '#0b1712' }}>
       <div className="max-w-2xl mx-auto">
-        <Link href="/plan/today" className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all mb-6" style={{ background: '#12241a', border: '1px solid #24402f', color: '#c9a84c' }}>← Today</Link>
+        <Link href="/plan" className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all mb-6" style={{ background: '#12241a', border: '1px solid #24402f', color: '#c9a84c' }}>← Home</Link>
         <FoodLog
           planned={planned} budget={calBudget} dayType={todayMeals?.dayType ?? null}
           mealStatus={

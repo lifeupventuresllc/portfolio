@@ -70,7 +70,7 @@ export default async function CheckinPage() {
   return (
     <div className="min-h-[100dvh] bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto">
-        <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Back to my plan</Link>
+        <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Home</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Weekly Check-In</p>
         <h1 className="text-3xl font-bold text-white mb-2">Let&apos;s see where you&apos;re at, {firstName}</h1>
         <p className="text-ivory/60 text-sm mb-8">This is the part that changes everything. Check in with me every week — I read every one myself and adjust your plan around it. Not a PDF, not a bot. Me.</p>

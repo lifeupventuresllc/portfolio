@@ -60,7 +60,13 @@ export default function BottomTabBar() {
           <span className={`text-xs font-bold ${forYouActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>For You</span>
         </Link>
 
-        <Link href="/plan/checkin" className="relative h-9 flex items-center px-1.5" aria-label="Your progress">
+        {/* Real gap fixed 2026-08-28 (Asa's ask): this used to go to
+            /plan/checkin, but the natural instinct on every page is to tap
+            it expecting "home" -- the same instinct the middle slot's own
+            visual weight (biggest of the three) already invites. Weekly
+            check-in is still reachable from the side menu ("My progress &
+            previous weeks"), just no longer the ONLY thing this tap does. */}
+        <Link href="/plan" className="relative h-9 flex items-center px-1.5" aria-label="Home">
           <div className="relative w-full h-2 rounded-full bg-white/10 overflow-visible">
             <div className="h-full rounded-full" style={{ width: `${Math.max(pct, 6)}%`, background: 'linear-gradient(90deg, #044A34, #0f7a53)' }} />
             <div className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3.5 rounded bg-white/20" style={{ left: '58%' }} />

@@ -14,7 +14,7 @@ export default async function HabitReset() {
   return (
     <div className="min-h-[100dvh] bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto">
-        <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Back to my plan</Link>
+        <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Home</Link>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Bonus · Make It Stick</p>
         <h1 className="text-3xl font-bold text-white mb-2">The 21-Day Habit Reset</h1>
         <p className="text-ivory/60 text-sm mb-8">Results come from what you do on autopilot, {firstName}. One small habit a day for three weeks — do the day&apos;s habit, check it off in your head, keep the ones that fit. This is how the change actually lasts after the 6 weeks.</p>

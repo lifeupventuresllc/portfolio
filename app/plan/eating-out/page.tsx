@@ -96,7 +96,7 @@ export default async function EatingOutNow({ searchParams }: { searchParams: { r
   return (
     <div className="min-h-[100dvh] bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto">
-        <Link href="/plan/today" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Back to today</Link>
+        <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Home</Link>
 
         <div className="flex items-center gap-2 mb-1">
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase">Away from home right now</p>
