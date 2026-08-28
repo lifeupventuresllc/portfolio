@@ -309,11 +309,20 @@ async function recordDailyCheckIn(enrollmentId: string, userId: string, kind: st
 // Feedback Loop writes (prompt 4's third system) — every real interaction
 // closes the loop on the shown instruction so the next call's completion-
 // rate scoring reflects it immediately, not after some batch job.
-export async function markActionCompleted(logId: string, enrollmentId: string): Promise<ResolveOutcome> {
+//
+// skipFoodLog (2026-08-27, real bug found live): /plan/eating-out's
+// pre-existing "I ordered this" button (EatingOutPicks.tsx) already logs
+// the REAL order she actually picked via its own long-standing path
+// (source: 'escape_plan') -- which may be either of the 2 options shown,
+// not necessarily the single one this row's food_log_data stored. When
+// that flow also resolves this row (so the circle's own Done can't fire a
+// SECOND log for the same meal — see route.ts), it must skip this
+// function's own logEatenSuggestion call, or she'd get logged twice.
+export async function markActionCompleted(logId: string, enrollmentId: string, opts?: { skipFoodLog?: boolean }): Promise<ResolveOutcome> {
   const outcome = await resolveOwnedOpenRow(logId, enrollmentId, 'completed_at')
   if (!outcome.ok) return outcome
   await recordDailyCheckIn(enrollmentId, outcome.userId!, outcome.kind!).catch(() => {})
-  if (outcome.kind === 'location' && outcome.foodLogData) {
+  if (!opts?.skipFoodLog && outcome.kind === 'location' && outcome.foodLogData) {
     await logEatenSuggestion(enrollmentId, outcome.userId!, outcome.foodLogData).catch(() => {})
   }
   return { ok: true }

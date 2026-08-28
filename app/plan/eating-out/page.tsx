@@ -7,6 +7,7 @@ import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { getEffectiveCalorieBudget } from '@/lib/fos/effective-plan'
 import type { WeekPlan } from '@/lib/meal-plan'
 import EatingOutPicks from '@/components/EatingOutPicks'
+import { getOpenAction } from '@/lib/next-action'
 
 export const dynamic = 'force-dynamic'
 
@@ -79,6 +80,19 @@ export default async function EatingOutNow({ searchParams }: { searchParams: { r
   const restaurantPicks = searchParams?.restaurant ? pickForRestaurant(wc, searchParams.restaurant, nowSlot, targetCal) : []
   const nowPicks = restaurantPicks.length > 0 ? restaurantPicks : pickForNow(wc, nowSlot, budgetTier, epochDays, targetCal)
 
+  // Real bug fixed 2026-08-27: this page's own "I ordered this" logs the
+  // real order she picked through its own long-standing path — completely
+  // separate from the circle's Done button, which (as of this session)
+  // ALSO logs food when the winning action is 'location'. Without linking
+  // them, confirming here AND later tapping Done on the circle for the
+  // same suggestion double-counted the same meal. Only the CIRCLE's own
+  // open action for THIS enrollment — and only when it's still the
+  // location kind that actually routed her here — gets passed through, so
+  // logging a pick resolves it and the circle's Done can't fire a second
+  // log for the same meal (see EatingOutPicks.tsx).
+  const openAction = await getOpenAction(enrollment.id as string)
+  const linkedActionLogId = openAction?.kind === 'location' ? openAction.id : undefined
+
   return (
     <div className="min-h-[100dvh] bg-obsidian px-4 py-12">
       <div className="max-w-2xl mx-auto">
@@ -101,11 +115,14 @@ export default async function EatingOutNow({ searchParams }: { searchParams: { r
           <div className="mb-8">
             <p className="text-white font-medium text-sm mb-2.5">You don&apos;t need a plan in your hand to stay you — pick one, you&apos;ve got this. 💛</p>
             <p className="text-gold text-[10px] font-bold uppercase tracking-wider mb-2.5">{SLOT_ICON[nowSlot] || ''} Pick one for {nowSlot.toLowerCase()}, right now</p>
-            <EatingOutPicks picks={nowPicks.map((m) => ({
-              restaurant: m.restaurant, order: m.order, cal: m.cal, protein: m.protein, carbs: m.carbs, fat: m.fat,
-              priceTier: priceTierFor(m.restaurant, m.order), doordashUrl: doordashSearchUrl(m.restaurant),
-              meal: nowSlot.toLowerCase() as 'breakfast' | 'lunch' | 'dinner' | 'snack',
-            }))} />
+            <EatingOutPicks
+              picks={nowPicks.map((m) => ({
+                restaurant: m.restaurant, order: m.order, cal: m.cal, protein: m.protein, carbs: m.carbs, fat: m.fat,
+                priceTier: priceTierFor(m.restaurant, m.order), doordashUrl: doordashSearchUrl(m.restaurant),
+                meal: nowSlot.toLowerCase() as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+              }))}
+              linkedActionLogId={linkedActionLogId}
+            />
           </div>
         )}
 

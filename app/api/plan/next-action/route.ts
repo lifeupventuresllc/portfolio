@@ -93,7 +93,13 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === 'done') {
-    const outcome = await markActionCompleted(logId, enrollmentId)
+    // skipFoodLog: /plan/eating-out's own "I ordered this" flow already
+    // logged the real order she picked before resolving this row this way
+    // (see EatingOutPicks.tsx) — never a client-trusted way to skip real
+    // food tracking otherwise, since this only ever suppresses a REDUNDANT
+    // second insert, it can't fabricate or remove a real log entry.
+    const skipFoodLog = body?.skipFoodLog === true
+    const outcome = await markActionCompleted(logId, enrollmentId, { skipFoodLog })
     if (!outcome.ok) return NextResponse.json({ error: outcome.reason }, { status: statusFor(outcome.reason) })
     return NextResponse.json({ ok: true })
   }

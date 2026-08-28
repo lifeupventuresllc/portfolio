@@ -15,7 +15,7 @@ export type Pick = {
   priceTier: string; doordashUrl: string; meal: 'breakfast' | 'lunch' | 'dinner' | 'snack'
 }
 
-export default function EatingOutPicks({ picks }: { picks: Pick[] }) {
+export default function EatingOutPicks({ picks, linkedActionLogId }: { picks: Pick[]; linkedActionLogId?: string }) {
   const [logged, setLogged] = useState<Record<number, boolean>>({})
   const [logging, setLogging] = useState<number | null>(null)
 
@@ -32,6 +32,20 @@ export default function EatingOutPicks({ picks }: { picks: Pick[] }) {
         }),
       })
       setLogged((l) => ({ ...l, [i]: true }))
+      // Real bug fixed 2026-08-27: this button and the Next Action circle's
+      // own Done button used to log independently — confirming a pick here
+      // AND later tapping Done on the circle for the same suggestion
+      // double-counted one meal. Resolving the circle's action here (with
+      // skipFoodLog, since the real order is already logged above — it's
+      // done, not a re-estimate of what circle originally suggested) closes
+      // that gap. A second pick logged after the first already resolves it
+      // just gets `already_resolved` back, handled silently — one log wins.
+      if (linkedActionLogId) {
+        await fetch('/api/plan/next-action', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ logId: linkedActionLogId, action: 'done', skipFoodLog: true }),
+        }).catch(() => {})
+      }
     } catch { /* she can still log it manually via food search if this fails */ }
     setLogging(null)
   }
