@@ -72,19 +72,25 @@ export function buildCandidates(state: UserStateSnapshot): ActionCandidate[] {
   }
 
   // Eating out replaces the generic meal-log reminder entirely — a real
-  // location signal means she needs ONE specific order, not a reminder to
-  // log something later (prompt 6's single-selection requirement). Uses the
-  // app's real Escape Plan pick (state.eatingOutPick), not a synthetic list.
+  // location signal means she needs a real answer, not a reminder to log
+  // something later (prompt 6). Uses the app's real Escape Plan pick
+  // (state.eatingOutPick), not a synthetic list.
+  //
+  // Instruction wording (2026-08-28, Asa's refinement): still exactly ONE
+  // instruction on the circle — that never changes — but it no longer
+  // locks in one specific order up front. It names the restaurant and
+  // meal and says 2 real options are ready, since that's genuinely true
+  // (pickForNow/pickForRestaurant already return up to 2) and the actual
+  // choice between them happens on the /plan/eating-out expansion screen,
+  // not inside the circle. Tapping through still goes to exactly one
+  // destination, same as every other kind.
   if (state.eatingOutToday && state.eatingOutPick) {
     const p = state.eatingOutPick
+    const slotLower = (state.eatingOutSlot || 'meal').toLowerCase()
     candidates.push({
       kind: 'location',
       actionKey: `location:${p.restaurant}:${p.order}`,
-      // Kept short on purpose (2026-08-26 fix) — the full calorie/protein
-      // detail was pushing the circle's visible text past what fits;
-      // the macro breakdown is still there if she taps through to
-      // /plan/eating-out (prompt 3's expansion routing).
-      instruction: `At ${p.restaurant}, love: ${p.order}.`,
+      instruction: `${p.restaurant}, love — 2 real ${slotLower} options ready for you. Tap to see them.`,
       estMinutes: 2,
     })
   } else if (state.calorieBudget != null && state.caloriesLoggedToday < state.calorieBudget) {
