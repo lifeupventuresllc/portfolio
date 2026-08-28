@@ -32,12 +32,13 @@ import { createClient } from '@/lib/supabase/client'
 // that inherits the row's own text color via currentColor. Feather-style thin
 // stroke, matching the icons already established in BottomTabBar.tsx/
 // VoiceButton.tsx elsewhere in this app.
-type IconName = 'plate' | 'trending' | 'chat' | 'video' | 'refresh' | 'user' | 'target' | 'mail' | 'logout'
+type IconName = 'plate' | 'dumbbell' | 'trending' | 'chat' | 'video' | 'refresh' | 'user' | 'target' | 'mail' | 'logout'
 
 function MenuIcon({ name }: { name: IconName }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
   switch (name) {
     case 'plate': return <svg {...common}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /></svg>
+    case 'dumbbell': return <svg {...common}><path d="M6.5 7v10M17.5 7v10M2.5 10v4M21.5 10v4M6.5 12h11" /></svg>
     case 'trending': return <svg {...common}><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></svg>
     case 'chat': return <svg {...common}><path d="M21 12a8 8 0 1 1-3.3-6.5L21 4l-1 4.2A8 8 0 0 1 21 12Z" /></svg>
     case 'video': return <svg {...common}><rect x="2" y="6" width="14" height="12" rx="2" /><path d="M16 10l6-3v10l-6-3" /></svg>
@@ -73,6 +74,14 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
     {
       title: 'My Plan',
       items: [
+        // Re-added 2026-08-28 (bug #13, real gap from testing): the
+        // 2026-08-27 trim removed this on the theory the circle always
+        // routes here when a workout is the current action — but once the
+        // circle moves on ("Keep it simple", a message redirect, or it's
+        // just not today's action), there was no way back to today's real
+        // assigned workout at all. This always points at TODAY's workout —
+        // /plan/workout computes that itself, same logic the circle reads.
+        { href: '/plan/workout', label: 'My workout — today’s plan', icon: 'dumbbell' },
         { href: '/plan/meals', label: 'My meals — what I’m cooking & how', icon: 'plate' },
         { href: '/plan/checkin', label: 'My progress & previous weeks', icon: 'trending' },
         { href: '/plan/intake', label: 'My profile & stats', icon: 'user' },

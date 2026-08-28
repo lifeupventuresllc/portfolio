@@ -191,6 +191,31 @@ export async function resolveCurrentAction(enrollmentId: string): Promise<NextAc
     // literal UTC-midnight string against a local calendar date was a real
     // bug here. Both sides go through localDateISO now.
     if (localDateISO(tz, new Date(open.shown_at)) === today) {
+      // Bug #14 fix, 2026-08-28 (real, live-reported): a 'meal' row's
+      // "About X calories left today" text is written once at creation and
+      // stored so repeat fetches don't re-roll wording (see getNextAction's
+      // comment) — but that also froze the NUMBER, so logging real food
+      // through the separate food-log/search screen (not the circle itself)
+      // never moved it; she kept seeing the same stale total all day.
+      // Detected here, not guessed: a real challenge_food_log row landing
+      // after this action was shown means her actual remaining calories
+      // changed underneath it. Treated the same way a genuine day-changed
+      // disruption already is — supersede the now-stale row and hand back a
+      // freshly computed one instead of the frozen text.
+      if (open.kind === 'meal') {
+        const svc = createServiceClient()
+        const { data: newerLog } = await svc
+          .from('challenge_food_log')
+          .select('id')
+          .eq('enrollment_id', enrollmentId)
+          .gt('created_at', open.shown_at)
+          .limit(1)
+          .maybeSingle()
+        if (newerLog) {
+          await markActionSuperseded(open.id, enrollmentId)
+          return getNextAction(enrollmentId, today)
+        }
+      }
       return {
         logId: open.id, kind: open.kind as NextActionResult['kind'], actionKey: open.action_key, instruction: open.instruction, score: open.score,
         restaurant: open.food_log_data?.restaurant ?? restaurantFromActionKey(open.kind, open.action_key),
