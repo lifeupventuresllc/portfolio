@@ -12,7 +12,15 @@ import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
 // lives here too: tapping the instruction (not the buttons) opens the
 // supporting screen the engine already decided on — never a menu.
 type ActionKind = 'workout' | 'meal' | 'fallback' | 'location' | 'complete'
-type NextAction = { logId: string; kind: ActionKind; actionKey: string; instruction: string; score: number; restaurant?: string; mealSlot?: string }
+type NextAction = {
+  logId: string; kind: ActionKind; actionKey: string; instruction: string; score: number
+  restaurant?: string; mealSlot?: string
+  // Reward system (2026-08-28 refinement) — used to be silently woven into
+  // `instruction` itself, by original design. Asa reversed that after
+  // seeing it live and not noticing anything had happened: these now drive
+  // a real, visible celebration instead (see maybeCelebrate below).
+  isReward?: boolean; rewardLabel?: string
+}
 
 // The ONE destination per kind — fully determined by what the engine
 // decided, never a choice presented to her (prompt 3's core rule). Fallback
@@ -49,7 +57,30 @@ export default function NextActionCard() {
   const [message, setMessage] = useState('')
   const [note, setNote] = useState<string | null>(null)
   const [encouragement, setEncouragement] = useState<string | null>(null)
+  const [celebration, setCelebration] = useState<string | null>(null)
+  // Guards against re-showing the same reward's celebration every time this
+  // same still-open row gets re-fetched (a fresh page load, "Keep it
+  // simple" refetching after a failed request, etc.) — celebrate once per
+  // distinct logId, not once per render.
+  const celebratedRef = useRef<Set<string>>(new Set())
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+
+  // Real, visible celebration (2026-08-28, Asa's direct call) — the reward
+  // used to be silently woven into the instruction text, by original
+  // design, specifically so it was never a distinct moment. Asa saw it live
+  // and didn't notice anything had happened, and wants the opposite: an
+  // unmissable one. Auto-dismisses so it never blocks the actual task.
+  const maybeCelebrate = (a: NextAction) => {
+    if (a.isReward && a.rewardLabel && !celebratedRef.current.has(a.logId)) {
+      celebratedRef.current.add(a.logId)
+      setCelebration(a.rewardLabel)
+    }
+  }
+  useEffect(() => {
+    if (!celebration) return
+    const t = setTimeout(() => setCelebration(null), 6000)
+    return () => clearTimeout(t)
+  }, [celebration])
 
   // Auto-grow the transcript box to fit whatever's in it — a long voice
   // transcript (or a long typed message) must stay fully visible, never
@@ -67,7 +98,11 @@ export default function NextActionCard() {
     setLoading(true)
     try {
       const res = await fetch('/api/plan/next-action')
-      if (res.ok) setAction(await res.json())
+      if (res.ok) {
+        const a = await res.json()
+        setAction(a)
+        maybeCelebrate(a)
+      }
       setEncouragement(null)
     } finally {
       setLoading(false)
@@ -97,7 +132,9 @@ export default function NextActionCard() {
     try {
       const res = await fetch('/api/plan/next-action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logId: action.logId, action: 'day_changed' }) })
       if (res.ok) {
-        setAction(await res.json())
+        const a = await res.json()
+        setAction(a)
+        maybeCelebrate(a)
         // Purely decorative, softens the disruption moment — never sent
         // anywhere, never affects what the engine actually picked.
         setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)])
@@ -160,6 +197,7 @@ export default function NextActionCard() {
       }
       if (json.changed && json.logId) {
         setAction(json)
+        maybeCelebrate(json)
         setNote(null)
         // Real bug caught live, 2026-08-28: telling it something real (e.g.
         // "I'm not doing my workout today") silently swapped the circle with
@@ -240,6 +278,25 @@ export default function NextActionCard() {
 
   return (
     <div className="rounded-3xl p-6" style={{ background: cardBg, border: '1.5px solid #E5A93C', boxShadow: '0 0 30px -6px rgba(229,169,60,0.3)' }}>
+      {/* Real, visible reward celebration (2026-08-28, Asa's direct call) —
+          replaces the original design's silent text-weave, which she saw
+          live and didn't notice as anything special. No emoji (standing
+          app-wide rule) — a small hand-built star glyph instead. Auto-
+          dismisses on its own; tapping it closes it early. */}
+      {celebration && (
+        <button
+          onClick={() => setCelebration(null)}
+          className="w-full text-left rounded-2xl px-4 py-3 mb-4 flex items-start gap-3 active:scale-[0.99] transition-transform"
+          style={{ background: 'linear-gradient(135deg, rgba(229,169,60,0.22), rgba(15,122,83,0.18))', border: '1px solid rgba(229,169,60,0.5)' }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#E5A93C" className="shrink-0 mt-0.5"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2Z" /></svg>
+          <span style={{ fontFamily: 'var(--font-poppins)' }}>
+            <span className="block text-[#E5A93C] text-[10px] font-bold uppercase tracking-wider mb-0.5">A little something extra</span>
+            <span className="block text-white text-sm font-semibold">{celebration}, love — you&apos;ve kept showing up, and you deserve it.</span>
+          </span>
+        </button>
+      )}
+
       <p className="text-[#E5A93C] text-[10px] uppercase tracking-[0.25em] font-bold mb-1" style={{ fontFamily: 'var(--font-poppins)' }}>Right now</p>
 
       {/* The circle — generous room above/below it (Asa's ask, 2026-08-25:
@@ -263,17 +320,28 @@ export default function NextActionCard() {
           className="relative rounded-full flex items-center justify-center text-center active:scale-[0.98] transition-transform"
           style={{
             width: 'clamp(220px, 68vw, 300px)', height: 'clamp(220px, 68vw, 300px)',
-            background: 'conic-gradient(from 200deg, #E5A93C, #7fbf94, #0f7a53, #E5A93C)',
+            // Asa's ask, 2026-08-28: the circle should visibly LOOK different
+            // the moment "Keep it simple" (or an equivalent message-driven
+            // change) hands her a smaller substitute — not just say so in
+            // text underneath. Reuses `encouragement` as the signal (it's
+            // already exactly "this instruction is a simplified one," set on
+            // the same two success paths, cleared on every fresh load) so
+            // there's no second, separately-tracked "is this simplified"
+            // flag to drift out of sync with it.
+            background: encouragement
+              ? 'conic-gradient(from 200deg, #E9A0A0, #f2c6cf, #d97a90, #E9A0A0)'
+              : 'conic-gradient(from 200deg, #E5A93C, #7fbf94, #0f7a53, #E5A93C)',
             boxShadow: '0 30px 50px -18px rgba(0,0,0,0.65)',
             cursor: EXPANSION_ROUTE[action.kind] ? 'pointer' : 'default',
           }}
         >
-          {/* Outer gold ring — hovers OUTSIDE the circle with a real gap
-              (Asa's correction: a box-shadow ring blended into the edge
-              instead of reading as separate). A distinct element on purpose.
-              Pulses gently on its own (glow + scale, never the text inside)
-              so the card reads as alive without moving what she's reading. */}
-          <span aria-hidden className="absolute rounded-full pointer-events-none nac-ring-breathe" style={{ inset: -22, border: '2px solid #E5A93C' }} />
+          {/* Outer ring — hovers OUTSIDE the circle with a real gap (Asa's
+              correction: a box-shadow ring blended into the edge instead of
+              reading as separate). A distinct element on purpose. Pulses
+              gently on its own (glow + scale, never the text inside) so the
+              card reads as alive without moving what she's reading. Pink to
+              match the circle whenever this is a "kept it simple" moment. */}
+          <span aria-hidden className="absolute rounded-full pointer-events-none nac-ring-breathe" style={{ inset: -22, border: `2px solid ${encouragement ? '#E9A0A0' : '#E5A93C'}` }} />
           {/* Ridged inner texture — a thin sunburst ring just inside the
               circle's own edge, for a "dial" quality instead of a flat fill. */}
           <span
