@@ -67,9 +67,9 @@ export async function getOpenAction(enrollmentId: string): Promise<Omit<OpenRow,
 // insert fails with a 23505 unique-violation, and rather than erroring we
 // just return whatever the winner actually inserted, so a race never
 // produces two live instructions.
-export async function getNextAction(enrollmentId: string, todayISO: string, overrides: StateOverrides = {}, excludeActionKey?: string): Promise<NextActionResult> {
+export async function getNextAction(enrollmentId: string, todayISO: string, overrides: StateOverrides = {}, excludeActionKey?: string, forceFallback?: boolean): Promise<NextActionResult> {
   const state = await getUserState(enrollmentId, todayISO, overrides)
-  const candidates = buildCandidates(state)
+  const candidates = buildCandidates(state, { forceFallback })
   const scored = await scoreCandidates(candidates, state)
   // Real bug caught live, 2026-08-26: the scorer is fully deterministic, so
   // "day changed" replaying against unchanged state just re-picked the exact

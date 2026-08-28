@@ -44,12 +44,59 @@ function nutritionDoneToday(state: UserStateSnapshot): boolean {
   return state.calorieBudget != null ? state.caloriesLoggedToday >= state.calorieBudget : state.caloriesLoggedToday > 0
 }
 
+// The universal simple-tier pool (water/stretch/breath/walk/stillness, plus
+// a real protein fallback when relevant) — factored out so "Keep it simple"
+// can go straight here without touching the workout/meal/location logic
+// above it.
+function buildFallbackCandidates(state: UserStateSnapshot): ActionCandidate[] {
+  const candidates: ActionCandidate[] = []
+
+  for (const f of FALLBACKS) {
+    // Real bug caught live, 2026-08-27: a quantified daily total ("12
+    // glasses of water today") briefly replaced the plain line here — Asa's
+    // direct feedback: even though the number is real, seeing a whole-day
+    // total on a "keep it simple" tap breaks the one-tiny-thing feel every
+    // other fallback has (5 breaths, one stretch, a short walk — none of
+    // them show a cumulative target). Reverted to the same single, bite-
+    // sized framing as the rest of this list.
+    candidates.push({ kind: 'fallback', actionKey: `fallback:${f.key}`, instruction: f.instruction, estMinutes: f.minutes })
+  }
+
+  // A second real, quantified nutrition fallback (Asa's ask, 2026-08-27) —
+  // same foundation-piece spirit as the calorie candidate above, just the
+  // protein side. Lives in the same fallback tier as water/stretch/walk so
+  // it's personalized by the exact same completion-rate mechanism, no new
+  // scoring logic needed. Omitted (not zeroed) whenever she has no real
+  // protein target yet, or she's already hit it today.
+  if (state.proteinBudget != null) {
+    const proteinRemaining = Math.max(0, state.proteinBudget - state.proteinLoggedToday)
+    if (proteinRemaining > 0) {
+      candidates.push({ kind: 'fallback', actionKey: 'fallback:protein', instruction: `${proteinRemaining}g protein left today, love — you're taking care of you.`, estMinutes: 2 })
+    }
+  }
+
+  return candidates
+}
+
 // Builds every real option worth scoring right now — never a menu shown to
 // her, just the input list the scorer picks exactly one winner from. A
 // candidate is only included if it's actually actionable today (no
 // double-counting a workout she's already done, no meal prompt once she's
 // already hit budget).
-export function buildCandidates(state: UserStateSnapshot): ActionCandidate[] {
+//
+// forceFallback (Asa's ask, 2026-08-28): "Keep it simple" was landing on
+// another full-size real candidate (a meal reminder, even a different
+// workout) whenever one still outscored the generic fallback pool — real
+// and personalized, but not what pressing a button literally named "keep it
+// simple" means to her: "I don't have the energy/time/willpower for
+// anything today, just give me ONE small thing." That's always the
+// universal simple tier, never a substitute-sized real task. The backend
+// keeps computing her real calorie/workout numbers exactly as before —
+// this only changes which TIER the circle is allowed to pick from for this
+// one request.
+export function buildCandidates(state: UserStateSnapshot, opts?: { forceFallback?: boolean }): ActionCandidate[] {
+  if (opts?.forceFallback) return buildFallbackCandidates(state)
+
   if (state.workoutDoneToday && nutritionDoneToday(state)) {
     const instruction = COMPLETE_MESSAGES[Math.floor(Math.random() * COMPLETE_MESSAGES.length)]
     return [{ kind: 'complete', actionKey: 'complete:done_for_today', instruction, estMinutes: 0 }]
@@ -108,29 +155,7 @@ export function buildCandidates(state: UserStateSnapshot): ActionCandidate[] {
     })
   }
 
-  for (const f of FALLBACKS) {
-    // Real bug caught live, 2026-08-27: a quantified daily total ("12
-    // glasses of water today") briefly replaced the plain line here — Asa's
-    // direct feedback: even though the number is real, seeing a whole-day
-    // total on a "keep it simple" tap breaks the one-tiny-thing feel every
-    // other fallback has (5 breaths, one stretch, a short walk — none of
-    // them show a cumulative target). Reverted to the same single, bite-
-    // sized framing as the rest of this list.
-    candidates.push({ kind: 'fallback', actionKey: `fallback:${f.key}`, instruction: f.instruction, estMinutes: f.minutes })
-  }
-
-  // A second real, quantified nutrition fallback (Asa's ask, 2026-08-27) —
-  // same foundation-piece spirit as the calorie candidate above, just the
-  // protein side. Lives in the same fallback tier as water/stretch/walk so
-  // it's personalized by the exact same completion-rate mechanism, no new
-  // scoring logic needed. Omitted (not zeroed) whenever she has no real
-  // protein target yet, or she's already hit it today.
-  if (state.proteinBudget != null) {
-    const proteinRemaining = Math.max(0, state.proteinBudget - state.proteinLoggedToday)
-    if (proteinRemaining > 0) {
-      candidates.push({ kind: 'fallback', actionKey: 'fallback:protein', instruction: `${proteinRemaining}g protein left today, love — you're taking care of you.`, estMinutes: 2 })
-    }
-  }
+  candidates.push(...buildFallbackCandidates(state))
 
   return candidates
 }

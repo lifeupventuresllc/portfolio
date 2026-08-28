@@ -115,7 +115,14 @@ export async function POST(req: NextRequest) {
     const closing = await getOpenAction(enrollmentId)
     const outcome = await markActionSuperseded(logId, enrollmentId)
     if (!outcome.ok) return NextResponse.json({ error: outcome.reason }, { status: statusFor(outcome.reason) })
-    const result = await getNextAction(enrollmentId, localDateISO(getTimezone()), {}, closing?.action_key)
+    // forceFallback: true (Asa's ask, 2026-08-28) — this button is literally
+    // "Keep it simple," which used to still hand her another full-size real
+    // candidate (a different workout, a meal reminder) whenever one
+    // outscored the generic fallback pool. That's real and personalized,
+    // but not what she's asking for when she taps this — always the small
+    // universal tier now, never a same-size substitute. Her real
+    // calorie/workout numbers underneath are untouched either way.
+    const result = await getNextAction(enrollmentId, localDateISO(getTimezone()), {}, closing?.action_key, true)
     return NextResponse.json(result)
   }
   return NextResponse.json({ error: 'unknown action' }, { status: 400 })
