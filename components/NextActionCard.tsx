@@ -161,7 +161,13 @@ export default function NextActionCard() {
       if (json.changed && json.logId) {
         setAction(json)
         setNote(null)
-        setEncouragement(null)
+        // Real bug caught live, 2026-08-28: telling it something real (e.g.
+        // "I'm not doing my workout today") silently swapped the circle with
+        // zero acknowledgment — no different from the tap just not
+        // registering, from her side. "Keep it simple" already had this
+        // exact warm confirmation; a message-driven change deserves the
+        // same one, not a colder experience for actually talking to it.
+        setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)])
         setMessage('')
         setShowMessage(false)
         // "I'm at Chick-fil-A" should land her straight on the real order,

@@ -39,7 +39,14 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     // to the last 2 days server-side, then narrowed by real local-date
     // comparison below (same timezone-safe pattern as the API route's open-
     // row check — a literal UTC-boundary compare was a real bug there).
-    svc.from('next_action_log').select('shown_at, skipped_at').eq('enrollment_id', enrollmentId).eq('kind', 'workout').gte('shown_at', new Date(Date.now() - 2 * 86400000).toISOString()).order('shown_at', { ascending: false }),
+    // Also reads `superseded_at` now — real bug caught live, 2026-08-28:
+    // `skip` has no UI control anywhere (no button calls it), so this
+    // adjustment could never actually fire from real usage. The only real
+    // ways a workout action ever closes without being done are "Keep it
+    // simple" and a free-text redirect ("I'm not doing my workout today") —
+    // both supersede, never skip. Treating a same-day superseded workout the
+    // same as an explicit skip is what makes this reachable at all.
+    svc.from('next_action_log').select('shown_at, skipped_at, superseded_at').eq('enrollment_id', enrollmentId).eq('kind', 'workout').gte('shown_at', new Date(Date.now() - 2 * 86400000).toISOString()).order('shown_at', { ascending: false }),
     getProfile(enrollmentId),
     assessLifePattern(enrollmentId, todayISO),
     getApprovedTodayAdjustment(enrollmentId, todayISO),
@@ -72,7 +79,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const workoutCandidate = getEffectiveTodayWorkout(program, completed, todayAdjustment, focusOverride)
 
   const todaysWorkoutAction = (recentWorkoutActions || []).find((r) => localDateISO(tz, new Date(r.shown_at as string)) === todayISO)
-  const workoutSkippedToday = !workoutDoneToday && !!todaysWorkoutAction?.skipped_at
+  const workoutSkippedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)
   const workoutReducedToday = !workoutDoneToday && !workoutSkippedToday && !!todayAdjustment?.workoutChange
   const workoutBurnAdjustment = workoutSkippedToday ? WORKOUT_CALORIE_BURN_ESTIMATE : workoutReducedToday ? Math.round(WORKOUT_CALORIE_BURN_ESTIMATE * WORKOUT_REDUCED_BURN_FACTOR) : 0
 
