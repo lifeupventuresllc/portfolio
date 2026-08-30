@@ -17,6 +17,13 @@ const FEED_VIDEOS: FeedVideo[] = [
   { path: '8090798-sd_640_360_24fps.mp4', tag: 'Nutrition' },
   { path: '8456209-sd_360_640_25fps.mp4', tag: 'Fitness' },
   { path: '6575894-sd_360_640_24fps.mp4', tag: 'Nutrition' },
+  // +5 fitness clips, Asa's ask 2026-08-29 ("add 5 more video all fitness
+  // of black women working out")
+  { path: '8459966-sd_360_640_25fps.mp4', tag: 'Fitness' },
+  { path: '7117850-sd_338_640_30fps.mp4', tag: 'Fitness' },
+  { path: '6455071-sd_360_640_24fps.mp4', tag: 'Fitness' },
+  { path: '8053319-sd_360_640_25fps.mp4', tag: 'Fitness' },
+  { path: '6390153-sd_360_640_25fps.mp4', tag: 'Fitness' },
 ]
 
 const BUCKET_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL!.replace(/\s/g, '')}/storage/v1/object/public/feed-videos`
