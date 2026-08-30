@@ -53,7 +53,7 @@ export function GoalProgressCompact({
 }) {
   if (goal === 'maintain') {
     return (
-      <div className="rounded-xl px-2.5 py-2" style={{ fontFamily: 'var(--font-poppins)', background: 'rgba(0,0,0,0.55)', border: '1.5px solid rgba(233,160,160,0.85)', boxShadow: '0 0 28px 2px rgba(233,160,160,0.75)' }}>
+      <div className="rounded-xl px-2.5 py-2" style={{ fontFamily: 'var(--font-poppins)', background: 'linear-gradient(135deg, rgba(20,20,20,0.7), rgba(0,0,0,0.5))', border: '1.5px solid rgba(233,160,160,0.85)', boxShadow: '0 0 28px 2px rgba(233,160,160,0.75)' }}>
         <p className="text-white text-xs font-semibold">Holding steady at {Math.round(currentWeight)} lbs</p>
         <CalorieLine loggedToday={calorieLoggedToday} budgetToday={calorieBudgetToday} />
       </div>
@@ -66,8 +66,10 @@ export function GoalProgressCompact({
   const moved = Math.max(0, Math.round(Math.abs(progressed)))
   const remaining = Math.max(0, Math.round(span - progressed))
   const verb = goal === 'lose' ? 'down' : 'up'
+  // $ before both numbers, Asa's ask 2026-08-30 — a deliberate stylistic
+  // choice for this readout, not a currency claim.
   const budgetLabel = calorieBudgetToday != null
-    ? <><b>{Math.round(calorieLoggedToday)}</b>/{Math.round(calorieBudgetToday)} cal</>
+    ? `$${Math.round(calorieLoggedToday).toLocaleString()}/$${Math.round(calorieBudgetToday).toLocaleString()} cal`
     : null
 
   return (
@@ -79,12 +81,17 @@ export function GoalProgressCompact({
        whole block — text included, not just the track — guarantees
        contrast regardless of what's playing behind it, same principle as
        the self-talk card above it. Pink glow (Asa's ask) makes the whole
-       card stand out from the feed instead of blending into it. */
-    <div className="rounded-xl px-2.5 py-2" style={{ fontFamily: 'var(--font-poppins)', background: 'rgba(0,0,0,0.55)', border: '1.5px solid rgba(233,160,160,0.85)', boxShadow: '0 0 28px 2px rgba(233,160,160,0.75)' }}>
-      <p className="text-[12px] font-semibold text-white m-0">
-        {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} to go` : moved > 0 ? ' · goal reached' : ''}
-        {budgetLabel && <> · <span className="text-[#E5A93C] font-bold">{budgetLabel}</span></>}
-      </p>
+       card stand out from the feed instead of blending into it. Gradient
+       background (not flat) matches the chat box's own treatment. */
+    <div className="rounded-xl px-2.5 py-2" style={{ fontFamily: 'var(--font-poppins)', background: 'linear-gradient(135deg, rgba(20,20,20,0.7), rgba(0,0,0,0.5))', border: '1.5px solid rgba(233,160,160,0.85)', boxShadow: '0 0 28px 2px rgba(233,160,160,0.75)' }}>
+      {/* Calorie readout pushed to the far right of the row instead of
+          inline after the weight text — Asa's ask, 2026-08-30. */}
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-[12px] font-semibold text-white m-0">
+          {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} to go` : moved > 0 ? ' · goal reached' : ''}
+        </p>
+        {budgetLabel && <span className="text-[12px] font-bold text-[#E5A93C] whitespace-nowrap">{budgetLabel}</span>}
+      </div>
       <div className="relative h-2 rounded-full mt-2.5" style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.4)' }}>
         <div className="h-full rounded-full" style={{ width: `${Math.max(pct, 4)}%`, background: 'linear-gradient(90deg, #E5A93C, #f2c879, #E9A0A0)', boxShadow: '0 0 6px rgba(229,169,60,0.6)' }} />
         <span

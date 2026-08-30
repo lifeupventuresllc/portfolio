@@ -349,7 +349,12 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
 
         {note && <p className="text-white/60 text-[11px] mb-1.5">{note}</p>}
 
-        <div className="flex items-center gap-2 rounded-full pl-3.5 pr-1.5 py-1.5" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(229,169,60,0.3)' }}>
+        {/* Gold gradient + thin glow — Asa's ask, 2026-08-29/30, after
+            trying white glow then a stronger gold glow: matches the app's
+            real accent (same gold as the Next Action circle's own glow)
+            instead of a third distinct color, and a thin/tight glow read
+            better than a big spread once compared side by side. */}
+        <div className="flex items-center gap-2 rounded-full pl-3.5 pr-1.5 py-1.5" style={{ background: 'linear-gradient(135deg, rgba(20,20,20,0.75), rgba(0,0,0,0.55))', border: '1px solid rgba(229,169,60,0.75)', boxShadow: '0 0 8px 0px rgba(229,169,60,0.4)' }}>
           <input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
