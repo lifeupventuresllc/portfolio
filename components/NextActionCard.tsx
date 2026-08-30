@@ -47,13 +47,12 @@ const ENCOURAGEMENTS = [
   "Progress doesn't have to be big.",
 ]
 
-export default function NextActionCard() {
+export default function NextActionCard({ variant = 'full' }: { variant?: 'full' | 'dock' }) {
   const router = useRouter()
   const [action, setAction] = useState<NextAction | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
-  const [showMessage, setShowMessage] = useState(false)
   const [message, setMessage] = useState('')
   const [note, setNote] = useState<string | null>(null)
   const [encouragement, setEncouragement] = useState<string | null>(null)
@@ -92,7 +91,7 @@ export default function NextActionCard() {
     if (!el) return
     el.style.height = 'auto'
     el.style.height = `${el.scrollHeight}px`
-  }, [message, showMessage])
+  }, [message])
 
   const load = async () => {
     setLoading(true)
@@ -207,7 +206,6 @@ export default function NextActionCard() {
         // same one, not a colder experience for actually talking to it.
         setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)])
         setMessage('')
-        setShowMessage(false)
         // "I'm at Chick-fil-A" should land her straight on the real order,
         // not back on the circle waiting for a second tap.
         if (json.kind === 'location') { goToExpansion(json); return }
@@ -215,7 +213,6 @@ export default function NextActionCard() {
         setNote("Got it — didn't need to change anything.")
       }
       setMessage('')
-      setShowMessage(false)
     } catch {
       setNote('Something went wrong sending that — check your connection and try again.')
     } finally {
@@ -233,7 +230,6 @@ export default function NextActionCard() {
   // and gracefully falls back to the plain browser API only if Deepgram
   // isn't reachable — never a silent dead end.
   const onVoiceInterim = (text: string) => {
-    setShowMessage(true)
     setMessage(text)
   }
   const onVoiceFinal = (text: string) => {
@@ -254,15 +250,19 @@ export default function NextActionCard() {
   const cardBg = 'radial-gradient(80% 60% at 50% 38%, rgba(229,169,60,0.14), transparent 60%), radial-gradient(140% 100% at 50% 115%, rgba(0,0,0,0.7), transparent 55%), linear-gradient(180deg, #06231a 0%, #021F16 45%, #010b07 100%)'
 
   if (loading) {
-    return <div className="rounded-3xl animate-pulse" style={{ background: cardBg, border: '1.5px solid rgba(229,169,60,0.3)', minHeight: 360 }} />
+    return variant === 'dock'
+      ? <div className="rounded-2xl animate-pulse bg-black/25" style={{ height: 54 }} />
+      : <div className="rounded-3xl animate-pulse" style={{ background: cardBg, border: '1.5px solid rgba(229,169,60,0.3)', minHeight: 360 }} />
   }
 
   if (!action) {
-    return (
-      <div className="rounded-3xl p-6 text-center" style={{ background: cardBg, border: '1.5px solid rgba(229,169,60,0.3)' }}>
-        <p className="text-ivory/50 text-sm">Your next action will show up here once your plan is set up.</p>
-      </div>
-    )
+    return variant === 'dock'
+      ? <p className="text-white/60 text-xs" style={{ fontFamily: 'var(--font-poppins)' }}>Your next action will show up here once your plan is set up.</p>
+      : (
+        <div className="rounded-3xl p-6 text-center" style={{ background: cardBg, border: '1.5px solid rgba(229,169,60,0.3)' }}>
+          <p className="text-ivory/50 text-sm">Your next action will show up here once your plan is set up.</p>
+        </div>
+      )
   }
 
   // Real bug caught live (2026-08-26): a longer instruction (e.g. a
@@ -275,6 +275,88 @@ export default function NextActionCard() {
     : action.instruction.length > 70
       ? 'clamp(13px, 3.6vw, 15px)'
       : 'clamp(15px, 4.2vw, 18px)'
+
+  if (variant === 'dock') {
+    return (
+      <div style={{ fontFamily: 'var(--font-poppins)' }}>
+        {celebration && (
+          <button
+            onClick={() => setCelebration(null)}
+            className="w-full text-left rounded-xl px-3 py-2 mb-2 flex items-start gap-2 active:scale-[0.99] transition-transform"
+            style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(229,169,60,0.5)' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#E5A93C" className="shrink-0 mt-0.5"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2Z" /></svg>
+            <span className="text-white text-xs font-semibold">{celebration}, love — you&apos;ve kept showing up, and you deserve it.</span>
+          </button>
+        )}
+
+        <div className="flex items-start gap-2 mb-2">
+          <div
+            role={EXPANSION_ROUTE[action.kind] ? 'button' : undefined}
+            tabIndex={EXPANSION_ROUTE[action.kind] ? 0 : undefined}
+            onClick={EXPANSION_ROUTE[action.kind] ? expand : undefined}
+            onKeyDown={EXPANSION_ROUTE[action.kind] ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expand() } } : undefined}
+            className="rounded-full shrink-0 mt-0.5"
+            style={{
+              width: 28, height: 28,
+              background: encouragement
+                ? 'conic-gradient(from 200deg, #E9A0A0, #f2c6cf, #d97a90, #E9A0A0)'
+                : 'conic-gradient(from 200deg, #E5A93C, #7fbf94, #0f7a53, #E5A93C)',
+              border: '1.5px solid rgba(229,169,60,0.7)',
+              cursor: EXPANSION_ROUTE[action.kind] ? 'pointer' : 'default',
+            }}
+          />
+          <span className="flex-1 leading-snug text-white" style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, fontSize: 15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {encouragement && <span className="block not-italic font-semibold text-white/70" style={{ fontFamily: 'var(--font-poppins)', fontSize: 11 }}>{encouragement}</span>}
+            {action.instruction}
+          </span>
+          {action.kind !== 'complete' && (
+            <button onClick={markDone} disabled={busy} aria-label={done ? 'Nice!' : 'Done'} className="rounded-full shrink-0 flex items-center justify-center disabled:opacity-60 active:scale-95 transition-transform" style={{ width: 26, height: 26, background: '#C9A84C' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0A0A0F" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+            </button>
+          )}
+        </div>
+
+        {action.kind !== 'complete' && (
+          <button onClick={dayChanged} disabled={busy} className="text-white/80 text-[10.5px] font-bold bg-white/10 border border-white/20 rounded-full px-3 py-1 mb-2 disabled:opacity-60">
+            Keep it simple
+          </button>
+        )}
+
+        {note && <p className="text-white/60 text-[11px] mb-1.5">{note}</p>}
+
+        <div className="flex items-center gap-2 rounded-full pl-3.5 pr-1.5 py-1.5" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(229,169,60,0.3)' }}>
+          <input
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage() } }}
+            placeholder="Ask anything about your plan…"
+            className="flex-1 bg-transparent text-white text-xs placeholder:text-white/40 focus:outline-none min-w-0"
+          />
+          <span onClick={(e) => e.stopPropagation()}>
+            <DeepgramVoiceInput
+              source="next_action"
+              onInterim={onVoiceInterim}
+              onResult={onVoiceFinal}
+              idleLabel="Talk instead of typing"
+              className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-white/55"
+              activeClassName="w-[26px] h-[26px] rounded-full flex items-center justify-center bg-[#E9A0A0]"
+              icon={
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
+                  <path d="M19 11a7 7 0 0 1-14 0" />
+                  <path d="M12 18v4" />
+                </svg>
+              }
+            />
+          </span>
+          <button onClick={() => sendMessage()} disabled={busy || !message.trim()} aria-label="Send" className="rounded-full shrink-0 flex items-center justify-center disabled:opacity-40" style={{ width: 30, height: 30, background: '#C9A84C' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0A0A0F" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="rounded-3xl p-6" style={{ background: cardBg, border: '1.5px solid #E5A93C', boxShadow: '0 0 30px -6px rgba(229,169,60,0.3)' }}>
@@ -403,10 +485,10 @@ export default function NextActionCard() {
       {note && <p className="text-ivory/50 text-[11px] text-center mb-2" style={{ fontFamily: 'var(--font-poppins)' }}>{note}</p>}
 
       {/* Small on purpose — the circle is the one thing on this screen;
-          these are just the escape hatches, not a second focal point.
+          this is just the escape hatch, not a second focal point.
           "complete" (2026-08-28) hides Done/Keep it simple — there's
           nothing left to mark done and nothing to simplify on a day she's
-          already finished everything; "Something else?" stays in case she
+          already finished everything; the chat bar below stays in case she
           wants to add anything. */}
       <div className="flex flex-col items-center gap-1.5" style={{ fontFamily: 'var(--font-poppins)' }}>
         {action.kind !== 'complete' && (
@@ -414,20 +496,21 @@ export default function NextActionCard() {
             {done ? 'Nice!' : 'Done'}
           </button>
         )}
-        <div className="flex items-center justify-center gap-4">
-          {action.kind !== 'complete' && (
-            <button onClick={dayChanged} disabled={busy} className="text-ivory/50 text-[11px] font-semibold py-1.5 disabled:opacity-60">
-              Keep it simple
-            </button>
-          )}
-          <button onClick={() => setShowMessage((s) => !s)} disabled={busy} className="text-ivory/50 text-[11px] font-semibold py-1.5 disabled:opacity-60">
-            Something else?
+        {action.kind !== 'complete' && (
+          <button onClick={dayChanged} disabled={busy} className="text-ivory/50 text-[11px] font-semibold py-1.5 disabled:opacity-60">
+            Keep it simple
           </button>
-        </div>
+        )}
       </div>
 
-      {showMessage && (
-        <div className="mt-3 flex items-end gap-2" style={{ fontFamily: 'var(--font-poppins)' }}>
+      {/* Persistent chat bar — same real engine as before (sendMessage ->
+          POST /api/plan/next-action, action:'message'), just always visible
+          now instead of hidden behind a "Something else?" toggle. This IS
+          the "ask your coach anything" surface; nothing new to wire, just a
+          new door onto the same room. */}
+      <div className="mt-3">
+        <p className="text-[#E5A93C] text-[9px] uppercase tracking-[0.2em] font-bold mb-1.5 text-center" style={{ fontFamily: 'var(--font-poppins)' }}>Ask your coach</p>
+        <div className="flex items-end gap-2" style={{ fontFamily: 'var(--font-poppins)' }}>
           {/* A textarea, not a single-line input — Asa's ask, 2026-08-26:
               the full transcript must stay visible no matter how long it
               gets, like any normal AI chat box, never clipped or side-
@@ -437,7 +520,7 @@ export default function NextActionCard() {
             value={message}
             onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-            placeholder="Tell it what's going on…"
+            placeholder="Ask anything about your plan…"
             rows={1}
             className="flex-1 bg-black/20 border border-white/15 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-ivory/30 focus:outline-none focus:border-gold/60 resize-none max-h-60 overflow-y-auto"
           />
@@ -445,7 +528,7 @@ export default function NextActionCard() {
             Send
           </button>
         </div>
-      )}
+      </div>
     </div>
   )
 }

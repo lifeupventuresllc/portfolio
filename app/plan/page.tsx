@@ -3,14 +3,20 @@ import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import ClientMenu from '@/components/ClientMenu'
 import StreakChip from '@/components/StreakChip'
-import GoalProgressBar from '@/components/GoalProgressBar'
+import { GoalProgressCompact } from '@/components/GoalProgressBar'
 import VerifyEmailBanner from '@/components/VerifyEmailBanner'
 import AnonymousSessionBanner from '@/components/AnonymousSessionBanner'
 import TimezoneSync from '@/components/TimezoneSync'
 import NextActionCard from '@/components/NextActionCard'
+import DashboardVideoFeed from '@/components/DashboardVideoFeed'
+import FeedEngagementRail from '@/components/FeedEngagementRail'
+import { getFeedVideos } from '@/lib/feed-videos'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
-import { localDateISO, localDayNumber, addDaysISO } from '@/lib/localdate'
+import { localDateISO, localDayNumber, localMondayIndex } from '@/lib/localdate'
+import { getApprovedTodayAdjustment } from '@/lib/fos/context'
+import { getEffectiveCalorieBudget } from '@/lib/fos/effective-plan'
+import type { WeekPlan } from '@/lib/meal-plan'
 
 export const dynamic = 'force-dynamic'
 
@@ -116,15 +122,18 @@ export default async function PlanDashboard() {
   const hasPlan = !!enrollment.intake_completed
 
   const todayIso = localDateISO()
-  const consistencyWindowStart = addDaysISO(todayIso, -13) // 14 days incl. today, ~2 weeks
-  const [{ data: doneRows }, { data: intakeRow }, { data: latestCheckin }, { data: foodLogRows }] = hasPlan
+  const [{ data: intakeRow }, { data: latestCheckin }, { data: foodLogRows }, { data: nutritionPlan }, todayAdjustment] = hasPlan
     ? await Promise.all([
-        svc.from('challenge_progress').select('logged_on, measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
         svc.from('challenge_intake').select('weight_lbs, target_lbs, goal, days_per_week, form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
         svc.from('challenge_checkins').select('weight_lbs, submitted_at').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('submitted_at', { ascending: false }).limit(1).maybeSingle(),
-        svc.from('challenge_food_log').select('logged_on').eq('enrollment_id', enrollment.id).gte('logged_on', consistencyWindowStart),
+        // The old 14-day nutrition-consistency stat this used to also cover
+        // was dropped from this page's compact merged line (2026-08-29 feed
+        // redesign) — just today's rows needed now.
+        svc.from('challenge_food_log').select('calories').eq('enrollment_id', enrollment.id).eq('logged_on', todayIso),
+        svc.from('challenge_nutrition_plans').select('meals, calories').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
+        getApprovedTodayAdjustment(enrollment.id as string, todayIso),
       ])
-    : [{ data: null }, { data: null }, { data: null }, { data: null }] as const
+    : [{ data: null }, { data: null }, { data: null }, { data: null }, null] as const
 
   const affirmation = affirmationForDay(localDayNumber())
 
@@ -146,52 +155,89 @@ export default async function PlanDashboard() {
   const currentWeight = statsProvided ? (Number(latestCheckin?.weight_lbs) || startWeight) : 0
   const goalDirection = (intakeRow?.goal === 'gain' || intakeRow?.goal === 'maintain' ? intakeRow.goal : 'lose') as 'lose' | 'gain' | 'maintain'
 
-  // Consistency stat — deliberately separate from the weight math above, never
-  // blended into it (a good-effort stretch with a stubborn scale shouldn't make the
-  // goal bar lie in the "good" direction). Shown alongside it, smaller, clearly
-  // labeled as consistency, not progress. 14-day window: workouts = completed vs.
-  // her own planned days/week (capped 100%, no plan yet = 0 rather than divide-by-
-  // zero); nutrition = days she logged anything, a real-but-honest proxy for
-  // engagement — not strict calorie-budget adherence, which would need reconstructing
-  // each historical day's day-type-specific target and isn't worth that complexity
-  // for a small dashboard stat.
-  const workoutDaysInWindow = new Set(
-    (doneRows || [])
-      .filter((r) => (r as { logged_on?: string }).logged_on! >= consistencyWindowStart && (r.measurements as { workout?: boolean } | null)?.workout)
-      .map((r) => (r as { logged_on?: string }).logged_on)
-  ).size
-  const plannedPerWeek = Number(intakeRow?.days_per_week) || 0
-  const workoutConsistencyPct = plannedPerWeek > 0 ? Math.min(100, Math.round((workoutDaysInWindow / (plannedPerWeek * 2)) * 100)) : 0
-  const nutritionDaysLogged = new Set((foodLogRows || []).map((r) => r.logged_on as string)).size
-  const nutritionConsistencyPct = Math.min(100, Math.round((nutritionDaysLogged / 14) * 100))
+  // Today's calories for the progress card — mirrors app/plan/today/page.tsx's
+  // calBudget/loggedCalories exactly (same todayMeals-aware target, same
+  // getEffectiveCalorieBudget adjustment layer) so the two pages never
+  // disagree on a day Coach Asa approved a calorie change.
+  const mealIdx = localMondayIndex()
+  const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
+    ? (nutritionPlan.meals as WeekPlan) : null
+  const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
+  const flatCalTarget = Number(nutritionPlan?.calories) || null
+  const baseCalTarget = todayMeals?.target ?? flatCalTarget ?? undefined
+  const calBudget = baseCalTarget != null ? getEffectiveCalorieBudget(baseCalTarget, todayAdjustment) : null
+  const loggedCaloriesToday = (foodLogRows || []).reduce((sum, r) => sum + (Number((r as { calories?: number }).calories) || 0), 0)
 
-  // Asa's explicit call, 2026-08-25, after reviewing the real mockup: this
-  // page IS the Next Action circle now — not the circle plus the old
-  // dashboard content underneath it. Chat (CoachHero), the workout photo
-  // hero, the workout/calorie status cards, the weekly check-in prompt, and
-  // the feedback card are NOT deleted — every one of them is still one tap
-  // away from the hamburger menu (ClientMenu already links to /plan/coach,
-  // /plan/workout, /plan/checkin, /plan/feedback, etc.) — they're just no
-  // longer part of the landing view, exactly matching the approved mockup:
-  // greeting + self-talk (in shell(), above) + circle + progress, nothing else.
-  return shell(
-    <div className="space-y-4">
-      {hasPlan && (
-        <>
-          <NextActionCard />
-          {statsProvided ? (
-            <GoalProgressBar startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} workoutConsistencyPct={workoutConsistencyPct} nutritionConsistencyPct={nutritionConsistencyPct} />
-          ) : (
-            <Link href="/plan/intake" className="block rounded-[2rem] p-5" style={{ background: '#083023', border: '1px solid rgba(229,169,60,0.3)' }}>
-              <p className="text-[#E5A93C] text-[10px] uppercase tracking-wider font-semibold mb-1">Your progress</p>
-              <p className="text-white font-bold text-lg">Add your starting weight & goal</p>
-              <p className="text-white/50 text-sm mt-0.5">90 seconds — then this fills in with your real numbers, not a placeholder.</p>
+  const menu = <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
+
+  // Real dashboard, feed-first (Asa's approved mockup, 2026-08-28/29): the
+  // TikTok-style vertical reel is now the dominant middle section, full-bleed,
+  // with the greeting/streak/self-talk, the like/community rail, and the
+  // Next Action + progress content all layered on top of it as one caption
+  // dock — not a separate stack of cards below a static hero, per
+  // "keep the main thing the main thing." No hero card here (that's shell(),
+  // still used below for the not-enrolled / no-plan states, which have no
+  // feed to layer onto).
+  if (hasPlan) {
+    return (
+      <div className="min-h-[100dvh] flex flex-col" style={{ background: '#021F16' }}>
+        <TimezoneSync />
+        {user.is_anonymous ? <AnonymousSessionBanner /> : (!user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />)}
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+          <p className="text-[#E5A93C] text-xs font-semibold tracking-[0.25em] uppercase" style={{ fontFamily: 'var(--font-poppins)' }}>Life-Up Fitness</p>
+          <div className="flex items-center gap-2">
+            <Link href="/plan/preferences" aria-label="Update your goals and workout style" title="Update your goals and workout style" className="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center hover:border-gold/60 transition-colors">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EDE7DA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+              </svg>
             </Link>
-          )}
-        </>
-      )}
-    </div>,
-    <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />,
-    affirmation
-  )
+            {menu}
+          </div>
+        </div>
+
+        <div className="flex-1 min-h-0 px-4 pb-4 relative" style={{ height: '68vh', minHeight: 460 }}>
+          {/* absolute inset-0 (not w-full h-full) — DashboardVideoFeed's own
+              root and every layer inside it are position:absolute (the reel,
+              scrims, slots), so nothing in that subtree contributes normal-
+              flow content height. A percentage (h-full) chain feeding an
+              all-absolute subtree has nothing definite to resolve against
+              and collapses/overflows unpredictably across reloads (caught
+              live, 2026-08-29: rendered 0px on one load, 1788px on the
+              next). Anchoring by inset against this relative parent's real
+              flex-grown height is deterministic instead. */}
+          <div className="absolute inset-0 rounded-3xl overflow-hidden" style={{ border: '1px solid rgba(229,169,60,0.3)' }}>
+            <DashboardVideoFeed
+              videos={getFeedVideos()}
+              topSlot={
+                <div>
+                  <h1 className="text-white" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontStyle: 'italic', fontWeight: 700, fontSize: 20, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>Hey {firstName}</h1>
+                  <StreakChip />
+                  {affirmation && <p className="text-white/80 italic text-[11px] leading-snug mt-1" style={{ fontFamily: 'var(--font-poppins)', textShadow: '0 1px 5px rgba(0,0,0,0.5)' }}>&ldquo;{affirmation}&rdquo;</p>}
+                </div>
+              }
+              railSlot={<FeedEngagementRail />}
+              captionSlot={
+                <div className="px-4 pb-3.5" style={{ paddingRight: 58 }}>
+                  <NextActionCard variant="dock" />
+                  {statsProvided ? (
+                    <div className="mt-2.5 pt-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+                      <GoalProgressCompact startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} calorieLoggedToday={loggedCaloriesToday} calorieBudgetToday={calBudget} />
+                    </div>
+                  ) : (
+                    <Link href="/plan/intake" className="block mt-2.5 pt-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font-poppins)' }}>
+                      <p className="text-white font-bold text-xs">Add your starting weight & goal</p>
+                      <p className="text-white/60 text-[11px] mt-0.5">90 seconds — then your real progress shows up here.</p>
+                    </Link>
+                  )}
+                </div>
+              }
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return shell(<div className="space-y-4" />, menu, affirmation)
 }

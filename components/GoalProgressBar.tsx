@@ -21,8 +21,78 @@ function ConsistencyChip({ workoutPct, nutritionPct }: { workoutPct: number; nut
   )
 }
 
+// Today's calories — same adjustment-aware budget/logged numbers as
+// /plan/today (getEffectiveCalorieBudget + today's real challenge_food_log
+// rows), just surfaced here too so this card never disagrees with it.
+// Renders nothing when there's no real budget yet, same "don't show a
+// fabricated number" rule as the weight math above.
+function CalorieLine({ loggedToday, budgetToday }: { loggedToday: number; budgetToday: number | null }) {
+  if (budgetToday == null) return null
+  const remaining = Math.max(0, budgetToday - loggedToday)
+  return (
+    <p className="text-[10.5px] text-ivory/50 mt-1">
+      <span className="text-[#E5A93C] font-semibold">{Math.round(loggedToday)}</span> of {Math.round(budgetToday)} cal today &middot; {Math.round(remaining)} left
+    </p>
+  )
+}
+
+// Just the headline + track + calorie line, no card chrome and no Link
+// wrapper — for embedding inline inside the feed dock (Asa's approved
+// mockup, 2026-08-29: progress and calories merged into the one caption
+// row instead of a separate card below the feed). Same real math as the
+// full card below; this is a render split, not a second source of truth.
+export function GoalProgressCompact({
+  startWeight, currentWeight, goalWeight, goal, calorieLoggedToday = 0, calorieBudgetToday = null,
+}: {
+  startWeight: number
+  currentWeight: number
+  goalWeight: number
+  goal: 'lose' | 'gain' | 'maintain'
+  calorieLoggedToday?: number
+  calorieBudgetToday?: number | null
+}) {
+  if (goal === 'maintain') {
+    return (
+      <div style={{ fontFamily: 'var(--font-poppins)' }}>
+        <p className="text-white text-xs font-semibold">Holding steady at {Math.round(currentWeight)} lbs</p>
+        <CalorieLine loggedToday={calorieLoggedToday} budgetToday={calorieBudgetToday} />
+      </div>
+    )
+  }
+
+  const span = goal === 'lose' ? startWeight - goalWeight : goalWeight - startWeight
+  const progressed = goal === 'lose' ? startWeight - currentWeight : currentWeight - startWeight
+  const pct = span > 0 ? Math.max(0, Math.min(100, Math.round((progressed / span) * 100))) : 0
+  const moved = Math.max(0, Math.round(Math.abs(progressed)))
+  const remaining = Math.max(0, Math.round(span - progressed))
+  const verb = goal === 'lose' ? 'down' : 'up'
+  const budgetLabel = calorieBudgetToday != null
+    ? <><b>{Math.round(calorieLoggedToday)}</b>/{Math.round(calorieBudgetToday)} cal</>
+    : null
+
+  return (
+    <div style={{ fontFamily: 'var(--font-poppins)' }}>
+      <p className="text-[12px] font-semibold text-white/92 m-0">
+        {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} to go` : moved > 0 ? ' · goal reached' : ''}
+        {budgetLabel && <> · <span className="text-[#E5A93C] font-bold">{budgetLabel}</span></>}
+      </p>
+      <div className="relative h-1.5 rounded-full mt-2.5" style={{ background: 'rgba(255,255,255,0.18)' }}>
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #044A34, #0f7a53, #E9A0A0)' }} />
+        <span
+          aria-hidden
+          className="absolute flex items-center justify-center rounded-full"
+          style={{ left: `${pct}%`, top: '50%', transform: 'translate(-50%, -50%) scaleX(-1)', width: 20, height: 20, fontSize: 13, background: 'radial-gradient(circle, rgba(233,160,160,0.55), transparent 70%)' }}
+        >
+          🏃🏿‍♀️
+        </span>
+      </div>
+    </div>
+  )
+}
+
 export default function GoalProgressBar({
   startWeight, currentWeight, goalWeight, goal, workoutConsistencyPct, nutritionConsistencyPct,
+  calorieLoggedToday = 0, calorieBudgetToday = null,
 }: {
   startWeight: number
   currentWeight: number
@@ -30,6 +100,8 @@ export default function GoalProgressBar({
   goal: 'lose' | 'gain' | 'maintain'
   workoutConsistencyPct: number
   nutritionConsistencyPct: number
+  calorieLoggedToday?: number
+  calorieBudgetToday?: number | null
 }) {
   if (goal === 'maintain') {
     return (
@@ -37,6 +109,7 @@ export default function GoalProgressBar({
         <p className="text-[#E5A93C] text-[9px] uppercase tracking-wider font-semibold mb-0.5">Your progress</p>
         <p className="text-white font-bold text-sm">Holding steady at {Math.round(currentWeight)} lbs</p>
         <p className="text-white/50 text-[11px] mt-0.5">Right around your goal of {Math.round(goalWeight)} lbs — consistency is the whole game now.</p>
+        <CalorieLine loggedToday={calorieLoggedToday} budgetToday={calorieBudgetToday} />
         <ConsistencyChip workoutPct={workoutConsistencyPct} nutritionPct={nutritionConsistencyPct} />
       </Link>
     )
@@ -86,6 +159,7 @@ export default function GoalProgressBar({
         <span className="text-[#E5A93C] font-semibold">{pct}%</span>
         <span>{Math.round(goalWeight)} lbs goal</span>
       </div>
+      <CalorieLine loggedToday={calorieLoggedToday} budgetToday={calorieBudgetToday} />
       <ConsistencyChip workoutPct={workoutConsistencyPct} nutritionPct={nutritionConsistencyPct} />
     </Link>
   )

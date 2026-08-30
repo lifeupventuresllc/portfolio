@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Ring from '@/components/Ring'
 import VoiceButton from '@/components/VoiceButton'
+import MealPhotoButton from '@/components/MealPhotoButton'
 import SessionExpiredNotice from '@/components/SessionExpiredNotice'
 import { pieceWeightFor } from '@/lib/food-portions'
 
@@ -313,6 +314,10 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
               <button type="submit" disabled={searching || !q.trim()} className="shrink-0 bg-gold text-obsidian px-3 rounded-lg font-bold text-xs uppercase disabled:opacity-50">{searching ? '…' : 'Go'}</button>
             </form>
           </div>
+
+          {/* Snap a photo — a real upload + a real log row (source:'photo'),
+              calories at 0 until the Cal-AI-style backend estimates them. */}
+          <MealPhotoButton />
 
           {/* Results — verified DB facts (green) vs AI estimate (amber) */}
           {results.length > 0 && !picking && (
