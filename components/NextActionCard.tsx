@@ -298,7 +298,7 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
             onKeyDown={EXPANSION_ROUTE[action.kind] ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expand() } } : undefined}
             className="rounded-full shrink-0 mt-0.5"
             style={{
-              width: 28, height: 28,
+              width: 34, height: 34,
               background: encouragement
                 ? 'conic-gradient(from 200deg, #E9A0A0, #f2c6cf, #d97a90, #E9A0A0)'
                 : 'conic-gradient(from 200deg, #E5A93C, #7fbf94, #0f7a53, #E5A93C)',
@@ -318,9 +318,21 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
         </div>
 
         {action.kind !== 'complete' && (
-          <button onClick={dayChanged} disabled={busy} className="text-white/80 text-[10.5px] font-bold bg-white/10 border border-white/20 rounded-full px-3 py-1 mb-2 disabled:opacity-60">
-            Keep it simple
-          </button>
+          <div className="flex items-center gap-1.5 mb-2">
+            <button onClick={dayChanged} disabled={busy} className="text-white/80 text-[10.5px] font-bold bg-white/10 border border-white/20 rounded-full px-3 py-1 disabled:opacity-60">
+              Keep it simple
+            </button>
+            {/* Was a toggle that revealed the (then-hidden) chat box —
+                that box is always visible now, so this pill's job changed:
+                Asa's ask, 2026-08-29, was to bring it back visually next to
+                Keep it simple, matching the approved mockup. Routes through
+                the exact same real message engine as typing in the chat
+                box below — a canned starting phrase, not a separate
+                stub path. */}
+            <button onClick={() => sendMessage('Something else, please')} disabled={busy} className="text-white/80 text-[10.5px] font-bold bg-white/10 border border-white/20 rounded-full px-3 py-1 disabled:opacity-60">
+              Something else?
+            </button>
+          </div>
         )}
 
         {note && <p className="text-white/60 text-[11px] mb-1.5">{note}</p>}

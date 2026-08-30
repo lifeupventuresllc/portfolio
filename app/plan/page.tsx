@@ -178,9 +178,29 @@ export default async function PlanDashboard() {
   // "keep the main thing the main thing." No hero card here (that's shell(),
   // still used below for the not-enrolled / no-plan states, which have no
   // feed to layer onto).
+  // h-[100dvh] overflow-hidden, with -mb-16 to cancel the outer wrapper's
+  // pb-16 — the real root cause of the swipe-reveals-a-gap bug Asa caught
+  // on his own phone, 2026-08-29: app/plan/layout.tsx wraps every /plan
+  // page in its own "pb-16" clearance div for simpler pages that don't
+  // need pixel-perfect tab-bar accounting. Stacked with this page's own
+  // precise paddingBottom below, the combined content came out taller
+  // than the real viewport, which is exactly what makes a page scrollable
+  // — so a swipe on the video scrolled the whole document, not just the
+  // reel, revealing the reserved tab-bar space as a gap that opened and
+  // closed as she swiped.
+  // Tried position:fixed inset-0 first (taking this out of flow entirely,
+  // same as BottomTabBar) but that broke completely: an ancestor
+  // (".luf-page", page-transition infrastructure elsewhere in the app —
+  // not this file) has an active CSS transform, which per spec makes IT
+  // the containing block for any position:fixed descendant instead of the
+  // real viewport — and since that ancestor's own height collapses to
+  // near-0 (its only content became a no-longer-in-flow fixed child), the
+  // "fixed" box collapsed right along with it. -mb-16 (Tailwind's pb-16 in
+  // reverse, -4rem) cancels the outer wrapper's padding while staying in
+  // normal flow, which isn't affected by that ancestor's transform at all.
   if (hasPlan) {
     return (
-      <div className="h-[100dvh] flex flex-col" style={{ background: '#021F16', paddingBottom: 'calc(72px + env(safe-area-inset-bottom))' }}>
+      <div className="h-[100dvh] -mb-16 flex flex-col overflow-hidden" style={{ background: '#021F16', paddingBottom: 'calc(72px + env(safe-area-inset-bottom))' }}>
         <TimezoneSync />
         {user.is_anonymous ? <AnonymousSessionBanner /> : (!user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />)}
 
@@ -204,7 +224,14 @@ export default async function PlanDashboard() {
             caption content — next action, chat, progress — behind the
             tab bar). Reserving the space one level up in real padding
             sidesteps that entirely. */}
-        <div className="flex-1 min-h-0 px-4 pb-4 relative">
+        {/* No side/bottom padding, no rounded corners, no border — Asa's
+            catch on his own phone, 2026-08-29: those made the video read
+            as a floating card with a visible gap above the tab bar
+            instead of one continuous surface running right up to it,
+            unlike TikTok's own feed (which touches every edge except the
+            true top, which topSlot's transparent overlay already
+            handles). */}
+        <div className="flex-1 min-h-0 relative">
           {/* absolute inset-0 (not w-full h-full) — DashboardVideoFeed's own
               root and every layer inside it are position:absolute (the reel,
               scrims, slots), so nothing in that subtree contributes normal-
@@ -214,7 +241,7 @@ export default async function PlanDashboard() {
               live, 2026-08-29: rendered 0px on one load, 1788px on the
               next). Anchoring by inset against this relative parent's real
               flex-grown height is deterministic instead. */}
-          <div className="absolute inset-0 rounded-3xl overflow-hidden" style={{ border: '1px solid rgba(229,169,60,0.3)' }}>
+          <div className="absolute inset-0 overflow-hidden">
             <DashboardVideoFeed
               videos={getFeedVideos()}
               topSlot={
