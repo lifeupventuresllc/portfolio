@@ -76,8 +76,14 @@ export function GoalProgressCompact({
         {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} to go` : moved > 0 ? ' · goal reached' : ''}
         {budgetLabel && <> · <span className="text-[#E5A93C] font-bold">{budgetLabel}</span></>}
       </p>
-      <div className="relative h-1.5 rounded-full mt-2.5" style={{ background: 'rgba(255,255,255,0.18)' }}>
-        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #044A34, #0f7a53, #E9A0A0)' }} />
+      {/* Was rgba(255,255,255,0.18) at 6px with a dark-green fill start —
+          Asa's catch on his own phone, 2026-08-29: it disappeared
+          entirely against dark video. Brighter track + a border reads as
+          a track even where the fill hasn't reached; a gold-forward fill
+          (the app's real accent, not near-black green) stays visible
+          end to end. */}
+      <div className="relative h-2 rounded-full mt-2.5" style={{ background: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.4)', boxShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #E5A93C, #f2c879, #E9A0A0)', boxShadow: '0 0 6px rgba(229,169,60,0.6)' }} />
         <span
           aria-hidden
           className="absolute flex items-center justify-center rounded-full"

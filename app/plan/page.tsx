@@ -180,23 +180,31 @@ export default async function PlanDashboard() {
   // feed to layer onto).
   if (hasPlan) {
     return (
-      <div className="min-h-[100dvh] flex flex-col" style={{ background: '#021F16' }}>
+      <div className="h-[100dvh] flex flex-col" style={{ background: '#021F16', paddingBottom: 'calc(72px + env(safe-area-inset-bottom))' }}>
         <TimezoneSync />
         {user.is_anonymous ? <AnonymousSessionBanner /> : (!user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />)}
-        <div className="flex items-center justify-between px-4 pt-3 pb-2">
-          <p className="text-[#E5A93C] text-xs font-semibold tracking-[0.25em] uppercase" style={{ fontFamily: 'var(--font-poppins)' }}>Life-Up Fitness</p>
-          <div className="flex items-center gap-2">
-            <Link href="/plan/preferences" aria-label="Update your goals and workout style" title="Update your goals and workout style" className="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center hover:border-gold/60 transition-colors">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EDE7DA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
-              </svg>
-            </Link>
-            {menu}
-          </div>
-        </div>
 
-        <div className="flex-1 min-h-0 px-4 pb-4 relative" style={{ height: '68vh', minHeight: 460 }}>
+        {/* No separate header bar above the video (Asa's catch on his real
+            phone, 2026-08-29: the wordmark/gear/menu were sitting in their
+            own solid quadrant above the feed, eating into it — never the
+            approved design). The video now starts at the screen's real top
+            edge; wordmark/icons/greeting/self-talk are all overlays
+            floating directly on it via topSlot below, matching TikTok's
+            own transparent top nav — approved on Asa's phone in Safari,
+            2026-08-29. */}
+        {/* No inline height here — flex-1 (flex-grow, flex-basis:0%) fills
+            whatever's left of the root's h-[100dvh] above, which already
+            has paddingBottom reserving the fixed BottomTabBar's real
+            height. BottomTabBar isn't a normal-flow sibling (it's
+            position:fixed, rendered from app/plan/layout.tsx), so nothing
+            here would otherwise know to leave room for it — an inline
+            calc(100dvh - ...) here computed wrong in testing (100dvh
+            resolved larger than the real viewport in this environment,
+            so the subtraction landed back at the full height, burying the
+            caption content — next action, chat, progress — behind the
+            tab bar). Reserving the space one level up in real padding
+            sidesteps that entirely. */}
+        <div className="flex-1 min-h-0 px-4 pb-4 relative">
           {/* absolute inset-0 (not w-full h-full) — DashboardVideoFeed's own
               root and every layer inside it are position:absolute (the reel,
               scrims, slots), so nothing in that subtree contributes normal-
@@ -211,9 +219,28 @@ export default async function PlanDashboard() {
               videos={getFeedVideos()}
               topSlot={
                 <div>
-                  <h1 className="text-white" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontStyle: 'italic', fontWeight: 700, fontSize: 20, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>Hey {firstName}</h1>
-                  <StreakChip />
-                  {affirmation && <p className="text-white/80 italic text-[11px] leading-snug mt-1" style={{ fontFamily: 'var(--font-poppins)', textShadow: '0 1px 5px rgba(0,0,0,0.5)' }}>&ldquo;{affirmation}&rdquo;</p>}
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[#E5A93C] text-[10px] font-bold uppercase" style={{ fontFamily: 'var(--font-poppins)', letterSpacing: '0.22em', textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>Life-Up Fitness</p>
+                    <div className="flex items-center gap-2.5">
+                      <Link href="/plan/preferences" aria-label="Update your goals and workout style" title="Update your goals and workout style" className="h-[30px] w-[30px] rounded-[10px] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.18)', backdropFilter: 'blur(2px)' }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EDE7DA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="3" />
+                          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+                        </svg>
+                      </Link>
+                      {menu}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 mt-2.5">
+                    <h1 className="text-white" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontStyle: 'italic', fontWeight: 700, fontSize: 20, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>Hey {firstName}</h1>
+                    <StreakChip />
+                  </div>
+                  {affirmation && (
+                    <div className="mt-2.5 rounded-xl px-2.5 py-1.5" style={{ background: 'rgba(0,0,0,0.38)', border: '1px solid rgba(229,169,60,0.3)', backdropFilter: 'blur(2px)' }}>
+                      <p className="text-[#E5A93C] text-[9px] font-bold uppercase" style={{ fontFamily: 'var(--font-poppins)', letterSpacing: '0.18em' }}>Today&apos;s self-talk</p>
+                      <p className="text-white/90 italic text-[11px] leading-snug mt-0.5" style={{ fontFamily: 'var(--font-poppins)' }}>&ldquo;{affirmation}&rdquo;</p>
+                    </div>
+                  )}
                 </div>
               }
               railSlot={<FeedEngagementRail />}
