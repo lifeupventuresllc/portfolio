@@ -18,6 +18,7 @@ export default function DashboardVideoFeed({
   captionSlot?: React.ReactNode
 }) {
   const reelRef = useRef<HTMLDivElement | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const reel = reelRef.current
@@ -38,8 +39,69 @@ export default function DashboardVideoFeed({
     return () => io.disconnect()
   }, [videos])
 
+  // The topSlot/railSlot/captionSlot overlays sit ABOVE the reel in
+  // z-order but are DOM siblings, not ancestors — a swipe that starts
+  // over them (the caption zone in particular now covers most of the
+  // lower half: next action, chat bar, progress line) never reaches the
+  // reel underneath, since the overlay itself isn't scrollable. That's
+  // dead touch space with no visible sign anything's wrong (caught live,
+  // 2026-08-29: swiping from over the caption area did nothing). Forward
+  // a vertical swipe that didn't start on an actual control (button,
+  // input, link) to the reel as a one-slide scroll, both directions.
+  useEffect(() => {
+    const reel = reelRef.current
+    const container = containerRef.current
+    if (!reel || !container) return
+    let startY = 0
+    let startedOnControl = false
+    const isControl = (t: EventTarget | null) => t instanceof Element && !!t.closest('button, a, input, textarea, [role="button"], [contenteditable="true"]')
+    const onStart = (e: TouchEvent) => {
+      startY = e.touches[0]?.clientY ?? 0
+      startedOnControl = isControl(e.target)
+    }
+    const onEnd = (e: TouchEvent) => {
+      if (startedOnControl) return
+      const endY = e.changedTouches[0]?.clientY ?? startY
+      const deltaY = startY - endY
+      if (Math.abs(deltaY) < 40) return
+      reel.scrollBy({ top: deltaY > 0 ? reel.clientHeight : -reel.clientHeight, behavior: 'smooth' })
+    }
+    const overlays = Array.from(container.querySelectorAll<HTMLDivElement>('[data-feed-overlay]'))
+    overlays.forEach((o) => {
+      o.addEventListener('touchstart', onStart, { passive: true })
+      o.addEventListener('touchend', onEnd, { passive: true })
+    })
+    return () => overlays.forEach((o) => {
+      o.removeEventListener('touchstart', onStart)
+      o.removeEventListener('touchend', onEnd)
+    })
+  }, [videos])
+
+  // Loop back to the first video once the last one's fully scrolled past
+  // (Asa's ask, 2026-08-29: same 10 clips, but it should feel endless
+  // like a real feed instead of just stopping). A clone of video 0 is
+  // appended after the real last slide; once THAT clone settles into
+  // view, jump scrollTop back to the real slide 0 with no animation —
+  // since the clone is pixel-identical, the jump is invisible.
+  useEffect(() => {
+    const reel = reelRef.current
+    if (!reel || videos.length === 0) return
+    const loopSlide = reel.querySelector<HTMLDivElement>('[data-feed-slide="loop-clone"]')
+    if (!loopSlide) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting && e.intersectionRatio > 0.98) reel.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+        })
+      },
+      { threshold: [0.98], root: reel }
+    )
+    io.observe(loopSlide)
+    return () => io.disconnect()
+  }, [videos])
+
   return (
-    <div className="relative w-full h-full overflow-hidden bg-black">
+    <div ref={containerRef} className="relative w-full h-full overflow-hidden bg-black">
       <div ref={reelRef} className="absolute inset-0 overflow-y-scroll snap-y snap-mandatory feed-no-scrollbar">
         {videos.map((v, i) => (
           <div key={v.url} data-feed-slide className="relative w-full h-full snap-start snap-always flex items-center justify-center bg-[#0b1712]">
@@ -54,15 +116,20 @@ export default function DashboardVideoFeed({
             />
           </div>
         ))}
+        {videos.length > 1 && (
+          <div key={`${videos[0].url}-loop-end`} data-feed-slide="loop-clone" className="relative w-full h-full snap-start snap-always flex items-center justify-center bg-[#0b1712]">
+            <video src={videos[0].url} muted loop playsInline preload="none" className="absolute inset-0 w-full h-full object-cover" />
+          </div>
+        )}
       </div>
 
       {/* Decorative scrims — video layer's own, not part of a caller slot. */}
       <div className="absolute left-0 right-0 top-0 z-[1] pointer-events-none" style={{ height: '24%', background: 'linear-gradient(180deg, rgba(0,0,0,0.6), transparent)' }} />
       <div className="absolute left-0 right-0 bottom-0 z-[1] pointer-events-none" style={{ height: '46%', background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.72) 50%, rgba(0,0,0,0.86))' }} />
 
-      {topSlot && <div className="absolute left-4 right-4 top-3 z-[3] pointer-events-auto">{topSlot}</div>}
-      {railSlot && <div className="absolute right-3 z-[3] pointer-events-auto" style={{ bottom: '34%' }}>{railSlot}</div>}
-      {captionSlot && <div className="absolute left-0 right-0 bottom-0 z-[3] pointer-events-auto">{captionSlot}</div>}
+      {topSlot && <div data-feed-overlay className="absolute left-4 right-4 top-3 z-[3] pointer-events-auto">{topSlot}</div>}
+      {railSlot && <div data-feed-overlay className="absolute right-3 z-[3] pointer-events-auto" style={{ bottom: '34%' }}>{railSlot}</div>}
+      {captionSlot && <div data-feed-overlay className="absolute left-0 right-0 bottom-0 z-[3] pointer-events-auto">{captionSlot}</div>}
 
       <style>{`.feed-no-scrollbar::-webkit-scrollbar { display: none; } .feed-no-scrollbar { scrollbar-width: none; }`}</style>
     </div>
