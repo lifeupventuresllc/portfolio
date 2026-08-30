@@ -64,6 +64,14 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: '#0b0b0f',
+  // Required for the video feed to extend under the device's status bar/
+  // notch once added to home screen (matches appleWebApp's black-
+  // translucent status bar above) — without this, standalone mode still
+  // leaves a blank margin at the very top instead of true full-bleed.
+  // A regular browser tab can never get this effect regardless (no site
+  // can hide the browser's own address bar), so this only changes
+  // anything once installed.
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({

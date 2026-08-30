@@ -127,7 +127,12 @@ export default function DashboardVideoFeed({
       <div className="absolute left-0 right-0 top-0 z-[1] pointer-events-none" style={{ height: '24%', background: 'linear-gradient(180deg, rgba(0,0,0,0.6), transparent)' }} />
       <div className="absolute left-0 right-0 bottom-0 z-[1] pointer-events-none" style={{ height: '46%', background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.72) 50%, rgba(0,0,0,0.86))' }} />
 
-      {topSlot && <div data-feed-overlay className="absolute left-4 right-4 top-3 z-[3] pointer-events-auto">{topSlot}</div>}
+      {/* The video itself bleeds all the way under the notch/status bar
+          once installed (viewport-fit=cover in app/layout.tsx) — but this
+          text/icon content shouldn't sit literally under it. env()
+          falls back to 0 on a device with no notch/regular browser tab,
+          so this is a no-op everywhere else. */}
+      {topSlot && <div data-feed-overlay className="absolute left-4 right-4 z-[3] pointer-events-auto" style={{ top: 'max(12px, env(safe-area-inset-top))' }}>{topSlot}</div>}
       {railSlot && <div data-feed-overlay className="absolute right-3 z-[3] pointer-events-auto" style={{ bottom: '34%' }}>{railSlot}</div>}
       {captionSlot && <div data-feed-overlay className="absolute left-0 right-0 bottom-0 z-[3] pointer-events-auto">{captionSlot}</div>}
 
