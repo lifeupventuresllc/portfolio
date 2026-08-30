@@ -291,18 +291,30 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
         )}
 
         <div className="flex items-start gap-2 mb-2">
+          {/* Pulsating glow — Asa's ask, 2026-08-29 (pushed stronger on a
+              second pass): "the one thing on screen" earns a breathing
+              ring, not just a static border. A real @keyframes animation
+              needs a real stylesheet rule, not an inline style, so it's
+              scoped to this one class right below. */}
+          <style>{`
+            @keyframes luf-next-action-pulse {
+              0%, 100% { box-shadow: 0 0 0 0 rgba(229,169,60,0.7), 0 0 10px 2px rgba(229,169,60,0.4); }
+              50% { box-shadow: 0 0 0 10px rgba(229,169,60,0), 0 0 26px 8px rgba(229,169,60,0.85); }
+            }
+            .luf-next-action-circle { animation: luf-next-action-pulse 2.6s ease-in-out infinite; }
+          `}</style>
           <div
             role={EXPANSION_ROUTE[action.kind] ? 'button' : undefined}
             tabIndex={EXPANSION_ROUTE[action.kind] ? 0 : undefined}
             onClick={EXPANSION_ROUTE[action.kind] ? expand : undefined}
             onKeyDown={EXPANSION_ROUTE[action.kind] ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expand() } } : undefined}
-            className="rounded-full shrink-0 mt-0.5"
+            className="luf-next-action-circle rounded-full shrink-0 mt-0.5"
             style={{
-              width: 34, height: 34,
+              width: 42, height: 42,
               background: encouragement
                 ? 'conic-gradient(from 200deg, #E9A0A0, #f2c6cf, #d97a90, #E9A0A0)'
                 : 'conic-gradient(from 200deg, #E5A93C, #7fbf94, #0f7a53, #E5A93C)',
-              border: '1.5px solid rgba(229,169,60,0.7)',
+              border: '1.5px solid rgba(229,169,60,0.8)',
               cursor: EXPANSION_ROUTE[action.kind] ? 'pointer' : 'default',
             }}
           />

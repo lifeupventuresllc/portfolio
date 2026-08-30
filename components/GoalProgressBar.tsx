@@ -53,7 +53,7 @@ export function GoalProgressCompact({
 }) {
   if (goal === 'maintain') {
     return (
-      <div style={{ fontFamily: 'var(--font-poppins)' }}>
+      <div className="rounded-xl px-2.5 py-2" style={{ fontFamily: 'var(--font-poppins)', background: 'rgba(0,0,0,0.55)', border: '1.5px solid rgba(233,160,160,0.85)', boxShadow: '0 0 28px 2px rgba(233,160,160,0.75)' }}>
         <p className="text-white text-xs font-semibold">Holding steady at {Math.round(currentWeight)} lbs</p>
         <CalorieLine loggedToday={calorieLoggedToday} budgetToday={calorieBudgetToday} />
       </div>
@@ -71,19 +71,21 @@ export function GoalProgressCompact({
     : null
 
   return (
-    <div style={{ fontFamily: 'var(--font-poppins)' }}>
-      <p className="text-[12px] font-semibold text-white/92 m-0">
+    /* Second fix (translucent white track alone) still washed out on a
+       real phone, Asa's catch 2026-08-29 (twice) — both the TEXT and the
+       track were losing contrast against bright/busy video, and at 0%
+       progress (a fresh account, exactly what he was looking at) there's
+       no gold fill yet to fall back on. A real solid card behind the
+       whole block — text included, not just the track — guarantees
+       contrast regardless of what's playing behind it, same principle as
+       the self-talk card above it. Pink glow (Asa's ask) makes the whole
+       card stand out from the feed instead of blending into it. */
+    <div className="rounded-xl px-2.5 py-2" style={{ fontFamily: 'var(--font-poppins)', background: 'rgba(0,0,0,0.55)', border: '1.5px solid rgba(233,160,160,0.85)', boxShadow: '0 0 28px 2px rgba(233,160,160,0.75)' }}>
+      <p className="text-[12px] font-semibold text-white m-0">
         {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} to go` : moved > 0 ? ' · goal reached' : ''}
         {budgetLabel && <> · <span className="text-[#E5A93C] font-bold">{budgetLabel}</span></>}
       </p>
-      {/* First fix (translucent white track) still washed out on a real
-          phone, Asa's catch 2026-08-29 — a semi-opaque white reads fine
-          against a controlled dark background but not against arbitrary
-          bright video underneath, and at 0% progress (a fresh account,
-          exactly what he was looking at) there's no gold fill yet at all
-          to fall back on. Solid dark backing now guarantees contrast
-          regardless of what's playing behind it or how much is filled. */}
-      <div className="relative h-2 rounded-full mt-2.5" style={{ background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.35)', boxShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+      <div className="relative h-2 rounded-full mt-2.5" style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.4)' }}>
         <div className="h-full rounded-full" style={{ width: `${Math.max(pct, 4)}%`, background: 'linear-gradient(90deg, #E5A93C, #f2c879, #E9A0A0)', boxShadow: '0 0 6px rgba(229,169,60,0.6)' }} />
         <span
           aria-hidden

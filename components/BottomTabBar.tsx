@@ -37,7 +37,17 @@ export default function BottomTabBar() {
   const communityActive = pathname.startsWith('/plan/community')
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#011611] border-t border-white/5 pb-[env(safe-area-inset-bottom)]">
+    // Option B, "warm gold wash" — Asa's catch, 2026-08-29: flat
+    // bg-[#011611] "looks too plain." A soft radial gold glow centered
+    // behind the + button (echoes its own gradient), fading into the same
+    // forest green, plus a thin gold hairline seam instead of the old
+    // barely-there white/5 border.
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)]"
+      style={{
+        background: 'radial-gradient(120px 60px at 50% -10px, rgba(229,169,60,0.28), transparent 70%), linear-gradient(180deg, #0c2016 0%, #021109 100%)',
+        borderTop: '1px solid rgba(229,169,60,0.5)',
+      }}>
       <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={onFile} className="hidden" />
       <div className="max-w-2xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-6 py-3">
         <Link href="/plan/today" className="flex flex-col items-center gap-1">
