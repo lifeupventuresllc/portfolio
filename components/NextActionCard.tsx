@@ -249,6 +249,20 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
     goToExpansion(action)
   }
 
+  // Do-vs-decide split (Asa's spec, 2026-08-31): passive/self-directed
+  // actions (water, stretch, breathing, a short walk — the real
+  // `fallback` tier) mark done the instant you tap, right here, no
+  // navigation — there's no "screen" for drinking water to expand into.
+  // App-assisted actions (workout, a real eating-out pick) keep opening
+  // their real screen exactly as before. Either way this is the ONE
+  // button for "do the thing" — never routes into chat/typing.
+  const isPassive = action?.kind === 'fallback'
+  const isTappable = isPassive || !!(action && EXPANSION_ROUTE[action.kind])
+  const handleTap = () => {
+    if (isPassive) { markDone(); return }
+    expand()
+  }
+
   // Cinematic emerald/gold treatment — Asa's final pick, 2026-08-26, after a
   // live mockup review (published Artifact, several rounds: color family →
   // texture → font pairing → cinematic vignette → outer ring placement).
@@ -320,12 +334,13 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
             .luf-sonar-ring { position: absolute; inset: 0; border-radius: 9999px; border-style: solid; animation: luf-sonar-ping 3.2s cubic-bezier(0,0,0.3,1) infinite; }
           `}</style>
           <div
-            role={EXPANSION_ROUTE[action.kind] ? 'button' : undefined}
-            tabIndex={EXPANSION_ROUTE[action.kind] ? 0 : undefined}
-            onClick={EXPANSION_ROUTE[action.kind] ? expand : undefined}
-            onKeyDown={EXPANSION_ROUTE[action.kind] ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expand() } } : undefined}
+            role={isTappable ? 'button' : undefined}
+            tabIndex={isTappable ? 0 : undefined}
+            onClick={isTappable ? handleTap : undefined}
+            onKeyDown={isTappable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTap() } } : undefined}
+            aria-label={isPassive ? 'Mark done' : undefined}
             className="relative shrink-0 mt-0.5"
-            style={{ width: 42, height: 42, cursor: EXPANSION_ROUTE[action.kind] ? 'pointer' : 'default' }}
+            style={{ width: 42, height: 42, cursor: isTappable ? 'pointer' : 'default' }}
           >
             {[0, 1, 2, 3, 4].map((i) => (
               <div
@@ -382,16 +397,13 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
             <button onClick={dayChanged} disabled={busy} className="text-white/80 text-[10.5px] font-bold bg-white/10 border border-white/20 rounded-full px-3 py-1 disabled:opacity-60">
               Keep it simple
             </button>
-            {/* Was a toggle that revealed the (then-hidden) chat box —
-                that box is always visible now, so this pill's job changed:
-                Asa's ask, 2026-08-29, was to bring it back visually next to
-                Keep it simple, matching the approved mockup. Routes through
-                the exact same real message engine as typing in the chat
-                box below — a canned starting phrase, not a separate
-                stub path. */}
-            <button onClick={() => sendMessage('Something else, please')} disabled={busy} className="text-white/80 text-[10.5px] font-bold bg-white/10 border border-white/20 rounded-full px-3 py-1 disabled:opacity-60">
-              Something else?
-            </button>
+            {/* "Something else?" removed (Asa's spec, 2026-08-31): it looked
+                like a plain button but actually sent a canned phrase through
+                the same AI message pipeline the chat box below uses — a real
+                side door from "doing" into "deciding via chat," which is
+                exactly what the do-vs-decide split forbids. The always-
+                visible chat box already covers this if she wants to type it
+                herself; nothing lost, just no more disguised entry point. */}
           </div>
         )}
 
