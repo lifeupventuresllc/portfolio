@@ -241,8 +241,15 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
 
   return (
     <div className="max-w-2xl mx-auto pb-6">
-      <div className="flex items-center justify-between mb-4">
-        <Link href="/plan" className="inline-flex items-center gap-1 bg-charcoal border border-gold/40 text-gold text-xs font-semibold px-3 py-1.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all">← Dashboard</Link>
+      {/* Real gap found live, 2026-08-31 (Asa: "its not in all the side tabs
+          like talk to coach") — this link to home was always here, but a
+          returning conversation auto-scrolls to its latest message on load
+          (see the scrollIntoView effect below), which buries a plain
+          in-flow header at the very top, off-screen, behind however much
+          history exists. `sticky top-0` keeps it pinned to the viewport
+          regardless of scroll position or how long the chat gets. */}
+      <div className="sticky top-0 z-20 bg-obsidian -mx-4 px-4 py-3 -mt-10 pt-10 flex items-center justify-between mb-4">
+        <Link href="/plan" className="inline-flex items-center gap-1 bg-charcoal border border-gold/40 text-gold text-xs font-semibold px-3 py-1.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all">← Home</Link>
         <p className="text-gold text-[10px] uppercase tracking-[0.2em] font-semibold">Coach Asa · your operator</p>
       </div>
 
