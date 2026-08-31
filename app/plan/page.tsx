@@ -198,9 +198,17 @@ export default async function PlanDashboard() {
   // "fixed" box collapsed right along with it. -mb-16 (Tailwind's pb-16 in
   // reverse, -4rem) cancels the outer wrapper's padding while staying in
   // normal flow, which isn't affected by that ancestor's transform at all.
+  // 48px, down from 72px — real bug caught live, 2026-08-31: this reserved
+  // space was calibrated for the OLD, taller BottomTabBar. After thinning
+  // that nav (py-3→py-1.5, smaller icons/+ button), 72px reserved way more
+  // than the nav actually needs, opening a real gap of empty video between
+  // the chat box and the nav — Asa's catch ("all the space between the chat
+  // box... it should be a lot lower"). 48px = the new nav's real content
+  // height (12px padding + 35px row + 1px border), computed once here
+  // instead of guessed.
   if (hasPlan) {
     return (
-      <div className="h-[100dvh] -mb-16 flex flex-col overflow-hidden" style={{ background: '#021F16', paddingBottom: 'calc(72px + env(safe-area-inset-bottom))' }}>
+      <div className="h-[100dvh] -mb-16 flex flex-col overflow-hidden" style={{ background: '#021F16', paddingBottom: 'calc(48px + env(safe-area-inset-bottom))' }}>
         <TimezoneSync />
         {user.is_anonymous ? <AnonymousSessionBanner /> : (!user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />)}
 
@@ -291,14 +299,15 @@ export default async function PlanDashboard() {
               }
               railSlot={<FeedEngagementRail />}
               captionSlot={
-                // Bottom padding calc, not the old flat pb-3.5 (14px): with the
-                // progress card moved up top, this shorter stack's last item (the
-                // chat box) was landing entirely behind the tightened nav bar (real
-                // bug, caught in mockup review — "we have lost the chat box"). 58px
-                // matches BottomTabBar's own non-safe-area height (py-1.5 + content +
-                // border) plus a small gap; env() adds the real device safe area on
-                // top, same value BottomTabBar itself adds.
-                <div className="px-4" style={{ paddingRight: 58, paddingBottom: 'calc(58px + env(safe-area-inset-bottom))' }}>
+                // Plain pb-3.5 (14px), same as before — clearing the nav
+                // itself is already handled once, correctly, by the root
+                // container's own paddingBottom above (which shrinks the
+                // video area's real rendered height to stop right at the
+                // nav's top edge). This is just breathing room between the
+                // chat box and that edge, not a second nav-height reservation
+                // — stacking both was the actual bug (Asa's catch, 2026-08-31:
+                // a real gap of empty video between the chat box and the nav).
+                <div className="px-4 pb-3.5" style={{ paddingRight: 58 }}>
                   <NextActionCard variant="dock" />
                 </div>
               }
