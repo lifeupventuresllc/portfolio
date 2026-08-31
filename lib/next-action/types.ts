@@ -55,6 +55,17 @@ export type UserStateSnapshot = {
   // True when a workout adjustment is on file for today (e.g. a cardio
   // swap) — treated as a partial, not full, burn reduction.
   workoutReducedToday: boolean
+  // A real, live approved override for today's workout that she hasn't
+  // finished yet — deliberately NOT the same signal as workoutReducedToday
+  // above. Real bug found live, 2026-08-31: workoutReducedToday is gated on
+  // `!workoutSkippedToday`, which latches true for the rest of the day the
+  // moment ANY prior workout row gets superseded — which happens on every
+  // single adjustment approval by design (see index.ts's
+  // resolveCurrentAction). Score.ts needs "is there a live override right
+  // now" as an independent signal from that calorie-math flag, or the
+  // explicit-priority boost a fresh approval needs permanently disables
+  // itself the moment a second approval happens the same day.
+  workoutOverrideActive: boolean
   // Calories already invisibly subtracted from calorieBudget above because
   // an expected burn didn't happen — kept here only for audit/debugging,
   // never shown to her.

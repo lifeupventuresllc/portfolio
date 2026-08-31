@@ -100,6 +100,11 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const workoutSkippedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)
   const workoutReducedToday = !workoutDoneToday && !workoutSkippedToday && !!todayAdjustment?.workoutChange
   const workoutBurnAdjustment = workoutSkippedToday ? WORKOUT_CALORIE_BURN_ESTIMATE : workoutReducedToday ? Math.round(WORKOUT_CALORIE_BURN_ESTIMATE * WORKOUT_REDUCED_BURN_FACTOR) : 0
+  // See types.ts — independent of workoutReducedToday on purpose: a live
+  // approved override should keep outranking stale-history candidates all
+  // day, even after an earlier same-day approval already flipped
+  // workoutSkippedToday true by superseding a prior row.
+  const workoutOverrideActive = !workoutDoneToday && !!todayAdjustment?.workoutChange
 
   const baseCalorieBudget = nutritionPlan?.calories != null ? getEffectiveCalorieBudget(Number(nutritionPlan.calories), todayAdjustment) : null
   // Cross-domain adjustment (prompt 6): an unburned workout tightens today's
@@ -203,6 +208,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     goal,
     workoutSkippedToday,
     workoutReducedToday,
+    workoutOverrideActive,
     workoutBurnAdjustment,
     eatingOutToday,
     eatingOutExplicit,

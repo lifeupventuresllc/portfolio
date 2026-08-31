@@ -67,13 +67,14 @@ function timeFitAdjustment(candidate: ActionCandidate, state: UserStateSnapshot)
 // this account has completed many times before. KIND_BASE's 10-point
 // workout/meal gap is smaller than a well-worn meal key's completion bonus
 // can make up, so the just-approved override lost outright. Same fix as
-// eatingOutExplicit just above: an approved, not-yet-done-or-skipped
-// today-only workout override (state.workoutReducedToday) is exactly as
-// strong an explicit right-now signal as "I'm eating out right now" — it
-// must win on the very next resolve, not get outscored by unrelated history.
+// eatingOutExplicit just above: an approved, not-yet-done today-only workout
+// override (state.workoutOverrideActive — see types.ts for why this is a
+// separate signal from workoutReducedToday) is exactly as strong an explicit
+// right-now signal as "I'm eating out right now" — it must win on the very
+// next resolve, not get outscored by unrelated history.
 function explicitContextAdjustment(candidate: ActionCandidate, state: UserStateSnapshot): number {
   if (candidate.kind === 'location' && state.eatingOutExplicit) return 25
-  if (candidate.kind === 'workout' && state.workoutReducedToday) return 25
+  if (candidate.kind === 'workout' && state.workoutOverrideActive) return 25
   return 0
 }
 
