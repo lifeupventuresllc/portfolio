@@ -506,8 +506,21 @@ export async function POST(request: NextRequest) {
   // explicit focus-area ask are the two paths that regenerate the whole
   // program by track; other signal kinds (energy, time, injury, etc.) via
   // recover() don't need a track decided to answer.
+  //
+  // Real bug found live, same day: this originally checked `!location`
+  // (the blended `aiResult.location`), which is NOT scoped to this one
+  // message — parseSignalAI deliberately carries location forward from
+  // earlier in the conversation (same mechanism as its focus-area carry-
+  // forward, by design, for messages like "yes" that restate nothing on
+  // their own). Once she'd said "at the gym" even once, EVERY later
+  // message silently inherited it as `location`, so the ask never fired
+  // again for the rest of the conversation — exactly the kind of stale
+  // assumption she asked never to happen. `detectLocation(message)` here
+  // is the deterministic, THIS-MESSAGE-ONLY check — no carry-forward — so
+  // only an explicit statement in the current message counts as "she said."
+  const statedThisMessage = detectLocation(message)
   const wouldNeedTrack = focusAreas.length > 0 || workoutStyle === 'cardio'
-  if (wouldNeedTrack && !location && existingIntakeForPlan?.training_location === 'both') {
+  if (wouldNeedTrack && !statedThisMessage && existingIntakeForPlan?.training_location === 'both') {
     const todayTrack = await getApprovedTodayAdjustment(eid, today)
     if (!todayTrack?.workoutChange?.trackOverride) {
       const q = 'Quick one — training at home or the gym today?'

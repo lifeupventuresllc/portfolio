@@ -176,7 +176,14 @@ function estimateHomeCalories(inp: WorkoutInputs, level: Level, minutesLabel: st
 // default for most people including beginners, which is exactly what this
 // rotation still does; only the DaySpec objects were hand-authored, not the
 // underlying training logic, which was already correct and stays intact.
-type Slot = { push: Muscle[]; pull: Muscle[] }
+// A slot is normally one push-movement exercise paired with one
+// pull-movement exercise (a real antagonist superset). `{ same, muscles }`
+// (added 2026-08-31) is the other real shape: TWO exercises of the SAME
+// movement type, both targeting `muscles` — the only correct way to
+// represent a genuinely single-area chest or back request (see
+// daySpecFromAreas below for why `{push:m, pull:m}` doesn't work for
+// either of those two).
+type Slot = { push: Muscle[]; pull: Muscle[] } | { same: Movement; muscles: Muscle[] }
 type DaySpec = { title: string; muscles: string[]; warm: 'legs' | 'upper'; slots: Slot[] }
 
 const LEGS_SLOTS: Slot[] = [{ push: ['quads'], pull: ['glutes'] }, { push: ['quads'], pull: ['hamstrings'] }, { push: ['quads'], pull: ['glutes', 'hamstrings'] }]
@@ -219,29 +226,35 @@ function splitFor(sex: WorkoutInputs['sex'], days: number, level: Level): DaySpe
 // works identically whether a day came from the weekly rotation or from a
 // live chat request. 2 slots per named area keeps a 1-area ask proportionate
 // (~2 exercises) and a 3-area ask still a real, complete session (~6).
-// Real bug found live: chest and back are each ENTIRELY one movement
-// direction in GYM_POOL (every chest exercise is 'push', every back
-// exercise is 'pull' — confirmed by reading the pool) — so building a slot
-// as {push: m, pull: m} for either one asks pickGym for a movement that
-// literally does not exist for that muscle. pickGym's fallback then quietly
-// ignores the muscle filter and returns whatever's next in the whole pool,
-// which is how "focus on my back" came back with tricep/calf/core exercises
-// and only 2 real back moves. Every area gets a real antagonist pairing
-// instead — the same pairing already used for the weekly rotation's own
-// PUSH_SLOTS/PULL_SLOTS/LEGS_SLOTS above, so a live chat request and the
-// normal weekly split build a day the exact same, correct way.
-const AREA_SLOT_MUSCLES: Record<Exclude<FocusArea, 'core' | 'overall'>, { push: Muscle[]; pull: Muscle[] }> = {
+//
+// Real bug found live, 2026-08-31 (Asa: "give me a back workout" came back
+// naming shoulder exercises too; "when creating workouts we have to use
+// what the user is giving us"): chest and back are each ENTIRELY one
+// movement direction in GYM_POOL (every chest exercise is 'push', every
+// back exercise is 'pull') — an EARLIER version of this file paired each
+// with itself ({push: m, pull: m}), which asked pickGym for a movement
+// that literally does not exist for that muscle, so its fallback quietly
+// ignored the muscle filter and returned random unrelated exercises (see
+// git history) — worse. That was "fixed" by pairing chest with biceps and
+// back with shoulders instead (a real antagonist superset, at least
+// on-topic-adjacent) — but that's still not what she asked for: naming
+// "back" got real back work with shoulder exercises mixed in, silently
+// deciding for her that she wanted a combined session. `same` (Slot's
+// other real shape, see its type comment) is the actual correct fix for
+// these two specifically — two real chest-push or back-pull exercises,
+// genuinely single-area, nothing she didn't ask for riding along.
+const AREA_SLOT_MUSCLES: Record<Exclude<FocusArea, 'core' | 'overall'>, { push: Muscle[]; pull: Muscle[] } | { same: Movement; muscles: Muscle[] }> = {
   legs: { push: ['quads'], pull: ['glutes', 'hamstrings'] },
   arms: { push: ['triceps'], pull: ['biceps'] },
-  chest: { push: ['chest'], pull: ['biceps'] },
-  back: { push: ['shoulders'], pull: ['back'] },
+  chest: { same: 'push', muscles: ['chest'] },
+  back: { same: 'pull', muscles: ['back'] },
   shoulders: { push: ['shoulders'], pull: ['shoulders'] },
 }
 export function daySpecFromAreas(areas: FocusArea[]): DaySpec {
   const bodyAreas = areas.filter((a): a is Exclude<FocusArea, 'core' | 'overall'> => a !== 'core' && a !== 'overall')
   const slots: Slot[] = bodyAreas.flatMap((area) => {
-    const { push, pull } = AREA_SLOT_MUSCLES[area]
-    return [{ push, pull }, { push, pull }]
+    const spec = AREA_SLOT_MUSCLES[area]
+    return [spec, spec]
   })
   // Real bug found live, 2026-08-31 (Asa: "make me an ab workout only" at
   // the gym came back titled "Core · Full Body" and was, underneath, a
@@ -409,6 +422,20 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
     const usedPush = new Set<string>()
     const usedPull = new Set<string>()
     const supersets: Superset[] = spec.slots.map((slot, s) => {
+      // A `same`-shaped slot (see Slot's type comment) is two exercises of
+      // the SAME movement type, both real matches for what was actually
+      // asked — used instead of an unrelated push/pull pairing for the two
+      // areas (chest, back) that are genuinely one movement direction only.
+      if ('same' in slot) {
+        const used = slot.same === 'push' ? usedPush : usedPull
+        const firstC = pickGym(slot.same, slot.muscles, level, off + s, 6, injuries, targets)
+        const first = firstC.find(e => !used.has(e.name)) || firstC[0]
+        used.add(first.name)
+        const secondC = pickGym(slot.same, slot.muscles, level, off + s + 1, 6, injuries, targets)
+        const second = secondC.find(e => e.name !== first.name && !used.has(e.name)) || secondC.find(e => e.name !== first.name) || secondC[0]
+        used.add(second.name)
+        return { title: `${first.name} + ${second.name}`, push: first, pull: second, reps: repScheme(level, inp.goal) }
+      }
       const pushC = pickGym('push', slot.push, level, off + s, 6, injuries, targets)
       const pullC = pickGym('pull', slot.pull, level, off + s + 1, 6, injuries, targets)
       const push = pushC.find(e => !usedPush.has(e.name)) || pushC[0]
