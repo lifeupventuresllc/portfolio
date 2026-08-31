@@ -5,7 +5,7 @@ import type { WeekPlan } from '@/lib/meal-plan'
 import { recover, injurySafetyClause, type LifeSignal, type RecoveryPlan } from '@/lib/fos/recovery'
 import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation, detectFocusAreas, injuriesGenuinelyAddressed } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
-import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
+import { getProfile, recentEvents, upsertProfile, mergeProfilePatch, getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { extractProfileFacts, generateReply, generateDeclineFollowUp, describeDecision, answerGeneralQuestion } from '@/lib/fos/memory'
 import { assessGoalDrift } from '@/lib/fos/goal-drift'
 import { detectPlanIntent } from '@/lib/fos/plan-intent'
@@ -488,6 +488,31 @@ export async function POST(request: NextRequest) {
       }
       await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: reply })
       return NextResponse.json({ reply, loggedFood: true })
+    }
+  }
+
+  // Real gap, Asa's direct ask 2026-08-31: "the system never checks if
+  // they're at home or gym — if the user doesn't say, the chat should
+  // never assume." Every trackOverride fallback in this app
+  // (`intake.training_location === 'home' ? 'home' : 'gym'`, in state.ts
+  // and workout/page.tsx) silently treats a stored 'both' the same as a
+  // plain 'gym' — so a real "trains at both" user who just says "give me
+  // an ab workout" without naming where she is gets gym silently assumed,
+  // wrong exactly as often as it's right. Only asks when it's genuinely
+  // ambiguous (stored preference really is 'both') AND she hasn't already
+  // told us today (an approved trackOverride already on file for today
+  // answers it without asking twice) AND this message is actually about
+  // to produce a track-determining workout swap — a plain cardio ask or an
+  // explicit focus-area ask are the two paths that regenerate the whole
+  // program by track; other signal kinds (energy, time, injury, etc.) via
+  // recover() don't need a track decided to answer.
+  const wouldNeedTrack = focusAreas.length > 0 || workoutStyle === 'cardio'
+  if (wouldNeedTrack && !location && existingIntakeForPlan?.training_location === 'both') {
+    const todayTrack = await getApprovedTodayAdjustment(eid, today)
+    if (!todayTrack?.workoutChange?.trackOverride) {
+      const q = 'Quick one — training at home or the gym today?'
+      await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: q })
+      return NextResponse.json({ reply: q, quickReplies: ['Home', 'Gym'] })
     }
   }
 
