@@ -138,7 +138,9 @@ export default function DashboardVideoFeed({
           text/icon content shouldn't sit literally under it. env()
           falls back to 0 on a device with no notch/regular browser tab,
           so this is a no-op everywhere else. */}
-      {topSlot && <div data-feed-overlay className="absolute left-4 right-4 z-[3] pointer-events-auto" style={{ top: 'max(12px, env(safe-area-inset-top))' }}>{topSlot}</div>}
+      {/* 8px, down from 12px — Asa's ask, 2026-08-31: top chrome moves up a
+          little to free more room for the feed. */}
+      {topSlot && <div data-feed-overlay className="absolute left-4 right-4 z-[3] pointer-events-auto" style={{ top: 'max(8px, env(safe-area-inset-top))' }}>{topSlot}</div>}
       {/* Mute toggle — owns the `muted` state directly since it's this
           component's own <video> elements it's controlling, not something
           the caller's railSlot content (likes/community, no audio concept)

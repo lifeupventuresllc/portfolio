@@ -296,33 +296,55 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
         )}
 
         <div className="flex items-start gap-2 mb-2">
-          {/* Pulsating glow — Asa's ask, 2026-08-29 (pushed stronger on a
-              second pass): "the one thing on screen" earns a breathing
-              ring, not just a static border. A real @keyframes animation
-              needs a real stylesheet rule, not an inline style, so it's
-              scoped to this one class right below. */}
+          {/* Sonar/target button — Asa's ask, 2026-08-31: replaced the plain
+              pulsating circle with a real target-dot + concentric ripple-ring
+              indicator (5 rings, staggered, scale-out + fade-to-0 loop).
+              Green/gold alternating rings match the app's real accent pair;
+              swaps to the pink family when `encouragement` is set, same
+              "visibly different on a simplified instruction" signal the old
+              circle's color swap gave. */}
           <style>{`
-            @keyframes luf-next-action-pulse {
-              0%, 100% { box-shadow: 0 0 0 0 rgba(229,169,60,0.7), 0 0 10px 2px rgba(229,169,60,0.4); }
-              50% { box-shadow: 0 0 0 10px rgba(229,169,60,0), 0 0 26px 8px rgba(229,169,60,0.85); }
+            @keyframes luf-sonar-ping {
+              0% { transform: scale(0.5); opacity: 0.9; }
+              60% { opacity: 0.35; }
+              100% { transform: scale(2.5); opacity: 0; }
             }
-            .luf-next-action-circle { animation: luf-next-action-pulse 2.6s ease-in-out infinite; }
+            @keyframes luf-sonar-dot-glow {
+              0%, 100% { box-shadow: 0 0 8px 2px rgba(229,169,60,0.7), 0 0 4px 1px rgba(127,191,148,0.6); transform: scale(1); }
+              50% { box-shadow: 0 0 14px 4px rgba(229,169,60,0.95), 0 0 8px 2px rgba(127,191,148,0.85); transform: scale(1.06); }
+            }
+            .luf-sonar-ring { position: absolute; inset: 0; border-radius: 9999px; border-style: solid; animation: luf-sonar-ping 3.2s cubic-bezier(0,0,0.3,1) infinite; }
           `}</style>
           <div
             role={EXPANSION_ROUTE[action.kind] ? 'button' : undefined}
             tabIndex={EXPANSION_ROUTE[action.kind] ? 0 : undefined}
             onClick={EXPANSION_ROUTE[action.kind] ? expand : undefined}
             onKeyDown={EXPANSION_ROUTE[action.kind] ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expand() } } : undefined}
-            className="luf-next-action-circle rounded-full shrink-0 mt-0.5"
-            style={{
-              width: 42, height: 42,
-              background: encouragement
-                ? 'conic-gradient(from 200deg, #E9A0A0, #f2c6cf, #d97a90, #E9A0A0)'
-                : 'conic-gradient(from 200deg, #E5A93C, #7fbf94, #0f7a53, #E5A93C)',
-              border: '1.5px solid rgba(229,169,60,0.8)',
-              cursor: EXPANSION_ROUTE[action.kind] ? 'pointer' : 'default',
-            }}
-          />
+            className="relative shrink-0 mt-0.5"
+            style={{ width: 42, height: 42, cursor: EXPANSION_ROUTE[action.kind] ? 'pointer' : 'default' }}
+          >
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="luf-sonar-ring"
+                style={{
+                  borderWidth: 1.5,
+                  borderColor: encouragement ? '#E9A0A0' : i % 2 === 0 ? '#7fbf94' : '#E5A93C',
+                  animationDelay: `${i * 0.64}s`,
+                }}
+              />
+            ))}
+            <div
+              style={{
+                position: 'absolute', top: '50%', left: '50%', width: 9, height: 9, margin: '-4.5px 0 0 -4.5px',
+                borderRadius: '50%',
+                background: encouragement
+                  ? 'radial-gradient(circle at 35% 30%, #f2c6cf, #E9A0A0 45%, #d97a90 100%)'
+                  : 'radial-gradient(circle at 35% 30%, #f2c879, #E5A93C 45%, #7fbf94 100%)',
+                animation: 'luf-sonar-dot-glow 2.6s ease-in-out infinite',
+              }}
+            />
+          </div>
           <span className="flex-1 leading-snug text-white" style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, fontSize: 15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
             {encouragement && <span className="block not-italic font-semibold text-white/70" style={{ fontFamily: 'var(--font-poppins)', fontSize: 11 }}>{encouragement}</span>}
             {action.instruction}

@@ -43,7 +43,7 @@ function CalorieLine({ loggedToday, budgetToday }: { loggedToday: number; budget
 // row instead of a separate card below the feed). Same real math as the
 // full card below; this is a render split, not a second source of truth.
 export function GoalProgressCompact({
-  startWeight, currentWeight, goalWeight, goal, calorieLoggedToday = 0, calorieBudgetToday = null,
+  startWeight, currentWeight, goalWeight, goal, calorieLoggedToday = 0, calorieBudgetToday = null, embedded = false,
 }: {
   startWeight: number
   currentWeight: number
@@ -51,12 +51,23 @@ export function GoalProgressCompact({
   goal: 'lose' | 'gain' | 'maintain'
   calorieLoggedToday?: number
   calorieBudgetToday?: number | null
+  // Folded into the merged header card now (Asa's ask, 2026-08-31: "what's
+  // one thing that can be folded to make the feed longer") — skips this
+  // component's own card chrome (background/border/glow) since the parent
+  // card already provides it, same real numbers either way.
+  embedded?: boolean
 }) {
   if (goal === 'maintain') {
-    return (
-      <div className="rounded-xl px-2.5 py-2" style={{ fontFamily: 'var(--font-poppins)', background: 'linear-gradient(135deg, rgba(20,20,20,0.7), rgba(0,0,0,0.5))', border: '1.5px solid rgba(233,160,160,0.85)', boxShadow: '0 0 28px 2px rgba(233,160,160,0.75)' }}>
+    const inner = (
+      <>
         <p className="text-white text-xs font-semibold">Holding steady at {Math.round(currentWeight)} lbs</p>
         <CalorieLine loggedToday={calorieLoggedToday} budgetToday={calorieBudgetToday} />
+      </>
+    )
+    if (embedded) return <div style={{ fontFamily: 'var(--font-poppins)' }}>{inner}</div>
+    return (
+      <div className="rounded-xl px-2.5 py-2" style={{ fontFamily: 'var(--font-poppins)', background: 'linear-gradient(135deg, rgba(20,20,20,0.7), rgba(0,0,0,0.5))', border: '1.5px solid rgba(233,160,160,0.85)', boxShadow: '0 0 28px 2px rgba(233,160,160,0.75)' }}>
+        {inner}
       </div>
     )
   }
@@ -73,18 +84,8 @@ export function GoalProgressCompact({
     ? `$${Math.round(calorieLoggedToday).toLocaleString()}/$${Math.round(calorieBudgetToday).toLocaleString()} cal`
     : null
 
-  return (
-    /* Second fix (translucent white track alone) still washed out on a
-       real phone, Asa's catch 2026-08-29 (twice) — both the TEXT and the
-       track were losing contrast against bright/busy video, and at 0%
-       progress (a fresh account, exactly what he was looking at) there's
-       no gold fill yet to fall back on. A real solid card behind the
-       whole block — text included, not just the track — guarantees
-       contrast regardless of what's playing behind it, same principle as
-       the self-talk card above it. Pink glow (Asa's ask) makes the whole
-       card stand out from the feed instead of blending into it. Gradient
-       background (not flat) matches the chat box's own treatment. */
-    <div className="rounded-xl px-2.5 py-2" style={{ fontFamily: 'var(--font-poppins)', background: 'linear-gradient(135deg, rgba(20,20,20,0.7), rgba(0,0,0,0.5))', border: '1.5px solid rgba(233,160,160,0.85)', boxShadow: '0 0 28px 2px rgba(233,160,160,0.75)' }}>
+  const inner = (
+    <>
       {/* Calorie readout pushed to the far right of the row instead of
           inline after the weight text — Asa's ask, 2026-08-30. */}
       <div className="flex items-baseline justify-between gap-2">
@@ -103,6 +104,24 @@ export function GoalProgressCompact({
           🏃🏿‍♀️
         </span>
       </div>
+    </>
+  )
+
+  if (embedded) return <div style={{ fontFamily: 'var(--font-poppins)' }}>{inner}</div>
+
+  return (
+    /* Second fix (translucent white track alone) still washed out on a
+       real phone, Asa's catch 2026-08-29 (twice) — both the TEXT and the
+       track were losing contrast against bright/busy video, and at 0%
+       progress (a fresh account, exactly what he was looking at) there's
+       no gold fill yet to fall back on. A real solid card behind the
+       whole block — text included, not just the track — guarantees
+       contrast regardless of what's playing behind it, same principle as
+       the self-talk card above it. Pink glow (Asa's ask) makes the whole
+       card stand out from the feed instead of blending into it. Gradient
+       background (not flat) matches the chat box's own treatment. */
+    <div className="rounded-xl px-2.5 py-2" style={{ fontFamily: 'var(--font-poppins)', background: 'linear-gradient(135deg, rgba(20,20,20,0.7), rgba(0,0,0,0.5))', border: '1.5px solid rgba(233,160,160,0.85)', boxShadow: '0 0 28px 2px rgba(233,160,160,0.75)' }}>
+      {inner}
     </div>
   )
 }

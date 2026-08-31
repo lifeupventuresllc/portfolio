@@ -258,32 +258,48 @@ export default async function PlanDashboard() {
                       {menu}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between gap-2 mt-2.5">
-                    <h1 className="text-white" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontStyle: 'italic', fontWeight: 700, fontSize: 20, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>Hey {firstName}</h1>
-                    <StreakChip />
-                  </div>
-                  {affirmation && (
-                    <div className="mt-2.5 rounded-xl px-2.5 py-1.5" style={{ background: 'rgba(0,0,0,0.38)', border: '1px solid rgba(229,169,60,0.3)', backdropFilter: 'blur(2px)' }}>
-                      <p className="text-[#E5A93C] text-[9px] font-bold uppercase" style={{ fontFamily: 'var(--font-poppins)', letterSpacing: '0.18em' }}>Today&apos;s self-talk</p>
-                      <p className="text-white/90 italic text-[11px] leading-snug mt-0.5" style={{ fontFamily: 'var(--font-poppins)' }}>&ldquo;{affirmation}&rdquo;</p>
+                  {/* Merged greeting + self-talk + progress into ONE card (Asa's ask,
+                      2026-08-31 — "what's one thing that can be folded to make the feed
+                      longer/more seamless"): one card's border/glow instead of two stacked
+                      ones. Emerald glass, more translucent than the first pass per Asa's
+                      side-by-side pick ("Option B"). Progress bar moved up here from the
+                      caption zone below — see GoalProgressCompact's `embedded` prop, which
+                      skips its own card chrome now that this card already provides it. */}
+                  <div className="mt-2 rounded-xl px-2.5 py-2" style={{ background: 'rgba(6,35,26,0.35)', border: '1px solid rgba(15,122,83,0.4)', backdropFilter: 'blur(3px)' }}>
+                    <div className="flex items-center justify-between gap-2">
+                      <h1 className="text-white" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontStyle: 'italic', fontWeight: 700, fontSize: 20, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>Hey {firstName}</h1>
+                      <StreakChip />
                     </div>
-                  )}
+                    {affirmation && (
+                      <div className="mt-1.5">
+                        <p className="text-[#E5A93C] text-[9px] font-bold uppercase" style={{ fontFamily: 'var(--font-poppins)', letterSpacing: '0.18em' }}>Today&apos;s self-talk</p>
+                        <p className="text-white/90 italic text-[11px] leading-snug mt-0.5" style={{ fontFamily: 'var(--font-poppins)' }}>&ldquo;{affirmation}&rdquo;</p>
+                      </div>
+                    )}
+                    {statsProvided ? (
+                      <div className="mt-2">
+                        <GoalProgressCompact startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} calorieLoggedToday={loggedCaloriesToday} calorieBudgetToday={calBudget} embedded />
+                      </div>
+                    ) : (
+                      <Link href="/plan/intake" className="block mt-2" style={{ fontFamily: 'var(--font-poppins)' }}>
+                        <p className="text-white font-bold text-xs">Add your starting weight & goal</p>
+                        <p className="text-white/60 text-[11px] mt-0.5">90 seconds — then your real progress shows up here.</p>
+                      </Link>
+                    )}
+                  </div>
                 </div>
               }
               railSlot={<FeedEngagementRail />}
               captionSlot={
-                <div className="px-4 pb-3.5" style={{ paddingRight: 58 }}>
+                // Bottom padding calc, not the old flat pb-3.5 (14px): with the
+                // progress card moved up top, this shorter stack's last item (the
+                // chat box) was landing entirely behind the tightened nav bar (real
+                // bug, caught in mockup review — "we have lost the chat box"). 58px
+                // matches BottomTabBar's own non-safe-area height (py-1.5 + content +
+                // border) plus a small gap; env() adds the real device safe area on
+                // top, same value BottomTabBar itself adds.
+                <div className="px-4" style={{ paddingRight: 58, paddingBottom: 'calc(58px + env(safe-area-inset-bottom))' }}>
                   <NextActionCard variant="dock" />
-                  {statsProvided ? (
-                    <div className="mt-2.5 pt-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-                      <GoalProgressCompact startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} calorieLoggedToday={loggedCaloriesToday} calorieBudgetToday={calBudget} />
-                    </div>
-                  ) : (
-                    <Link href="/plan/intake" className="block mt-2.5 pt-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font-poppins)' }}>
-                      <p className="text-white font-bold text-xs">Add your starting weight & goal</p>
-                      <p className="text-white/60 text-[11px] mt-0.5">90 seconds — then your real progress shows up here.</p>
-                    </Link>
-                  )}
                 </div>
               }
             />
