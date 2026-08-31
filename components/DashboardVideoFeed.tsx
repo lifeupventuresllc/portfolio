@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // The TikTok-style vertical reel — full-bleed background for the dashboard's
 // dominant middle section (Asa's approved mockup, 2026-08-28/29: real free-
@@ -19,6 +19,12 @@ export default function DashboardVideoFeed({
 }) {
   const reelRef = useRef<HTMLDivElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
+  // Starts muted — browsers block autoplay-with-sound outright, and every
+  // clip in the feed used to be hardcoded muted with no way to turn it on
+  // (Asa's catch, 2026-08-30: his own clips have real audio and it never
+  // played). A real per-viewer toggle now, TikTok-style: tap the speaker to
+  // unmute, applies to whichever slide is actually playing.
+  const [muted, setMuted] = useState(true)
 
   useEffect(() => {
     const reel = reelRef.current
@@ -107,7 +113,7 @@ export default function DashboardVideoFeed({
           <div key={v.url} data-feed-slide className="relative w-full h-full snap-start snap-always flex items-center justify-center bg-[#0b1712]">
             <video
               src={v.url}
-              muted
+              muted={muted}
               loop
               playsInline
               autoPlay={i === 0}
@@ -118,7 +124,7 @@ export default function DashboardVideoFeed({
         ))}
         {videos.length > 1 && (
           <div key={`${videos[0].url}-loop-end`} data-feed-slide="loop-clone" className="relative w-full h-full snap-start snap-always flex items-center justify-center bg-[#0b1712]">
-            <video src={videos[0].url} muted loop playsInline preload="none" className="absolute inset-0 w-full h-full object-cover" />
+            <video src={videos[0].url} muted={muted} loop playsInline preload="none" className="absolute inset-0 w-full h-full object-cover" />
           </div>
         )}
       </div>
@@ -133,6 +139,33 @@ export default function DashboardVideoFeed({
           falls back to 0 on a device with no notch/regular browser tab,
           so this is a no-op everywhere else. */}
       {topSlot && <div data-feed-overlay className="absolute left-4 right-4 z-[3] pointer-events-auto" style={{ top: 'max(12px, env(safe-area-inset-top))' }}>{topSlot}</div>}
+      {/* Mute toggle — owns the `muted` state directly since it's this
+          component's own <video> elements it's controlling, not something
+          the caller's railSlot content (likes/community, no audio concept)
+          should need to know about. Sits just above that rail. */}
+      <div data-feed-overlay className="absolute right-3 z-[3] pointer-events-auto" style={{ bottom: 'calc(34% + 92px)' }}>
+        <button
+          onClick={() => setMuted((v) => !v)}
+          aria-label={muted ? 'Unmute' : 'Mute'}
+          aria-pressed={!muted}
+          className="active:scale-90 transition-transform"
+          style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.5))' }}
+        >
+          {muted ? (
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+              <line x1="16" y1="9" x2="22" y2="15" />
+              <line x1="22" y1="9" x2="16" y2="15" />
+            </svg>
+          ) : (
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+              <path d="M16.5 8.5a5 5 0 0 1 0 7" />
+              <path d="M19 6a9 9 0 0 1 0 12" />
+            </svg>
+          )}
+        </button>
+      </div>
       {railSlot && <div data-feed-overlay className="absolute right-3 z-[3] pointer-events-auto" style={{ bottom: '34%' }}>{railSlot}</div>}
       {captionSlot && <div data-feed-overlay className="absolute left-0 right-0 bottom-0 z-[3] pointer-events-auto">{captionSlot}</div>}
 
