@@ -230,6 +230,32 @@ export async function resolveCurrentAction(enrollmentId: string): Promise<NextAc
           return getNextAction(enrollmentId, today)
         }
       }
+      // Real gap found live, 2026-08-31 (Asa: approved an arm-workout swap in
+      // Coach Asa chat, tapped through to /plan and the circle still said
+      // "Full Body" — same root cause as the meal-staleness bug just above,
+      // never extended to cover this): approving an adjustment in chat
+      // (app/api/plan/operator/route.ts) only ever wrote a `fos_adjustments`
+      // row — nothing told an ALREADY-OPEN action (created before the
+      // approval) that it was now stale, so it just kept getting handed back
+      // frozen until she resolved it some other way. Same fix, same shape:
+      // detect an approved adjustment newer than this row's `shown_at` and
+      // treat it exactly like a real day-changed disruption.
+      if (open.kind === 'workout' || open.kind === 'meal') {
+        const svc = createServiceClient()
+        const { data: newerAdjustment } = await svc
+          .from('fos_adjustments')
+          .select('id')
+          .eq('enrollment_id', enrollmentId)
+          .eq('for_date', today)
+          .eq('status', 'approved')
+          .gt('created_at', open.shown_at)
+          .limit(1)
+          .maybeSingle()
+        if (newerAdjustment) {
+          await markActionSuperseded(open.id, enrollmentId)
+          return getNextAction(enrollmentId, today)
+        }
+      }
       return {
         logId: open.id, kind: open.kind as NextActionResult['kind'], actionKey: open.action_key, instruction: open.instruction, score: open.score,
         restaurant: open.food_log_data?.restaurant ?? restaurantFromActionKey(open.kind, open.action_key),
