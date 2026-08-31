@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
 
 // A real ruler, not a rounded pill — small tick marks at regular intervals, a
 // filled segment in the app's warm-rose accent, start/current/goal labels at
@@ -27,7 +28,7 @@ function ConsistencyChip({ workoutPct, nutritionPct }: { workoutPct: number; nut
 // Renders nothing when there's no real budget yet, same "don't show a
 // fabricated number" rule as the weight math above.
 function CalorieLine({ loggedToday, budgetToday }: { loggedToday: number; budgetToday: number | null }) {
-  if (budgetToday == null) return null
+  if (!SHOW_CALORIE_COUNTER || budgetToday == null) return null
   const remaining = Math.max(0, budgetToday - loggedToday)
   return (
     <p className="text-[10.5px] text-ivory/50 mt-1">
@@ -68,7 +69,7 @@ export function GoalProgressCompact({
   const verb = goal === 'lose' ? 'down' : 'up'
   // $ before both numbers, Asa's ask 2026-08-30 — a deliberate stylistic
   // choice for this readout, not a currency claim.
-  const budgetLabel = calorieBudgetToday != null
+  const budgetLabel = SHOW_CALORIE_COUNTER && calorieBudgetToday != null
     ? `$${Math.round(calorieLoggedToday).toLocaleString()}/$${Math.round(calorieBudgetToday).toLocaleString()} cal`
     : null
 

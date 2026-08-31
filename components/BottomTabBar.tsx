@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useMealPhotoUpload } from '@/lib/useMealPhotoUpload'
+import { SHOW_COMMUNITY_TAB } from '@/lib/feature-flags'
 
 // The 3 things she reaches for most, one tap away, always in the same place —
 // zero decisions about where to find anything. Everything else (cookbook,
@@ -65,10 +66,17 @@ export default function BottomTabBar() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0A0A0F" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
         </button>
 
-        <Link href="/plan/community" className="flex flex-col items-center gap-1">
-          <HeartIcon active={communityActive} />
-          <span className={`text-xs font-bold ${communityActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Community</span>
-        </Link>
+        {SHOW_COMMUNITY_TAB ? (
+          <Link href="/plan/community" className="flex flex-col items-center gap-1">
+            <HeartIcon active={communityActive} />
+            <span className={`text-xs font-bold ${communityActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Community</span>
+          </Link>
+        ) : (
+          // Empty placeholder, not a removed grid column — keeps the +
+          // button centered exactly as before instead of shifting layout
+          // for what's meant to be a temporary, flippable hide.
+          <div aria-hidden />
+        )}
       </div>
     </nav>
   )

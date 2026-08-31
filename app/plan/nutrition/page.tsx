@@ -6,6 +6,7 @@ import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { getEffectiveCalorieBudget, isEatingOutToday } from '@/lib/fos/effective-plan'
 import type { WeekPlan } from '@/lib/meal-plan'
+import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,11 @@ export const dynamic = 'force-dynamic'
 // logged list), just moved off the main page so that one stays a glance,
 // not a second card to scroll past.
 export default async function NutritionPage() {
+  // Hidden from testers for now (Asa's ask, 2026-08-30) — a direct URL visit
+  // or an old link shouldn't reach an incomplete page any more than tapping
+  // through from the dashboard can (NextActionCard's meal expansion route is
+  // gated the same way). Flip SHOW_CALORIE_COUNTER back on when it's ready.
+  if (!SHOW_CALORIE_COUNTER) redirect('/plan')
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login?redirect=/plan/nutrition')

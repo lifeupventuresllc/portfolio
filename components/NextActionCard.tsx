@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { hapticTap } from '@/lib/haptics'
 import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
+import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
 
 // Prompt 1's "Next Action" — the single-instruction circle, now the
 // dashboard's primary surface (Asa's call, 2026-08-25: "this is the new
@@ -27,7 +28,11 @@ type NextAction = {
 // actions have nothing to expand into; tapping does nothing.
 const EXPANSION_ROUTE: Partial<Record<ActionKind, string>> = {
   workout: '/plan/workout',
-  meal: '/plan/nutrition',
+  // Hidden from testers for now (Asa's ask, 2026-08-30) — /plan/nutrition
+  // itself redirects away while this is off, so a meal instruction has
+  // nowhere real to send her; same "nothing to expand into" treatment
+  // fallback/complete kinds already get.
+  ...(SHOW_CALORIE_COUNTER ? { meal: '/plan/nutrition' } : {}),
   location: '/plan/eating-out',
 }
 
