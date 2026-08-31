@@ -66,7 +66,10 @@ export default async function WorkoutWeekPage() {
   return (
     <div className="min-h-[100dvh] bg-obsidian px-4 py-8">
       <div className="max-w-lg mx-auto">
-        <Link href="/plan/workout" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold active:scale-95 transition-all mb-6">← Today&apos;s workout</Link>
+        <div className="flex items-center gap-3 mb-6">
+          <Link href="/plan/workout" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold active:scale-95 transition-all">← Today&apos;s workout</Link>
+          <Link href="/plan" className="text-ivory/50 hover:text-gold text-xs font-semibold">← Home</Link>
+        </div>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">My week</p>
         <h1 className="text-white text-2xl font-bold mb-2">Your real plan, day by day</h1>
         <p className="text-ivory/50 text-sm mb-8">Exactly what you&apos;ll get, generated from your current goals and focus. Change your preferences and this list updates with it.</p>

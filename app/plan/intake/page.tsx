@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import Image from 'next/image'
 import CountUp from '@/components/CountUp'
 import FocusAreaPhoto from '@/components/FocusAreaPhoto'
@@ -386,6 +387,7 @@ function ConversationalIntakeInner() {
               <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
             </div>
             <span className="text-ink/30 text-xs tabular-nums">{step + 1}/{total}</span>
+            <Link href="/plan" className="text-ink/30 hover:text-gold text-xs whitespace-nowrap">Home</Link>
             {!isAnonymous && <button onClick={handleSignOut} className="text-ink/30 hover:text-gold text-xs whitespace-nowrap">Sign out</button>}
           </div>
         </div>
@@ -607,6 +609,7 @@ function ConversationalIntakeInner() {
             <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
           <span className="text-ivory/50 text-xs tabular-nums">{step + 1}/{total}</span>
+          <Link href="/plan" className="text-ivory/40 hover:text-gold text-xs whitespace-nowrap">Home</Link>
           {!isAnonymous && <button onClick={handleSignOut} className="text-ivory/40 hover:text-gold text-xs whitespace-nowrap">Sign out</button>}
         </div>
       </div>
