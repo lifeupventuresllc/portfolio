@@ -172,15 +172,35 @@ export function cardioFinisher(level: Level, goal: string) {
 }
 
 // ---------- HOME BODYWEIGHT POOL ----------
-export interface HomeExercise { name: string; level: Level; type: 'leg' | 'upper' | 'core' | 'cardio'; imageUrl?: string }
+// `sub` (2026-08-31, real gap found live): home exercises used to carry only
+// the broad 'upper' type — no way to tell an arm move from a chest move from
+// a back move. That's not just a display issue: it meant "give me a shoulder
+// workout" and "give me a chest workout" drew from the exact same 2-3-entry
+// 'upper' pool and could come back byte-for-byte identical, even after
+// generateHome() stopped letting leg exercises leak in (see the `types`
+// fix in generateHome below — a real, separate bug, fixed the same day).
+// `sub` narrows selection to the specific area she asked for when one was
+// named; entries without it (or a genuinely full pool) still work exactly
+// as before as the general 'upper' fallback.
+export interface HomeExercise { name: string; level: Level; type: 'leg' | 'upper' | 'core' | 'cardio'; sub?: 'arms' | 'chest' | 'back' | 'shoulders'; imageUrl?: string }
 const HOME_POOL_BASE: HomeExercise[] = [
   // beginner
   { name: 'Chair / Couch Squats', level: 1, type: 'leg' }, { name: 'Bodyweight Squats', level: 1, type: 'leg' },
   { name: 'Pulsating Squats', level: 1, type: 'leg' }, { name: 'Lunges in Place', level: 1, type: 'leg' },
-  { name: 'Air Punches / Jabs', level: 1, type: 'upper' }, { name: 'Standing Oblique Touches', level: 1, type: 'core' },
-  { name: 'Cross Toe Touches', level: 1, type: 'core' }, { name: 'Beginner Push-Ups (Knees)', level: 1, type: 'upper' },
+  { name: 'Air Punches / Jabs', level: 1, type: 'upper', sub: 'arms' }, { name: 'Standing Oblique Touches', level: 1, type: 'core' },
+  { name: 'Cross Toe Touches', level: 1, type: 'core' }, { name: 'Beginner Push-Ups (Knees)', level: 1, type: 'upper', sub: 'chest' },
   { name: 'Sit-Ups', level: 1, type: 'core' }, { name: 'Plank Holds', level: 1, type: 'core' },
   { name: 'Leg Raises (Floor)', level: 1, type: 'core' }, { name: 'March in Place', level: 1, type: 'cardio' },
+  // real distinct per-area bodyweight moves, 2026-08-31 — no equipment
+  // assumed (home track's whole premise), each safe for a true beginner
+  { name: 'Tricep Dips (Chair)', level: 1, type: 'upper', sub: 'arms' },
+  { name: 'Incline Push-Ups (Couch or Stairs)', level: 1, type: 'upper', sub: 'chest' },
+  { name: 'Superman Hold', level: 1, type: 'upper', sub: 'back' },
+  { name: 'Reverse Snow Angels', level: 1, type: 'upper', sub: 'back' },
+  { name: 'Arm Circles (Standing)', level: 1, type: 'upper', sub: 'shoulders' },
+  { name: 'Pike Push-Ups', level: 2, type: 'upper', sub: 'shoulders' },
+  { name: 'Wide Push-Ups', level: 2, type: 'upper', sub: 'chest' },
+  { name: 'Plank Shoulder Taps', level: 2, type: 'upper', sub: 'arms' },
   { name: 'Running in Place (Low)', level: 1, type: 'cardio' },
   // intermediate
   { name: 'Jumping Jacks', level: 2, type: 'cardio' }, { name: 'High Knees', level: 2, type: 'cardio' },
@@ -188,7 +208,7 @@ const HOME_POOL_BASE: HomeExercise[] = [
   { name: 'Flutter Kicks', level: 2, type: 'core' }, { name: 'Leg In-Outs', level: 2, type: 'core' },
   { name: 'Bicycle Kicks', level: 2, type: 'core' }, { name: 'Kickboxing Kicks (Right Leg)', level: 2, type: 'leg' },
   { name: 'Kickboxing Kicks (Left Leg)', level: 2, type: 'leg' }, { name: 'Lateral Toe Touches (Skater Style)', level: 2, type: 'cardio' },
-  { name: 'Regular Push-Ups', level: 2, type: 'upper' }, { name: 'Oblique Toe Touches with Movement', level: 2, type: 'core' },
+  { name: 'Regular Push-Ups', level: 2, type: 'upper', sub: 'chest' }, { name: 'Oblique Toe Touches with Movement', level: 2, type: 'core' },
   // Real gap found live: "Jump Rope" was the one entry in this whole pool
   // that actually needs equipment — every other move here (jumping jacks,
   // high knees, mountain climbers, running in place) is genuinely bodyweight,
@@ -222,9 +242,9 @@ export function walkingIntervals(level: Level) {
 export type Injury = 'knee' | 'lower_back' | 'shoulder' | 'wrist' | 'elbow' | 'hip' | 'ankle'
 const INJURY_AVOID: Record<Injury, { names: string[]; note: string }> = {
   knee: { names: ['Bulgarian', 'Walking Lunge', 'Curtsy', 'Reverse Lunge', 'Back Squat', 'Hack Squat', 'Step-Up', 'Jump', 'Skater', 'Burpee', 'Explosive', 'Pulsating Squat', 'Thrusters', 'Dumbbell Snatch', 'Surrenders', 'Squat to Press', 'Squat Pulses'], note: 'Knees: shallow range, no deep lunges or jumps — machine & glute-focused work instead.' },
-  lower_back: { names: ['Romanian Deadlift (Barbell)', 'Barbell Bent-Over Row', 'Barbell Back Squat', 'RDL to Upright Row', 'Deadlift Row', 'Windmill', 'Dumbbell Swing', 'Weighted Decline Sit-Up', 'Slow Sit-Up', 'Cable Crunch', 'Plate-Held Reverse Crunch'], note: 'Lower back: no heavy barbell hinges, weighted sit-ups, or loaded spinal rotation — chest-supported, machine, and gentler core variations instead.' },
-  shoulder: { names: ['Barbell Overhead Press', 'Arnold Press', 'DB Upright Row', 'Windmill', 'Overhead Marches', 'Weighted Overhead March', 'Thrusters', 'Dumbbell Snatch', 'Push-Up T-Up', 'Squat to Press', 'Sumo Squat + Overhead Press', 'Full Body Combo', 'Seated Shoulder Press'], note: 'Shoulder: no overhead pressing or loaded overhead holds, keep raises at/below shoulder height — cables & machines.' },
-  wrist: { names: ['Push-Up', 'Barbell Bench Press', 'Close-Grip Bench Press', 'Plank', 'Bird Dog', 'Deadbug Pullover'], note: 'Wrist: avoid weight-bearing on the hands — machine & cable pressing.' },
+  lower_back: { names: ['Romanian Deadlift (Barbell)', 'Barbell Bent-Over Row', 'Barbell Back Squat', 'RDL to Upright Row', 'Deadlift Row', 'Windmill', 'Dumbbell Swing', 'Weighted Decline Sit-Up', 'Slow Sit-Up', 'Cable Crunch', 'Plate-Held Reverse Crunch', 'Superman Hold'], note: 'Lower back: no heavy barbell hinges, weighted sit-ups, or loaded spinal rotation — chest-supported, machine, and gentler core variations instead.' },
+  shoulder: { names: ['Barbell Overhead Press', 'Arnold Press', 'DB Upright Row', 'Windmill', 'Overhead Marches', 'Weighted Overhead March', 'Thrusters', 'Dumbbell Snatch', 'Push-Up T-Up', 'Squat to Press', 'Sumo Squat + Overhead Press', 'Full Body Combo', 'Seated Shoulder Press', 'Pike Push-Up', 'Tricep Dips'], note: 'Shoulder: no overhead pressing or loaded overhead holds, keep raises at/below shoulder height — cables & machines.' },
+  wrist: { names: ['Push-Up', 'Barbell Bench Press', 'Close-Grip Bench Press', 'Plank', 'Bird Dog', 'Deadbug Pullover', 'Tricep Dips'], note: 'Wrist: avoid weight-bearing on the hands — machine & cable pressing.' },
   elbow: { names: ['Skull Crusher', 'Barbell Curl', 'Close-Grip Bench Press'], note: 'Elbow: cables and lighter loads, no heavy lockout stress.' },
   hip: { names: ['Bulgarian', 'Walking Lunge', 'Sumo Squat', 'Curtsy', 'Surrenders'], note: 'Hip: shallow range, no deep or wide-stance work.' },
   ankle: { names: ['Standing Calf Raise', 'Explosive', 'Skater', 'Jump', 'Burpee', 'High Knees', 'Thrusters', 'Dumbbell Snatch'], note: 'Ankle: no jumping/plyo, controlled work only.' },

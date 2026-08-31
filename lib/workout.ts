@@ -450,18 +450,22 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
   const level = inp.level
   const week = inp.weekNumber || 1
   const coreFocus = inp.focusArea === 'core' || !!inp.overrideAreas?.includes('core')
-  // Home exercises only carry a broad 'leg'/'upper'/'core'/'cardio' type, not
-  // per-muscle data like GYM_POOL — 'upper' is the closest available proxy
-  // for "arms & back". On a split that's already Leg-day/Upper-day
-  // alternating, every non-core pick on the matching day is already 100% the
-  // focus type (nothing to reorder) — the partition below mainly matters on
-  // Full Body days (level 1 or a 1-day/week split), where leg/upper/core mix
-  // together. The count bump below is what actually adds real extra volume
-  // on every split, tested against a real generated program before shipping.
-  // A live chat override with any upper-body area (arms/chest/back/shoulders)
-  // maps to the same 'upper' proxy — the real per-muscle split lives on the
-  // gym track (GYM_POOL has the fine-grained tags); this is home's honest ceiling.
+  // Home exercises carry a broad 'leg'/'upper'/'core'/'cardio' type — 'upper'
+  // covers arms/chest/back/shoulders together, plus an optional `sub` tag
+  // (added 2026-08-31) narrowing a subset of them to one specific area; see
+  // requestedUpperSubs below for how that gets preferred. On a split that's
+  // already Leg-day/Upper-day alternating, every non-core pick on the
+  // matching day is already 100% the focus type (nothing to reorder) — the
+  // partition below mainly matters on Full Body days (level 1 or a 1-day/week
+  // split), where leg/upper/core mix together. The count bump below is what
+  // actually adds real extra volume on every split, tested against a real
+  // generated program before shipping.
   const overrideUpper = inp.overrideAreas?.some((a) => a === 'arms' || a === 'chest' || a === 'back' || a === 'shoulders')
+  // The specific upper-body area(s) named, if any (arms/chest/back/shoulders
+  // — never 'legs'/'core'/'overall') — used below to prefer HOME_POOL's real
+  // `sub`-tagged exercises for that exact area over the generic 'upper' pool,
+  // so "shoulders" and "chest" stop coming back as the identical workout.
+  const requestedUpperSubs = (inp.overrideAreas || []).filter((a): a is 'arms' | 'chest' | 'back' | 'shoulders' => a === 'arms' || a === 'chest' || a === 'back' || a === 'shoulders')
   // Real bug found live: coreFocus and focusType used to be mutually
   // exclusive (coreFocus ? null : ...), so a compound request that included
   // 'core' alongside a real body area ("arms, legs, and core") silently
@@ -524,12 +528,27 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
     // rotating a sorted array can shove the very items we just prioritized to the back,
     // silently undoing the prioritization. Each partition still rotates independently so
     // week-to-week variety is preserved within it.
-    const split2 = (arr: typeof avail) => focusType
-      ? { hi: arr.filter(e => e.type === focusType), lo: arr.filter(e => e.type !== focusType) }
-      : { hi: [] as typeof avail, lo: arr }
+    // Real gap found live, 2026-08-31: within the 'upper' focus-type bucket,
+    // a named specific area (e.g. "shoulders") still pulled from the whole
+    // undifferentiated 'upper' pool — since HOME_POOL now tags real exercises
+    // with `sub`, split the 'upper' hi-bucket itself: sub-matched entries
+    // first, everything else 'upper' after, so a small pool still surfaces
+    // the genuinely relevant moves before falling back to generic upper work.
+    // hiSub/hiRest kept as SEPARATE tiers (not pre-concatenated) so each can
+    // be rotated independently below — rotating a combined array can shove
+    // sub-matched entries behind generic ones depending on `off`, silently
+    // undoing the exact prioritization this exists for.
+    const split2 = (arr: typeof avail) => {
+      if (!focusType) return { hiSub: [] as typeof avail, hiRest: [] as typeof avail, lo: arr }
+      const focusArr = arr.filter(e => e.type === focusType)
+      const useSubs = requestedUpperSubs.length > 0 && focusType === 'upper'
+      const hiSub = useSubs ? focusArr.filter(e => e.sub && requestedUpperSubs.includes(e.sub)) : []
+      const hiRest = useSubs ? focusArr.filter(e => !e.sub || !requestedUpperSubs.includes(e.sub)) : focusArr
+      return { hiSub, hiRest, lo: arr.filter(e => e.type !== focusType) }
+    }
     const atLevelSplit = split2(avail.filter(e => types.includes(e.type) && e.type !== 'cardio' && e.level === level))
     const lowerSplit = split2(avail.filter(e => types.includes(e.type) && e.type !== 'cardio' && e.level < level))
-    const ordered = rotate(atLevelSplit.hi, off).concat(rotate(atLevelSplit.lo, off), rotate(lowerSplit.hi, off), rotate(lowerSplit.lo, off))
+    const ordered = rotate(atLevelSplit.hiSub, off).concat(rotate(atLevelSplit.hiRest, off), rotate(atLevelSplit.lo, off), rotate(lowerSplit.hiSub, off), rotate(lowerSplit.hiRest, off), rotate(lowerSplit.lo, off))
     return picked.concat(ordered.slice(0, remaining).map(e => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl })))
   }
   // Real gap found+fixed: generateHome never read `goal` at all — same
@@ -553,7 +572,25 @@ function generateHome(inp: WorkoutInputs): WorkoutProgram['home'] {
   const days: HomeDay[] = split.map((focus, i) => {
     const off = week + i
     let types: string[]
-    if (focus.startsWith('Leg')) types = ['leg', 'core']
+    // Real bug found live, 2026-08-31: this used to key purely off the day's
+    // generic split LABEL ("Leg Focus"/"Upper Body & Core"/"Full Body") —
+    // but homeSplit() gives every day the literal label "Full Body" for any
+    // beginner-level program (see homeSplit above), so an explicit chat
+    // override (focusType, set from overrideAreas — e.g. she asked for an
+    // arm workout) never actually narrowed the eligible pool for a beginner.
+    // With only 2-3 real 'upper'-type entries in the whole HOME_POOL,
+    // byType()'s fallback (below, when the focus-type pool runs dry) fell
+    // through to whatever else `types` still allowed — 'leg' exercises,
+    // since the label-derived types stayed ['leg','upper','core'] regardless
+    // of what she asked for. That's why an "arm workout" request could come
+    // back listing Bodyweight Squats and Lunges right alongside real arm
+    // moves. An explicit focusType now takes priority over the day's label —
+    // 'leg' is never eligible when she asked for an upper-body area, and
+    // vice versa, so the fallback can only ever reach for MORE of what she
+    // actually asked for (or core), never the type she didn't ask for.
+    if (focusType === 'leg') types = ['leg', 'core']
+    else if (focusType === 'upper') types = ['upper', 'core']
+    else if (focus.startsWith('Leg')) types = ['leg', 'core']
     else if (focus.startsWith('Upper')) types = ['upper', 'core']
     else types = ['leg', 'upper', 'core']
     // Real extra volume on a matching day, not just reordering — an alternating
