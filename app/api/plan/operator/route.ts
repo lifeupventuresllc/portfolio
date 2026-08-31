@@ -10,9 +10,9 @@ import { extractProfileFacts, generateReply, describeDecision, answerGeneralQues
 import { assessGoalDrift } from '@/lib/fos/goal-drift'
 import { detectPlanIntent } from '@/lib/fos/plan-intent'
 import { buildInitialPlans } from '@/lib/plan-builder'
-import type { FosEventKind, WorkoutChange } from '@/lib/fos/types'
-import type { Injury, Level } from '@/lib/workout-exercises'
-import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
+import type { FosEventKind, WorkoutChange, NutritionChange } from '@/lib/fos/types'
+import type { Injury } from '@/lib/workout-exercises'
+import type { WorkoutProgram, FocusArea } from '@/lib/workout'
 
 // Names the week's actual training days for the "built your whole plan" reply —
 // without this, a week-scope build only ever said "your Nx/week program is
@@ -74,6 +74,39 @@ function summarizeTodaysWorkout(program: WorkoutProgram, minutesAvailable?: numb
     : picked.join(', ')
 }
 
+function joinAreas(areas: string[]): string {
+  if (areas.length <= 1) return areas[0] || ''
+  if (areas.length === 2) return `${areas[0]} and ${areas[1]}`
+  return `${areas.slice(0, -1).join(', ')}, and ${areas[areas.length - 1]}`
+}
+
+// A short, always-accurate one-line description of what she just approved —
+// built directly from the structured workout_change/nutrition_change fields,
+// the same source the recommendation card's adjLines() (OperatorChat.tsx/
+// CoachHero.tsx) already reads for its bullets. Used for the post-approval
+// confirmation instead of mutating the original proposal's prose (real bug,
+// 2026-08-31: that approach — stripping "Want me to lock that in?" off the
+// end of the stored proposal message — only ever matched the deterministic
+// fallback wording; Claude's personalized version of the same proposal
+// rarely ends with that exact phrase, so the swap silently no-op'd and the
+// "confirmation" ended up just echoing the entire original proposal message
+// back verbatim, an even more confusing repeat than the generic line it
+// replaced). This is deterministic and short by construction — no prose to
+// parse, nothing that can drift out of sync with what Claude wrote.
+function describeApprovedChange(workoutChange?: WorkoutChange | null, nutritionChange?: NutritionChange | null): string | null {
+  const w = workoutChange, n = nutritionChange
+  if (w?.injuryBodyPart) return `protecting your ${w.injuryBodyPart.replace('_', ' ')} from now on`
+  if (w?.contentSwap === 'cardio') return 'cardio today'
+  if (w?.trackOverride && w?.focusOverride?.length) return `a ${w.trackOverride === 'home' ? 'bodyweight home' : 'gym'} session focused on ${joinAreas(w.focusOverride)} today`
+  if (w?.trackOverride) return `a ${w.trackOverride === 'home' ? 'bodyweight home' : 'gym'} session today${w.toMinutes ? `, ${w.toMinutes} min` : ''}`
+  if (w?.focusOverride?.length) return `today focused on ${joinAreas(w.focusOverride)}`
+  if (w?.toMinutes) return `a ${w.toMinutes}-min ${w.swapTo || 'session'} today`
+  if (n?.dinnerSuggestion) return n.dinnerSuggestion
+  if (n?.calorieDelta) return `${n.calorieDelta > 0 ? '+' : ''}${n.calorieDelta} calories today`
+  if (n?.eatingOut) return "eating out today"
+  return null
+}
+
 // The Fitness OS operator. She tells it about her day; it replies in Coach Asa's
 // voice with a goal-protecting adjustment she can approve / modify / reject.
 // Reading her message runs Claude first (parseSignalAI), falling back to the
@@ -123,10 +156,10 @@ export async function POST(request: NextRequest) {
   if (body.adjustmentId !== undefined && body.status) {
     const status = ['approved', 'modified', 'rejected'].includes(body.status) ? body.status : 'approved'
     let injuryPersisted: Injury | null = null
-    let proposedMessage: string | null = null
+    let changeSummary: string | null = null
     if (body.adjustmentId) {
-      const { data: updated } = await svc.from('fos_adjustments').update({ status }).eq('id', body.adjustmentId).eq('enrollment_id', eid).select('workout_change, message').maybeSingle()
-      proposedMessage = (updated?.message as string | null) || null
+      const { data: updated } = await svc.from('fos_adjustments').update({ status }).eq('id', body.adjustmentId).eq('enrollment_id', eid).select('workout_change, nutrition_change').maybeSingle()
+      changeSummary = describeApprovedChange(updated?.workout_change as WorkoutChange | null, updated?.nutrition_change as NutritionChange | null)
       // An approved injury signal doesn't just adjust today — it teaches the app
       // permanently, so she never has to mention the same injury again. Written to
       // her real intake record, the same field the workout engine already reads.
@@ -148,16 +181,15 @@ export async function POST(request: NextRequest) {
     // Real gap Asa caught live, 2026-08-31: the approved reply used to be a
     // generic "locked in, go be great" regardless of WHAT was actually
     // approved — no way to tell from the reply alone whether she got an arm
-    // workout, a home-track swap, or something else entirely. Every proposal
-    // message stored on the adjustment (set when it was first suggested,
-    // e.g. "Got it — arm today. Want me to lock that in?") already names the
-    // real change and consistently ends with that same question — swap it
-    // for a completion instead of falling back to a generic line.
-    const lockedInLine = proposedMessage?.replace(/\s*Want me to lock that in\?\s*$/i, ' Locked in!')
+    // workout, a home-track swap, or something else entirely. A short,
+    // structured confirmation (changeSummary, built above from the real
+    // workout_change/nutrition_change fields) always names the specific
+    // change, in one clause, whether or not Claude personalized the original
+    // proposal's wording.
     const reply = status === 'approved'
       ? withName(injuryPersisted
-          ? `${lockedInLine || 'Locked in.'} I've noted it so every future workout stays safe for it automatically. You won't need to bring it up again.`
-          : (lockedInLine || "locked in. I've got the rest — go be great."))
+          ? `locked in — ${changeSummary || "noted"}. I've noted it so every future workout stays safe for it automatically. You won't need to bring it up again.`
+          : `locked in${changeSummary ? ` — ${changeSummary}` : ''}. I've got the rest — go be great.`)
       : status === 'rejected' ? withName("no problem — we'll keep today as planned. You're always in control.")
       : withName("got it — tell me what you'd rather do and I'll rework it around your goal.")
     await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: reply })
@@ -480,13 +512,6 @@ export async function POST(request: NextRequest) {
   // via describeDecision() output on 2026-08-19: it never mentions "travel" for this
   // merge case even though the fallback plan.message did.
   let travelMergeAck = ''
-  // Real content preview for a fresh location-only swap — held separately and
-  // appended to `reply` after generateReply() has run, for the exact same
-  // reason as travelMergeAck above: describeDecision() only ever reads
-  // plan.workoutChange/nutritionChange, so exercise names baked into
-  // plan.message here would get silently discarded the moment Claude
-  // successfully personalizes the reply (the common case, not the fallback).
-  let workoutPreview = ''
   if (location) {
     const trackOverride: 'home' | 'gym' = location === 'gym' ? 'gym' : 'home'
     if (plan) {
@@ -509,40 +534,6 @@ export async function POST(request: NextRequest) {
         workoutChange: { trackOverride, reason: location === 'traveling' ? 'traveling — no equipment' : `training at ${location}` },
       }
     }
-  }
-
-  // Real content, not a promise — build TODAY's actual session (on whichever
-  // track/focus the merges above landed on) right here so the reply names
-  // real exercises. Real gap found live: without this, approving just
-  // pointed her at whatever the dashboard already had saved (her regular
-  // program), not a session genuinely built for what she asked for — a bare
-  // "build me an arm workout" showed no real content at all (see the
-  // focusArea comment above), and "I'm in a hotel" showed her unchanged gym
-  // program. Runs once, after every signal/location/focus merge above has
-  // fully resolved, so it always reflects the FINAL workoutChange, not
-  // whichever branch happened to touch it first. Best-effort — a preview
-  // failure still leaves a real, approvable swap, just without the list.
-  const finalTrackOverride = plan?.workoutChange?.trackOverride
-  const finalFocusOverride = plan?.workoutChange?.focusOverride
-  if ((finalTrackOverride || finalFocusOverride?.length) && existingIntakeForPlan) {
-    const level = (existingIntakeForPlan.experience_level === 'advanced' ? 3 : existingIntakeForPlan.experience_level === 'intermediate' ? 2 : 1) as Level
-    const previewGoal = (existingIntakeForPlan.goal === 'gain' || existingIntakeForPlan.goal === 'maintain' ? existingIntakeForPlan.goal : 'lose') as 'lose' | 'gain' | 'maintain'
-    const sex = (existingIntakeForPlan.sex === 'male' ? 'male' : existingIntakeForPlan.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
-    const fd = (existingIntakeForPlan.form_data || {}) as Record<string, unknown>
-    const previewProgram = generateWorkout({
-      name: enrollment.name || 'Your', sex, level, goal: previewGoal,
-      track: finalTrackOverride || (existingIntakeForPlan.training_location === 'home' ? 'home' : 'gym'),
-      daysPerWeek: Number(existingIntakeForPlan.days_per_week) || 3, weekNumber: 1,
-      injuries: recordedInjuries, postpartum: !!fd.postpartum,
-      trainingStyle: (fd.training_style as TrainingStyle) || 'none',
-      focusArea: (fd.focus_area as FocusArea) || 'overall',
-      overrideAreas: finalFocusOverride?.length ? finalFocusOverride : undefined,
-    })
-    // overrideAreas above builds day 0 directly from exactly the requested
-    // areas (see daySpecFromAreas in lib/workout.ts) — no per-day scoring
-    // needed the way a single focusArea used to require via pickFocusDayIndex.
-    const previewDayIndex = 0
-    workoutPreview = ` Today: ${summarizeTodaysWorkout(previewProgram, undefined, previewDayIndex, finalFocusOverride)}.`
   }
 
   // First chat-triggered workout swap for someone whose injuries were never
@@ -651,20 +642,30 @@ export async function POST(request: NextRequest) {
   }
 
   // Deterministic, applied AFTER generateReply() above has already had its shot —
-  // not folded into plan.message beforehand. Both of these are required to be true
-  // every single time regardless of whether Claude personalized the reply or the
-  // rule-based fallback fired, and describeDecision() (Claude's only window into
-  // what happened) never carries either one: it reads plan.workoutChange/
-  // nutritionChange only, so text baked only into plan.message before the
-  // generateReply() call above was silently discarded the moment Claude succeeded.
-  // Appending here — after reply is already whatever it's going to be — guarantees
-  // both survive regardless of which path produced `reply`. The 'injury' signal
-  // branch (recovery.ts) already has its own complete sentence naming the body
-  // part — skip here so the same reply doesn't say it twice. Real filtering already
-  // happened wherever the exercises were actually chosen (lib/workout.ts,
-  // lib/cardio-session.ts); this is just saying so, not doing the safety work itself.
+  // not folded into plan.message beforehand. Required to be true every single
+  // time regardless of whether Claude personalized the reply or the rule-based
+  // fallback fired, and describeDecision() (Claude's only window into what
+  // happened) never carries it: it reads plan.workoutChange/nutritionChange
+  // only, so text baked only into plan.message before the generateReply() call
+  // above was silently discarded the moment Claude succeeded. Appending here —
+  // after reply is already whatever it's going to be — guarantees it survives
+  // regardless of which path produced `reply`.
+  //
+  // Real simplification, 2026-08-31 (Asa's direct ask: chat replies were
+  // "confusing," should be "simple explanation"): this used to also append a
+  // full "Today: <every exercise in the day, comma-separated>" recitation
+  // here (built from a throwaway `previewProgram`, see git history) — for a
+  // home-track swap that list wasn't even scoped to what she asked for (the
+  // underlying day object mixes leg/upper/core regardless of focus — a
+  // separate, deeper gap, see [[luf-coach-asa-workout-matching-deep-dive]]),
+  // so an "arm workout" reply could recite squats and glute bridges right
+  // alongside the real arm moves. Removed outright rather than filtered: the
+  // plain-language reply above already names the change on its own ("Got it —
+  // core workout at home today..."), and the structured recommendation card
+  // rendered right below it (OperatorChat.tsx/CoachHero.tsx's `adjLines()`)
+  // already gives the accurate, focus-correct one-line summary — reciting the
+  // full exercise list a third time, unfiltered, only added noise.
   if (travelMergeAck) reply += travelMergeAck
-  if (workoutPreview) reply += workoutPreview
   if (injuryAsk) reply += injuryAsk
   if (plan?.workoutChange && signal?.kind !== 'injury') {
     const clause = injurySafetyClause(recordedInjuries)
