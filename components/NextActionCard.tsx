@@ -354,8 +354,25 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
             {action.instruction}
           </span>
           {action.kind !== 'complete' && (
-            <button onClick={markDone} disabled={busy} aria-label={done ? 'Nice!' : 'Done'} className="rounded-full shrink-0 flex items-center justify-center disabled:opacity-60 active:scale-95 transition-transform" style={{ width: 26, height: 26, background: '#C9A84C' }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0A0A0F" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+            // Real unchecked/checked states, not a permanently-filled icon —
+            // Asa's catch, live: this always looked already-checked, even
+            // before she'd done anything. `done` already existed (it drove
+            // the aria-label) and already resets to false once `load()`
+            // swaps in the next action — this just makes the STYLE follow
+            // that same real state instead of staying static regardless.
+            <button
+              onClick={markDone}
+              disabled={busy}
+              aria-label={done ? 'Nice!' : 'Mark done'}
+              aria-pressed={done}
+              className="rounded-full shrink-0 flex items-center justify-center disabled:opacity-60 active:scale-95 transition-all"
+              style={{
+                width: 26, height: 26,
+                background: done ? '#C9A84C' : 'rgba(0,0,0,0.35)',
+                border: done ? 'none' : '1.5px solid rgba(229,169,60,0.6)',
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={done ? '#0A0A0F' : 'rgba(229,169,60,0.7)'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
             </button>
           )}
         </div>
