@@ -58,8 +58,22 @@ function timeFitAdjustment(candidate: ActionCandidate, state: UserStateSnapshot)
 // an explicit real-time report already outweighs a static default. +25 is
 // enough to clear workout's 5-point edge with real room to spare, without
 // being so large it can never lose to something even more urgent later.
+// Real gap found live, 2026-08-31 (Asa: approved an arm-workout swap in
+// Coach Asa chat, the circle correctly retired the stale "Full Body" row
+// but then handed back a nutrition nudge instead of the arm workout just
+// approved): a freshly-adjusted workout candidate carries a brand-new
+// action_key (title changed), so completionRates has zero history for it —
+// 0 in COMPLETION_WEIGHT's ×15 term — while 'meal:log_next' is a stable key
+// this account has completed many times before. KIND_BASE's 10-point
+// workout/meal gap is smaller than a well-worn meal key's completion bonus
+// can make up, so the just-approved override lost outright. Same fix as
+// eatingOutExplicit just above: an approved, not-yet-done-or-skipped
+// today-only workout override (state.workoutReducedToday) is exactly as
+// strong an explicit right-now signal as "I'm eating out right now" — it
+// must win on the very next resolve, not get outscored by unrelated history.
 function explicitContextAdjustment(candidate: ActionCandidate, state: UserStateSnapshot): number {
   if (candidate.kind === 'location' && state.eatingOutExplicit) return 25
+  if (candidate.kind === 'workout' && state.workoutReducedToday) return 25
   return 0
 }
 

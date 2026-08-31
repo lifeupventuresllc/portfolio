@@ -123,8 +123,10 @@ export async function POST(request: NextRequest) {
   if (body.adjustmentId !== undefined && body.status) {
     const status = ['approved', 'modified', 'rejected'].includes(body.status) ? body.status : 'approved'
     let injuryPersisted: Injury | null = null
+    let proposedMessage: string | null = null
     if (body.adjustmentId) {
-      const { data: updated } = await svc.from('fos_adjustments').update({ status }).eq('id', body.adjustmentId).eq('enrollment_id', eid).select('workout_change').maybeSingle()
+      const { data: updated } = await svc.from('fos_adjustments').update({ status }).eq('id', body.adjustmentId).eq('enrollment_id', eid).select('workout_change, message').maybeSingle()
+      proposedMessage = (updated?.message as string | null) || null
       // An approved injury signal doesn't just adjust today — it teaches the app
       // permanently, so she never has to mention the same injury again. Written to
       // her real intake record, the same field the workout engine already reads.
@@ -143,8 +145,19 @@ export async function POST(request: NextRequest) {
     }
     await svc.from('fos_events').insert({ enrollment_id: eid, user_id: user.id, occurred_on: today, kind: 'adjustment', summary: `Adjustment ${status}`, payload: { adjustmentId: body.adjustmentId, status } })
     const withName = (lower: string) => enrollment.name ? `${enrollment.name}, ${lower}` : `${lower.charAt(0).toUpperCase()}${lower.slice(1)}`
+    // Real gap Asa caught live, 2026-08-31: the approved reply used to be a
+    // generic "locked in, go be great" regardless of WHAT was actually
+    // approved — no way to tell from the reply alone whether she got an arm
+    // workout, a home-track swap, or something else entirely. Every proposal
+    // message stored on the adjustment (set when it was first suggested,
+    // e.g. "Got it — arm today. Want me to lock that in?") already names the
+    // real change and consistently ends with that same question — swap it
+    // for a completion instead of falling back to a generic line.
+    const lockedInLine = proposedMessage?.replace(/\s*Want me to lock that in\?\s*$/i, ' Locked in!')
     const reply = status === 'approved'
-      ? withName(injuryPersisted ? "locked in — and I've noted it so every future workout stays safe for it automatically. You won't need to bring it up again." : "locked in. I've got the rest — go be great.")
+      ? withName(injuryPersisted
+          ? `${lockedInLine || 'Locked in.'} I've noted it so every future workout stays safe for it automatically. You won't need to bring it up again.`
+          : (lockedInLine || "locked in. I've got the rest — go be great."))
       : status === 'rejected' ? withName("no problem — we'll keep today as planned. You're always in control.")
       : withName("got it — tell me what you'd rather do and I'll rework it around your goal.")
     await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: reply })
