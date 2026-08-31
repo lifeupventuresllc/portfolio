@@ -92,7 +92,7 @@ export function GoalProgressCompact({
           inline after the weight text — Asa's ask, 2026-08-30. */}
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-[12px] font-semibold text-white m-0">
-          {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} to go` : moved > 0 ? ' · goal reached' : ''}
+          {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} lbs to go` : moved > 0 ? ' · goal reached' : ''}
         </p>
         {budgetLabel && <span className="text-[12px] font-bold text-[#E5A93C] whitespace-nowrap">{budgetLabel}</span>}
       </div>
@@ -165,7 +165,7 @@ export default function GoalProgressBar({
       <div className="flex items-center justify-between mb-1.5">
         <p className="text-[#E5A93C] text-[9px] uppercase tracking-wider font-semibold">Your progress</p>
         <p className="text-white font-bold text-xs">
-          {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} to go` : moved > 0 ? ' · goal reached' : ''}
+          {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} lbs to go` : moved > 0 ? ' · goal reached' : ''}
         </p>
       </div>
 

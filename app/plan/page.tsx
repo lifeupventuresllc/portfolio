@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import ClientMenu from '@/components/ClientMenu'
 import StreakChip from '@/components/StreakChip'
-import { GoalProgressCompact } from '@/components/GoalProgressBar'
+import CollapsibleHeaderCard from '@/components/CollapsibleHeaderCard'
 import VerifyEmailBanner from '@/components/VerifyEmailBanner'
 import AnonymousSessionBanner from '@/components/AnonymousSessionBanner'
 import TimezoneSync from '@/components/TimezoneSync'
@@ -272,29 +272,22 @@ export default async function PlanDashboard() {
                       ones. Emerald glass, more translucent than the first pass per Asa's
                       side-by-side pick ("Option B"). Progress bar moved up here from the
                       caption zone below — see GoalProgressCompact's `embedded` prop, which
-                      skips its own card chrome now that this card already provides it. */}
-                  <div className="mt-2 rounded-xl px-2.5 py-2" style={{ background: 'rgba(6,35,26,0.35)', border: '1px solid rgba(15,122,83,0.4)', backdropFilter: 'blur(3px)' }}>
-                    <div className="flex items-center justify-between gap-2">
-                      <h1 className="text-white" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontStyle: 'italic', fontWeight: 700, fontSize: 20, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>Hey {firstName}</h1>
-                      <StreakChip />
-                    </div>
-                    {affirmation && (
-                      <div className="mt-1.5">
-                        <p className="text-[#E5A93C] text-[9px] font-bold uppercase" style={{ fontFamily: 'var(--font-poppins)', letterSpacing: '0.18em' }}>Today&apos;s self-talk</p>
-                        <p className="text-white/90 italic text-[11px] leading-snug mt-0.5" style={{ fontFamily: 'var(--font-poppins)' }}>&ldquo;{affirmation}&rdquo;</p>
-                      </div>
-                    )}
-                    {statsProvided ? (
-                      <div className="mt-2">
-                        <GoalProgressCompact startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} calorieLoggedToday={loggedCaloriesToday} calorieBudgetToday={calBudget} embedded />
-                      </div>
-                    ) : (
-                      <Link href="/plan/intake" className="block mt-2" style={{ fontFamily: 'var(--font-poppins)' }}>
-                        <p className="text-white font-bold text-xs">Add your starting weight & goal</p>
-                        <p className="text-white/60 text-[11px] mt-0.5">90 seconds — then your real progress shows up here.</p>
-                      </Link>
-                    )}
-                  </div>
+                      skips its own card chrome now that this card already provides it.
+                      Collapsible (2026-08-31, Asa's ask): a real client component (page.tsx
+                      itself is a server component, can't hold the toggle state) — collapses
+                      to a thin name+streak strip on tap, expands back on tap, for whoever
+                      wants maximum feed. */}
+                  <CollapsibleHeaderCard
+                    firstName={firstName}
+                    affirmation={affirmation}
+                    statsProvided={statsProvided}
+                    startWeight={startWeight}
+                    currentWeight={currentWeight}
+                    goalWeight={goalWeight}
+                    goalDirection={goalDirection}
+                    loggedCaloriesToday={loggedCaloriesToday}
+                    calBudget={calBudget}
+                  />
                 </div>
               }
               railSlot={<FeedEngagementRail />}
