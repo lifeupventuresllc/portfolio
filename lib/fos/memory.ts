@@ -149,6 +149,48 @@ export async function generateReply(input: {
   } catch { return null }
 }
 
+// Real gap, Asa's direct ask 2026-08-31: declining a proposed change used to
+// just get a flat "no problem — we'll keep today as planned," a dead end
+// that never actually tried to find something that WOULD work for her. This
+// is deliberately a SEPARATE prompt from generateReply's, not a reuse with a
+// different DECISION string — GENERATE_SYSTEM's whole framing assumes
+// DECISION describes something already finalized ("the concrete facts...
+// are final and correct"), which doesn't fit "she just said no, ask her a
+// real question instead."
+const DECLINE_FOLLOWUP_SYSTEM = `You are Coach Asa. She just declined a change you proposed to her plan for today — DECLINED below names what she said no to. She does NOT want it; never confirm it, restate it as happening, or act like it's still on the table.
+
+Ask ONE short, warm, genuinely useful follow-up question about what WOULD work better for her today instead — grounded in her real goal (GOAL below) and, when it fits, her real profile/recent history. Don't just repeat "what would you rather do" with nothing behind it — offer a concrete angle worth reacting to (e.g. less time, a different focus, lower intensity, something totally different) that actually fits her situation, not a generic list.
+
+Never say you're an AI, never guilt her for declining — she's always in control. Warm, direct, brief — one or two sentences, a real question, not a lecture.
+
+Reply with ONLY the message to send her. No preamble, no quotes, no explanation.`
+
+export async function generateDeclineFollowUp(input: {
+  declined: string
+  goal: string
+  profile: FosProfile | null
+  events: FosEvent[]
+  name?: string | null
+}): Promise<string | null> {
+  if (!anthropicConfigured()) return null
+  try {
+    const client = new Anthropic()
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 200,
+      system: DECLINE_FOLLOWUP_SYSTEM,
+      messages: [{
+        role: 'user',
+        content: `${input.name ? `NAME: ${input.name}\n\n` : ''}DECLINED: ${input.declined}\n\nGOAL: ${input.goal}\n\nPROFILE:\n${describeProfile(input.profile)}\n\nRECENT:\n${describeEvents(input.events)}`,
+      }],
+    })
+    const block = msg.content.find((b) => b.type === 'text')
+    const text = block && block.type === 'text' ? block.text.trim() : ''
+    if (!text || text.length > 400) return null
+    return text
+  } catch { return null }
+}
+
 // Coach Asa's fallback brain — fires when nothing situational, food-related, or
 // plan-building matched. Before this existed, ANY genuine question ("how many
 // days a week should I train?", "is it bad to eat carbs at night?") got the exact

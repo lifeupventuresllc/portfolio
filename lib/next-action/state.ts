@@ -52,6 +52,15 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     getApprovedTodayAdjustment(enrollmentId, todayISO),
   ])
 
+  // Simulate a not-yet-approved change INSTEAD of whatever's actually
+  // approved for today — see StateOverrides' comment. Replaces outright
+  // rather than merging: this call exists purely to answer "what would
+  // today's effective workout/calorie state become if THIS were approved,"
+  // not to combine it with an unrelated real adjustment.
+  const effectiveTodayAdjustment = (overrides.workoutChangeOverride || overrides.nutritionChangeOverride)
+    ? { workoutChange: overrides.workoutChangeOverride ?? null, nutritionChange: overrides.nutritionChangeOverride ?? null, message: null }
+    : todayAdjustment
+
   const userId = (enrollment?.user_id as string | null) ?? null
   const injuries = (Array.isArray((intake?.form_data as { injuries?: Injury[] } | null)?.injuries) ? (intake!.form_data as { injuries: Injury[] }).injuries : []) as Injury[]
   const goal = (intake?.goal === 'gain' || intake?.goal === 'maintain' ? intake.goal : 'lose') as 'lose' | 'gain' | 'maintain'
@@ -65,7 +74,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   // promise one workout while /plan/workout opened a different one. Any
   // future change to /plan/workout's own regeneration block needs the same
   // change made here.
-  const focusOverride = todayAdjustment?.workoutChange?.focusOverride
+  const focusOverride = effectiveTodayAdjustment?.workoutChange?.focusOverride
   let program: WorkoutProgram | null = (workoutPlan?.plan as WorkoutProgram) ?? null
   if (program && intake) {
     const level = (intake.experience_level === 'advanced' ? 3 : intake.experience_level === 'intermediate' ? 2 : 1) as Level
@@ -74,7 +83,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle
     const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
     const weekNumber = currentWeekNumber((enrollment!.created_at as string) || new Date().toISOString())
-    const trackOverride = todayAdjustment?.workoutChange?.trackOverride
+    const trackOverride = effectiveTodayAdjustment?.workoutChange?.trackOverride
     program = generateWorkout({
       name: (enrollment!.name as string) || 'Your', sex, track: trackOverride || (intake.training_location === 'home' ? 'home' : 'gym'),
       level, goal, daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyle, focusArea,
@@ -94,19 +103,19 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const effectiveFocusArea = focusOverride?.length
     ? focusOverride
     : completed === 0 && storedFocusArea && storedFocusArea !== 'overall' ? storedFocusArea : undefined
-  const workoutCandidate = getEffectiveTodayWorkout(program, completed, todayAdjustment, effectiveFocusArea)
+  const workoutCandidate = getEffectiveTodayWorkout(program, completed, effectiveTodayAdjustment, effectiveFocusArea)
 
   const todaysWorkoutAction = (recentWorkoutActions || []).find((r) => localDateISO(tz, new Date(r.shown_at as string)) === todayISO)
   const workoutSkippedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)
-  const workoutReducedToday = !workoutDoneToday && !workoutSkippedToday && !!todayAdjustment?.workoutChange
+  const workoutReducedToday = !workoutDoneToday && !workoutSkippedToday && !!effectiveTodayAdjustment?.workoutChange
   const workoutBurnAdjustment = workoutSkippedToday ? WORKOUT_CALORIE_BURN_ESTIMATE : workoutReducedToday ? Math.round(WORKOUT_CALORIE_BURN_ESTIMATE * WORKOUT_REDUCED_BURN_FACTOR) : 0
   // See types.ts — independent of workoutReducedToday on purpose: a live
   // approved override should keep outranking stale-history candidates all
   // day, even after an earlier same-day approval already flipped
   // workoutSkippedToday true by superseding a prior row.
-  const workoutOverrideActive = !workoutDoneToday && !!todayAdjustment?.workoutChange
+  const workoutOverrideActive = !workoutDoneToday && !!effectiveTodayAdjustment?.workoutChange
 
-  const baseCalorieBudget = nutritionPlan?.calories != null ? getEffectiveCalorieBudget(Number(nutritionPlan.calories), todayAdjustment) : null
+  const baseCalorieBudget = nutritionPlan?.calories != null ? getEffectiveCalorieBudget(Number(nutritionPlan.calories), effectiveTodayAdjustment) : null
   // Cross-domain adjustment (prompt 6): an unburned workout tightens today's
   // remaining calorie allowance immediately, before the next meal/eating-out
   // recommendation is made — never surfaced as its own line item, just baked
@@ -125,7 +134,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals) ? (nutritionPlan.meals as WeekPlan) : null
   const mealIdx = localMondayIndex(tz)
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
-  const eatingOutToday = overrides.eatingOut ?? isEatingOutToday(todayMeals?.eatOut, todayAdjustment)
+  const eatingOutToday = overrides.eatingOut ?? isEatingOutToday(todayMeals?.eatOut, effectiveTodayAdjustment)
   // Distinct from eatingOutToday itself — see types.ts. Only true when THIS
   // call actually passed an explicit override, never inferred from the
   // schedule fallback above.

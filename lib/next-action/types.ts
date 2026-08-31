@@ -1,3 +1,5 @@
+import type { WorkoutChange, NutritionChange } from '../fos/types'
+
 // The Next Action engine — a new, standalone system (2026-08-25 spec, see
 // memory "Next Action Engine — One Thing"). Deliberately its own module tree,
 // not folded into lib/fos/* — it READS existing data (fos_profile, fos_events,
@@ -121,6 +123,14 @@ export type StateOverrides = {
   // whatever the clock alone would infer (Lunch). Only ever set from an
   // explicit word in her own message; time-of-day remains the fallback.
   eatingOutMealSlot?: 'Breakfast' | 'Lunch' | 'Snack' | 'Dinner'
+  // A not-yet-approved workout/nutrition change to simulate INSTEAD of
+  // whatever's actually approved for today (added 2026-08-31, for the
+  // operator route's approval-ask copy: "we'd be changing your workout from
+  // X to Y — approve?" needs the real Y, computed the exact same way the
+  // dashboard would once it's actually approved, not a re-derived copy of
+  // that logic). Never written anywhere — purely a read-time simulation.
+  workoutChangeOverride?: WorkoutChange
+  nutritionChangeOverride?: NutritionChange
 }
 
 export type ActionCandidate = {

@@ -6,10 +6,11 @@ import { recover, injurySafetyClause, type LifeSignal, type RecoveryPlan } from 
 import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation, detectFocusAreas, injuriesGenuinelyAddressed } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
 import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
-import { extractProfileFacts, generateReply, describeDecision, answerGeneralQuestion } from '@/lib/fos/memory'
+import { extractProfileFacts, generateReply, generateDeclineFollowUp, describeDecision, answerGeneralQuestion } from '@/lib/fos/memory'
 import { assessGoalDrift } from '@/lib/fos/goal-drift'
 import { detectPlanIntent } from '@/lib/fos/plan-intent'
 import { buildInitialPlans } from '@/lib/plan-builder'
+import { getUserState } from '@/lib/next-action'
 import type { FosEventKind, WorkoutChange, NutritionChange } from '@/lib/fos/types'
 import type { Injury } from '@/lib/workout-exercises'
 import type { WorkoutProgram, FocusArea } from '@/lib/workout'
@@ -178,20 +179,41 @@ export async function POST(request: NextRequest) {
     }
     await svc.from('fos_events').insert({ enrollment_id: eid, user_id: user.id, occurred_on: today, kind: 'adjustment', summary: `Adjustment ${status}`, payload: { adjustmentId: body.adjustmentId, status } })
     const withName = (lower: string) => enrollment.name ? `${enrollment.name}, ${lower}` : `${lower.charAt(0).toUpperCase()}${lower.slice(1)}`
-    // Real gap Asa caught live, 2026-08-31: the approved reply used to be a
-    // generic "locked in, go be great" regardless of WHAT was actually
-    // approved — no way to tell from the reply alone whether she got an arm
-    // workout, a home-track swap, or something else entirely. A short,
-    // structured confirmation (changeSummary, built above from the real
-    // workout_change/nutrition_change fields) always names the specific
-    // change, in one clause, whether or not Claude personalized the original
-    // proposal's wording.
-    const reply = status === 'approved'
-      ? withName(injuryPersisted
-          ? `locked in — ${changeSummary || "noted"}. I've noted it so every future workout stays safe for it automatically. You won't need to bring it up again.`
-          : `locked in${changeSummary ? ` — ${changeSummary}` : ''}. I've got the rest — go be great.`)
-      : status === 'rejected' ? withName("no problem — we'll keep today as planned. You're always in control.")
-      : withName("got it — tell me what you'd rather do and I'll rework it around your goal.")
+    let reply: string
+    if (status === 'approved') {
+      // Real gap Asa caught live, 2026-08-31: the approved reply used to be a
+      // generic "locked in, go be great" regardless of WHAT was actually
+      // approved. Now states the real, current, already-persisted result —
+      // freshState re-reads it via getUserState the normal way (same source
+      // the dashboard circle itself reads), not a re-derived guess — so
+      // "here's your updated workout" always names what she'll actually see,
+      // never stale or approximate.
+      const freshState = await getUserState(eid, today)
+      const updatedLine = freshState.workoutCandidate?.title
+        ? `Here's your updated workout: ${freshState.workoutCandidate.title} today.`
+        : changeSummary ? `Here's your update: ${changeSummary}.` : 'Locked in.'
+      reply = withName(injuryPersisted
+        ? `${updatedLine.charAt(0).toLowerCase()}${updatedLine.slice(1)} I've noted it so every future workout stays safe for it automatically. You won't need to bring it up again.`
+        : `${updatedLine.charAt(0).toLowerCase()}${updatedLine.slice(1)} I've got the rest — go be great.`)
+    } else if (status === 'rejected') {
+      // Real gap, Asa's direct ask 2026-08-31: declining used to be a dead
+      // end ("no problem, we'll keep today as planned") — never actually
+      // tried to find something that WOULD work. Now asks one real,
+      // goal-grounded follow-up instead, via a purpose-built prompt (see
+      // generateDeclineFollowUp — deliberately NOT generateReply, whose
+      // system prompt assumes DECISION describes something already decided,
+      // not a decline).
+      const [profile, events, { data: intakeGoal }] = await Promise.all([
+        getProfile(eid),
+        recentEvents(eid, addDaysISO(today, -60)),
+        svc.from('challenge_intake').select('goal').eq('enrollment_id', eid).maybeSingle(),
+      ])
+      const goal = (intakeGoal?.goal === 'gain' || intakeGoal?.goal === 'maintain' ? intakeGoal.goal : 'lose') as string
+      const followUp = await generateDeclineFollowUp({ declined: changeSummary || 'the proposed change', goal, profile, events, name: (enrollment.name as string) || null })
+      reply = followUp || withName("no problem — what would actually work better for you today?")
+    } else {
+      reply = withName("got it — tell me what you'd rather do and I'll rework it around your goal.")
+    }
     await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: reply })
     return NextResponse.json({ reply })
   }
@@ -670,6 +692,43 @@ export async function POST(request: NextRequest) {
   if (plan?.workoutChange && signal?.kind !== 'injury') {
     const clause = injurySafetyClause(recordedInjuries)
     if (clause) reply += clause
+  }
+
+  // Real gap, Asa's direct ask 2026-08-31: "the option has to be more
+  // clearly state[d] — would you like to approve the change, yes or no —
+  // and it should tell them in that same message... we're changing X to Y."
+  // Appended here for the same reason as travelMergeAck/injuryAsk above —
+  // after AI personalization has already run, so it survives regardless of
+  // which path produced `reply`; describeDecision() (Claude's only window
+  // into what happened) never carries an explicit from/to comparison or a
+  // forced yes/no ask on its own. First strips whatever generic "want to
+  // lock (that/it) in?" phrasing plan.message (or its AI rewrite) already
+  // ends with — asking twice in one message reads as confused, not clear.
+  if (plan?.workoutChange || plan?.nutritionChange) {
+    reply = reply.replace(/\s*want (me )?to lock (that|it) in\??\s*$/i, '')
+    const [beforeState, afterState] = await Promise.all([
+      getUserState(eid, today),
+      getUserState(eid, today, { workoutChangeOverride: plan.workoutChange ?? undefined, nutritionChangeOverride: plan.nutritionChange ?? undefined }),
+    ])
+    const fromTitle = beforeState.workoutCandidate?.title
+    const toTitle = afterState.workoutCandidate?.title
+    const fromCal = beforeState.calorieBudget
+    const toCal = afterState.calorieBudget
+    let ask = ''
+    if (plan.workoutChange?.injuryBodyPart) {
+      ask = ` I'd adjust today's workout to protect your ${plan.workoutChange.injuryBodyPart.replace('_', ' ')} — want to approve this? Yes or no.`
+    } else if (fromTitle && toTitle && fromTitle !== toTitle) {
+      ask = ` I'd be changing your workout from ${fromTitle} to ${toTitle} today — want to approve this? Yes or no.`
+    } else if (toTitle && plan.workoutChange) {
+      ask = ` I'd set today's workout to ${toTitle} — want to approve this? Yes or no.`
+    } else if (plan.nutritionChange?.calorieDelta && fromCal != null && toCal != null && fromCal !== toCal) {
+      ask = ` I'd be adjusting your calorie target from ${fromCal} to ${toCal} today — want to approve this? Yes or no.`
+    } else if (plan.nutritionChange?.dinnerSuggestion) {
+      ask = ` I'd suggest ${plan.nutritionChange.dinnerSuggestion} for dinner today — want to approve this? Yes or no.`
+    } else if (plan.nutritionChange?.eatingOut) {
+      ask = " I'll build today's plan around eating out — want to approve this? Yes or no."
+    }
+    if (ask) reply += ask
   }
 
   // Post-answer nudges — only for someone with no real plan on file yet, never
