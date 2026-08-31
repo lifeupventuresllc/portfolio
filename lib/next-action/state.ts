@@ -56,8 +56,16 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const injuries = (Array.isArray((intake?.form_data as { injuries?: Injury[] } | null)?.injuries) ? (intake!.form_data as { injuries: Injury[] }).injuries : []) as Injury[]
   const goal = (intake?.goal === 'gain' || intake?.goal === 'maintain' ? intake.goal : 'lose') as 'lose' | 'gain' | 'maintain'
 
-  // Same real regeneration every other surface uses (see effective-plan.ts) —
-  // never a second, possibly-different generation.
+  // Same real regeneration every other surface uses (see effective-plan.ts),
+  // now genuinely matching /plan/workout/page.tsx's own regeneration block —
+  // real gap found 2026-08-30 (Asa's ask: "the decision tool and the
+  // workout engine must speak to each other"): this used to omit
+  // trackOverride and overrideAreas entirely, so an approved "home today,
+  // not gym" swap or a chat-approved focus request could make the circle
+  // promise one workout while /plan/workout opened a different one. Any
+  // future change to /plan/workout's own regeneration block needs the same
+  // change made here.
+  const focusOverride = todayAdjustment?.workoutChange?.focusOverride
   let program: WorkoutProgram | null = (workoutPlan?.plan as WorkoutProgram) ?? null
   if (program && intake) {
     const level = (intake.experience_level === 'advanced' ? 3 : intake.experience_level === 'intermediate' ? 2 : 1) as Level
@@ -66,17 +74,27 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle
     const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
     const weekNumber = currentWeekNumber((enrollment!.created_at as string) || new Date().toISOString())
+    const trackOverride = todayAdjustment?.workoutChange?.trackOverride
     program = generateWorkout({
-      name: (enrollment!.name as string) || 'Your', sex, track: intake.training_location === 'home' ? 'home' : 'gym',
+      name: (enrollment!.name as string) || 'Your', sex, track: trackOverride || (intake.training_location === 'home' ? 'home' : 'gym'),
       level, goal, daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyle, focusArea,
+      overrideAreas: focusOverride?.length ? focusOverride : undefined,
     })
   }
 
   const doneRows = await svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollmentId).eq('note', '__daily__')
   const completed = (doneRows.data || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
   const workoutDoneToday = !!(todayProgress?.measurements as { workout?: boolean } | null)?.workout
-  const focusOverride = todayAdjustment?.workoutChange?.focusOverride
-  const workoutCandidate = getEffectiveTodayWorkout(program, completed, todayAdjustment, focusOverride)
+  // Same first-visit fallback /plan/workout applies (completed === 0: her
+  // freshly-stored focus preference should be reflected immediately, not
+  // "eventually, whenever rotation gets there") — real gap found 2026-08-30,
+  // same root cause as the beta-feedback Priority 1 fix already applied to
+  // /plan/workout/page.tsx, just never carried over to this engine.
+  const storedFocusArea = (intake?.form_data as { focus_area?: FocusArea } | null)?.focus_area
+  const effectiveFocusArea = focusOverride?.length
+    ? focusOverride
+    : completed === 0 && storedFocusArea && storedFocusArea !== 'overall' ? storedFocusArea : undefined
+  const workoutCandidate = getEffectiveTodayWorkout(program, completed, todayAdjustment, effectiveFocusArea)
 
   const todaysWorkoutAction = (recentWorkoutActions || []).find((r) => localDateISO(tz, new Date(r.shown_at as string)) === todayISO)
   const workoutSkippedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)
