@@ -243,12 +243,31 @@ export function daySpecFromAreas(areas: FocusArea[]): DaySpec {
     const { push, pull } = AREA_SLOT_MUSCLES[area]
     return [{ push, pull }, { push, pull }]
   })
+  // Real bug found live, 2026-08-31 (Asa: "make me an ab workout only" at
+  // the gym came back titled "Core · Full Body" and was, underneath, a
+  // genuine full-body day with one bonus ab exercise tacked on — she read
+  // "Full Body" and correctly concluded nothing had actually changed).
+  // `bodyAreas` deliberately excludes 'core' (it isn't a push/pull slot
+  // area), so a real core-ONLY request always produced empty `bodyAreas`/
+  // `slots` — indistinguishable, before this fix, from a genuine no-
+  // preference request, which is the only case the FULL_BODY_SLOTS
+  // fallback and " · Full Body" label were ever meant for. `coreOnly` names
+  // that real distinction: an explicit ask for core and nothing else.
+  const coreOnly = areas.length > 0 && bodyAreas.length === 0 && areas.includes('core')
   const label = areas.map((a) => a === 'core' ? 'Core' : a === 'overall' ? 'Full Body' : a[0].toUpperCase() + a.slice(1)).join(' + ')
   return {
-    title: `${label}${slots.length ? '' : ' · Full Body'}`,
-    muscles: bodyAreas.length ? bodyAreas.map((a) => a[0].toUpperCase() + a.slice(1)) : ['Full Body'],
+    // Pre-existing cosmetic bug, noticed and fixed in passing: an empty
+    // `areas` (a genuine "overall, no preference" request) left `label`
+    // empty too, so the suffix produced a stray leading space (" · Full
+    // Body") instead of just "Full Body".
+    title: label ? `${label}${slots.length || coreOnly ? '' : ' · Full Body'}` : 'Full Body',
+    muscles: bodyAreas.length ? bodyAreas.map((a) => a[0].toUpperCase() + a.slice(1)) : coreOnly ? ['Core'] : ['Full Body'],
     warm: bodyAreas.includes('legs') ? 'legs' : 'upper',
-    slots: slots.length ? slots : FULL_BODY_SLOTS,
+    // A real core-only day skips the full-body push/pull filler outright —
+    // generateGym (below) gives it real, substantial ab content instead,
+    // rather than quietly building a full-body day regardless of what she
+    // actually asked for.
+    slots: slots.length ? slots : coreOnly ? [] : FULL_BODY_SLOTS,
   }
 }
 
@@ -308,15 +327,31 @@ function pickFocusAccessory(muscles: Muscle[], level: Level, goal: WorkoutInputs
 // she's flagged postpartum in intake. Injury filtering was missing here entirely
 // before (pre-existing gap, not introduced by the priority-pool work) — pickGym and
 // generateHome both already filtered by injuries, this closes the same gap for abs.
-export function pickAb(zone: 'upper' | 'lower', level: Level, offset: number, postpartum = false, injuries: Injury[] = []): AbExercise {
+//
+// `excludeNames` (added 2026-08-31): real bug found chasing a different one — a
+// beginner-level gym program has exactly ONE `priority` entry in the 'upper' zone
+// ("Weighted Toe Touch (Beginner)"), so `rotate(priority, offset)[0]` returns that
+// SAME exercise for every offset, always — the existing bonus-ab dedup retry
+// elsewhere in this file (a different offset on a name collision) was silently
+// ineffective for any beginner, since a 1-item array rotates to itself regardless
+// of offset. Falls through past the priority tier to the full zone/level pool once
+// every priority option is excluded, instead of only ever considering priority.
+export function pickAb(zone: 'upper' | 'lower', level: Level, offset: number, postpartum = false, injuries: Injury[] = [], excludeNames: string[] = []): AbExercise {
   const base = AB_POOL.filter(a => a.zone === zone && a.minLevel <= level)
   const safe = base.filter(a => !isContraindicated(a.name, injuries))
   const inZoneLevel = safe.length ? safe : base // never end up with nothing just because every option got excluded
+  const fresh = (arr: AbExercise[]) => arr.filter((a) => !excludeNames.includes(a.name))
   if (postpartum) {
     const pp = inZoneLevel.filter(a => a.postpartum)
+    const ppFresh = fresh(pp)
+    if (ppFresh.length) return rotate(ppFresh, offset)[0]
     if (pp.length) return rotate(pp, offset)[0]
   }
   const priority = inZoneLevel.filter(a => a.priority && !a.postpartum)
+  const priorityFresh = fresh(priority)
+  if (priorityFresh.length) return rotate(priorityFresh, offset)[0]
+  const anyFresh = fresh(inZoneLevel)
+  if (anyFresh.length) return rotate(anyFresh, offset)[0]
   if (priority.length) return rotate(priority, offset)[0]
   return rotate(inZoneLevel, offset)[0]
 }
@@ -384,16 +419,20 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
     const usedNames = new Set<string>(Array.from(usedPush).concat(Array.from(usedPull)))
     const focusBonus = targets.length ? pickFocusAccessory(targets, level, inp.goal, off + 7, injuries, usedNames) : null
     const upperAb = pickAb('upper', level, off, inp.postpartum, injuries)
+    const lowerAb = pickAb('lower', level, off + 2, inp.postpartum, injuries)
     // Real gap found live: the bonus ab pick and the regular upper ab pick
     // are both drawn from the same 'upper' zone — a small filtered pool
     // (postpartum/level/injury-narrowed) could land both offsets on the
-    // identical exercise, showing the same name twice in one list. One retry
-    // at a different offset is enough; if the pool really is that small, a
-    // repeat is unavoidable, not a bug.
+    // identical exercise, showing the same name twice in one list.
+    // `usedAbNames` (extended 2026-08-31 alongside pickAb's own excludeNames
+    // fix — see its comment) accumulates every ab name already picked THIS
+    // day, so every later pick actively avoids all of them, not just the one
+    // immediately before it.
+    const usedAbNames = [upperAb.name, lowerAb.name]
     let bonusAb: AbExercise | undefined
     if (coreFocus) {
-      bonusAb = pickAb('upper', level, off + 5, inp.postpartum, injuries)
-      if (bonusAb.name === upperAb.name) bonusAb = pickAb('upper', level, off + 6, inp.postpartum, injuries)
+      bonusAb = pickAb('upper', level, off + 5, inp.postpartum, injuries, usedAbNames)
+      usedAbNames.push(bonusAb.name)
     }
     return {
       dayNum,
@@ -415,10 +454,24 @@ function generateGym(inp: WorkoutInputs): GymDay[] {
           { name: 'Single-Arm Tibialis Raise (wall)', reps: '2 × 15 each', cue: 'Back to wall, lift toes toward shins, squeeze the shin, lower slow.', imageUrl: FORM_IMAGES['Single-Arm Tibialis Raise (wall)'] },
         ] : []),
         ...(focusBonus ? [focusBonus] : []),
+        // Real fix, 2026-08-31: a genuine core-only day (spec.slots empty —
+        // see daySpecFromAreas' coreOnly branch) has zero supersets by
+        // design now, so without this it'd be left with just 2-3 ab
+        // exercises total — barely a real session for something she
+        // explicitly asked for. Two more real AB_POOL picks make it an
+        // actually substantial, genuinely core-focused day — each excludes
+        // every ab name already used today (usedAbNames), so a small
+        // priority pool (see pickAb's own fix) can't quietly repeat the
+        // same exercise three times over.
+        ...(spec.slots.length === 0 && coreFocus ? (() => {
+          const extraUpper = pickAb('upper', level, off + 8, inp.postpartum, injuries, usedAbNames)
+          const extraLower = pickAb('lower', level, off + 9, inp.postpartum, injuries, [...usedAbNames, extraUpper.name])
+          return [extraUpper, extraLower].map((a) => ({ name: a.name, reps: AB_SCHEME[level], cue: a.cue, imageUrl: a.imageUrl }))
+        })() : []),
       ],
       ab: {
         upper: upperAb,
-        lower: pickAb('lower', level, off + 2, inp.postpartum, injuries),
+        lower: lowerAb,
         scheme: AB_SCHEME[level],
         ...(bonusAb ? { bonus: bonusAb } : {}),
       },

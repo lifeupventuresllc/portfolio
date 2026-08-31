@@ -63,10 +63,22 @@ export default function WorkoutMusicPlayer({ duck = false }: {
   const audioRef = useRef<HTMLAudioElement>(null)
   const track = WORKOUT_TRACKS[idx]
 
-  // One-time autoplay attempt for track 0, right on mount.
+  // One-time autoplay attempt, right on mount — also where the starting
+  // track gets randomized (Asa's ask, 2026-08-31: "make the music randomly
+  // play each time"). Deliberately done HERE, inside a client-only effect
+  // that only ever runs after the first hydration-matching render, and NOT
+  // by seeding useState(idx) with a random value — that's exactly the
+  // pattern that caused the real silent-production-bug described above.
+  // `setIdx` won't have re-rendered the DOM yet by the time `.play()` runs
+  // below in this same synchronous effect body, so `a.src` is set directly
+  // first — React re-applies the identical value on the next render once
+  // `idx` catches up, a harmless no-op there.
   useEffect(() => {
     const a = audioRef.current
     if (!a) return
+    const startIdx = Math.floor(Math.random() * WORKOUT_TRACKS.length)
+    setIdx(startIdx)
+    a.src = WORKOUT_TRACKS[startIdx].src
     a.play().then(() => { setPlaying(true); setBlocked(false) }).catch(() => setBlocked(true))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

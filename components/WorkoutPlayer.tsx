@@ -200,7 +200,19 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
             week view existed. Now points at an actual one (app/plan/workout/
             week), the direct proof that a saved preference change reshapes
             the whole week, not just today. */}
-        <button onClick={() => router.push('/plan/workout/week')} className="text-ivory/50 hover:text-gold text-xs font-semibold">← My week</button>
+        {/* Real gap, Asa's direct ask 2026-08-31: an active session had NO way
+            back to the dashboard at all — "My week" only ever chained one
+            level (workout -> week), never a direct jump. Deliberately kept
+            small/plain text here, not the big gold pill used everywhere
+            else — a large, tempting exit control mid-session risks the exact
+            accidental-abandonment problem "My week" was already changed
+            away from once before (see the comment below); this is a real
+            escape hatch, not an invitation to bail. */}
+        <div className="flex items-center gap-2.5">
+          <button onClick={() => router.push('/plan/workout/week')} className="text-ivory/50 hover:text-gold text-xs font-semibold">← My week</button>
+          <span className="text-ivory/20 text-xs">·</span>
+          <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} className="text-ivory/50 hover:text-gold text-xs font-semibold">Home</button>
+        </div>
         <button onClick={() => setSwitching((s) => !s)} className="text-center">
           <p className="text-gold text-[10px] font-semibold tracking-[0.2em] uppercase">
             {targetMinutes ? 'Shortened for today' : "Today's session"} · about {estimateWorkoutMinutes(steps)} min
