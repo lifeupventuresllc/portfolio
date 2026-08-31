@@ -302,12 +302,16 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
               Green/gold alternating rings match the app's real accent pair;
               swaps to the pink family when `encouragement` is set, same
               "visibly different on a simplified instruction" signal the old
-              circle's color swap gave. */}
+              circle's color swap gave. Max scale capped at 1.35 (was 2.5) —
+              Asa's catch, live: the full-size rings spilled into the
+              instruction text and the "Keep it simple" pill below. Border
+              thickened 1.5→2px to keep the same bold, big feel at the
+              smaller contained size instead of just shrinking it down. */}
           <style>{`
             @keyframes luf-sonar-ping {
-              0% { transform: scale(0.5); opacity: 0.9; }
+              0% { transform: scale(0.6); opacity: 0.9; }
               60% { opacity: 0.35; }
-              100% { transform: scale(2.5); opacity: 0; }
+              100% { transform: scale(1.35); opacity: 0; }
             }
             @keyframes luf-sonar-dot-glow {
               0%, 100% { box-shadow: 0 0 8px 2px rgba(229,169,60,0.7), 0 0 4px 1px rgba(127,191,148,0.6); transform: scale(1); }
@@ -328,7 +332,7 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
                 key={i}
                 className="luf-sonar-ring"
                 style={{
-                  borderWidth: 1.5,
+                  borderWidth: 2,
                   borderColor: encouragement ? '#E9A0A0' : i % 2 === 0 ? '#7fbf94' : '#E5A93C',
                   animationDelay: `${i * 0.64}s`,
                 }}
