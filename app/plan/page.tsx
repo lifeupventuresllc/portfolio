@@ -198,17 +198,17 @@ export default async function PlanDashboard() {
   // "fixed" box collapsed right along with it. -mb-16 (Tailwind's pb-16 in
   // reverse, -4rem) cancels the outer wrapper's padding while staying in
   // normal flow, which isn't affected by that ancestor's transform at all.
-  // 48px, down from 72px — real bug caught live, 2026-08-31: this reserved
-  // space was calibrated for the OLD, taller BottomTabBar. After thinning
-  // that nav (py-3→py-1.5, smaller icons/+ button), 72px reserved way more
-  // than the nav actually needs, opening a real gap of empty video between
-  // the chat box and the nav — Asa's catch ("all the space between the chat
-  // box... it should be a lot lower"). 48px = the new nav's real content
-  // height (12px padding + 35px row + 1px border), computed once here
-  // instead of guessed.
+  // 104px, up from 48px — Asa's catch, 2026-09-01: the bottom nav's + button
+  // became a floating circular FAB raised 48px above the nav bar (was an
+  // inline tab within it), so the old "just the nav's own height" reservation
+  // no longer clears it — the FAB now pokes up into this exact space and sat
+  // on top of the chat box. 104px = 48px (nav's real content height, see
+  // below) + 48px (how far the FAB floats above the nav's top edge) + 8px
+  // breathing room, computed instead of guessed for the same reason the
+  // original 48px was.
   if (hasPlan) {
     return (
-      <div className="h-[100dvh] -mb-16 flex flex-col overflow-hidden" style={{ background: '#021F16', paddingBottom: 'calc(48px + env(safe-area-inset-bottom))' }}>
+      <div className="h-[100dvh] -mb-16 flex flex-col overflow-hidden" style={{ background: '#021F16', paddingBottom: 'calc(104px + env(safe-area-inset-bottom))' }}>
         <TimezoneSync />
         {user.is_anonymous ? <AnonymousSessionBanner /> : (!user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />)}
 

@@ -26,8 +26,15 @@ export default function ProgressViewToggle({ plan, garden }: { plan: ReactNode; 
   }
 
   return (
-    <div>
-      <div className="flex gap-1 bg-charcoal border border-smoke rounded-full p-1 mb-4">
+    // flex column filling whatever real space this component's own parent
+    // hands it (see app/plan/today/page.tsx) — the toggle pill stays natural
+    // height (flex: 0 0 auto), and only the currently-visible branch below it
+    // claims the leftover space. Garden gets flex:1+minHeight:0 (the standard
+    // "fill exactly, allow shrink" pair) since it's a fixed-height hero visual;
+    // Today keeps flexShrink:0 so its long scrollable content is never
+    // compressed — it just grows the page and scrolls, same as before.
+    <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 }}>
+      <div className="flex gap-1 bg-charcoal border border-smoke rounded-full p-1 mb-4" style={{ flex: '0 0 auto' }}>
         {([['garden', 'Progress'], ['plan', 'Today']] as const).map(([t, label]) => (
           <button
             key={t}
@@ -38,8 +45,8 @@ export default function ProgressViewToggle({ plan, garden }: { plan: ReactNode; 
           </button>
         ))}
       </div>
-      <div style={{ display: tab === 'garden' ? 'block' : 'none' }}>{garden}</div>
-      <div style={{ display: tab === 'plan' ? 'block' : 'none' }}>{plan}</div>
+      <div style={{ display: tab === 'garden' ? 'flex' : 'none', flexDirection: 'column', flex: '1 1 0%', minHeight: 0 }}>{garden}</div>
+      <div style={{ display: tab === 'plan' ? 'block' : 'none', flex: '1 1 auto', flexShrink: 0 }}>{plan}</div>
     </div>
   )
 }

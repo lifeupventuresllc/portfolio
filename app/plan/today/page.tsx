@@ -279,15 +279,22 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   const cardStyle = { background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }
 
   return (
-    <div className="min-h-[100dvh] px-4 py-6" style={{ background: '#0b1712' }}>
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between gap-3 mb-4">
+    // flex column, min-height 100dvh — the Garden branch below needs to fill
+    // whatever real space is left after the header/toggle, not a guessed
+    // `calc(100dvh - Npx)` (that number silently goes stale the moment
+    // header content changes height on any device). flex:1 on the toggle's
+    // content region hands it the actual leftover space every layout pass;
+    // the Today branch stays flexShrink:0 so long content still just grows
+    // the page and scrolls normally, exactly as before.
+    <div className="min-h-[100dvh] px-4 py-6 flex flex-col" style={{ background: '#0b1712' }}>
+      <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col min-h-0">
+        <div className="flex items-center justify-between gap-3 mb-4" style={{ flex: '0 0 auto' }}>
           <Link href="/plan" className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all" style={{ background: CARD_BG, border: CARD_BORDER, color: ACCENT }}>← Home</Link>
           <ClientMenu firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
         </div>
 
         <ProgressViewToggle
-          garden={<div style={{ margin: '0 -16px' }}><BuilderView /></div>}
+          garden={<BuilderView />}
           plan={
             <div>
         <div className="flex items-center justify-between gap-3 mb-1">

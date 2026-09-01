@@ -641,13 +641,21 @@ export default function BuilderView() {
     return () => cancelAnimationFrame(id)
   }, [pendingIds])
 
+  // Negative side + bottom margins bleed the card past its padded page
+  // container to the true screen edges (the mockup's edge-to-edge look)
+  // without needing an extra wrapper div — a wrapper here would sit outside
+  // the flex chain below and silently break the fill-to-nav sizing again.
+  // -24px cancels the page's own py-6 bottom padding so the scene actually
+  // reaches the real viewport bottom instead of stopping 24px short of it.
+  const BLEED = { margin: '0 -16px -24px', width: 'calc(100% + 32px)' } as const
+
   if (loading) {
-    return <div className="animate-pulse" style={{ background: CARD_BG, minHeight: 360 }} />
+    return <div className="animate-pulse" style={{ ...BLEED, flex: '1 1 auto', minHeight: 0, background: CARD_BG }} />
   }
 
   if (!elements.length && !totalCount) {
     return (
-      <div className="p-6 text-center" style={{ background: CARD_BG }}>
+      <div className="p-6 text-center" style={{ ...BLEED, flex: '1 1 auto', minHeight: 0, background: CARD_BG }}>
         <p className="text-ivory/50 text-sm">Your garden will start growing here once you log your first action.</p>
       </div>
     )
@@ -656,12 +664,17 @@ export default function BuilderView() {
   const cfg = PHASE_CONFIG[phase]
 
   return (
+    // flex:1+minHeight:0 fills exactly whatever real space its flex parent
+    // (ProgressViewToggle's garden slot) hands it — no guessed viewport
+    // subtraction, so it can never fall short of the real available height
+    // the way a static calc(100dvh - Npx) does the moment header content
+    // above it changes size on any given device.
     <div
-      className="w-full"
       style={{
+        ...BLEED,
         boxSizing: 'border-box', overflow: 'hidden', position: 'relative',
         display: 'flex', flexDirection: 'column',
-        minHeight: 'calc(100dvh - 260px)',
+        flex: '1 1 auto', minHeight: 0,
         background: CARD_BG,
       }}
     >
