@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Confetti from '@/components/Confetti'
 import QuickFeedback from '@/components/QuickFeedback'
 import EffortTap from '@/components/EffortTap'
+import SetEffortTap, { type Effort } from '@/components/SetEffortTap'
 import WorkoutMusicPlayer from '@/components/WorkoutMusicPlayer'
 import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { buildSteps, dayLabels, estimateWorkoutMinutes, trimStepsToTarget, type WorkoutStep } from '@/lib/workout-steps'
@@ -83,6 +84,16 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
   // one flag covers "even for the rest of it" the way it was asked for.
   const [musicDucked, setMusicDucked] = useState(false)
 
+  // Layer four (progression memory's real-time half) — a rest step is the
+  // one place in this step sequence that always directly follows a real
+  // working set (see lib/workout-steps.ts: 'Rest' only ever appears after
+  // a superset or accessory exercise, never warm-up/abs/cardio). Shown
+  // once per rest step, never re-triggered by stepping back/forward across
+  // the same one — handledRestIdx tracks that per the CURRENT day only,
+  // matching how `steps` itself resets on a day switch.
+  const [showEffortTap, setShowEffortTap] = useState(false)
+  const handledRestIdx = useRef<Set<number>>(new Set())
+
   // Real bug found live: the countdown beep's AudioContext only ever got
   // created/resumed from inside the countdown's own setInterval tick, never
   // from a direct click — browsers require that resume to happen inside a
@@ -116,6 +127,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
   function selectDay(d: number) {
     setDayIdx(clamp(d)); setSteps(buildDay(clamp(d)))
     setI(0); setDone(false); setPaused(false); setSwitching(false)
+    handledRestIdx.current = new Set()
   }
   function finish() {
     setDone(true)
@@ -141,6 +153,35 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
     setLeft(secs)
     setMusicDucked(secs != null && secs <= 10 && secs >= 1)
   }, [i, dayIdx, step?.seconds])
+
+  // Surface the effort tap the instant a real working-set rest begins —
+  // once per rest step, never again if she navigates back over it.
+  useEffect(() => {
+    if (step?.rest && i > 0 && !handledRestIdx.current.has(i)) setShowEffortTap(true)
+    else setShowEffortTap(false)
+  }, [i, dayIdx, step?.rest])
+
+  function handleSetEffort(effort: Effort) {
+    handledRestIdx.current.add(i)
+    setShowEffortTap(false)
+    const exerciseName = steps[i - 1]?.name
+    // Immediate half — applied instantly, no dependency on the network
+    // call below resolving. Mirrors lib/progression.ts's immediateAdjustment
+    // exactly (kept in sync there; duplicated here only because that
+    // module also does a DB write this component has no business doing).
+    const restBumpSec = effort === 'hard' ? 20 : effort === 'easy' ? -10 : 0
+    if (restBumpSec !== 0) setLeft((l) => (l == null ? l : Math.max(5, l + restBumpSec)))
+    hapticTap()
+    // Long-term half — logs the real set + updates her live progression
+    // state (lib/progression.ts). Fire-and-forget: the immediate effect
+    // above already happened; her rest timer never waits on this.
+    if (exerciseName) {
+      fetch('/api/plan/workout/set-effort', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exerciseName, effort, setIndex: i }),
+      }).catch(() => {})
+    }
+  }
 
   // Persist live progress so the dashboard's workout ring reflects mid-session state.
   useEffect(() => {
@@ -251,7 +292,14 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
         </div>
       )}
 
-      <div key={`${dayIdx}-${i}`} className="q-in-fwd flex-1 flex flex-col">
+      <div key={`${dayIdx}-${i}`} className="relative q-in-fwd flex-1 flex flex-col">
+        {showEffortTap && steps[i - 1] && (
+          <SetEffortTap
+            exerciseName={steps[i - 1].name}
+            onPick={handleSetEffort}
+            onDismiss={() => { handledRestIdx.current.add(i); setShowEffortTap(false) }}
+          />
+        )}
         {/* Info + timer band — the countdown lives here now, not layered over
             the image, so a real photo and a running clock can both show at
             once instead of being an either/or (real gap that used to mean

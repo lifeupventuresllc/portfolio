@@ -8,6 +8,7 @@
 // changes HOW exercises get chosen, not what the app renders.
 // ============================================================
 import type { GymExercise, AbExercise, Level, Injury, Muscle } from './workout-exercises'
+import type { MovementPattern, SkillLevel, IntensityLevel } from './exercise-library'
 
 export type TrainingStyle = 'compound' | 'split' | 'cardio' | 'none'
 export type FocusArea = 'core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders' | 'overall'
@@ -35,6 +36,13 @@ export interface WorkoutInputs {
   // could only crudely slice its reply text after the fact. Only applied to
   // day 0 (the live "today" request this came from).
   minutesAvailable?: number
+  // New, 2026-09-01 rebuild — layer three (progression memory). Per-
+  // movement-pattern live skill/intensity state, computed by
+  // lib/progression.ts from her actual logged set-effort history. When a
+  // pattern isn't in this map (no history yet), the assembly engine falls
+  // back to `level` exactly as before this system existed — cold start is
+  // identical to the pre-progression engine by construction.
+  progressionOverrides?: Partial<Record<MovementPattern, { skillLevel: SkillLevel; intensityLevel: IntensityLevel }>>
 }
 
 export interface Superset { title: string; push: GymExercise; pull: GymExercise; reps: string }

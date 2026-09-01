@@ -16,7 +16,7 @@
 // it decides WHICH MUSCLES a day targets, never which EXACT EXERCISES fill
 // it. Exercise selection itself is 100% attribute-matched, every time.
 // ============================================================
-import { ATOMIC_LIBRARY, isExerciseSafe, type AtomicExercise, type Location, type EquipmentTag, type MuscleGroup, type SkillLevel } from './exercise-library'
+import { ATOMIC_LIBRARY, isExerciseSafe, type AtomicExercise, type Location, type EquipmentTag, type MuscleGroup, type SkillLevel, type MovementPattern, type IntensityLevel } from './exercise-library'
 import type { Injury, Equip, Muscle } from './workout-exercises'
 import { injuryNotes } from './workout-exercises'
 import { compoundExercisesForLevel } from './compound-exercises'
@@ -89,7 +89,16 @@ function derivePushPull(e: AtomicExercise): 'push' | 'pull' {
 // consumer — WorkoutPlayer, WorkoutView, workout-pdf, workout-steps) keeps
 // working unchanged: `movement`/`muscle`/`minLevel`/`equip`/`free` are
 // derived FROM the atomic entry's real tags, not a second source of truth.
-function toGymExerciseShim(e: AtomicExercise) {
+// `overrides` is optional so pickAb/other gym-shim call sites that never
+// deal with progression state (nothing core-related tracks a movement
+// pattern intensity yet) don't have to pass it. A real, visible surface
+// for layer three's intensity axis, not just an invisible filter effect —
+// she SEES why a set got scaled, not just experiences it.
+function toGymExerciseShim(e: AtomicExercise, overrides?: Constraints['progressionOverrides']) {
+  const intensity = overrides?.[e.movementPattern]?.intensityLevel
+  const intensityCue = intensity === 5 ? ' You’ve been crushing this movement lately — push the top of your range.'
+    : intensity === 1 ? ' Easing the intensity here based on your recent sets — controlled reps, no rush.'
+    : ''
   return {
     // Casts are safe by construction, not by hope: this is only ever called
     // on picks drawn from a gym-superset-eligible pool (buildGymDay filters
@@ -98,7 +107,7 @@ function toGymExerciseShim(e: AtomicExercise) {
     // WIDER unions (kettlebell, bands, core, full_body) never reach here.
     name: e.name, equip: e.equipment[0] as Equip, free: e.freeWeight,
     movement: derivePushPull(e), muscle: e.muscleGroups[0] as Muscle, minLevel: e.skillLevel,
-    cue: e.cue, imageUrl: e.imageUrl,
+    cue: e.cue + intensityCue, imageUrl: e.imageUrl,
   }
 }
 function toAbExerciseShim(e: AtomicExercise) {
@@ -116,6 +125,11 @@ interface Constraints {
   skillLevel: SkillLevel
   injuries: Injury[]
   postpartum: boolean
+  // Layer three (lib/progression.ts) — per-movement-pattern live skill/
+  // intensity, computed from real logged set-effort history. When a
+  // pattern isn't here, filterLibrary falls back to the flat `skillLevel`
+  // above exactly as it did before progression memory existed.
+  progressionOverrides?: Partial<Record<MovementPattern, { skillLevel: SkillLevel; intensityLevel: IntensityLevel }>>
 }
 
 // Ab/core picking, generalized off the same attribute-matching `pick()`
@@ -136,14 +150,25 @@ export function pickAb(zone: 'upper' | 'lower', level: SkillLevel, offset: numbe
   return toAbExerciseShim(pickAbAtomic(zone, level, offset, postpartum, injuries, excludeNames))
 }
 
+// Real gap this closes: `e.skillLevel <= c.skillLevel` used to gate every
+// exercise by ONE flat number for the whole session — her intake level,
+// chosen once, never moving. `effectiveSkill` looks up whether she has
+// real logged history for THIS exercise's specific movement pattern
+// (lib/progression.ts) and gates by THAT instead when present — so a
+// member who's been logging consistent "easy" squats gets access to
+// harder squat-pattern exercises automatically, while her overhead-press
+// pattern (no history yet, or a recent "hard" streak) stays gated at her
+// baseline. This is what "progressive overload happens automatically
+// within the attribute-matching logic itself" actually means in code.
 function filterLibrary(c: Constraints, muscles?: MuscleGroup[]): AtomicExercise[] {
-  return ATOMIC_LIBRARY.filter((e) =>
-    e.locations.includes(c.location) &&
-    e.skillLevel <= c.skillLevel &&
-    isExerciseSafe(e, c.injuries) &&
-    (!c.equipment || e.equipment.some((eq) => c.equipment!.includes(eq))) &&
-    (!muscles || muscles.length === 0 || e.muscleGroups.some((m) => muscles.includes(m)))
-  )
+  return ATOMIC_LIBRARY.filter((e) => {
+    const effectiveSkill = c.progressionOverrides?.[e.movementPattern]?.skillLevel ?? c.skillLevel
+    return e.locations.includes(c.location) &&
+      e.skillLevel <= effectiveSkill &&
+      isExerciseSafe(e, c.injuries) &&
+      (!c.equipment || e.equipment.some((eq) => c.equipment!.includes(eq))) &&
+      (!muscles || muscles.length === 0 || e.muscleGroups.some((m) => muscles.includes(m)))
+  })
 }
 
 // The one real picker every selection in this file routes through — target
@@ -241,7 +266,7 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
   const supersets: Superset[] = []
   for (let i = 0; i + 1 < picked.length; i += 2) {
     const a = picked[i], b = picked[i + 1]
-    supersets.push({ title: `${a.name} + ${b.name}`, push: toGymExerciseShim(a), pull: toGymExerciseShim(b), reps: repScheme(c.skillLevel, goal) })
+    supersets.push({ title: `${a.name} + ${b.name}`, push: toGymExerciseShim(a, c.progressionOverrides), pull: toGymExerciseShim(b, c.progressionOverrides), reps: repScheme(c.skillLevel, goal) })
   }
   const leftover = picked.length % 2 === 1 ? picked[picked.length - 1] : null
 
@@ -336,7 +361,7 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
   const week = inp.weekNumber || 1
   const injuries = inp.injuries || []
   const location: Location = inp.track
-  const c: Constraints = { location, skillLevel: level, injuries, postpartum: !!inp.postpartum }
+  const c: Constraints = { location, skillLevel: level, injuries, postpartum: !!inp.postpartum, progressionOverrides: inp.progressionOverrides }
   const days = Math.min(Math.max(Math.round(inp.daysPerWeek || 3), 1), 6)
   const coreFocus = inp.focusArea === 'core' || !!inp.overrideAreas?.includes('core')
 

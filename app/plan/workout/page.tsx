@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import WorkoutPlayer from '@/components/WorkoutPlayer'
 import QuickstartWorkout from '@/components/QuickstartWorkout'
 import { generateWorkout, pickFocusDayIndex, applyProgressiveOverload, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
+import { getProgressionOverrides } from '@/lib/progression'
 import { generateCardioSession } from '@/lib/cardio-session'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
@@ -113,12 +114,19 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
     const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle
     const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
     const weekNumber = currentWeekNumber((enrollment.created_at as string) || new Date().toISOString())
+    // Layer three (lib/progression.ts) — real logged set-effort history,
+    // per movement pattern. This is the ONE place her actual dynamic
+    // skill/intensity state reaches the assembly engine for her real,
+    // displayed session (as opposed to a preview/PDF render elsewhere that
+    // doesn't need to reflect live progression).
+    const progressionOverrides = await getProgressionOverrides(enrollment.id as string)
     program = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex,
       track: trackOverride || (intake.training_location === 'home' ? 'home' : 'gym'),
       level, goal,
       daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyle, focusArea,
       overrideAreas: focusOverride?.length ? focusOverride : undefined,
+      progressionOverrides,
     })
   }
 
