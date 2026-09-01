@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { createServiceClient } from '@/lib/supabase/server'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+let _resend: Resend | null = null
+function resend() { return (_resend ??= new Resend(process.env.RESEND_API_KEY)) }
 
 const CTA_URL = 'https://asaluke.io/services/fitness'
 
@@ -120,7 +121,7 @@ export async function GET(request: NextRequest) {
       const firstName = lead.name.split(' ')[0]
       const emailData = getEmail2(firstName)
 
-      await resend.emails.send({
+      await resend().emails.send({
         from: `Asa Luke <${process.env.FROM_EMAIL!}>`,
         to: lead.email,
         replyTo: 'info.lifeupventures@gmail.com',
@@ -162,7 +163,7 @@ export async function GET(request: NextRequest) {
       const firstName = lead.name.split(' ')[0]
       const emailData = getEmail3(firstName)
 
-      await resend.emails.send({
+      await resend().emails.send({
         from: `Asa Luke <${process.env.FROM_EMAIL!}>`,
         to: lead.email,
         replyTo: 'info.lifeupventures@gmail.com',

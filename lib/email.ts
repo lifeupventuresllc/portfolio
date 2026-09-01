@@ -2,7 +2,12 @@ import { Resend } from 'resend'
 import fs from 'fs'
 import path from 'path'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Lazy — constructing at module scope throws immediately when
+// RESEND_API_KEY is unset (e.g. Preview deploys without it configured),
+// which crashes the whole build during Next.js's page-data collection
+// since every API route module gets evaluated then, not just at request time.
+let _resend: Resend | null = null
+function resend() { return (_resend ??= new Resend(process.env.RESEND_API_KEY)) }
 
 // Static PDF downloads shipped in public/downloads/ — read at send-time so they
 // can ride along as email attachments. Literal paths (not built from a dynamic
@@ -32,7 +37,7 @@ const FOOTER = `<p style="color:#cccccc; font-size:10px; margin-top:24px; border
 export async function sendPurchaseConfirmation(email: string, productName: string, amount: number) {
   const dollars = (amount / 100).toFixed(2)
 
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
     to: email,
     replyTo: REPLY_TO,
@@ -66,7 +71,7 @@ export async function sendPurchaseConfirmation(email: string, productName: strin
 }
 
 export async function sendWelcomeEmail(email: string) {
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
     to: email,
     replyTo: REPLY_TO,
@@ -102,7 +107,7 @@ export async function sendChallengeWelcome(email: string, name: string) {
   const firstName = (name || '').split(' ')[0] || 'sis'
   const tierBlurb = "You're in — full, free access to custom training, done-for-you weekly nutrition, Coach, and everything else the app does. No trial, no card, nothing to cancel later."
 
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
     to: email,
     replyTo: REPLY_TO,
@@ -154,7 +159,7 @@ export async function sendBlueprintEmail(
   }
   const bundleLine = bundledNames.length ? ` I've also attached ${bundledNames.join(' and ')} — everything you need in one place.` : ''
 
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
     to: email,
     replyTo: REPLY_TO,
@@ -192,7 +197,7 @@ export async function sendCoachBlueprintNotification(info: {
   age: number; activity: string; workout_days: number; workoutEat: number; restEat: number
 }) {
   const coachEmail = process.env.COACH_EMAIL || REPLY_TO
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Life Up Fitness <${FROM_EMAIL}>`,
     to: coachEmail,
     replyTo: REPLY_TO,
@@ -219,7 +224,7 @@ export async function sendCoachBlueprintNotification(info: {
 }
 
 export async function sendOnboardingDay3Email(email: string) {
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
     to: email,
     replyTo: REPLY_TO,
@@ -251,7 +256,7 @@ export async function sendOnboardingDay3Email(email: string) {
 }
 
 export async function sendOnboardingDay7Email(email: string) {
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
     to: email,
     replyTo: REPLY_TO,
@@ -282,7 +287,7 @@ export async function sendOnboardingDay7Email(email: string) {
 }
 
 export async function sendPurchaseOnboardingDay3Email(email: string, serviceName: string) {
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
     to: email,
     replyTo: REPLY_TO,
@@ -311,7 +316,7 @@ export async function sendPurchaseOnboardingDay3Email(email: string, serviceName
 }
 
 export async function sendPurchaseOnboardingDay7Email(email: string, serviceName: string) {
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
     to: email,
     replyTo: REPLY_TO,
@@ -416,7 +421,7 @@ export async function sendUpsellEmail(email: string, firstName: string, serviceT
 
   const emailData = emails[stage] || emails[1]
 
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
     to: email,
     replyTo: REPLY_TO,
@@ -492,7 +497,7 @@ export async function sendCheckinEmail(email: string, firstName: string, type: '
     `,
   }
 
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
     to: email,
     replyTo: REPLY_TO,
@@ -510,7 +515,7 @@ export async function sendCheckinEmail(email: string, firstName: string, type: '
 // === BOOKING CONFIRMATION EMAILS ===
 
 export async function sendBookingConfirmation(email: string, name: string, date: string, timeSlot: string, service: string) {
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
     to: email,
     replyTo: REPLY_TO,
@@ -537,7 +542,7 @@ export async function sendBookingConfirmation(email: string, name: string, date:
   if (error) console.error('Failed to send booking confirmation:', error)
 
   // Notify admin
-  await resend.emails.send({
+  await resend().emails.send({
     from: `Asa Luke System <${FROM_EMAIL}>`,
     to: REPLY_TO,
     subject: `New Booking: ${name} — ${date} at ${timeSlot}`,
@@ -560,7 +565,7 @@ export async function sendBookingConfirmation(email: string, name: string, date:
 export async function sendRefundConfirmation(email: string, productName: string, amount: number) {
   const dollars = (amount / 100).toFixed(2)
 
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
     to: email,
     replyTo: REPLY_TO,
@@ -617,7 +622,7 @@ export async function sendFindYourFixEmail(
     cta = { label: 'Get my numbers →', href: `${APP_URL}/blueprint?fromQuiz=1&bundle=${bundle}` }
   }
 
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
     to: email,
     replyTo: REPLY_TO,
@@ -646,7 +651,7 @@ export async function sendCoachFixNotification(info: {
   name: string; email: string; phone?: string; blocker: string; goal: string; weight_lbs: number
 }) {
   const coachEmail = process.env.COACH_EMAIL || REPLY_TO
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: `Life Up Fitness <${FROM_EMAIL}>`,
     to: coachEmail,
     replyTo: REPLY_TO,

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { createServiceClient } from '@/lib/supabase/server'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+let _resend: Resend | null = null
+function resend() { return (_resend ??= new Resend(process.env.RESEND_API_KEY)) }
 
 const GUIDE_INFO = {
   content: {
@@ -155,7 +156,7 @@ export async function POST(request: Request) {
     })
 
     // Notify Asa
-    await resend.emails.send({
+    await resend().emails.send({
       from: `Asa Luke <${process.env.FROM_EMAIL!}>`,
       to: 'info.lifeupventures@gmail.com',
       subject: `New Lead: ${name} downloaded ${guide.label}`,
@@ -180,7 +181,7 @@ export async function POST(request: Request) {
     const firstName = name.split(' ')[0]
     const plainText = `Hey ${firstName},\n\nYour free ${guide.label} guide is ready.\n\n${guide.assets.map(a => `- ${a.name}: ${a.desc}`).join('\n')}\n\nView your guide: ${guideUrl}\n\nWant this done for you? View my packages: ${packageUrl}\n\nTalk soon,\nAsa Luke\n\nIG: @1AsaLuke | info.lifeupventures@gmail.com\n\nTo unsubscribe, reply with "unsubscribe".`
 
-    await resend.emails.send({
+    await resend().emails.send({
       from: `Asa Luke <${process.env.FROM_EMAIL!}>`,
       to: email,
       replyTo: 'info.lifeupventures@gmail.com',

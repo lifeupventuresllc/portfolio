@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+let _resend: Resend | null = null
+function resend() { return (_resend ??= new Resend(process.env.RESEND_API_KEY)) }
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@asaluke.io'
 const REPLY_TO = 'info.lifeupventures@gmail.com'
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://asaluke.io'
@@ -129,7 +130,7 @@ export async function sendProspectFollowUpEmail(
   if (!sequence) return false
 
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await resend().emails.send({
       from: `Asa Luke <${FROM_EMAIL}>`,
       to: email,
       replyTo: REPLY_TO,
@@ -160,7 +161,7 @@ export async function sendFollowUpEmail(
   if (!sequence) return false
 
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await resend().emails.send({
       from: `Asa Luke <${FROM_EMAIL}>`,
       to: email,
       replyTo: REPLY_TO,
