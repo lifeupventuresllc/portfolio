@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { hapticTap } from '@/lib/haptics'
 import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
@@ -98,6 +99,13 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
   const [turns, setTurns] = useState<ChatTurn[]>([])
   const [quickReplies, setQuickReplies] = useState<string[] | null>(null)
   const [pendingAdjustment, setPendingAdjustment] = useState<PendingAdjustment | null>(null)
+  // A real "take me there" link right in the chat reply the instant she
+  // approves — Asa's explicit ask, 2026-09-01: "the chat box should be able
+  // to generate whatever they just came up with... right there in front of
+  // them... just like the Coach box does." Matches OperatorChat.tsx's own
+  // justApproved exactly (same copy, same routing) rather than leaving her
+  // to notice the circle above changed on its own.
+  const [justApproved, setJustApproved] = useState<PendingAdjustment | null>(null)
   const [encouragement, setEncouragement] = useState<string | null>(null)
   const [celebration, setCelebration] = useState<string | null>(null)
   // Guards against re-showing the same reward's celebration every time this
@@ -225,6 +233,7 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
     setBusy(true)
     setQuickReplies(null)
     setPendingAdjustment(null)
+    setJustApproved(null)
     // Real, visible echo of what she actually sent — the old version had no
     // transcript at all, just a single note line that silently overwrote
     // itself, so sending something real read as "did nothing" even when it
@@ -267,6 +276,7 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
       if (json?.reply) setTurns((t) => [...t, { role: 'operator', content: json.reply }])
       if (status === 'approved') {
         setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)])
+        setJustApproved(adj)
         router.refresh()
         broadcastRefresh()
       }
@@ -502,6 +512,27 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
           </div>
         )}
 
+        {/* Real "take me there" the instant she approves — same copy/routing
+            as OperatorChat.tsx's justApproved, right in the chat reply
+            itself, not just an implicit "the circle above changed." */}
+        {justApproved && (
+          <div className="flex flex-col gap-1.5 mb-2">
+            {justApproved.workoutChange && (
+              <Link href="/plan/workout" className="flex items-center justify-center gap-1.5 bg-[#C9A84C] text-obsidian px-3 py-1.5 font-bold text-[10.5px] uppercase tracking-wide rounded-lg active:scale-95 transition-transform">
+                View my updated workout →
+              </Link>
+            )}
+            {justApproved.nutritionChange && (
+              <Link
+                href={justApproved.nutritionChange.eatingOut ? '/plan/eating-out' : '/plan/today'}
+                className="flex items-center justify-center gap-1.5 bg-black/30 border border-[#E5A93C]/50 text-[#E5A93C] px-3 py-1.5 font-bold text-[10.5px] uppercase tracking-wide rounded-lg active:scale-95 transition-transform"
+              >
+                {justApproved.nutritionChange.eatingOut ? 'Show me my options →' : 'View my updated plan →'}
+              </Link>
+            )}
+          </div>
+        )}
+
         {/* Gold gradient + thin glow — Asa's ask, 2026-08-29/30, after
             trying white glow then a stronger gold glow: matches the app's
             real accent (same gold as the Next Action circle's own glow)
@@ -724,6 +755,24 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
               <button onClick={() => decide('approved')} disabled={busy} className="flex-1 bg-gold text-obsidian px-4 py-2 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform disabled:opacity-60">Yes, update it</button>
               <button onClick={() => decide('rejected')} disabled={busy} className="flex-1 bg-charcoal border border-smoke text-ivory/60 px-4 py-2 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform disabled:opacity-60">No, keep it</button>
             </div>
+          </div>
+        )}
+
+        {justApproved && (
+          <div className="flex flex-col gap-2 mb-2.5">
+            {justApproved.workoutChange && (
+              <Link href="/plan/workout" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+                View my updated workout →
+              </Link>
+            )}
+            {justApproved.nutritionChange && (
+              <Link
+                href={justApproved.nutritionChange.eatingOut ? '/plan/eating-out' : '/plan/today'}
+                className="flex items-center justify-center gap-1.5 bg-obsidian border border-gold/40 text-gold px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl hover:border-gold/70 transition-colors"
+              >
+                {justApproved.nutritionChange.eatingOut ? 'Show me my options →' : 'View my updated plan →'}
+              </Link>
+            )}
           </div>
         )}
 
