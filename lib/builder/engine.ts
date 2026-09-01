@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { ingestEvents } from '@/lib/builder/ingest'
 import { loadTierMap, classifyFrom } from '@/lib/builder/tiers'
+import { getPaceScale } from '@/lib/builder/pace'
 
 export type BuilderElement = {
   id: string
@@ -18,10 +19,14 @@ export type BuilderSyncResult = {
   phase: BuilderPhase
 }
 
-function phaseFor(count: number): BuilderPhase {
-  if (count < 10) return 'foundation'
-  if (count < 30) return 'structure'
-  if (count < 60) return 'detail'
+// scale < 1 means she's on/ahead of pace on her real goal+timeline — the
+// same action count then reads as a later phase than the raw baseline
+// would show. scale is always <= 1 (see getPaceScale), so this only ever
+// helps, never delays a phase past where the unscaled baseline would put it.
+function phaseFor(count: number, scale: number): BuilderPhase {
+  if (count < 10 * scale) return 'foundation'
+  if (count < 30 * scale) return 'structure'
+  if (count < 60 * scale) return 'detail'
   return 'landmark'
 }
 
@@ -34,10 +39,11 @@ export async function syncBuilderState(enrollmentId: string, userId: string): Pr
     state = { last_synced_at: null }
   }
 
-  const [events, tierMap, { data: maxRow }] = await Promise.all([
+  const [events, tierMap, { data: maxRow }, paceScale] = await Promise.all([
     ingestEvents(enrollmentId, state.last_synced_at as string | null),
     loadTierMap(),
     svc.from('builder_elements').select('sequence').eq('enrollment_id', enrollmentId).order('sequence', { ascending: false }).limit(1).maybeSingle(),
+    getPaceScale(enrollmentId),
   ])
 
   events.sort((a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime())
@@ -71,5 +77,5 @@ export async function syncBuilderState(enrollmentId: string, userId: string): Pr
   const { data: allRows } = await svc.from('builder_elements').select('id, tier, source_type, sequence, variant, placed_at').eq('enrollment_id', enrollmentId).order('sequence', { ascending: true })
   const elements = (allRows || []) as BuilderElement[]
 
-  return { elements, phase: phaseFor(elements.length) }
+  return { elements, phase: phaseFor(elements.length, paceScale) }
 }
