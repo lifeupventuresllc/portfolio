@@ -8,7 +8,7 @@ import VideoTileRow from '@/components/VideoTileRow'
 const INCLUDED = [
   { title: 'Your Custom Sculpt Plan', desc: 'Workouts built for you — home or gym, matched to your level (beginner → advanced) and your goal.', to: '/plan/workout' },
   { title: 'The Eat-What-You-Love Meal Plan', desc: 'Your meals planned every week for your goal (lose or gain), plus a grocery list built around your budget and the foods you love.', to: '/plan/meals' },
-  { title: 'Coach Asa, Built In', desc: 'Tell it about your day — voice or text — and it adjusts your plan around your real life, right there with you.', to: '/plan/coach' },
+  { title: 'Coach, Built In', desc: 'Tell it about your day — voice or text — and it adjusts your plan around your real life, right there with you.', to: '/plan/coach' },
   { title: 'The Curve Collective', desc: 'A private community of women walking it out with you.', to: '/plan/community' },
   { title: 'The Transformation Tracker', desc: 'See your progress beyond the scale — weight, measurements, and photos over time.', to: '/plan/checkin' },
   { title: 'The Menu Cookbook', desc: 'Cravable, macro-friendly recipes — real food you actually want to eat.', to: '/plan/library' },
@@ -18,10 +18,10 @@ const INCLUDED = [
 ]
 
 const FAQ = [
-  { q: 'Is this actually free?', a: "Yes — every part of the app is free, no trial, no card, no catch. Custom workouts, meal plans, Coach Asa, the community, all of it." },
+  { q: 'Is this actually free?', a: "Yes — every part of the app is free, no trial, no card, no catch. Custom workouts, meal plans, Coach, the community, all of it." },
   { q: 'What if I want to gain weight, not lose it?', a: 'This is built for both. Your plan is set to your goal — lose or gain your first 10–15 lbs. Most programs only do fat loss; this does either.' },
   { q: "I'm a total beginner. Is this for me?", a: 'Yes. Your training is matched to your level — beginner, intermediate, or advanced — and you can train at home or in the gym.' },
-  { q: 'Do I really talk to someone, or is it automated?', a: "Coach Asa is built right into the app — tell it what's going on with your day (voice or text) and it responds in real time, adjusting your plan around your actual life instead of just tracking you from a distance." },
+  { q: 'Do I really talk to someone, or is it automated?', a: "Coach is built right into the app — tell it what's going on with your day (voice or text) and it responds in real time, adjusting your plan around your actual life instead of just tracking you from a distance." },
 ]
 
 export default function ChallengePage() {
@@ -127,7 +127,7 @@ function ChallengeContent() {
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">Simple, By Design</p>
           <h2 className="text-3xl font-bold text-ink mb-3">100% free. Every feature. No catch.</h2>
           <p className="text-ink/50 text-sm mb-10 max-w-lg mx-auto">
-            Custom workouts, done-for-you meals, Coach Asa, the community, the cookbook — everything the app does is free, for everyone, always.
+            Custom workouts, done-for-you meals, Coach, the community, the cookbook — everything the app does is free, for everyone, always.
           </p>
           <div className="bg-charcoal border-2 border-gold rounded-3xl p-8 sm:p-10">
             <p className="text-5xl font-bold text-emerald-400 mb-2">Free</p>

@@ -448,7 +448,7 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
               see the needsRequiredTier note above) — only the visual weight drops. */}
           <div className="flex flex-wrap gap-2">
             <Link href="/plan/coach" className="inline-flex items-center gap-2 rounded-full pl-3.5 pr-4 py-2.5 text-xs font-semibold transition-colors" style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', color: CARD_ACCENT }}>
-              <ChatIcon /> Coach Asa
+              <ChatIcon /> Coach
             </Link>
             {/* Real decision, live: viewing today's real meal plan and logging
                 food used to be two separate things (a full budget card plus a

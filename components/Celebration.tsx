@@ -25,7 +25,7 @@ export default function Celebration({ trigger, message, dedupeKey }: { trigger: 
         <div className="luf-pop bg-charcoal border border-gold/40 rounded-2xl px-5 py-4 max-w-sm text-center shadow-2xl shadow-gold/10">
           <p className="text-2xl mb-1">🎉</p>
           <p className="text-white text-sm font-semibold leading-snug">{message}</p>
-          <p className="text-gold text-[11px] mt-1.5 font-semibold">— Coach Asa</p>
+          <p className="text-gold text-[11px] mt-1.5 font-semibold">— Coach</p>
         </div>
       </div>
     </>

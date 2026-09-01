@@ -82,7 +82,7 @@ function glance(doc: PDFDocument, f: F, plan: WeeklyMealPlan) {
 
   box(p, 36, py - 96 - 44, W - 72, 32, hx('#16120a'), C.gold, 1.2)
   Cn(p, 'SUNDAY = FREE DAY  ·  No cooking. No tracking. Enjoy — Monday you reset and go again.', W / 2, py - 96 - 25, 9, f.bold, C.white)
-  Cn(p, `(c) ${new Date().getFullYear()} Life-Up Fitness · Coach Asa`, W / 2, 34, 7, f.reg, C.gray)
+  Cn(p, `(c) ${new Date().getFullYear()} Life-Up Fitness · Coach`, W / 2, 34, 7, f.reg, C.gray)
 }
 
 // ---- PAGE 2: WHAT TO COOK ----

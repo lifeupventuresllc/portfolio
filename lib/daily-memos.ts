@@ -26,17 +26,17 @@ export interface DailyMemo {
 
 export const DAILY_MEMOS: DailyMemo[] = [
   // ---- nutrition ----
-  { id: 'n1', category: 'nutrition', title: 'Quick one from Coach Asa', body: "You don't have to eat perfect today — just eat on purpose. One good choice at your next meal is enough." },
-  { id: 'n2', category: 'nutrition', title: 'Quick one from Coach Asa', body: "Water first. Right now, before anything else — grab a glass. Small thing, real difference." },
-  { id: 'n3', category: 'nutrition', title: 'Quick one from Coach Asa', body: "Protein at your next meal, even a little. Future-you will thank you for it." },
-  { id: 'n4', category: 'nutrition', title: 'Quick one from Coach Asa', body: "If today's been a mess so far, your next meal is a clean slate — not a reason to give up on the day." },
-  { id: 'n5', category: 'nutrition', title: 'Quick one from Coach Asa', body: "You're allowed to enjoy your food. This isn't punishment — it's building the body you actually want." },
+  { id: 'n1', category: 'nutrition', title: 'Quick one from Coach', body: "You don't have to eat perfect today — just eat on purpose. One good choice at your next meal is enough." },
+  { id: 'n2', category: 'nutrition', title: 'Quick one from Coach', body: "Water first. Right now, before anything else — grab a glass. Small thing, real difference." },
+  { id: 'n3', category: 'nutrition', title: 'Quick one from Coach', body: "Protein at your next meal, even a little. Future-you will thank you for it." },
+  { id: 'n4', category: 'nutrition', title: 'Quick one from Coach', body: "If today's been a mess so far, your next meal is a clean slate — not a reason to give up on the day." },
+  { id: 'n5', category: 'nutrition', title: 'Quick one from Coach', body: "You're allowed to enjoy your food. This isn't punishment — it's building the body you actually want." },
   // ---- fitness ----
-  { id: 'f1', category: 'fitness', title: 'Quick one from Coach Asa', body: "Today's workout is already built for you — no thinking required. Just show up and follow it." },
-  { id: 'f2', category: 'fitness', title: 'Quick one from Coach Asa', body: "You don't need to feel motivated to start. Start, and the motivation shows up on the way." },
-  { id: 'f3', category: 'fitness', title: 'Quick one from Coach Asa', body: "Even a shorter version of today's session beats skipping it. Show up for 10 minutes and see how you feel." },
-  { id: 'f4', category: 'fitness', title: 'Quick one from Coach Asa', body: "Proud of you for still being here. However today's workout goes, that's what counts." },
-  { id: 'f5', category: 'fitness', title: 'Quick one from Coach Asa', body: "Your body remembers every rep you've put in so far. Today's just the next one." },
+  { id: 'f1', category: 'fitness', title: 'Quick one from Coach', body: "Today's workout is already built for you — no thinking required. Just show up and follow it." },
+  { id: 'f2', category: 'fitness', title: 'Quick one from Coach', body: "You don't need to feel motivated to start. Start, and the motivation shows up on the way." },
+  { id: 'f3', category: 'fitness', title: 'Quick one from Coach', body: "Even a shorter version of today's session beats skipping it. Show up for 10 minutes and see how you feel." },
+  { id: 'f4', category: 'fitness', title: 'Quick one from Coach', body: "Proud of you for still being here. However today's workout goes, that's what counts." },
+  { id: 'f5', category: 'fitness', title: 'Quick one from Coach', body: "Your body remembers every rep you've put in so far. Today's just the next one." },
 ]
 
 // Deterministic pseudo-random int in [0, max) from a string seed — same seed

@@ -35,8 +35,8 @@ export default async function MealsPage() {
       <div className="min-h-[100dvh] bg-obsidian px-4 py-16">
         <div className="max-w-md mx-auto text-center">
           <h1 className="text-2xl font-bold text-white mb-2">Let&apos;s get your numbers first</h1>
-          <p className="text-ivory/60 text-sm mb-6">Tell Coach Asa what you&apos;re looking for and she&apos;ll build it right there — or fill in your stats yourself.</p>
-          <Link href="/plan/coach" className="inline-block bg-gold text-obsidian px-8 py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl mb-3">Talk to Coach Asa</Link>
+          <p className="text-ivory/60 text-sm mb-6">Tell Coach what you&apos;re looking for and she&apos;ll build it right there — or fill in your stats yourself.</p>
+          <Link href="/plan/coach" className="inline-block bg-gold text-obsidian px-8 py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl mb-3">Talk to Coach</Link>
           <Link href="/plan/intake" className="block text-ivory/50 text-sm underline underline-offset-4">Or build it myself</Link>
         </div>
       </div>

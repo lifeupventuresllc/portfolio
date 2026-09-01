@@ -83,8 +83,8 @@ function cover(doc: PDFDocument, f: Fonts, prog: WorkoutProgram) {
   }
   cardBox(p, 36, 70, W - 72, 44, hex('#16120a'), C.green, 1.5)
   tC(p, isGym ? 'Free weights first. Progress the load, then reps.' : 'Go at your own pace. Set your timer. Show up.', W / 2, 94, 10, f.bold, C.white)
-  tC(p, 'Check in with Coach Asa every week.', W / 2, 79, 8.5, f.reg, C.grayL)
-  tC(p, `© ${new Date().getFullYear()} Life-Up Fitness · Coach Asa · asaluke.io`, W / 2, 34, 7, f.reg, C.gray)
+  tC(p, 'Check in with Coach every week.', W / 2, 79, 8.5, f.reg, C.grayL)
+  tC(p, `© ${new Date().getFullYear()} Life-Up Fitness · Coach · asaluke.io`, W / 2, 34, 7, f.reg, C.gray)
 }
 
 function gymDayPage(doc: PDFDocument, f: Fonts, prog: WorkoutProgram, d: GymDay, idx: number) {

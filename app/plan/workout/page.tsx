@@ -208,7 +208,7 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
           second, separate switching path. */}
       <div className="max-w-lg mx-auto text-center mt-6">
         <a href="/plan/coach" className="text-ivory/40 text-sm underline underline-offset-4">
-          Training somewhere different today? Tell Coach Asa
+          Training somewhere different today? Tell Coach
         </a>
       </div>
     </div>

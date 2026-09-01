@@ -35,7 +35,7 @@ export default function CheckinForm({ firstName }: { firstName: string }) {
         <p className="text-3xl mb-3">🙌🏽</p>
         <p className="text-white font-semibold text-lg mb-2">Got it, {firstName}.</p>
         <p className="text-ivory/60 text-sm">I&apos;ve got your check-in. I&apos;ll look it over personally and get back to you with your adjustments and what I want from you next week. Proud of you for showing up.</p>
-        <p className="text-gold text-sm font-semibold mt-3">— Coach Asa</p>
+        <p className="text-gold text-sm font-semibold mt-3">— Coach</p>
         <QuickFeedback category="checkin" context="Weekly check-in" dark />
       </div>
     )

@@ -200,7 +200,7 @@ async function coverPage(doc: PDFDocument, f: Fonts, inp: ManualMealPlanInputs) 
   tL(p, 'HOW THIS WORKS', 50, introTop - 24, 10, f.bold, C.gold)
   wrap(p, `Two cook days a week, same meals repeat. Eat your calorie number for whatever kind of day it is. Grocery list + cost estimate is in the back.`, 50, introTop - 46, W - 72 - 28, 10.5, f.reg, C.grayL, 15)
 
-  tC(p, `© ${new Date().getFullYear()} Life-Up Fitness · Coach Asa · asaluke.io`, W / 2, 60, 7, f.reg, C.gray)
+  tC(p, `© ${new Date().getFullYear()} Life-Up Fitness · Coach · asaluke.io`, W / 2, 60, 7, f.reg, C.gray)
 }
 
 async function recipeCardPage(doc: PDFDocument, f: Fonts, inp: ManualMealPlanInputs, mealName: string, batchLabel: string, batchColor: RGB) {

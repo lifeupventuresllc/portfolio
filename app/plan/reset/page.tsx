@@ -31,7 +31,7 @@ export default async function HabitReset() {
         <div className="bg-charcoal border border-gold/30 rounded-2xl p-6 text-center mt-6">
           <p className="text-white font-semibold mb-1">Keep the ones that fit your life.</p>
           <p className="text-ivory/50 text-sm mb-4">You don&apos;t need all 21 forever — you need the handful that make staying on track feel automatic. Those are yours to keep.</p>
-          <p className="text-gold text-sm font-semibold">— Coach Asa</p>
+          <p className="text-gold text-sm font-semibold">— Coach</p>
         </div>
       </div>
     </div>

@@ -204,7 +204,7 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
         <textarea
           ref={textareaRef}
           value={input} onChange={(e) => setInput(e.target.value)} disabled={sending}
-          placeholder="Ask Coach Asa…"
+          placeholder="Ask Coach…"
           rows={1}
           autoComplete="off" autoCorrect="on" enterKeyHint="send" inputMode="text"
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
@@ -230,7 +230,7 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
           // components/DeepgramVoiceInput.tsx. No auto-send: she reviews the
           // transcript like anything typed, same as CoachHero's widget.
           <DeepgramVoiceInput
-            source="operator_chat" idleLabel="Talk to Coach Asa" onInterim={setInput} onResult={setInput}
+            source="operator_chat" idleLabel="Talk to Coach" onInterim={setInput} onResult={setInput}
             className="h-9 w-9 rounded-full bg-gold text-obsidian"
             activeClassName="h-9 w-9 rounded-full bg-red-500/90 text-white luf-glow scale-105"
           />
@@ -250,7 +250,7 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
           regardless of scroll position or how long the chat gets. */}
       <div className="sticky top-0 z-20 bg-obsidian -mx-4 px-4 py-3 -mt-10 pt-10 flex items-center justify-between mb-4">
         <Link href="/plan" className="inline-flex items-center gap-1 bg-charcoal border border-gold/40 text-gold text-xs font-semibold px-3 py-1.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all">← Home</Link>
-        <p className="text-gold text-[10px] uppercase tracking-[0.2em] font-semibold">Coach Asa · your operator</p>
+        <p className="text-gold text-[10px] uppercase tracking-[0.2em] font-semibold">Coach · your operator</p>
       </div>
 
       {historyLoaded && isFresh && messages.length === 0 ? (
@@ -264,11 +264,11 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
           </h1>
           <div className="w-full max-w-md">{composerEl}</div>
           <button
-            onClick={() => send('What can Coach Asa do?')}
+            onClick={() => send('What can Coach do?')}
             disabled={sending}
             className="mt-4 bg-charcoal border border-smoke text-ivory/60 text-xs px-4 py-2 rounded-full hover:border-gold/60 hover:text-gold transition-colors disabled:opacity-40"
           >
-            What can Coach Asa do?
+            What can Coach do?
           </button>
         </div>
       ) : (
@@ -277,7 +277,7 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-sm leading-snug ${m.role === 'user' ? 'bg-gold text-obsidian font-medium rounded-br-sm' : 'bg-charcoal border border-smoke text-ivory/90 rounded-bl-sm'}`}>
-              {m.role === 'operator' && <p className="text-gold/70 text-[9px] uppercase tracking-wider font-semibold mb-0.5">Coach Asa</p>}
+              {m.role === 'operator' && <p className="text-gold/70 text-[9px] uppercase tracking-wider font-semibold mb-0.5">Coach</p>}
               {m.content}
             </div>
           </div>

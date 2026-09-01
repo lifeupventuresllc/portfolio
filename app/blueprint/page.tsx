@@ -250,7 +250,7 @@ export default function BlueprintPage() {
             <div className="border-t border-smoke pt-4 space-y-3">
               <input type="text" autoCorrect="off" autoCapitalize="words" spellCheck={false} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={input} />
               <input type="email" autoComplete="email" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="Your email (your blueprint lands here too)" className={input} />
-              <input type="tel" inputMode="tel" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="Phone (so Coach Asa can follow up)" className={input} />
+              <input type="tel" inputMode="tel" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="Phone (so Coach can follow up)" className={input} />
             </div>
 
             {error && <p className="text-red-400 text-sm">{error}</p>}

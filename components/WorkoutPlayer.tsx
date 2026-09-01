@@ -182,7 +182,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
         <p className="text-ivory/60 text-sm mb-8">You showed up and you finished. That&apos;s the whole game. I logged it for your streak.</p>
         <EffortTap />
         <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} className="luf-glow w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl mt-6">← Home</button>
-        <p className="text-gold text-sm font-semibold mt-4">— Coach Asa</p>
+        <p className="text-gold text-sm font-semibold mt-4">— Coach</p>
         <QuickFeedback category="workout" context={`${labels[dayIdx]} · day ${dayIdx + 1}`} dark reviewGate emphasize />
       </div>
     )

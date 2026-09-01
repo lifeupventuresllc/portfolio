@@ -24,7 +24,7 @@ export default function AnonymousSessionBanner() {
   return (
     <div className="flex items-center justify-between gap-3 bg-gold/10 border border-gold/30 rounded-xl px-4 py-2.5 mb-4 text-xs">
       <p className="text-gold">
-        💾 Save your progress so Coach Asa remembers you tomorrow — {' '}
+        💾 Save your progress so Coach remembers you tomorrow — {' '}
         <Link href="/plan/save" className="font-semibold hover:underline">save now</Link>
       </p>
       <button onClick={dismiss} className="text-gold/50 hover:text-gold/80 shrink-0">✕</button>

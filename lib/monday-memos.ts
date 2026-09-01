@@ -30,10 +30,10 @@ export interface MondayMemo {
 }
 
 export const MONDAY_MEMOS: MondayMemo[] = [
-  { slot: 'crushing_it', title: 'You’re Crushing It', subtitle: 'A quick one from Coach Asa — keep this going.' },
-  { slot: 'on_track', title: 'Staying Steady', subtitle: 'A quick check-in from Coach Asa on your week.' },
-  { slot: 'off_track', title: 'Let’s Reset Together', subtitle: 'A quick one from Coach Asa — no judgment, just next steps.' },
-  { slot: 'default', title: 'Your Week Ahead', subtitle: 'A quick note from Coach Asa to kick off your week.' },
+  { slot: 'crushing_it', title: 'You’re Crushing It', subtitle: 'A quick one from Coach — keep this going.' },
+  { slot: 'on_track', title: 'Staying Steady', subtitle: 'A quick check-in from Coach on your week.' },
+  { slot: 'off_track', title: 'Let’s Reset Together', subtitle: 'A quick one from Coach — no judgment, just next steps.' },
+  { slot: 'default', title: 'Your Week Ahead', subtitle: 'A quick note from Coach to kick off your week.' },
 ]
 
 export function mondayMemoFor(slot: MemoSlot): MondayMemo | undefined {

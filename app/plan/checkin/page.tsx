@@ -143,7 +143,7 @@ export default async function CheckinPage() {
                   {c.client_notes && <p className="text-ivory/60 text-sm mb-3 italic">&ldquo;{c.client_notes}&rdquo;</p>}
                   {c.coach_response || c.coach_media_url ? (
                     <div className="bg-obsidian border-l-2 border-gold rounded-r-xl p-4">
-                      <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1">From Coach Asa</p>
+                      <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1">From Coach</p>
                       {c.coach_response && <p className="text-ivory/80 text-sm">{c.coach_response}</p>}
                       <CoachMedia url={c.coach_media_url} />
                     </div>

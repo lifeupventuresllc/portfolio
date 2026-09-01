@@ -100,7 +100,7 @@ export async function sendWelcomeEmail(email: string) {
 // Every account gets full access now — no paid tiers left to describe.
 export async function sendChallengeWelcome(email: string, name: string) {
   const firstName = (name || '').split(' ')[0] || 'sis'
-  const tierBlurb = "You're in — full, free access to custom training, done-for-you weekly nutrition, Coach Asa, and everything else the app does. No trial, no card, nothing to cancel later."
+  const tierBlurb = "You're in — full, free access to custom training, done-for-you weekly nutrition, Coach, and everything else the app does. No trial, no card, nothing to cancel later."
 
   const { error } = await resend.emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
@@ -108,7 +108,7 @@ export async function sendChallengeWelcome(email: string, name: string) {
     replyTo: REPLY_TO,
     subject: "You're in! Welcome to Snatched Without Starving",
     headers: UNSUB_HEADERS,
-    text: `Welcome ${firstName}!\n\n${tierBlurb}\n\nStep 1 — create your account with THIS email (${email}) so I can build your custom plan:\n${APP_URL}/signup?redirect=/plan/intake\n\nOnce you're in, you'll fill out a quick intake (your goal, stats, budget, and the foods you love) and I'll build your training + nutrition around it.\n\nLet's get you snatched — without starving.\n\n— Coach Asa\nasaluke.io`,
+    text: `Welcome ${firstName}!\n\n${tierBlurb}\n\nStep 1 — create your account with THIS email (${email}) so I can build your custom plan:\n${APP_URL}/signup?redirect=/plan/intake\n\nOnce you're in, you'll fill out a quick intake (your goal, stats, budget, and the foods you love) and I'll build your training + nutrition around it.\n\nLet's get you snatched — without starving.\n\n— Coach\nasaluke.io`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #C9A84C;">You're in, ${firstName}! 🙌🏽</h1>
@@ -119,7 +119,7 @@ export async function sendChallengeWelcome(email: string, name: string) {
         </p>
         <p style="color: #374151; line-height: 1.7;">Once you're in, you'll fill out a quick intake — your goal, stats, budget, and the foods you love — and I'll build your training and nutrition around it.</p>
         <p style="color: #374151; line-height: 1.7;">Let's get you snatched — without starving.</p>
-        <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">— Coach Asa · asaluke.io</p>
+        <p style="color: #9ca3af; font-size: 12px; margin-top: 40px;">— Coach · asaluke.io</p>
         ${FOOTER}
       </div>
     `,
@@ -161,7 +161,7 @@ export async function sendBlueprintEmail(
     subject: `${firstName}, here's your Calorie Blueprint`,
     headers: UNSUB_HEADERS,
     attachments: attachments.length ? attachments : undefined,
-    text: `Hey ${firstName}!\n\nHere's your personalized Nutrition Blueprint to ${goalWord} weight:\n\nDaily Calories: ${targets.calories}\nProtein: ${targets.protein_g}g\nCarbs: ${targets.carbs_g}g\nFats: ${targets.fats_g}g\n\nHitting these every day is how you ${goalWord} the right way — without starving.${bundleLine}\n\nWant me to build the actual meals, workouts, and check in on you every week so you actually hit it? That's my Snatched Without Starving challenge:\n${APP_URL}/challenge\n\n— Coach Asa\nasaluke.io`,
+    text: `Hey ${firstName}!\n\nHere's your personalized Nutrition Blueprint to ${goalWord} weight:\n\nDaily Calories: ${targets.calories}\nProtein: ${targets.protein_g}g\nCarbs: ${targets.carbs_g}g\nFats: ${targets.fats_g}g\n\nHitting these every day is how you ${goalWord} the right way — without starving.${bundleLine}\n\nWant me to build the actual meals, workouts, and check in on you every week so you actually hit it? That's my Snatched Without Starving challenge:\n${APP_URL}/challenge\n\n— Coach\nasaluke.io`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #C9A84C;">Your Nutrition Blueprint 📊</h1>
@@ -176,7 +176,7 @@ export async function sendBlueprintEmail(
         <p style="margin: 24px 0;">
           <a href="${APP_URL}/challenge" style="display:inline-block; background:#C9A84C; color:#0A0A0F; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold;">Get Snatched Without Starving →</a>
         </p>
-        <p style="color:#9ca3af; font-size:12px; margin-top:40px;">— Coach Asa · asaluke.io</p>
+        <p style="color:#9ca3af; font-size:12px; margin-top:40px;">— Coach · asaluke.io</p>
         ${FOOTER}
       </div>
     `,
@@ -624,7 +624,7 @@ export async function sendFindYourFixEmail(
     subject: `${firstName}, here's what's actually stalling you`,
     headers: UNSUB_HEADERS,
     attachments: attachments.length ? attachments : undefined,
-    text: `Hey ${firstName}!\n\n${diagnosticSentence}\n\n${bodyBlurb}\n\n${cta.label} ${cta.href}\n\n— Coach Asa\nasaluke.io`,
+    text: `Hey ${firstName}!\n\n${diagnosticSentence}\n\n${bodyBlurb}\n\n${cta.label} ${cta.href}\n\n— Coach\nasaluke.io`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #C9A84C;">You now know what's stalling you 🎯</h1>
@@ -633,7 +633,7 @@ export async function sendFindYourFixEmail(
         <p style="margin: 24px 0;">
           <a href="${cta.href}" style="display:inline-block; background:#C9A84C; color:#0A0A0F; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold;">${cta.label}</a>
         </p>
-        <p style="color:#9ca3af; font-size:12px; margin-top:40px;">— Coach Asa · asaluke.io</p>
+        <p style="color:#9ca3af; font-size:12px; margin-top:40px;">— Coach · asaluke.io</p>
         ${FOOTER}
       </div>
     `,

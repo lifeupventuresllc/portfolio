@@ -350,7 +350,7 @@ async function coverPage(doc: PDFDocument, f: Fonts, prog: ManualWorkoutProgram)
       y -= extraGap
     }
   }
-  tC(lastPage, `© ${new Date().getFullYear()} Life-Up Fitness · Coach Asa · asaluke.io`, W / 2, 30, 8, f.reg, C.gray)
+  tC(lastPage, `© ${new Date().getFullYear()} Life-Up Fitness · Coach · asaluke.io`, W / 2, 30, 8, f.reg, C.gray)
 }
 
 // ---- Exercise card (image left, details right) ----

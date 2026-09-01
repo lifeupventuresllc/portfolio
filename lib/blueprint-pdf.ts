@@ -299,10 +299,10 @@ function dailyTargetsPage(doc: PDFDocument, f: Fonts, bp: Blueprint) {
   const noteY = top - 6
   noteBox(p, 36, noteY - 40, W - 72, 40, C.gold, noWorkout ? [
     'You’re not working out right now, so it’s the same simple number every day.',
-    '3 meals + a snack, built around a palm of protein. — Coach Asa',
+    '3 meals + a snack, built around a palm of protein. — Coach',
   ] : [
     `You burn ${fmt(bp.exerciseBurn)} extra calories on workout days — that’s why you eat a little more.`,
-    '3 meals + a snack, built around a palm of protein. — Coach Asa',
+    '3 meals + a snack, built around a palm of protein. — Coach',
   ], f.reg)
 }
 
@@ -578,7 +578,7 @@ function longTermPage(doc: PDFDocument, f: Fonts, bp: Blueprint, pageNum: number
     : `Trust the numbers and check in weekly, ${firstName(bp)}.`
   noteBox(p, 36, noteTop - 40, W - 72, 40, C.orange, [
     goalNote,
-    'Message Coach Asa if your weight plateaus for 2+ weeks.',
+    'Message Coach if your weight plateaus for 2+ weeks.',
   ], f.reg)
 
   // ---- Kept per Asa's explicit call: the app's lead-magnet CTA, not part of the generic spec ----

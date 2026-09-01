@@ -309,7 +309,7 @@ function ConversationalIntakeInner() {
           </div>
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">One moment</p>
           <h1 className={`text-2xl sm:text-3xl font-bold mb-2 ${light ? 'text-ink' : 'text-white'}`}>
-            {tier === 'optional' ? 'Fine-tuning your plan…' : 'Coach Asa is building your plan…'}
+            {tier === 'optional' ? 'Fine-tuning your plan…' : 'Coach is building your plan…'}
           </h1>
           <p className={light ? 'text-ink/50 text-sm' : 'text-ivory/60 text-sm'}>Crunching your numbers, matching your workout, and setting up your meals for {firstName}.</p>
         </div>
@@ -358,7 +358,7 @@ function ConversationalIntakeInner() {
               💾 Save your progress →
             </button>
           )}
-          <p className="text-gold text-sm font-semibold mt-5">— Coach Asa</p>
+          <p className="text-gold text-sm font-semibold mt-5">— Coach</p>
         </div>
       </div>
     )

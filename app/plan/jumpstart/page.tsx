@@ -34,7 +34,7 @@ export default async function JumpStart() {
         <div className="bg-charcoal border border-gold/30 rounded-2xl p-6 text-center mt-6">
           <p className="text-white font-semibold mb-1">That&apos;s your week, {firstName}.</p>
           <p className="text-ivory/50 text-sm mb-4">Nail these seven and you&apos;ve already built the base everything else stacks on. Proud of you.</p>
-          <p className="text-gold text-sm font-semibold">— Coach Asa</p>
+          <p className="text-gold text-sm font-semibold">— Coach</p>
         </div>
       </div>
     </div>

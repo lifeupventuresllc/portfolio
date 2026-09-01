@@ -30,7 +30,7 @@ function MicIcon() {
 // recoverable if she sees it before it goes out, which matters more now
 // that low-confidence results are actually possible to detect and flag.
 export default function DeepgramVoiceInput({
-  onResult, onInterim, idleLabel = 'Talk to Coach Asa', icon, source, className, activeClassName,
+  onResult, onInterim, idleLabel = 'Talk to Coach', icon, source, className, activeClassName,
 }: {
   onResult: (text: string) => void
   onInterim?: (text: string) => void
