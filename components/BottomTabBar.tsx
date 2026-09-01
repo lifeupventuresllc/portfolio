@@ -25,6 +25,16 @@ function HeartIcon({ active, size = 20 }: { active: boolean; size?: number }) {
   )
 }
 
+function HomeIcon({ active, size = 20 }: { active: boolean; size?: number }) {
+  const color = active ? '#E5A93C' : 'rgba(237,231,218,0.4)'
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11.5 12 4l9 7.5" />
+      <path d="M5.5 10v9a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-9" />
+    </svg>
+  )
+}
+
 export default function BottomTabBar() {
   const pathname = usePathname() || ''
   const { inputRef, uploading, onFile, trigger } = useMealPhotoUpload()
@@ -34,7 +44,8 @@ export default function BottomTabBar() {
   // starting the moment she lands on her real dashboard, not before.
   if (pathname.startsWith('/plan/intake')) return null
 
-  const forYouActive = pathname === '/plan' || pathname.startsWith('/plan/today')
+  const homeActive = pathname === '/plan'
+  const forYouActive = pathname.startsWith('/plan/today')
   const communityActive = pathname.startsWith('/plan/community')
 
   return (
@@ -53,11 +64,18 @@ export default function BottomTabBar() {
       {/* Thinner bar — Asa's ask, 2026-08-31: py-3→py-1.5, smaller icons/
           labels/+ button, tighter gap. Frees more feed room, closer to
           TikTok's own slim nav proportions. */}
-      <div className="max-w-2xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-6 py-1.5">
-        <Link href="/plan/today" className="flex flex-col items-center gap-[3px]">
-          <Image src="/images/brand/foryou-icon.png" alt="" width={19} height={19} className="object-contain" style={{ filter: forYouActive ? 'sepia(1) saturate(6) brightness(0.95)' : 'brightness(0) invert(1) opacity(0.4)' }} />
-          <span className={`text-[10.5px] font-bold ${forYouActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>For You</span>
+      <div className="max-w-2xl mx-auto flex justify-evenly items-center px-5 py-1.5">
+        <Link href="/plan" className="flex flex-col items-center gap-[3px]">
+          <HomeIcon active={homeActive} size={19} />
+          <span className={`text-[10.5px] font-bold ${homeActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Home</span>
         </Link>
+
+        {SHOW_COMMUNITY_TAB && (
+          <Link href="/plan/community" className="flex flex-col items-center gap-[3px]">
+            <HeartIcon active={communityActive} size={17} />
+            <span className={`text-[10.5px] font-bold ${communityActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Community</span>
+          </Link>
+        )}
 
         <button
           onClick={trigger}
@@ -69,17 +87,13 @@ export default function BottomTabBar() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0A0A0F" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
         </button>
 
-        {SHOW_COMMUNITY_TAB ? (
-          <Link href="/plan/community" className="flex flex-col items-center gap-[3px]">
-            <HeartIcon active={communityActive} size={17} />
-            <span className={`text-[10.5px] font-bold ${communityActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Community</span>
-          </Link>
-        ) : (
-          // Empty placeholder, not a removed grid column — keeps the +
-          // button centered exactly as before instead of shifting layout
-          // for what's meant to be a temporary, flippable hide.
-          <div aria-hidden />
-        )}
+        {/* Far right, TikTok's Profile-tab spot — this page is now a
+            personal-stats page (progress + today's plan), not a content
+            feed, matching Profile's meaning better than a middle slot. */}
+        <Link href="/plan/today" className="flex flex-col items-center gap-[3px]">
+          <Image src="/images/brand/foryou-icon.png" alt="" width={19} height={19} className="object-contain" style={{ filter: forYouActive ? 'sepia(1) saturate(6) brightness(0.95)' : 'brightness(0) invert(1) opacity(0.4)' }} />
+          <span className={`text-[10.5px] font-bold ${forYouActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>For You</span>
+        </Link>
       </div>
     </nav>
   )

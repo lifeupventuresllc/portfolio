@@ -8,8 +8,6 @@ import VerifyEmailBanner from '@/components/VerifyEmailBanner'
 import AnonymousSessionBanner from '@/components/AnonymousSessionBanner'
 import TimezoneSync from '@/components/TimezoneSync'
 import NextActionCard from '@/components/NextActionCard'
-import ProgressViewToggle from '@/components/ProgressViewToggle'
-import BuilderView from '@/components/BuilderView'
 import DashboardVideoFeed from '@/components/DashboardVideoFeed'
 import FeedEngagementRail from '@/components/FeedEngagementRail'
 import { getFeedVideos } from '@/lib/feed-videos'
@@ -303,7 +301,7 @@ export default async function PlanDashboard() {
                 // — stacking both was the actual bug (Asa's catch, 2026-08-31:
                 // a real gap of empty video between the chat box and the nav).
                 <div className="px-4 pb-3.5" style={{ paddingRight: 58 }}>
-                  <ProgressViewToggle claimField={<NextActionCard variant="dock" />} garden={<BuilderView />} />
+                  <NextActionCard variant="dock" />
                 </div>
               }
             />

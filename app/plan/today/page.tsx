@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import ProgressViewToggle from '@/components/ProgressViewToggle'
+import BuilderView from '@/components/BuilderView'
 import LifePatternCard from '@/components/LifePatternCard'
 import PlanEvolutionCard from '@/components/PlanEvolutionCard'
 import ClientMenu from '@/components/ClientMenu'
@@ -283,6 +285,11 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
           <Link href="/plan" className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all" style={{ background: CARD_BG, border: CARD_BORDER, color: ACCENT }}>← Home</Link>
           <ClientMenu firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
         </div>
+
+        <ProgressViewToggle
+          garden={<BuilderView />}
+          plan={
+            <div>
         <div className="flex items-center justify-between gap-3 mb-1">
           <p className="text-xs font-semibold tracking-[0.25em] uppercase" style={{ color: ACCENT }}>{weekdayLabel}</p>
           {/* The always-visible half of the streak loop — banked progress she'd
@@ -472,6 +479,9 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
             )}
           </div>
         </div>
+            </div>
+          }
+        />
       </div>
     </div>
   )

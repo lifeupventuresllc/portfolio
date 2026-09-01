@@ -2,21 +2,21 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 
-const STORAGE_KEY = 'luf_progress_view_tab'
-type Tab = 'claimField' | 'garden'
+const STORAGE_KEY = 'luf_foryou_view_tab'
+type Tab = 'plan' | 'garden'
 
 // Same structural precedent as CommunityTabs.tsx — segmented pill, both
 // halves pre-rendered and handed in as children, display:none toggles which
-// one shows. Claim Field stays the default/active tab (existing primary
+// one shows. Plan stays the default/active tab (today's real page, unchanged
 // behavior); the last pick is remembered per-device so returning to Garden
 // doesn't require a re-tap every visit.
-export default function ProgressViewToggle({ claimField, garden }: { claimField: ReactNode; garden: ReactNode }) {
-  const [tab, setTab] = useState<Tab>('claimField')
+export default function ProgressViewToggle({ plan, garden }: { plan: ReactNode; garden: ReactNode }) {
+  const [tab, setTab] = useState<Tab>('plan')
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved === 'claimField' || saved === 'garden') setTab(saved)
+      if (saved === 'plan' || saved === 'garden') setTab(saved)
     } catch { /* private mode — default stands */ }
   }, [])
 
@@ -27,8 +27,8 @@ export default function ProgressViewToggle({ claimField, garden }: { claimField:
 
   return (
     <div>
-      <div className="flex gap-1 bg-charcoal border border-smoke rounded-full p-1 mb-2">
-        {([['claimField', 'Claim Field'], ['garden', 'Garden']] as const).map(([t, label]) => (
+      <div className="flex gap-1 bg-charcoal border border-smoke rounded-full p-1 mb-4">
+        {([['garden', 'Garden'], ['plan', 'Plan']] as const).map(([t, label]) => (
           <button
             key={t}
             onClick={() => pick(t)}
@@ -38,8 +38,8 @@ export default function ProgressViewToggle({ claimField, garden }: { claimField:
           </button>
         ))}
       </div>
-      <div style={{ display: tab === 'claimField' ? 'block' : 'none' }}>{claimField}</div>
       <div style={{ display: tab === 'garden' ? 'block' : 'none' }}>{garden}</div>
+      <div style={{ display: tab === 'plan' ? 'block' : 'none' }}>{plan}</div>
     </div>
   )
 }
