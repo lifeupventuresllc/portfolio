@@ -49,59 +49,55 @@ export default function BottomTabBar() {
   const communityActive = pathname.startsWith('/plan/community')
 
   return (
-    // Option B, "warm gold wash" — Asa's catch, 2026-08-29: flat
-    // bg-[#011611] "looks too plain." A soft radial gold glow centered
-    // behind the + button (echoes its own gradient), fading into the same
-    // forest green, plus a thin gold hairline seam instead of the old
-    // barely-there white/5 border.
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)]"
-      style={{
-        background: 'radial-gradient(120px 60px at 50% -10px, rgba(229,169,60,0.28), transparent 70%), linear-gradient(180deg, #0c2016 0%, #021109 100%)',
-        borderTop: '1px solid rgba(229,169,60,0.5)',
-      }}>
+    // Asa's approved mockup, 2026-09-01: genuinely 3 evenly-spaced tabs
+    // (Home / Community / For You) with the + meal-photo button raised into
+    // a floating circular FAB above the bar instead of a 4th inline slot —
+    // 4 items in a row was reading as visually uneven no matter how the
+    // math centered the + button; removing it as a competing tab fixed it
+    // at the root instead of re-centering around the problem.
+    <nav className="fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)]">
       <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={onFile} className="hidden" />
-      {/* Thinner bar — Asa's ask, 2026-08-31: py-3→py-1.5, smaller icons/
-          labels/+ button, tighter gap. Frees more feed room, closer to
-          TikTok's own slim nav proportions. */}
-      <div className="max-w-2xl mx-auto flex items-center px-5 py-1.5">
-        {/* Two equal-width (flex-1) side groups guarantee the + button sits
-            at the true mathematical center, regardless of one side (Home)
-            having fewer tabs than the other (Community, For You) — a plain
-            space-evenly row centers by ITEM COUNT, not by pixel midpoint,
-            so it drifted off-center the moment the two sides went uneven. */}
-        <div className="flex-1 flex justify-center">
-          <Link href="/plan" className="flex flex-col items-center gap-[3px]">
-            <HomeIcon active={homeActive} size={19} />
-            <span className={`text-[10.5px] font-bold ${homeActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Home</span>
+
+      <button
+        onClick={trigger}
+        disabled={uploading}
+        aria-label="Snap a photo of your meal"
+        className="absolute left-1/2 rounded-full flex items-center justify-center disabled:opacity-50 active:scale-95 transition-transform z-10"
+        style={{
+          top: -48, transform: 'translateX(-50%)', width: 52, height: 52,
+          background: 'linear-gradient(135deg, #E5A93C, #EA5C87)',
+          border: '3px solid #021F16',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
+        }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0A0A0F" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+      </button>
+
+      <div
+        className="max-w-2xl mx-auto flex items-center justify-evenly px-5 py-1.5"
+        style={{
+          background: 'radial-gradient(120px 60px at 50% -10px, rgba(229,169,60,0.28), transparent 70%), linear-gradient(180deg, #0c2016 0%, #021109 100%)',
+          borderTop: '1px solid rgba(229,169,60,0.5)',
+        }}
+      >
+        <Link href="/plan" className="flex flex-col items-center gap-[3px]">
+          <HomeIcon active={homeActive} size={19} />
+          <span className={`text-[10.5px] font-bold ${homeActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Home</span>
+        </Link>
+
+        {SHOW_COMMUNITY_TAB && (
+          <Link href="/plan/community" className="flex flex-col items-center gap-[3px]">
+            <HeartIcon active={communityActive} size={17} />
+            <span className={`text-[10.5px] font-bold ${communityActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Community</span>
           </Link>
-        </div>
+        )}
 
-        <button
-          onClick={trigger}
-          disabled={uploading}
-          aria-label="Snap a photo of your meal"
-          className="rounded-lg flex items-center justify-center disabled:opacity-50 active:scale-95 transition-transform shrink-0"
-          style={{ width: 42, height: 26, background: 'linear-gradient(135deg, #E5A93C, #EA5C87)' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0A0A0F" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-        </button>
-
-        <div className="flex-1 flex justify-evenly">
-          {SHOW_COMMUNITY_TAB && (
-            <Link href="/plan/community" className="flex flex-col items-center gap-[3px]">
-              <HeartIcon active={communityActive} size={17} />
-              <span className={`text-[10.5px] font-bold ${communityActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Community</span>
-            </Link>
-          )}
-
-          {/* Personal-stats spot — this page is now progress + today's plan,
-              not a content feed, so it sits like a profile tab, at the end. */}
-          <Link href="/plan/today" className="flex flex-col items-center gap-[3px]">
-            <Image src="/images/brand/foryou-icon.png" alt="" width={19} height={19} className="object-contain" style={{ filter: forYouActive ? 'sepia(1) saturate(6) brightness(0.95)' : 'brightness(0) invert(1) opacity(0.4)' }} />
-            <span className={`text-[10.5px] font-bold ${forYouActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>For You</span>
-          </Link>
-        </div>
+        {/* Personal-stats spot — this page is now progress + today's plan,
+            not a content feed, so it sits like a profile tab, at the end. */}
+        <Link href="/plan/today" className="flex flex-col items-center gap-[3px]">
+          <Image src="/images/brand/foryou-icon.png" alt="" width={19} height={19} className="object-contain" style={{ filter: forYouActive ? 'sepia(1) saturate(6) brightness(0.95)' : 'brightness(0) invert(1) opacity(0.4)' }} />
+          <span className={`text-[10.5px] font-bold ${forYouActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>For You</span>
+        </Link>
       </div>
     </nav>
   )

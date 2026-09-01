@@ -642,12 +642,12 @@ export default function BuilderView() {
   }, [pendingIds])
 
   if (loading) {
-    return <div className="rounded-3xl animate-pulse" style={{ background: CARD_BG, border: '1.5px solid rgba(229,169,60,0.3)', minHeight: 360 }} />
+    return <div className="animate-pulse" style={{ background: CARD_BG, minHeight: 360 }} />
   }
 
   if (!elements.length && !totalCount) {
     return (
-      <div className="rounded-3xl p-6 text-center" style={{ background: CARD_BG, border: '1.5px solid rgba(229,169,60,0.3)' }}>
+      <div className="p-6 text-center" style={{ background: CARD_BG }}>
         <p className="text-ivory/50 text-sm">Your garden will start growing here once you log your first action.</p>
       </div>
     )
@@ -657,25 +657,25 @@ export default function BuilderView() {
 
   return (
     <div
-      className="w-full rounded-3xl"
+      className="w-full"
       style={{
-        padding: '22px 18px 20px', boxSizing: 'border-box', overflow: 'hidden', position: 'relative',
+        boxSizing: 'border-box', overflow: 'hidden', position: 'relative',
         display: 'flex', flexDirection: 'column',
         minHeight: 'calc(100dvh - 260px)',
         background: CARD_BG,
-        border: '1.5px solid rgba(229,169,60,0.3)',
-        boxShadow: '0 0 24px -8px rgba(229,169,60,0.3), inset 0 1px 0 rgba(255,255,255,0.07), inset 0 0 44px rgba(0,0,0,0.28)',
       }}
     >
-      <div style={{ color: '#E5A93C', fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 14, flex: '0 0 auto' }}>
-        {cfg.label}
-      </div>
       <div style={{ flex: '1 1 auto', minHeight: 0 }}>
         <GardenScene phase={phase} elements={elements} pendingIds={pendingIds} />
       </div>
-      <p style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, color: '#ffffff', fontSize: 15, lineHeight: 1.4, margin: '16px 0 0', flex: '0 0 auto', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>
-        {cfg.caption}
-      </p>
+      <div style={{ position: 'absolute', top: 18, left: 20, right: 20 }}>
+        <div style={{ color: '#E5A93C', fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', textShadow: '0 1px 6px rgba(0,0,0,0.6)', marginBottom: 6 }}>
+          {cfg.label}
+        </div>
+        <p style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, color: '#ffffff', fontSize: 16, lineHeight: 1.35, margin: 0, textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>
+          {cfg.caption}
+        </p>
+      </div>
     </div>
   )
 }

@@ -287,7 +287,7 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
         </div>
 
         <ProgressViewToggle
-          garden={<BuilderView />}
+          garden={<div style={{ margin: '0 -16px' }}><BuilderView /></div>}
           plan={
             <div>
         <div className="flex items-center justify-between gap-3 mb-1">

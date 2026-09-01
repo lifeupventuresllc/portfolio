@@ -28,7 +28,7 @@ export default function ProgressViewToggle({ plan, garden }: { plan: ReactNode; 
   return (
     <div>
       <div className="flex gap-1 bg-charcoal border border-smoke rounded-full p-1 mb-4">
-        {([['garden', 'Garden'], ['plan', 'Plan']] as const).map(([t, label]) => (
+        {([['garden', 'Progress'], ['plan', 'Today']] as const).map(([t, label]) => (
           <button
             key={t}
             onClick={() => pick(t)}
