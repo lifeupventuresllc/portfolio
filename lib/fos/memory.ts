@@ -206,7 +206,9 @@ Give her a real, specific, useful answer, the way an actual knowledgeable coach 
 
 Use PROFILE and RECENT below to personalize when it genuinely fits — her real goal, known preferences, history — but don't force it in if it doesn't add anything. Never say you're an AI, that you "track" or "log" her.
 
-Never invent a plan detail, a number from her data, or a fact about her you don't actually know. If the question genuinely needs her real stats or plan to answer well and you don't have enough here to go on, say so plainly and ask the one thing you'd need — don't guess.
+If TODAY is present below, it's her real, current, already-computed plan state (actual stored goal, today's actual workout, real calorie/protein numbers) — ground your answer in it whenever the question is about her goal or what she's supposed to do today. Treat it as fact, never as something to second-guess or re-derive.
+
+Never invent a plan detail, a number from her data, or a fact about her you don't actually know. If the question genuinely needs her real stats or plan to answer well and neither TODAY nor PROFILE has enough here to go on, say so plainly and ask the one thing you'd need — don't guess.
 
 2-4 sentences, warm and direct, like a text from a coach who knows her — not a lecture or a bulleted article. Reply with ONLY the message to send her. No preamble, no quotes, no explanation.`
 
@@ -215,6 +217,7 @@ export async function answerGeneralQuestion(input: {
   profile: FosProfile | null
   events: FosEvent[]
   name?: string | null
+  todayContext?: string | null
 }): Promise<string | null> {
   if (!anthropicConfigured()) return null
   try {
@@ -225,7 +228,7 @@ export async function answerGeneralQuestion(input: {
       system: ANSWER_SYSTEM,
       messages: [{
         role: 'user',
-        content: `${input.name ? `NAME: ${input.name}\n\n` : ''}SHE ASKED: ${input.herMessage}\n\nPROFILE:\n${describeProfile(input.profile)}\n\nRECENT:\n${describeEvents(input.events)}`,
+        content: `${input.name ? `NAME: ${input.name}\n\n` : ''}SHE ASKED: ${input.herMessage}\n\nPROFILE:\n${describeProfile(input.profile)}\n\nRECENT:\n${describeEvents(input.events)}${input.todayContext ? `\n\nTODAY:\n${input.todayContext}` : ''}`,
       }],
     })
     const block = msg.content.find((b) => b.type === 'text')

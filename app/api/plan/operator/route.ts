@@ -719,9 +719,25 @@ export async function POST(request: NextRequest) {
     // which used to fire on every genuine question with zero attempt to actually
     // answer it — found via live testing, a real hole in the primary feature.
     const profile = await getProfile(eid)
+    // Real gap found live: a genuine question ("what's my goal again?", "what's
+    // on my plan today?") used to be answered from PROFILE/RECENT alone — a
+    // conversationally-extracted memory table that's empty until she's happened
+    // to restate something in chat, never her actual stored intake goal or
+    // today's real, already-computed workout/nutrition state. That meant the
+    // one place this app is supposed to be "ChatGPT for fitness, but it
+    // actually knows you" had zero access to the very data that makes it know
+    // her. getUserState is the same real state every other surface (the
+    // dashboard circle, the approval-ask above) already reads — reused here,
+    // not re-derived, so this can never drift from what she'd see on-screen.
+    const state = await getUserState(eid, today)
+    const todayContextParts: string[] = [`Goal: ${state.goal}.`]
+    if (state.workoutCandidate?.title) todayContextParts.push(`Today's workout: ${state.workoutCandidate.title}${state.workoutDoneToday ? ' (already done today)' : ''}.`)
+    if (state.calorieBudget != null) todayContextParts.push(`Calorie target today: ${state.calorieBudget} (${state.caloriesLoggedToday} logged so far).`)
+    if (state.injuries.length) todayContextParts.push(`Injuries on file: ${state.injuries.join(', ')}.`)
+    const todayContext = todayContextParts.join(' ')
     const events = await recentEvents(eid, addDaysISO(today, -60))
     const [answered, extracted] = await Promise.all([
-      answerGeneralQuestion({ herMessage: message, profile, events, name: (enrollment.name as string) || null }),
+      answerGeneralQuestion({ herMessage: message, profile, events, name: (enrollment.name as string) || null, todayContext }),
       extractProfileFacts(message, profile),
     ])
     if (answered) reply = answered
