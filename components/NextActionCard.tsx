@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { hapticTap } from '@/lib/haptics'
 import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
 import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
+import { useLiveRefresh, broadcastRefresh } from '@/lib/useLiveRefresh'
 
 // Prompt 1's "Next Action" — the single-instruction circle, now the
 // dashboard's primary surface (Asa's call, 2026-08-25: "this is the new
@@ -21,6 +22,41 @@ type NextAction = {
   // seeing it live and not noticing anything had happened: these now drive
   // a real, visible celebration instead (see maybeCelebrate below).
   isReward?: boolean; rewardLabel?: string
+}
+
+// Real gap found live, 2026-09-01 (Asa's report): this box used to POST
+// only to /api/plan/next-action's `action:'message'` handler, which
+// understands a narrow hand of signals (energy/minutes/day-changed/eating-
+// out) and NOTHING else — no location, no workout style, no focus area, no
+// injuries. "I'm at a hotel, build me a cardio workout for 15 minutes" had
+// no recognized signal beyond the minutes number, so it silently produced
+// nothing she could see. The full operator engine (/api/plan/operator,
+// already powering /plan/coach and just fixed for its own location/injury-
+// gate loop) is the one place that actually understands all of that — same
+// engine, same real gate questions, same approve/decline flow. Routes
+// through it now instead of duplicating a second, weaker parser.
+type ChatTurn = { role: 'user' | 'operator'; content: string }
+type WorkoutChange = { toMinutes?: number; swapTo?: string; reason?: string; injuryBodyPart?: string; trackOverride?: 'gym' | 'home'; focusOverride?: ('core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders')[] }
+type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string; eatingOut?: boolean }
+type PendingAdjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionChange?: NutritionChange }
+
+function joinAreas(areas: string[]): string {
+  if (areas.length <= 1) return areas[0] || ''
+  if (areas.length === 2) return `${areas[0]} and ${areas[1]}`
+  return `${areas.slice(0, -1).join(', ')}, and ${areas[areas.length - 1]}`
+}
+function adjLines(a: PendingAdjustment): string[] {
+  const out: string[] = []
+  const w = a.workoutChange, n = a.nutritionChange
+  if (w?.injuryBodyPart) out.push(`Workout → swapped to protect your ${w.injuryBodyPart.replace('_', ' ')}, from now on`)
+  else if (w?.trackOverride) out.push(`Workout → swapped to a ${w.trackOverride === 'home' ? 'bodyweight home' : 'gym'} session${w.toMinutes ? `, ${w.toMinutes} min` : ''}`)
+  else if (w?.focusOverride?.length) out.push(`Workout → focused on ${joinAreas(w.focusOverride)} today`)
+  else if (w?.toMinutes) out.push(`Workout → ${w.toMinutes}-min ${w.swapTo || 'session'}`)
+  else if (w?.reason) out.push(`Workout → re-slotted (${w.reason})`)
+  if (w?.focusOverride?.length && w?.trackOverride) out.push(`Focus → ${joinAreas(w.focusOverride)} today`)
+  if (n?.dinnerSuggestion) out.push(`Nutrition → ${n.dinnerSuggestion}`)
+  if (n?.calorieDelta) out.push(`Calories → ${n.calorieDelta > 0 ? '+' : ''}${n.calorieDelta}`)
+  return out
 }
 
 // The ONE destination per kind — fully determined by what the engine
@@ -59,7 +95,9 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
   const [message, setMessage] = useState('')
-  const [note, setNote] = useState<string | null>(null)
+  const [turns, setTurns] = useState<ChatTurn[]>([])
+  const [quickReplies, setQuickReplies] = useState<string[] | null>(null)
+  const [pendingAdjustment, setPendingAdjustment] = useState<PendingAdjustment | null>(null)
   const [encouragement, setEncouragement] = useState<string | null>(null)
   const [celebration, setCelebration] = useState<string | null>(null)
   // Guards against re-showing the same reward's celebration every time this
@@ -113,7 +151,13 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
     }
   }
 
-  useEffect(() => { load() }, [])
+  // Real gap found live, 2026-09-01: this only ever ran once on mount, so
+  // approving a change over on the full Coach chat page never reached the
+  // dashboard circle without a hard reload — every other live card on this
+  // app (WorkoutStatusCard, CoachHero, CaloriesTodayCard, StreakChip, ...)
+  // already refetches on focus/visibility/broadcastRefresh() via this same
+  // hook; this one had simply never been wired up to it.
+  useLiveRefresh(load)
 
   const markDone = async () => {
     if (!action || busy) return
@@ -177,49 +221,56 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
 
   const sendMessage = async (overrideText?: string) => {
     const text = (overrideText ?? message).trim()
-    if (!action || busy || !text) return
+    if (busy || !text) return
     setBusy(true)
+    setQuickReplies(null)
+    setPendingAdjustment(null)
+    // Real, visible echo of what she actually sent — the old version had no
+    // transcript at all, just a single note line that silently overwrote
+    // itself, so sending something real read as "did nothing" even when it
+    // worked. Every normal chat (this app's own /plan/coach included) shows
+    // her own message back to her; this now does too.
+    setTurns((t) => [...t, { role: 'user', content: text }])
+    setMessage('')
     try {
-      const res = await fetch('/api/plan/next-action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logId: action.logId, action: 'message', message: text }) })
-      // Real bug caught live, 2026-08-27: a failed request (a stale logId
-      // from a superseded/expired action, a session hiccup, a transient
-      // server error) used to throw inside this try with no catch —
-      // `finally` still reset `busy`, but nothing else ran, so hitting Send
-      // visibly did NOTHING: no note, no instruction change, message still
-      // sitting in the box. From her side that reads as "it's broken," with
-      // zero signal about why. Now every failure path — a non-OK response,
-      // or the body not even being valid JSON — surfaces a real note
-      // instead of failing silently.
-      if (!res.ok) {
-        setNote(res.status === 409 ? "That instruction already moved on — pull up the newest one and try again." : 'Something went wrong sending that — try again.')
-        return
-      }
+      const res = await fetch('/api/plan/operator', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }) })
       const json = await res.json().catch(() => null)
       if (!json) {
-        setNote('Something went wrong sending that — try again.')
+        setTurns((t) => [...t, { role: 'operator', content: 'Something went wrong sending that — try again.' }])
         return
       }
-      if (json.changed && json.logId) {
-        setAction(json)
-        maybeCelebrate(json)
-        setNote(null)
-        // Real bug caught live, 2026-08-28: telling it something real (e.g.
-        // "I'm not doing my workout today") silently swapped the circle with
-        // zero acknowledgment — no different from the tap just not
-        // registering, from her side. "Keep it simple" already had this
-        // exact warm confirmation; a message-driven change deserves the
-        // same one, not a colder experience for actually talking to it.
-        setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)])
-        setMessage('')
-        // "I'm at Chick-fil-A" should land her straight on the real order,
-        // not back on the circle waiting for a second tap.
-        if (json.kind === 'location') { goToExpansion(json); return }
-      } else {
-        setNote("Got it — didn't need to change anything.")
-      }
-      setMessage('')
+      setTurns((t) => [...t, { role: 'operator', content: json.reply || "I didn't quite catch that — try again." }])
+      if (json.quickReplies) setQuickReplies(json.quickReplies as string[])
+      if (json.adjustment) setPendingAdjustment(json.adjustment as PendingAdjustment)
+      // A cold-start build (planBuilt) or a food log both apply immediately,
+      // no approval step — refetch the real current action so the circle
+      // reflects it right away, same as every other live card on this app.
+      await load()
     } catch {
-      setNote('Something went wrong sending that — check your connection and try again.')
+      setTurns((t) => [...t, { role: 'operator', content: "I couldn't reach the plan just now — try that again in a sec." }])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Approve/decline a recommended adjustment — same real engine and same
+  // yes/no flow as the full Coach chat (components/OperatorChat.tsx), not a
+  // second, separately-maintained approval path.
+  const decide = async (status: 'approved' | 'rejected') => {
+    const adj = pendingAdjustment
+    if (!adj) return
+    setPendingAdjustment(null)
+    setBusy(true)
+    try {
+      const res = await fetch('/api/plan/operator', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ adjustmentId: adj.id ?? '', status }) })
+      const json = await res.json().catch(() => null)
+      if (json?.reply) setTurns((t) => [...t, { role: 'operator', content: json.reply }])
+      if (status === 'approved') {
+        setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)])
+        router.refresh()
+        broadcastRefresh()
+      }
+      await load()
     } finally {
       setBusy(false)
     }
@@ -407,7 +458,49 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
           </div>
         )}
 
-        {note && <p className="text-white/60 text-[11px] mb-1.5">{note}</p>}
+        {/* Real chat transcript, this session only (Asa's report, 2026-09-01:
+            "it doesn't show the user... typing in like ChatGPT") — capped
+            height + scroll instead of full-page since the dock sits over
+            the video feed with limited room; last few turns are what matter
+            here, not a full scrollback. Bubbles reuse the exact gold/dark
+            pairing already shipped on /plan/coach (components/
+            OperatorChat.tsx), not a new visual style. */}
+        {turns.length > 0 && (
+          <div className="space-y-1.5 mb-2 max-h-32 overflow-y-auto">
+            {turns.map((t, i) => (
+              <div key={i} className={`flex ${t.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 text-[11px] leading-snug ${t.role === 'user' ? 'bg-[#C9A84C] text-obsidian font-medium' : 'bg-black/35 border border-white/15 text-white/90'}`}>
+                  {t.content}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {quickReplies && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {quickReplies.map((o) => (
+              <button key={o} onClick={() => sendMessage(o)} disabled={busy}
+                className="bg-black/30 border border-[#E5A93C]/50 text-[#E5A93C] px-2.5 py-1 font-bold text-[10.5px] uppercase tracking-wide rounded-full active:scale-95 transition-transform disabled:opacity-40">
+                {o}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {pendingAdjustment && (
+          <div className="rounded-xl p-2.5 mb-2" style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(229,169,60,0.5)' }}>
+            {adjLines(pendingAdjustment).length ? (
+              <ul className="mb-1.5">
+                {adjLines(pendingAdjustment).map((l, i) => <li key={i} className="text-white text-[11px]">• {l}</li>)}
+              </ul>
+            ) : <p className="text-white/70 text-[11px] mb-1.5">A small tweak to keep you on track today.</p>}
+            <div className="flex gap-1.5">
+              <button onClick={() => decide('approved')} disabled={busy} className="flex-1 bg-[#C9A84C] text-obsidian px-3 py-1.5 font-bold text-[10.5px] uppercase tracking-wide rounded-lg active:scale-95 transition-transform disabled:opacity-60">Yes, update it</button>
+              <button onClick={() => decide('rejected')} disabled={busy} className="flex-1 bg-black/30 border border-white/20 text-white/70 px-3 py-1.5 font-bold text-[10.5px] uppercase tracking-wide rounded-lg active:scale-95 transition-transform disabled:opacity-60">No, keep it</button>
+            </div>
+          </div>
+        )}
 
         {/* Gold gradient + thin glow — Asa's ask, 2026-08-29/30, after
             trying white glow then a stronger gold glow: matches the app's
@@ -571,8 +664,6 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
         @media (prefers-reduced-motion: reduce) { .nac-ring-breathe { animation: none; } }
       `}</style>
 
-      {note && <p className="text-ivory/50 text-[11px] text-center mb-2" style={{ fontFamily: 'var(--font-poppins)' }}>{note}</p>}
-
       {/* Small on purpose — the circle is the one thing on this screen;
           this is just the escape hatch, not a second focal point.
           "complete" (2026-08-28) hides Done/Keep it simple — there's
@@ -592,13 +683,50 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
         )}
       </div>
 
-      {/* Persistent chat bar — same real engine as before (sendMessage ->
-          POST /api/plan/next-action, action:'message'), just always visible
-          now instead of hidden behind a "Something else?" toggle. This IS
-          the "ask your coach anything" surface; nothing new to wire, just a
-          new door onto the same room. */}
+      {/* Persistent chat bar — routes through the same full operator engine
+          as /plan/coach (components/OperatorChat.tsx), not a second,
+          weaker parser. This IS the "ask your coach anything" surface. */}
       <div className="mt-3">
         <p className="text-[#E5A93C] text-[9px] uppercase tracking-[0.2em] font-bold mb-1.5 text-center" style={{ fontFamily: 'var(--font-poppins)' }}>Ask your coach</p>
+
+        {turns.length > 0 && (
+          <div className="space-y-2 mb-2.5 max-h-64 overflow-y-auto" style={{ fontFamily: 'var(--font-poppins)' }}>
+            {turns.map((t, i) => (
+              <div key={i} className={`flex ${t.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-snug ${t.role === 'user' ? 'bg-gold text-obsidian font-medium rounded-br-sm' : 'bg-black/25 border border-white/15 text-ivory/90 rounded-bl-sm'}`}>
+                  {t.content}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {quickReplies && (
+          <div className="flex flex-wrap gap-2 mb-2.5">
+            {quickReplies.map((o) => (
+              <button key={o} onClick={() => sendMessage(o)} disabled={busy}
+                className="bg-black/25 border border-gold/40 text-gold px-3.5 py-1.5 font-bold text-[11px] uppercase tracking-wider rounded-xl active:scale-95 transition-transform disabled:opacity-40">
+                {o}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {pendingAdjustment && (
+          <div className="bg-black/25 border border-gold/40 rounded-2xl p-3.5 mb-2.5">
+            <p className="text-gold text-[10px] uppercase tracking-wider font-semibold mb-1.5">Here&rsquo;s what I recommend</p>
+            {adjLines(pendingAdjustment).length ? (
+              <ul className="space-y-1 mb-2.5">
+                {adjLines(pendingAdjustment).map((l, i) => <li key={i} className="text-white text-sm">• {l}</li>)}
+              </ul>
+            ) : <p className="text-ivory/70 text-sm mb-2.5">A small tweak to keep you on track today.</p>}
+            <div className="flex gap-2">
+              <button onClick={() => decide('approved')} disabled={busy} className="flex-1 bg-gold text-obsidian px-4 py-2 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform disabled:opacity-60">Yes, update it</button>
+              <button onClick={() => decide('rejected')} disabled={busy} className="flex-1 bg-charcoal border border-smoke text-ivory/60 px-4 py-2 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform disabled:opacity-60">No, keep it</button>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-end gap-2" style={{ fontFamily: 'var(--font-poppins)' }}>
           {/* A textarea, not a single-line input — Asa's ask, 2026-08-26:
               the full transcript must stay visible no matter how long it
