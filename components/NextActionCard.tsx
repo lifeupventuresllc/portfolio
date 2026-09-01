@@ -538,13 +538,21 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
             real accent (same gold as the Next Action circle's own glow)
             instead of a third distinct color, and a thin/tight glow read
             better than a big spread once compared side by side. */}
-        <div className="flex items-center gap-2 rounded-full pl-3.5 pr-1.5 py-1.5" style={{ background: 'linear-gradient(135deg, rgba(20,20,20,0.75), rgba(0,0,0,0.55))', border: '1px solid rgba(229,169,60,0.75)', boxShadow: '0 0 8px 0px rgba(229,169,60,0.4)' }}>
-          <input
+        <div className="flex items-end gap-2 rounded-3xl pl-3.5 pr-1.5 py-1.5" style={{ background: 'linear-gradient(135deg, rgba(20,20,20,0.75), rgba(0,0,0,0.55))', border: '1px solid rgba(229,169,60,0.75)', boxShadow: '0 0 8px 0px rgba(229,169,60,0.4)' }}>
+          {/* Real gap found live, 2026-09-01 (Asa's report): this was a
+              single-line <input> — anything longer than the visible box
+              just scrolled sideways out of view instead of wrapping, so she
+              couldn't see what she'd already typed. A textarea, same
+              auto-grow effect the full variant below already uses (shared
+              textareaRef), capped so it can't swallow the whole dock. */}
+          <textarea
+            ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage() } }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
             placeholder="Ask anything about your plan…"
-            className="flex-1 bg-transparent text-white text-xs placeholder:text-white/40 focus:outline-none min-w-0"
+            rows={1}
+            className="flex-1 bg-transparent text-white text-xs placeholder:text-white/40 focus:outline-none min-w-0 resize-none py-1.5 max-h-32 overflow-y-auto leading-snug"
           />
           <span onClick={(e) => e.stopPropagation()}>
             <DeepgramVoiceInput
