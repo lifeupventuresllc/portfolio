@@ -418,6 +418,40 @@ export async function POST(request: NextRequest) {
     .from('fos_messages').select('role, content').eq('enrollment_id', eid)
     .order('created_at', { ascending: false }).limit(10)
   const conversationText = [...(recentHistory || [])].reverse().map((h) => `${h.role}: ${h.content}`).join('\n')
+
+  // Real bug found live, 2026-09-01: the location/equipment/injury gates below
+  // each check ONLY the current message (by design — see the big comment above
+  // the location gate, which deliberately killed carry-forward so a stale
+  // answer from an unrelated OLDER request could never substitute for a real
+  // answer). But that made them forget EACH OTHER's answers within the same
+  // back-and-forth: she answers "Gym" to the location ask, then "No injuries"
+  // to the injury ask that follows it — and since "No injuries" doesn't
+  // mention gym, the location gate re-fired on that very next turn. Reproduced
+  // live: location → injuries → location → injuries, forever, never actually
+  // answering her. This walks backward through an UNBROKEN run of the route's
+  // own gate questions (stopping the instant it hits anything else — an
+  // unrelated older message, a genuine new request) to recover an answer she
+  // already gave a turn or two ago to a DIFFERENT gate than the one the
+  // current message is directly answering. Bounded and self-limiting: it can
+  // never reach past the start of THIS clarification exchange, so the
+  // original stale-carry-forward bug this design was built to kill stays
+  // fixed.
+  const LOCATION_ASK_TEXT = 'Quick one — training at home or the gym today?'
+  const INJURY_ASK_TEXT = 'Quick one — any injuries or areas I should work around today, or are you all clear?'
+  const isEquipmentAskText = (c: string) => c.startsWith('Quick one — what have you got at home?')
+  const isGateAskText = (c: string) => c === LOCATION_ASK_TEXT || c === INJURY_ASK_TEXT || isEquipmentAskText(c)
+  function recoverFromChain<T>(detector: (t: string) => T | undefined): T | undefined {
+    const h = recentHistory || []
+    for (let i = 1; i + 1 < h.length; i += 2) {
+      const op = h[i] as { role: string; content: string } | undefined
+      const usr = h[i + 1] as { role: string; content: string } | undefined
+      if (!op || op.role !== 'operator' || !isGateAskText(String(op.content))) break
+      if (!usr || usr.role !== 'user') break
+      const found = detector(String(usr.content))
+      if (found !== undefined) return found
+    }
+    return undefined
+  }
   const aiResult = await parseSignalAI(conversationText)
   const signal = aiResult.ok ? aiResult.signal : parseSignal(message)
   const signalSource: 'ai' | 'rule' = aiResult.ok ? 'ai' : 'rule'
@@ -521,10 +555,10 @@ export async function POST(request: NextRequest) {
   // once-a-day grace check has been removed entirely; every track-
   // determining request asks unless she names her location in that exact
   // message.
-  const statedThisMessage = detectLocation(message)
+  const statedThisMessage = detectLocation(message) ?? recoverFromChain(detectLocation)
   const wouldNeedTrack = focusAreas.length > 0 || workoutStyle === 'cardio'
   if (wouldNeedTrack && !statedThisMessage && existingIntakeForPlan?.training_location === 'both') {
-    const q = 'Quick one — training at home or the gym today?'
+    const q = LOCATION_ASK_TEXT
     await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: q })
     return NextResponse.json({ reply: q, quickReplies: ['Home', 'Gym'] })
   }
@@ -544,7 +578,7 @@ export async function POST(request: NextRequest) {
   // a real answer out of a genuinely ambiguous 'both' before reaching here).
   const effectiveTrackForEquipment = statedThisMessage === 'home' ? 'home' : statedThisMessage === 'gym' ? 'gym'
     : existingIntakeForPlan?.training_location === 'home' ? 'home' : existingIntakeForPlan?.training_location === 'gym' ? 'gym' : undefined
-  const statedEquipmentThisMessage = detectEquipment(message)
+  const statedEquipmentThisMessage = detectEquipment(message) ?? recoverFromChain(detectEquipment)
   if (wouldNeedTrack && effectiveTrackForEquipment === 'home' && !statedEquipmentThisMessage) {
     const q = "Quick one — what have you got at home? Dumbbells, bands, a full setup, or just your bodyweight?"
     await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: q })
@@ -635,10 +669,12 @@ export async function POST(request: NextRequest) {
   // elsewhere (the one-time cold-start onboarding gate, and real safety
   // filtering off intake.form_data.injuries) — untouched, only this
   // per-message re-ask decision no longer trusts them.
+  const injuryStatedRegex = /\b(injur(y|ies|ed)?|hurt|pain(ful)?|sore(ness)?|tweak(ed)?|sprain(ed)?|pulled|strain(ed)?|no injuries|i'?m fine|nothing wrong|nothing to report|all clear)\b/i
   const statedInjuryThisMessage = signal?.kind === 'injury'
-    || /\b(injur(y|ies|ed)?|hurt|pain(ful)?|sore(ness)?|tweak(ed)?|sprain(ed)?|pulled|strain(ed)?|no injuries|i'?m fine|nothing wrong|nothing to report|all clear)\b/i.test(message)
+    || injuryStatedRegex.test(message)
+    || !!recoverFromChain((t) => (injuryStatedRegex.test(t) ? true : undefined))
   if (plan?.workoutChange && !statedInjuryThisMessage) {
-    const q = 'Quick one — any injuries or areas I should work around today, or are you all clear?'
+    const q = INJURY_ASK_TEXT
     await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: q })
     return NextResponse.json({ reply: q, quickReplies: ['No injuries'] })
   }
