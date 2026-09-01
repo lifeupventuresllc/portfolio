@@ -641,13 +641,13 @@ export default function BuilderView() {
     return () => cancelAnimationFrame(id)
   }, [pendingIds])
 
-  // Negative side + bottom margins bleed the card past its padded page
-  // container to the true screen edges (the mockup's edge-to-edge look)
-  // without needing an extra wrapper div — a wrapper here would sit outside
-  // the flex chain below and silently break the fill-to-nav sizing again.
-  // -24px cancels the page's own py-6 bottom padding so the scene actually
-  // reaches the real viewport bottom instead of stopping 24px short of it.
-  const BLEED = { margin: '0 -16px -24px', width: 'calc(100% + 32px)' } as const
+  // Negative side margins bleed the card past its padded page container to
+  // the true screen edges (the mockup's edge-to-edge look) without needing
+  // an extra wrapper div — a wrapper here would sit outside the flex chain
+  // below and silently break the fill-to-nav sizing again. No bottom
+  // cancellation needed: the page no longer puts bottom padding under this
+  // branch (see app/plan/today/page.tsx), so there's nothing to escape.
+  const BLEED = { margin: '0 -16px', width: 'calc(100% + 32px)' } as const
 
   if (loading) {
     return <div className="animate-pulse" style={{ ...BLEED, flex: '1 1 auto', minHeight: 0, background: CARD_BG }} />

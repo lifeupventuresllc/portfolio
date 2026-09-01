@@ -279,14 +279,20 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   const cardStyle = { background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }
 
   return (
-    // flex column, min-height 100dvh — the Garden branch below needs to fill
-    // whatever real space is left after the header/toggle, not a guessed
-    // `calc(100dvh - Npx)` (that number silently goes stale the moment
-    // header content changes height on any device). flex:1 on the toggle's
-    // content region hands it the actual leftover space every layout pass;
-    // the Today branch stays flexShrink:0 so long content still just grows
-    // the page and scrolls normally, exactly as before.
-    <div className="min-h-[100dvh] px-4 py-6 flex flex-col" style={{ background: '#0b1712' }}>
+    // flex column filling the real leftover space after the header/toggle —
+    // flex:1 on the toggle's content region hands the Garden branch whatever
+    // is actually left, computed every layout pass instead of a guessed
+    // `calc(100dvh - Npx)` that goes stale the moment header content changes
+    // size on a given device. minHeight subtracts ONE known constant: the
+    // 64px `pb-16` app/plan/layout.tsx wraps every /plan/* page in to keep
+    // the fixed nav from covering content — without it Garden still comes up
+    // ~64px short of the nav even though it correctly fills this div (the
+    // gap was one level up, in an ancestor this file doesn't otherwise touch).
+    // No bottom padding here (py-6 → pt-6): a shared bottom pad on this same
+    // div would eat into Garden's fill the exact same way — the Today branch
+    // below adds its own pb-6 directly so its long list still gets breathing
+    // room before the nav, without Garden having to fight it.
+    <div className="px-4 pt-6 flex flex-col" style={{ minHeight: 'calc(100dvh - 64px)', background: '#0b1712' }}>
       <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between gap-3 mb-4" style={{ flex: '0 0 auto' }}>
           <Link href="/plan" className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all" style={{ background: CARD_BG, border: CARD_BORDER, color: ACCENT }}>← Home</Link>
@@ -296,7 +302,7 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
         <ProgressViewToggle
           garden={<BuilderView />}
           plan={
-            <div>
+            <div className="pb-6">
         <div className="flex items-center justify-between gap-3 mb-1">
           <p className="text-xs font-semibold tracking-[0.25em] uppercase" style={{ color: ACCENT }}>{weekdayLabel}</p>
           {/* The always-visible half of the streak loop — banked progress she'd
