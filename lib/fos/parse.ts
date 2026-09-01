@@ -174,6 +174,27 @@ export function detectLocation(text: string): 'home' | 'gym' | 'traveling' | und
   return undefined
 }
 
+// Real gap, Asa's direct ask 2026-08-31: home-track requests should ask
+// what equipment is actually available (dumbbells/bands/machines/nothing)
+// instead of always assuming pure bodyweight — matches the same
+// never-assume principle as detectLocation above. Deterministic keyword
+// check only (no AI classifier for this yet, matching detectFocusAreas'
+// own regex-only approach) — returns undefined when nothing in THIS
+// message says anything about equipment, which the caller treats as "not
+// stated," never as "none available."
+export function detectEquipment(text: string): string[] | undefined {
+  const t = ` ${text.toLowerCase()} `
+  const found: string[] = []
+  const add = (e: string) => { if (!found.includes(e)) found.push(e) }
+  if (/no equipment|bodyweight only|nothing at home|don'?t have (any )?equipment|just my body/.test(t)) add('bodyweight only')
+  if (/dumbbells?|\bdb'?s?\b/.test(t)) add('dumbbells')
+  if (/resistance bands?|\bbands?\b/.test(t)) add('bands')
+  if (/kettlebells?|\bkb'?s?\b/.test(t)) add('kettlebell')
+  if (/barbell/.test(t)) add('barbell')
+  if (/\bmachines?\b|home gym|full (gym )?setup|cable machine/.test(t)) add('machines')
+  return found.length ? found : undefined
+}
+
 // Regex-fallback counterpart to CLASSIFY_TOOL's focus_area field — an explicit
 // one-off "give me an arm workout today" request, not her permanent default.
 export function detectFocusArea(text: string): FocusAreaRequest | undefined {

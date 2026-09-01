@@ -3,9 +3,9 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { localDateISO, localHourNumber, localDayNumber, localMondayIndex, addDaysISO } from '@/lib/localdate'
 import type { WeekPlan } from '@/lib/meal-plan'
 import { recover, injurySafetyClause, type LifeSignal, type RecoveryPlan } from '@/lib/fos/recovery'
-import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation, detectFocusAreas, injuriesGenuinelyAddressed } from '@/lib/fos/parse'
+import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation, detectFocusAreas, detectEquipment, injuriesGenuinelyAddressed } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
-import { getProfile, recentEvents, upsertProfile, mergeProfilePatch, getApprovedTodayAdjustment } from '@/lib/fos/context'
+import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
 import { extractProfileFacts, generateReply, generateDeclineFollowUp, describeDecision, answerGeneralQuestion } from '@/lib/fos/memory'
 import { assessGoalDrift } from '@/lib/fos/goal-drift'
 import { detectPlanIntent } from '@/lib/fos/plan-intent'
@@ -232,11 +232,6 @@ export async function POST(request: NextRequest) {
   const { data: existingIntakeForPlan } = await svc.from('challenge_intake').select('id, experience_level, goal, sex, days_per_week, training_location, form_data').eq('enrollment_id', eid).maybeSingle()
   const recordedInjuries: Injury[] = Array.isArray((existingIntakeForPlan?.form_data as Record<string, unknown> | null)?.injuries)
     ? ((existingIntakeForPlan!.form_data as { injuries: Injury[] }).injuries) : []
-  // True only if she was genuinely asked (the structured intake form's required
-  // step, or a prior chat cold-start build's injury question) — NOT true just
-  // because a challenge_intake row exists. The Quickstart fast lane creates one
-  // with injuries defaulted to [] and never actually asks. See lib/plan-builder.ts.
-  const injuriesAddressed = !!(existingIntakeForPlan?.form_data as Record<string, unknown> | null)?.injuries_addressed
   if (!existingIntakeForPlan) {
     const { data: history } = await svc
       .from('fos_messages').select('role, content').eq('enrollment_id', eid)
@@ -499,13 +494,11 @@ export async function POST(request: NextRequest) {
   // plain 'gym' — so a real "trains at both" user who just says "give me
   // an ab workout" without naming where she is gets gym silently assumed,
   // wrong exactly as often as it's right. Only asks when it's genuinely
-  // ambiguous (stored preference really is 'both') AND she hasn't already
-  // told us today (an approved trackOverride already on file for today
-  // answers it without asking twice) AND this message is actually about
-  // to produce a track-determining workout swap — a plain cardio ask or an
-  // explicit focus-area ask are the two paths that regenerate the whole
-  // program by track; other signal kinds (energy, time, injury, etc.) via
-  // recover() don't need a track decided to answer.
+  // ambiguous (stored preference really is 'both') AND this message is
+  // actually about to produce a track-determining workout swap — a plain
+  // cardio ask or an explicit focus-area ask are the two paths that
+  // regenerate the whole program by track; other signal kinds (energy,
+  // time, injury, etc.) via recover() don't need a track decided to answer.
   //
   // Real bug found live, same day: this originally checked `!location`
   // (the blended `aiResult.location`), which is NOT scoped to this one
@@ -518,15 +511,47 @@ export async function POST(request: NextRequest) {
   // assumption she asked never to happen. `detectLocation(message)` here
   // is the deterministic, THIS-MESSAGE-ONLY check — no carry-forward — so
   // only an explicit statement in the current message counts as "she said."
+  //
+  // Real gap #2, same day, Asa's explicit follow-up correction: the first
+  // fix above still skipped the ask when an approved trackOverride was
+  // already on file for TODAY (a "don't ask twice a day" grace period).
+  // Asa's direct instruction: "the chat should always ask ... home or
+  // gym." No memory of an earlier answer — today's, or any day's — should
+  // ever substitute for her actually saying it in THIS message. The
+  // once-a-day grace check has been removed entirely; every track-
+  // determining request asks unless she names her location in that exact
+  // message.
   const statedThisMessage = detectLocation(message)
   const wouldNeedTrack = focusAreas.length > 0 || workoutStyle === 'cardio'
   if (wouldNeedTrack && !statedThisMessage && existingIntakeForPlan?.training_location === 'both') {
-    const todayTrack = await getApprovedTodayAdjustment(eid, today)
-    if (!todayTrack?.workoutChange?.trackOverride) {
-      const q = 'Quick one — training at home or the gym today?'
-      await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: q })
-      return NextResponse.json({ reply: q, quickReplies: ['Home', 'Gym'] })
-    }
+    const q = 'Quick one — training at home or the gym today?'
+    await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: q })
+    return NextResponse.json({ reply: q, quickReplies: ['Home', 'Gym'] })
+  }
+
+  // Real gap, Asa's direct ask 2026-08-31, same batch as the location ask
+  // above: "the chat should always ask equipment[,] home or gym[,]
+  // injuries." Only meaningful for a home-track session right now — gym is
+  // assumed fully equipped (the whole reason it's a separate track), and
+  // HOME_POOL is honestly 100% bodyweight today (see lib/workout.ts), so an
+  // answer here doesn't change exercise SELECTION yet — that's a real,
+  // separate follow-up build, not done in this pass. This ships the actual
+  // ask + a real stored answer now, matching what was explicitly asked for,
+  // rather than waiting on the full filtering feature to ship anything.
+  // Effective track resolved the same way the rest of this route already
+  // does it: explicit statement in THIS message wins, otherwise her
+  // unambiguous stored preference (the location gate above already forced
+  // a real answer out of a genuinely ambiguous 'both' before reaching here).
+  const effectiveTrackForEquipment = statedThisMessage === 'home' ? 'home' : statedThisMessage === 'gym' ? 'gym'
+    : existingIntakeForPlan?.training_location === 'home' ? 'home' : existingIntakeForPlan?.training_location === 'gym' ? 'gym' : undefined
+  const statedEquipmentThisMessage = detectEquipment(message)
+  if (wouldNeedTrack && effectiveTrackForEquipment === 'home' && !statedEquipmentThisMessage) {
+    const q = "Quick one — what have you got at home? Dumbbells, bands, a full setup, or just your bodyweight?"
+    await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: q })
+    return NextResponse.json({ reply: q, quickReplies: ['Bodyweight only', 'Dumbbells', 'Bands', 'Full home gym'] })
+  }
+  if (statedEquipmentThisMessage) {
+    await svc.from('fos_events').insert({ enrollment_id: eid, user_id: user.id, occurred_on: today, kind: 'message', summary: message, payload: { equipment: statedEquipmentThisMessage } })
   }
 
   // She asked for a workout-style swap (e.g. "can I get cardio today?") with no
@@ -596,20 +621,26 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // First chat-triggered workout swap for someone whose injuries were never
-  // actually asked (see injuriesAddressed above — the Quickstart fast lane is
-  // the common case: it creates a real intake row with injuries defaulted to
-  // [] and never asks). Asked once, folded right into this same reply instead
-  // of a separate round trip, then marked addressed immediately so it's never
-  // repeated. Skipped when this message itself IS an injury report — the
-  // recover() 'injury' case already has its own complete sentence for that.
-  let injuryAsk = ''
-  if (plan?.workoutChange && !injuriesAddressed && signal?.kind !== 'injury') {
-    injuryAsk = " Also — I don't have any injuries on file for you yet. Anything I should always work around, or are you all clear?"
-    if (existingIntakeForPlan) {
-      const fd = (existingIntakeForPlan.form_data || {}) as Record<string, unknown>
-      await svc.from('challenge_intake').update({ form_data: { ...fd, injuries_addressed: true } }).eq('id', existingIntakeForPlan.id)
-    }
+  // Real gap #2, Asa's explicit follow-up correction, same day as the
+  // location-ask fix above: injuries used to be asked ONCE EVER (gated by
+  // the permanent injuries_addressed flag) and even then only as a
+  // non-blocking note appended onto the SAME reply that already delivered
+  // the recommendation — never an actual block on proceeding. Asa's direct
+  // instruction: "the chat should always ask ... injuries [every workout
+  // request]." No memory of an earlier answer — today's, an old
+  // conversation, or the permanent intake flag — substitutes for her
+  // actually saying it in THIS message. Same shape as the location-ask
+  // fix: blocks and asks BEFORE building any recommendation, not after.
+  // `injuriesAddressed`/the permanent flag are still read/written
+  // elsewhere (the one-time cold-start onboarding gate, and real safety
+  // filtering off intake.form_data.injuries) — untouched, only this
+  // per-message re-ask decision no longer trusts them.
+  const statedInjuryThisMessage = signal?.kind === 'injury'
+    || /\b(injur(y|ies|ed)?|hurt|pain(ful)?|sore(ness)?|tweak(ed)?|sprain(ed)?|pulled|strain(ed)?|no injuries|i'?m fine|nothing wrong|nothing to report|all clear)\b/i.test(message)
+  if (plan?.workoutChange && !statedInjuryThisMessage) {
+    const q = 'Quick one — any injuries or areas I should work around today, or are you all clear?'
+    await svc.from('fos_messages').insert({ enrollment_id: eid, user_id: user.id, role: 'operator', content: q })
+    return NextResponse.json({ reply: q, quickReplies: ['No injuries'] })
   }
 
   // eat_out was replying with a platitude ("balance the rest of the day") and
@@ -726,7 +757,6 @@ export async function POST(request: NextRequest) {
   // already gives the accurate, focus-correct one-line summary — reciting the
   // full exercise list a third time, unfiltered, only added noise.
   if (travelMergeAck) reply += travelMergeAck
-  if (injuryAsk) reply += injuryAsk
   if (plan?.workoutChange && signal?.kind !== 'injury') {
     const clause = injurySafetyClause(recordedInjuries)
     if (clause) reply += clause
