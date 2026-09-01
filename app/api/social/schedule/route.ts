@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function makeSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
+let _supabase: ReturnType<typeof makeSupabase> | null = null
+function supabase() {
+  return (_supabase ??= makeSupabase())
+}
 
 // GET: List scheduled posts
 export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get('status') || 'all'
 
-  let query = supabase
+  let query = supabase()
     .from('scheduled_posts')
     .select('*')
     .order('scheduled_at', { ascending: true })
@@ -33,7 +39,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Caption and scheduled_at are required' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabase()
     .from('scheduled_posts')
     .insert({
       platform: platform || 'instagram',
@@ -59,7 +65,7 @@ export async function PATCH(req: NextRequest) {
 
   if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
-  const { data, error } = await supabase
+  const { data, error } = await supabase()
     .from('scheduled_posts')
     .update(updates)
     .eq('id', id)
@@ -74,7 +80,7 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const { id } = await req.json()
 
-  const { error } = await supabase
+  const { error } = await supabase()
     .from('scheduled_posts')
     .delete()
     .eq('id', id)

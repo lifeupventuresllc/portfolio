@@ -2,17 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { publishToInstagram, publishToTikTok } from '@/lib/social'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function makeSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
+let _supabase: ReturnType<typeof makeSupabase> | null = null
+function supabase() {
+  return (_supabase ??= makeSupabase())
+}
 
 // POST: Publish a scheduled post now (or called by cron)
 export async function POST(req: NextRequest) {
   const { postId } = await req.json()
 
   // Get the scheduled post
-  const { data: post, error: postError } = await supabase
+  const { data: post, error: postError } = await supabase()
     .from('scheduled_posts')
     .select('*')
     .eq('id', postId)
@@ -27,14 +33,14 @@ export async function POST(req: NextRequest) {
   }
 
   // Mark as publishing
-  await supabase.from('scheduled_posts').update({ status: 'publishing' }).eq('id', postId)
+  await supabase().from('scheduled_posts').update({ status: 'publishing' }).eq('id', postId)
 
   const fullCaption = post.hashtags ? `${post.caption}\n\n${post.hashtags}` : post.caption
   const results: { platform: string; success: boolean; id?: string; error?: string }[] = []
 
   // Publish to Instagram
   if (post.platform === 'instagram' || post.platform === 'both') {
-    const { data: igAccount } = await supabase
+    const { data: igAccount } = await supabase()
       .from('social_accounts')
       .select('page_access_token, ig_user_id')
       .eq('platform', 'instagram')
@@ -61,7 +67,7 @@ export async function POST(req: NextRequest) {
 
   // Publish to TikTok
   if (post.platform === 'tiktok' || post.platform === 'both') {
-    const { data: ttAccount } = await supabase
+    const { data: ttAccount } = await supabase()
       .from('social_accounts')
       .select('access_token')
       .eq('platform', 'tiktok')
@@ -89,7 +95,7 @@ export async function POST(req: NextRequest) {
   const allSuccess = results.every(r => r.success)
   const publishedId = results.find(r => r.id)?.id
 
-  await supabase.from('scheduled_posts').update({
+  await supabase().from('scheduled_posts').update({
     status: allSuccess ? 'published' : 'failed',
     published_at: allSuccess ? new Date().toISOString() : null,
     published_id: publishedId || null,

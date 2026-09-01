@@ -2,10 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { exchangeInstagramCode } from '@/lib/social'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function makeSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
+let _supabase: ReturnType<typeof makeSupabase> | null = null
+function supabase() {
+  return (_supabase ??= makeSupabase())
+}
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code')
@@ -22,13 +28,13 @@ export async function GET(req: NextRequest) {
   }
 
   // Deactivate any existing Instagram connections
-  await supabase
+  await supabase()
     .from('social_accounts')
     .update({ active: false })
     .eq('platform', 'instagram')
 
   // Save new connection
-  await supabase.from('social_accounts').insert({
+  await supabase().from('social_accounts').insert({
     platform: 'instagram',
     account_name: result.accountName,
     account_id: result.userId,
