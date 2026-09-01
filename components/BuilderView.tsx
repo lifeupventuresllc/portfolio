@@ -520,7 +520,7 @@ function GardenScene({ phase, elements, pendingIds }: { phase: Phase; elements: 
   const placed = elements.length > MAX_PLACED ? elements.slice(-MAX_PLACED) : elements
 
   return (
-    <svg viewBox="0 0 350 280" width="100%" style={{ display: 'block', overflow: 'visible' }}>
+    <svg viewBox="0 0 350 280" width="100%" height="100%" preserveAspectRatio="xMidYMax slice" style={{ display: 'block' }}>
       <GardenDefs cfg={cfg} />
 
       {cfg.aurora && (
@@ -660,17 +660,20 @@ export default function BuilderView() {
       className="w-full rounded-3xl"
       style={{
         padding: '22px 18px 20px', boxSizing: 'border-box', overflow: 'hidden', position: 'relative',
-        maxWidth: 440, marginLeft: 'auto', marginRight: 'auto',
+        display: 'flex', flexDirection: 'column',
+        minHeight: 'calc(100dvh - 260px)',
         background: CARD_BG,
         border: '1.5px solid rgba(229,169,60,0.3)',
         boxShadow: '0 0 24px -8px rgba(229,169,60,0.3), inset 0 1px 0 rgba(255,255,255,0.07), inset 0 0 44px rgba(0,0,0,0.28)',
       }}
     >
-      <div style={{ color: '#E5A93C', fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 14 }}>
+      <div style={{ color: '#E5A93C', fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 14, flex: '0 0 auto' }}>
         {cfg.label}
       </div>
-      <GardenScene phase={phase} elements={elements} pendingIds={pendingIds} />
-      <p style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, color: '#ffffff', fontSize: 15, lineHeight: 1.4, margin: '16px 0 0', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>
+      <div style={{ flex: '1 1 auto', minHeight: 0 }}>
+        <GardenScene phase={phase} elements={elements} pendingIds={pendingIds} />
+      </div>
+      <p style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, color: '#ffffff', fontSize: 15, lineHeight: 1.4, margin: '16px 0 0', flex: '0 0 auto', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>
         {cfg.caption}
       </p>
     </div>
