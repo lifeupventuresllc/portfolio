@@ -8,7 +8,7 @@
 // changes HOW exercises get chosen, not what the app renders.
 // ============================================================
 import type { GymExercise, AbExercise, Level, Injury, Muscle } from './workout-exercises'
-import type { MovementPattern, SkillLevel, IntensityLevel } from './exercise-library'
+import type { MovementPattern, SkillLevel, IntensityLevel, MuscleGroup } from './exercise-library'
 
 export type TrainingStyle = 'compound' | 'split' | 'cardio' | 'none'
 export type FocusArea = 'core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders' | 'overall'
@@ -47,6 +47,13 @@ export interface WorkoutInputs {
   // "low fuel" means the same real thing everywhere it's checked). Softens
   // today's cardio finisher — never strength work, never a silent skip.
   lowFuelToday?: boolean
+  // Replaces the removed fixed push/pull/legs rotation, 2026-09-02 (Asa's
+  // explicit call, FitBod over Sweat): an untargeted day now targets
+  // whatever she genuinely hasn't trained lately, from her real logged
+  // sets (getRecentlyTrainedMuscles in progression.ts) — never a hardcoded
+  // weekly calendar. Muscles she's touched recently sort to the back of
+  // the priority order, not excluded outright.
+  recentlyTrainedMuscles?: MuscleGroup[]
   // New, 2026-09-01 rebuild: a stated time budget now genuinely changes how
   // MANY exercises get assembled (see countForMinutes in workout-assembly.ts)
   // — the old fixed-template system had no such concept; the operator route

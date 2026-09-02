@@ -9,12 +9,12 @@
 // separate gym-pool/home-pool special-casing — one generic path, driven
 // by attribute matching, for any combination of constraints.
 //
-// The one place a fixed POLICY still exists is which muscle clusters a
-// week's untargeted days rotate through (legsMuscleRotation below) — that's
-// standard training-science sequencing (PPL-style antagonist rotation,
-// legs ~2x/week for the app's target avatar), not a pre-written scenario;
-// it decides WHICH MUSCLES a day targets, never which EXACT EXERCISES fill
-// it. Exercise selection itself is 100% attribute-matched, every time.
+// No fixed muscle-rotation policy either (removed 2026-09-02, Asa's
+// explicit call — a hardcoded push/pull/legs cluster was still a
+// pre-written categorization, not attribute matching, no matter how
+// standard it is in training science). An untargeted day defaults to full
+// body; a day only targets specific muscles when she's actually asked for
+// that. Exercise selection itself is 100% attribute-matched, every time.
 // ============================================================
 import { ATOMIC_LIBRARY, isExerciseSafe, type AtomicExercise, type Location, type EquipmentTag, type MuscleGroup, type SkillLevel, type MovementPattern, type IntensityLevel } from './exercise-library'
 import type { Injury, Equip, Muscle } from './workout-exercises'
@@ -48,24 +48,6 @@ const FOCUS_MUSCLES: Record<FocusArea, MuscleGroup[]> = {
 }
 export const FOCUS_LABEL: Record<FocusArea, string> = {
   core: 'Core & waistline', legs: 'Legs & glutes', arms: 'Arms', chest: 'Chest', back: 'Back', shoulders: 'Shoulders', overall: 'All-over',
-}
-
-// Standard PPL-style antagonist rotation, legs-forward for a 4-day cycle
-// (the app's real target avatar) — a training-science SEQUENCING policy,
-// not an exercise template. Decides which muscle groups a day targets;
-// which exact exercises fill it is always attribute-matched below.
-const ROTATION_CLUSTERS: Record<'male' | 'female', MuscleGroup[][]> = {
-  male: [
-    ['quads', 'hamstrings', 'glutes'],
-    ['chest', 'triceps', 'shoulders'],
-    ['back', 'biceps'],
-  ],
-  female: [
-    ['quads', 'hamstrings', 'glutes'],
-    ['chest', 'triceps', 'shoulders'],
-    ['quads', 'hamstrings', 'glutes'],
-    ['back', 'biceps'],
-  ],
 }
 
 export function rotate<T>(arr: T[], n: number): T[] {
@@ -435,14 +417,25 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
   const coreFocus = inp.focusArea === 'core' || !!inp.overrideAreas?.includes('core')
 
   // Which muscles day 0 targets: a live chat/override ask always wins for
-  // "today." Every OTHER day (a full-week build with no live override)
-  // rotates through the standard cluster policy — see ROTATION_CLUSTERS'
-  // comment for why this one rotation stays as a sequencing policy, not an
-  // exercise template.
+  // "today." Every OTHER day now targets whatever she genuinely hasn't
+  // trained recently (Asa's explicit call, 2026-09-02, FitBod over Sweat)
+  // — replaces the removed fixed push/pull/legs rotation, which was still
+  // a pre-written categorization, not attribute matching, and was
+  // producing real nonsense (chest grouped with biceps on one test day).
+  // recentlyTrainedMuscles (getRecentlyTrainedMuscles in progression.ts,
+  // her real logged sets) sorts to the BACK of the priority order, never
+  // excluded outright — rotate() still gives day-to-day variety across the
+  // week, same helper the old cluster system used, just walking a real-
+  // history-ordered list instead of a hardcoded table. No special-casing
+  // by level either: a beginner's 3-per-day slice naturally covers the
+  // whole body across a normal week just like it always did.
   const overrideMuscles: MuscleGroup[] | undefined = inp.overrideAreas !== undefined
     ? inp.overrideAreas.flatMap((a) => FOCUS_MUSCLES[a])
     : undefined
-  const cluster = level === 1 ? [[]] : ROTATION_CLUSTERS[inp.sex === 'male' ? 'male' : 'female']
+  const ALL_MUSCLES: MuscleGroup[] = ['quads', 'hamstrings', 'glutes', 'chest', 'back', 'shoulders', 'biceps', 'triceps']
+  const recentlyTrained = inp.recentlyTrainedMuscles || []
+  const priorityMuscles = ALL_MUSCLES.filter((m) => !recentlyTrained.includes(m)).concat(ALL_MUSCLES.filter((m) => recentlyTrained.includes(m)))
+  const MUSCLES_PER_DAY = 3
 
   const base: WorkoutProgram = {
     name: inp.name || 'Your', track: inp.track, level, levelLabel: LEVEL_LABEL[level], goal: inp.goal,
@@ -452,7 +445,8 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
   if (inp.targets && inp.targets.length) base.targetNote = inp.targets.map((m) => m[0].toUpperCase() + m.slice(1)).join(' · ')
   else if (inp.focusArea && inp.focusArea !== 'overall') base.targetNote = FOCUS_LABEL[inp.focusArea]
 
-  const dayMuscles = (i: number): MuscleGroup[] => (i === 0 && overrideMuscles !== undefined) ? overrideMuscles : cluster[i % cluster.length]
+  const dayMuscles = (i: number): MuscleGroup[] =>
+    (i === 0 && overrideMuscles !== undefined) ? overrideMuscles : rotate(priorityMuscles, i * MUSCLES_PER_DAY).slice(0, MUSCLES_PER_DAY)
   const dayTitle = (i: number, muscles: MuscleGroup[]): string => {
     if (i === 0 && inp.overrideAreas !== undefined) {
       const areas = inp.overrideAreas
@@ -460,9 +454,13 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
       return label || 'Full Body'
     }
     if (!muscles.length) return 'Full Body'
-    if (muscles.includes('quads')) return 'Legs · Quads, Hamstrings & Glutes'
-    if (muscles.includes('chest')) return 'Push · Chest & Triceps'
-    return 'Pull · Shoulders & Back'
+    // Real gap fixed 2026-09-02: this used to guess a fixed push/pull/legs
+    // label off whichever muscle happened to be present — correct only
+    // when muscles always came from the fixed 3-combo cluster table this
+    // replaced, wrong the instant they didn't (the exact "chest grouped
+    // with biceps" mislabel Asa caught live). Names the real muscles in
+    // today's actual slice instead of guessing a category.
+    return muscles.map((m) => m[0].toUpperCase() + m.slice(1)).join(' & ')
   }
 
   if (inp.track === 'home') {

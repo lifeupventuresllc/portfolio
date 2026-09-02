@@ -16,7 +16,7 @@
 // after the fact.
 // ============================================================
 import { createServiceClient } from '@/lib/supabase/server'
-import type { MovementPattern, SkillLevel, IntensityLevel } from './exercise-library'
+import type { MovementPattern, SkillLevel, IntensityLevel, MuscleGroup } from './exercise-library'
 
 export type Effort = 'easy' | 'right' | 'hard'
 
@@ -97,6 +97,25 @@ export async function getProgressionOverrides(enrollmentId: string): Promise<Par
     out[row.movement_pattern as MovementPattern] = { skillLevel: row.skill_level as SkillLevel, intensityLevel: row.intensity_level as IntensityLevel }
   }
   return out
+}
+
+// Asa's explicit call, 2026-09-02: replaces the removed fixed push/pull/
+// legs rotation. Instead of a hardcoded weekly split, an untargeted day
+// targets whatever she genuinely hasn't trained recently — same idea
+// FitBod uses, driven by her real logged sets, not a calendar. Reads the
+// same workout_set_logs table/index progression already writes to
+// (enrollment_id, movement_pattern, created_at — migration
+// 039_progression_engine.sql), just for a different question: not "how
+// hard was it," but "what muscles has she actually touched lately."
+export async function getRecentlyTrainedMuscles(enrollmentId: string, daysBack = 5): Promise<MuscleGroup[]> {
+  const svc = createServiceClient()
+  const since = new Date(Date.now() - daysBack * 86400000).toISOString()
+  const { data } = await svc.from('workout_set_logs').select('muscle_groups').eq('enrollment_id', enrollmentId).gte('created_at', since)
+  const set = new Set<MuscleGroup>()
+  for (const row of data || []) {
+    for (const m of (row.muscle_groups as string[] | null) || []) set.add(m as MuscleGroup)
+  }
+  return Array.from(set)
 }
 
 // The IMMEDIATE half of "two simultaneous effects of one input" — purely a

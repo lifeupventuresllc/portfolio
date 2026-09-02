@@ -9,6 +9,7 @@ import type { Level, Injury } from '@/lib/workout-exercises'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { localDateISO, addDaysISO, currentWeekNumber, getTimezone, localHourNumber } from '@/lib/localdate'
 import { computeLowFuelToday } from '@/lib/workout-assembly'
+import { getRecentlyTrainedMuscles } from '@/lib/progression'
 
 export const dynamic = 'force-dynamic'
 
@@ -128,7 +129,10 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
     // skill/intensity state reaches the assembly engine for her real,
     // displayed session (as opposed to a preview/PDF render elsewhere that
     // doesn't need to reflect live progression).
-    const progressionOverrides = await getProgressionOverrides(enrollment.id as string)
+    const [progressionOverrides, recentlyTrainedMuscles] = await Promise.all([
+      getProgressionOverrides(enrollment.id as string),
+      getRecentlyTrainedMuscles(enrollment.id as string),
+    ])
     program = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex,
       track: trackOverride || (intake.training_location === 'home' ? 'home' : 'gym'),
@@ -138,6 +142,7 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
       progressionOverrides,
       activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
       lowFuelToday,
+      recentlyTrainedMuscles,
     })
   }
 

@@ -1,7 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import { computeLowFuelToday } from '@/lib/workout-assembly'
-import { getProgressionOverrides } from '@/lib/progression'
+import { getProgressionOverrides, getRecentlyTrainedMuscles } from '@/lib/progression'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday } from '@/lib/fos/effective-plan'
 import { getApprovedTodayAdjustment, getProfile } from '@/lib/fos/context'
@@ -92,7 +92,10 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     // circle both silently used her flat intake-level skill/intensity
     // instead of what months of actual logged performance say it should
     // be, even though /plan/workout's own regeneration always has.
-    const progressionOverrides = await getProgressionOverrides(enrollmentId)
+    const [progressionOverrides, recentlyTrainedMuscles] = await Promise.all([
+      getProgressionOverrides(enrollmentId),
+      getRecentlyTrainedMuscles(enrollmentId),
+    ])
     // Nutrition -> workout (Asa's ask: "the two main brains" should connect).
     // Computed here from the same already-fetched foodToday rather than
     // waiting for caloriesLoggedToday further below, since this call runs
@@ -106,6 +109,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
       progressionOverrides,
       activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
       lowFuelToday: computeLowFuelToday(caloriesSoFar, localHourNumber(tz)),
+      recentlyTrainedMuscles,
     })
   }
 
