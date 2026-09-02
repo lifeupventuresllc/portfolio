@@ -13,6 +13,13 @@
 // (WorkoutPlayer), which is the thing that actually owns the countdown and
 // the network call. Kept this way so the immediate half can apply the
 // instant a finger lifts, with zero dependency on the fetch resolving.
+//
+// UI simplified 2026-09-02 (Asa's explicit call, mockup approved first):
+// two big color-coded choices instead of three plain ones — "just right"
+// removed so every tap is a real, unambiguous signal, not a hedge. The
+// 'right' value stays in the type (progression.ts/set-effort route both
+// still handle it) since nothing downstream needs to change — this
+// component just never sends it anymore.
 export type Effort = 'easy' | 'right' | 'hard'
 
 export default function SetEffortTap({ exerciseName, onPick, onDismiss }: {
@@ -30,30 +37,29 @@ export default function SetEffortTap({ exerciseName, onPick, onDismiss }: {
           this exactly as it would with no tap at all; tapping the backdrop
           skips it. "Minimal," per spec, not a form. */}
       <button aria-label="Skip" onClick={onDismiss} className="absolute inset-0" tabIndex={-1} />
-      <div className="relative z-10 text-center max-w-xs w-full">
+      <div className="relative z-10 text-center max-w-xs w-full h-[70vh] max-h-[420px] flex flex-col">
         <p className="text-ivory/50 text-xs font-semibold uppercase tracking-[0.2em] mb-1.5">{exerciseName}</p>
         <p className="text-white text-xl font-bold mb-6">How did that set feel?</p>
-        <div className="flex flex-col gap-3">
+        {/* Asa's explicit call, 2026-09-02: two big color-coded choices, not
+            three plain ones — "just right" removed so every tap gives a
+            real, unambiguous signal. A "Difficult" tap logs as 'hard'
+            underneath — same progression math as before, just without the
+            middle option ever being offered. */}
+        <div className="flex flex-col gap-3 flex-1">
           <button
             onClick={() => onPick('easy')}
-            className="w-full bg-charcoal border border-smoke text-white text-base font-bold py-4 rounded-2xl active:scale-95 transition-transform hover:border-emerald-400/60"
+            className="w-full flex-1 bg-gradient-to-br from-emerald-400 to-emerald-600 text-white text-xl font-extrabold rounded-3xl active:scale-95 transition-transform shadow-[0_8px_22px_-6px_rgba(34,197,94,0.55)]"
           >
             Easy
           </button>
           <button
-            onClick={() => onPick('right')}
-            className="w-full bg-gold text-obsidian text-base font-bold py-4 rounded-2xl active:scale-95 transition-transform"
-          >
-            Just right
-          </button>
-          <button
             onClick={() => onPick('hard')}
-            className="w-full bg-charcoal border border-smoke text-white text-base font-bold py-4 rounded-2xl active:scale-95 transition-transform hover:border-red-400/60"
+            className="w-full flex-1 bg-gradient-to-br from-red-400 to-red-600 text-white text-xl font-extrabold rounded-3xl active:scale-95 transition-transform shadow-[0_8px_22px_-6px_rgba(239,68,68,0.55)]"
           >
-            Hard
+            Difficult
           </button>
         </div>
-        <button onClick={onDismiss} className="text-ivory/30 text-xs font-semibold mt-6">Skip</button>
+        <button onClick={onDismiss} className="text-ivory/30 text-xs font-semibold mt-5">Skip</button>
       </div>
     </div>
   )

@@ -106,8 +106,18 @@ export function buildSteps(program: WorkoutProgram, dayIdx: number): WorkoutStep
     const day = program.home.days[dayIdx]
     if (!day) return steps
     steps.push({ phase: 'Warm-up', name: 'Warm-up', detail: program.home.warmup.join(' · ') })
+    // Real gap Asa caught live, 2026-09-02: the effort tap only ever fired
+    // for the gym track's set-based steps — home's flat, time-based
+    // exercise list never got a `rest: true` step at all, so the tap (and
+    // everything it feeds in progression.ts) silently never happened for a
+    // home session. Every home exercise IS her one real "set" here — same
+    // tap, same immediate + long-term effect, just after a timed move
+    // instead of a rep-based one. Home names already resolve correctly
+    // against ATOMIC_LIBRARY (homeAtomic in exercise-library.ts), so no
+    // special-casing needed the way the treadmill walk required.
     day.exercises.forEach((e) => {
       steps.push({ phase: day.title, name: e.name, detail: e.duration, seconds: parseSecs(e.duration), imageUrl: e.imageUrl })
+      steps.push({ phase: 'Rest', name: e.name, seconds: 20, rest: true })
     })
     steps.push({ phase: 'Cool-down', name: 'Cool-down', detail: program.home.cooldown.join(' · ') })
     return steps
