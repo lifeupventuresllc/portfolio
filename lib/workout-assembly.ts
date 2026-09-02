@@ -299,6 +299,12 @@ function countForMinutes(minutesAvailable: number | undefined, avgDurationSec: n
 }
 
 function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string, c: Constraints, goal: WorkoutInputs['goal'], offset: number, minutesAvailable: number | undefined, coreFocus: boolean, trainingStyle: WorkoutInputs['trainingStyle'], coreOnly = false): GymDay {
+  // Asa's follow-up, 2026-09-02: low fuel benefits from touching the real
+  // session, not just the cardio tail — but only how hard she's asked to
+  // push, never WHICH exercises she gets. One tier down on the rep/set
+  // prescription only; c.skillLevel itself (exercise selection, filtering,
+  // progression lookups) is untouched below.
+  const repLevel = c.lowFuelToday ? (Math.max(1, c.skillLevel - 1) as SkillLevel) : c.skillLevel
   const isFullBody = targetMuscles.length === 0 && !coreOnly
   const bodyMuscles: MuscleGroup[] = isFullBody ? ['quads', 'hamstrings', 'glutes', 'chest', 'back', 'shoulders', 'biceps', 'triceps'] : targetMuscles
   // A genuine core-only request skips body-area supersets entirely — real
@@ -314,7 +320,7 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
   const supersets: Superset[] = []
   for (let i = 0; i + 1 < picked.length; i += 2) {
     const a = picked[i], b = picked[i + 1]
-    supersets.push({ title: `${a.name} + ${b.name}`, push: toGymExerciseShim(a, c.progressionOverrides), pull: toGymExerciseShim(b, c.progressionOverrides), reps: repScheme(c.skillLevel, goal) })
+    supersets.push({ title: `${a.name} + ${b.name}`, push: toGymExerciseShim(a, c.progressionOverrides), pull: toGymExerciseShim(b, c.progressionOverrides), reps: repScheme(repLevel, goal) })
   }
   const leftover = picked.length % 2 === 1 ? picked[picked.length - 1] : null
 
@@ -340,11 +346,11 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
   const coreOnlyExtras = coreOnly ? (() => {
     const extraUpper = pickAbAtomic('upper', c.skillLevel, offset + 8, c.postpartum, c.injuries, usedAbNames)
     const extraLower = pickAbAtomic('lower', c.skillLevel, offset + 9, c.postpartum, c.injuries, [...usedAbNames, extraUpper.name])
-    return [extraUpper, extraLower].map((e) => ({ name: e.name, reps: AB_SCHEME[c.skillLevel], cue: e.cue, imageUrl: e.imageUrl, kind: 'core' as const }))
+    return [extraUpper, extraLower].map((e) => ({ name: e.name, reps: AB_SCHEME[repLevel], cue: e.cue, imageUrl: e.imageUrl, kind: 'core' as const }))
   })() : []
   const accessory: GymDay['accessory'] = [
-    ...(wantsLegAccessory ? calfPool.slice(0, 2).map((e) => ({ name: e.name, reps: c.skillLevel === 1 ? '2 × 15–20' : '3 × 15–20', cue: e.cue, imageUrl: e.imageUrl, kind: 'calves' as const })) : []),
-    ...(leftover ? [{ name: leftover.name, reps: repScheme(c.skillLevel, goal), cue: `${leftover.cue} (bonus set from today's session).`, imageUrl: leftover.imageUrl, kind: 'bonus' as const }] : []),
+    ...(wantsLegAccessory ? calfPool.slice(0, 2).map((e) => ({ name: e.name, reps: repLevel === 1 ? '2 × 15–20' : '3 × 15–20', cue: e.cue, imageUrl: e.imageUrl, kind: 'calves' as const })) : []),
+    ...(leftover ? [{ name: leftover.name, reps: repScheme(repLevel, goal), cue: `${leftover.cue} (bonus set from today's session).`, imageUrl: leftover.imageUrl, kind: 'bonus' as const }] : []),
     ...coreOnlyExtras,
   ]
 
@@ -356,7 +362,7 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
     dayNum, title, muscles: coreOnly ? ['Core'] : isFullBody ? ['Full Body'] : bodyMuscles.map((m) => m[0].toUpperCase() + m.slice(1)),
     warmup: bodyMuscles.includes('quads') || isFullBody ? ['15 bodyweight glute bridges', '10 hip circles each side', '10 arm circles', '10 leg swings each side'] : ['10 arm circles each direction', '10 shoulder rolls', '10 doorway chest stretches', '10 band pull-aparts'],
     supersets, accessory,
-    ...(upperAb && lowerAb ? { ab: { upper: toAbExerciseShim(upperAb), lower: toAbExerciseShim(lowerAb), scheme: AB_SCHEME[c.skillLevel], ...(bonusAb ? { bonus: toAbExerciseShim(bonusAb) } : {}) } } : {}),
+    ...(upperAb && lowerAb ? { ab: { upper: toAbExerciseShim(upperAb), lower: toAbExerciseShim(lowerAb), scheme: AB_SCHEME[repLevel], ...(bonusAb ? { bonus: toAbExerciseShim(bonusAb) } : {}) } } : {}),
     ...(wantsCardio ? { cardio: cardioFinisherFor(c, goal, trainingStyle, offset) } : {}),
   }
 }
