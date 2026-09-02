@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
+import { getProgressionOverrides } from '@/lib/progression'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday } from '@/lib/fos/effective-plan'
 import { getApprovedTodayAdjustment, getProfile } from '@/lib/fos/context'
@@ -84,10 +85,18 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
     const weekNumber = currentWeekNumber((enrollment!.created_at as string) || new Date().toISOString())
     const trackOverride = effectiveTodayAdjustment?.workoutChange?.trackOverride
+    // Real gap found live: this is the ONE generateWorkout call site that
+    // never read her real logged set-effort history — the chat's own
+    // "here's your updated workout" preview (below) and the dashboard
+    // circle both silently used her flat intake-level skill/intensity
+    // instead of what months of actual logged performance say it should
+    // be, even though /plan/workout's own regeneration always has.
+    const progressionOverrides = await getProgressionOverrides(enrollmentId)
     program = generateWorkout({
       name: (enrollment!.name as string) || 'Your', sex, track: trackOverride || (intake.training_location === 'home' ? 'home' : 'gym'),
       level, goal, daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyle, focusArea,
       overrideAreas: focusOverride?.length ? focusOverride : undefined,
+      progressionOverrides,
     })
   }
 

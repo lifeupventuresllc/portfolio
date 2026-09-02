@@ -189,8 +189,14 @@ export async function POST(request: NextRequest) {
       // "here's your updated workout" always names what she'll actually see,
       // never stale or approximate.
       const freshState = await getUserState(eid, today)
-      const updatedLine = freshState.workoutCandidate?.title
-        ? `Here's your updated workout: ${freshState.workoutCandidate.title} today.`
+      // Real gap Asa's explicit ask, 2026-09-02: naming just the day title
+      // ("Chest & Triceps") isn't the actual workout — muscles (gym track's
+      // real per-day breakdown, already computed by getEffectiveTodayWorkout,
+      // just never surfaced here) makes this a real preview of what she'll
+      // get, not a label she has to tap through to verify.
+      const cand = freshState.workoutCandidate
+      const updatedLine = cand?.title
+        ? `Here's your updated workout: ${cand.title}${cand.muscles?.length ? ` (${cand.muscles.join(', ')})` : ''} today.`
         : changeSummary ? `Here's your update: ${changeSummary}.` : 'Locked in.'
       reply = withName(injuryPersisted
         ? `${updatedLine.charAt(0).toLowerCase()}${updatedLine.slice(1)} I've noted it so every future workout stays safe for it automatically. You won't need to bring it up again.`
