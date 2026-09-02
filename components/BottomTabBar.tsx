@@ -48,34 +48,22 @@ export default function BottomTabBar() {
   const forYouActive = pathname.startsWith('/plan/today')
   const communityActive = pathname.startsWith('/plan/community')
 
+  // Asa's approved mockup, 2026-09-02: back to a plain inline + button as
+  // the second of 4 equal columns (grid-template-columns, not flex — a flex
+  // row centers each item's own content width, which reads as uneven the
+  // moment items differ in width; a grid gives every tab the exact same
+  // real estate regardless of its content). Replaces the floating-FAB
+  // version from the day before, which Asa asked to revert.
+  const columns = SHOW_COMMUNITY_TAB ? 4 : 3
+
   return (
-    // Asa's approved mockup, 2026-09-01: genuinely 3 evenly-spaced tabs
-    // (Home / Community / For You) with the + meal-photo button raised into
-    // a floating circular FAB above the bar instead of a 4th inline slot —
-    // 4 items in a row was reading as visually uneven no matter how the
-    // math centered the + button; removing it as a competing tab fixed it
-    // at the root instead of re-centering around the problem.
     <nav className="fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)]">
       <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={onFile} className="hidden" />
 
-      <button
-        onClick={trigger}
-        disabled={uploading}
-        aria-label="Snap a photo of your meal"
-        className="absolute left-1/2 rounded-full flex items-center justify-center disabled:opacity-50 active:scale-95 transition-transform z-10"
-        style={{
-          top: -48, transform: 'translateX(-50%)', width: 52, height: 52,
-          background: 'linear-gradient(135deg, #E5A93C, #EA5C87)',
-          border: '3px solid #021F16',
-          boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
-        }}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0A0A0F" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-      </button>
-
       <div
-        className="max-w-2xl mx-auto flex items-center justify-evenly px-5 py-1.5"
+        className="max-w-2xl mx-auto grid items-center px-3 pt-[10px] pb-[14px]"
         style={{
+          gridTemplateColumns: `repeat(${columns}, 1fr)`,
           background: 'radial-gradient(120px 60px at 50% -10px, rgba(229,169,60,0.28), transparent 70%), linear-gradient(180deg, #0c2016 0%, #021109 100%)',
           borderTop: '1px solid rgba(229,169,60,0.5)',
         }}
@@ -84,6 +72,18 @@ export default function BottomTabBar() {
           <HomeIcon active={homeActive} size={19} />
           <span className={`text-[10.5px] font-bold ${homeActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Home</span>
         </Link>
+
+        <div className="flex justify-center">
+          <button
+            onClick={trigger}
+            disabled={uploading}
+            aria-label="Snap a photo of your meal"
+            className="rounded-lg flex items-center justify-center disabled:opacity-50 active:scale-95 transition-transform shrink-0"
+            style={{ width: 42, height: 26, background: 'linear-gradient(135deg, #E5A93C, #EA5C87)' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0A0A0F" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
+        </div>
 
         {SHOW_COMMUNITY_TAB && (
           <Link href="/plan/community" className="flex flex-col items-center gap-[3px]">
