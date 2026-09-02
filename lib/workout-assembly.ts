@@ -216,13 +216,20 @@ function walkFinisher(level: SkillLevel, goal: string): CardioFinisher {
     : 'Steady-state to hold where you\'re at — walk tall, shoulders back, no handrails.'
   return { title: 'Incline Treadmill Walk', mode: 'walk', speed: CARDIO_SPEED[level], incline: base.incline, mins, note }
 }
-function cardioFinisherFor(level: SkillLevel, goal: string, trainingStyle: WorkoutInputs['trainingStyle'], injuries: Injury[], offset: number): CardioFinisher {
+function cardioFinisherFor(c: Constraints, goal: string, trainingStyle: WorkoutInputs['trainingStyle'], offset: number): CardioFinisher {
+  // Same override lookup filterLibrary already uses for every other pattern
+  // — real gap found live: the cardio finisher was the one place that read
+  // her flat intake-level skillLevel even after months of logged cardio
+  // effort, because nothing ever tapped 'cardio' to begin with (fixed
+  // alongside this in lib/workout-steps.ts). Falls back to c.skillLevel
+  // exactly like filterLibrary until real cardio tap history exists.
+  const effectiveLevel = c.progressionOverrides?.cardio?.skillLevel ?? c.skillLevel
   if (trainingStyle === 'compound') {
-    const pool = compoundExercisesForLevel(level, injuries)
+    const pool = compoundExercisesForLevel(effectiveLevel, c.injuries)
     const moves = rotate(pool, offset).slice(0, 3).map((m) => ({ name: m.name, reps: m.reps, cue: m.cue, imageUrl: m.imageUrl }))
     return { title: 'Compound Finisher', mode: 'compound', note: 'Full-body compound moves to close out your session — built in because that’s your training style.', moves }
   }
-  return walkFinisher(level, goal)
+  return walkFinisher(effectiveLevel, goal)
 }
 
 const AB_SCHEME: Record<SkillLevel, string> = { 1: '2 sets × 8–12', 2: '2–3 sets × 12–15', 3: '3–4 sets × 15+ (add weight)' }
@@ -312,7 +319,7 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
     warmup: bodyMuscles.includes('quads') || isFullBody ? ['15 bodyweight glute bridges', '10 hip circles each side', '10 arm circles', '10 leg swings each side'] : ['10 arm circles each direction', '10 shoulder rolls', '10 doorway chest stretches', '10 band pull-aparts'],
     supersets, accessory,
     ...(upperAb && lowerAb ? { ab: { upper: toAbExerciseShim(upperAb), lower: toAbExerciseShim(lowerAb), scheme: AB_SCHEME[c.skillLevel], ...(bonusAb ? { bonus: toAbExerciseShim(bonusAb) } : {}) } } : {}),
-    ...(wantsCardio ? { cardio: cardioFinisherFor(c.skillLevel, goal, trainingStyle, c.injuries, offset) } : {}),
+    ...(wantsCardio ? { cardio: cardioFinisherFor(c, goal, trainingStyle, offset) } : {}),
   }
 }
 

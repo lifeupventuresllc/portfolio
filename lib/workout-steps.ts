@@ -153,8 +153,15 @@ export function buildSteps(program: WorkoutProgram, dayIdx: number): WorkoutStep
       day.cardio.moves.forEach((m) => {
         steps.push({ phase: 'Cardio finisher · Compound', name: m.name, detail: m.reps, cue: m.cue, imageUrl: m.imageUrl })
       })
+      // Real gap: nothing ever tapped 'cardio' effort, so cardioFinisherFor's
+      // new progression lookup (lib/workout-assembly.ts) had no real history
+      // to ever read. One tap against the last move closes the loop, same as
+      // every strength set already does.
+      const last = day.cardio.moves[day.cardio.moves.length - 1]
+      if (last) steps.push({ phase: 'Rest', name: last.name, seconds: 30, rest: true })
     } else {
       steps.push({ phase: 'Cardio finisher', name: day.cardio.title, detail: `${day.cardio.mins} · ${day.cardio.speed} · incline ${day.cardio.incline}`, cue: day.cardio.note })
+      steps.push({ phase: 'Rest', name: day.cardio.title, seconds: 30, rest: true })
     }
   }
   return steps

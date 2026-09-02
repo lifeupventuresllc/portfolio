@@ -40,8 +40,14 @@ export async function POST(request: NextRequest) {
     // exercise from an older plan snapshot could send one) degrades to a
     // generic 'compound' pattern instead of failing the tap outright; she
     // still gets her immediate feedback either way.
+    // The one real exception: walkFinisher's 'Incline Treadmill Walk' (lib/
+    // workout-assembly.ts) is a computed cardio finisher, never drawn from
+    // ATOMIC_LIBRARY, so the lookup above would always miss it and silently
+    // log her cardio effort as 'compound' instead — the exact gap that kept
+    // cardioFinisherFor's new progression lookup from ever having real
+    // history to read.
     const entry = ATOMIC_LIBRARY.find((e) => e.name === exerciseName)
-    const movementPattern = entry?.movementPattern || 'compound'
+    const movementPattern = exerciseName === 'Incline Treadmill Walk' ? 'cardio' : entry?.movementPattern || 'compound'
     const muscleGroups = entry?.muscleGroups || []
 
     const state = await logSetEffort(enrollment.id as string, user.id, exerciseName, movementPattern, muscleGroups, effort, setIndex)
