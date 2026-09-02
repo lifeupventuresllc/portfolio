@@ -146,31 +146,6 @@ const AB_POOL_BASE: AbExercise[] = [
 ]
 export const AB_POOL: AbExercise[] = AB_POOL_BASE.map((e) => (FORM_IMAGES[e.name] ? { ...e, imageUrl: FORM_IMAGES[e.name] } : e))
 
-// ---------- WARM-UPS (by day focus) ----------
-export const WARMUPS: Record<string, string[]> = {
-  legs: ['15 bodyweight glute bridges', '10 hip circles each side', '10 arm circles', '10 leg swings each side'],
-  upper: ['10 arm circles each direction', '10 shoulder rolls', '10 doorway chest stretches', '10 band pull-aparts'],
-}
-
-// ---------- CARDIO FINISHER (incline treadmill; fixed 3.3 mph) ----------
-// Duration now genuinely varies by goal, not just the note text (real gap
-// found+fixed: this used to only swap one sentence — more cardio for fat
-// loss, less for muscle gain to reduce interference with recovery, is
-// standard coaching practice and now actually changes the minutes, not just
-// what she reads).
-const CARDIO_MIN_ADJUST: Record<string, number> = { lose: 5, gain: -5, maintain: 0 }
-export function cardioFinisher(level: Level, goal: string) {
-  const base = level === 1 ? { incline: '0–2.5%', minLow: 15, minHigh: 20 } : level === 2 ? { incline: '2.5–3.0%', minLow: 20, minHigh: 25 } : { incline: '3.0–4.0%', minLow: 25, minHigh: 30 }
-  const adjust = CARDIO_MIN_ADJUST[goal] ?? 0
-  const mins = `${Math.max(10, base.minLow + adjust)}–${Math.max(15, base.minHigh + adjust)} min`
-  const note = goal === 'lose'
-    ? 'Your fat-burning finisher — walk tall, shoulders back, no handrails.'
-    : goal === 'gain'
-      ? 'Keeps heart rate up without burning muscle — walk tall, no handrails.'
-      : 'Steady-state to hold where you\'re at — walk tall, shoulders back, no handrails.'
-  return { title: 'Incline Treadmill Walk', speed: '3.3 mph (fixed)', incline: base.incline, mins, note }
-}
-
 // ---------- HOME BODYWEIGHT POOL ----------
 // `sub` (2026-08-31, real gap found live): home exercises used to carry only
 // the broad 'upper' type — no way to tell an arm move from a chest move from
@@ -229,14 +204,6 @@ const HOME_POOL_BASE: HomeExercise[] = [
 // genuinely matched home exercise (e.g. 'Bodyweight Squats') would never
 // actually show its photo. Same pattern as the other two pools now.
 export const HOME_POOL: HomeExercise[] = HOME_POOL_BASE.map((e) => (FORM_IMAGES[e.name] ? { ...e, imageUrl: FORM_IMAGES[e.name] } : e))
-
-export const HOME_WARMUP = ['Arm Circles (fwd/back) – 60 sec', 'Torso Twists – 60 sec', 'Leg Swings / Hip Circles – 60 sec']
-export const HOME_COOLDOWN = ['Toe Touches (Hamstrings) – 60 sec', 'Cross-Body Arm Stretch – 60 sec', 'Quad Stretch – 60 sec']
-
-// Outside walking intervals by level
-export function walkingIntervals(level: Level) {
-  return level === 1 ? '15–20 min easy walk, 3–4×/week' : level === 2 ? '25–30 min brisk walk or 20 min with 1-min faster intervals, 4×/week' : '30–40 min power walk with 30-sec fast intervals every 3 min, 4–5×/week'
-}
 
 // ---------- INJURY HANDLING (models Asa's real client modifications) ----------
 export type Injury = 'knee' | 'lower_back' | 'shoulder' | 'wrist' | 'elbow' | 'hip' | 'ankle'

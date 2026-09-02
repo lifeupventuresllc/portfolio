@@ -345,16 +345,17 @@ export async function POST(request: NextRequest) {
       // Real fix, root cause: focus_area used to be a single value, so "arms,
       // legs, and core" could only ever keep one of the three. focus_areas is
       // the full list of everything she actually named — override_areas below
-      // builds a real day from ALL of them (see daySpecFromAreas in
-      // lib/workout.ts), not just the first. focus_area (singular) stays only
-      // as the permanent-preference fallback when she named nothing specific.
+      // builds a real day from ALL of them (lib/workout-assembly.ts maps them
+      // to FOCUS_MUSCLES and assembles day 0 from that), not just the first.
+      // focus_area (singular) stays only as the permanent-preference fallback
+      // when she named nothing specific.
       // Real gap found live: this used to pass undefined for an explicit
       // "overall" answer, which meant day 0 fell through to whatever the
       // normal weekly rotation's first day happened to be (a female plan's
       // rotation opens on a leg day) — an "overall" ask could still come
       // back looking leg-specific. Always a real array now: empty means
-      // exactly "overall," which daySpecFromAreas/generateHome now both
-      // build as a genuine full-body day, not a rotation coincidence.
+      // exactly "overall," which buildGymDay/buildHomeDay now both build as
+      // a genuine full-body day, not a rotation coincidence.
       const focus_areas = intent.focus_areas?.length ? intent.focus_areas : []
       const focus_area = focus_areas[0] || 'overall'
 

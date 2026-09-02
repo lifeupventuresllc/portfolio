@@ -58,9 +58,15 @@ export interface CardioFinisher {
 export interface GymDay {
   dayNum: number; title: string; muscles: string[]; warmup: string[]
   supersets: Superset[]
-  accessory: { name: string; reps: string; cue: string; imageUrl?: string }[]
-  ab: { upper: AbExercise; lower: AbExercise; scheme: string; bonus?: AbExercise }
-  cardio: CardioFinisher
+  // `kind` says what this entry actually is — 'calves' only when it's a real
+  // calf pick, never assumed by array position (that assumption is exactly
+  // what caused a real bug: core-only days had no calf work but the PDF
+  // still labeled slots 0/1 "CALVES" regardless of what filled them).
+  accessory: { name: string; reps: string; cue: string; imageUrl?: string; kind: 'calves' | 'bonus' | 'core' }[]
+  // Goal-driven, not automatic: undefined when the day's goal/focus doesn't
+  // call for it (see buildGymDay in lib/workout-assembly.ts).
+  ab?: { upper: AbExercise; lower: AbExercise; scheme: string; bonus?: AbExercise }
+  cardio?: CardioFinisher
 }
 export interface HomeDay { dayNum: number; title: string; exercises: { name: string; duration: string; imageUrl?: string }[]; estCalories?: number }
 export interface WorkoutProgram {

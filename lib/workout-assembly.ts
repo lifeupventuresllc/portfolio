@@ -5,9 +5,9 @@
 // on every call, reads live constraints (location, equipment, time, goal,
 // skill level, target muscles, injuries) and assembles a session by
 // filtering + combining matching entries from lib/exercise-library.ts's
-// ATOMIC_LIBRARY. No SLOT_SETS, no ROTATION_CYCLE, no per-area DaySpec
-// tables, no separate gym-pool/home-pool special-casing — one generic
-// path, driven by attribute matching, for any combination of constraints.
+// ATOMIC_LIBRARY. No fixed per-location/skill/split template tables, no
+// separate gym-pool/home-pool special-casing — one generic path, driven
+// by attribute matching, for any combination of constraints.
 //
 // The one place a fixed POLICY still exists is which muscle clusters a
 // week's untargeted days rotate through (legsMuscleRotation below) — that's
@@ -174,18 +174,17 @@ function filterLibrary(c: Constraints, muscles?: MuscleGroup[]): AtomicExercise[
 // The one real picker every selection in this file routes through — target
 // muscles first (rotated for weekly variety), then whatever else is
 // available in-constraint, free weights preferred, priority-tagged and
-// postpartum-flagged entries surfaced first when relevant. Replaces
-// pickGym/pickAb/HOME_POOL's byType entirely: one function, attribute-
-// driven, works for gym or home, any muscle set, any movement pattern.
+// postpartum-flagged entries surfaced first when relevant. One function,
+// attribute-driven, works for gym or home, any muscle set, any movement
+// pattern — no per-location/per-type special-casing anywhere else.
 function pick(pool: AtomicExercise[], targetMuscles: MuscleGroup[], count: number, offset: number, postpartum: boolean, excludeNames: string[] = []): AtomicExercise[] {
   const fresh = pool.filter((e) => !excludeNames.includes(e.name))
   // Real bug caught in testing: a plain non-postpartum request was still
   // surfacing postpartum-flagged entries first, purely because they also
-  // happen to carry `priority: true` — the old pickAb deliberately reserved
-  // those for postpartum members specifically (`priority.filter(a =>
-  // !a.postpartum)` when not postpartum), and this generic picker had no
-  // equivalent exclusion. `effectivePriority` folds that in once, here,
-  // rather than re-adding a special case at every call site.
+  // happen to carry `priority: true` — those are reserved for postpartum
+  // members specifically, and this generic picker had no equivalent
+  // exclusion. `effectivePriority` folds that in once, here, rather than
+  // re-adding a special case at every call site.
   const effectivePriority = (e: AtomicExercise) => e.priority && (postpartum || !e.postpartum)
   const sortFn = (a: AtomicExercise, b: AtomicExercise) => {
     if (postpartum && a.postpartum !== b.postpartum) return a.postpartum ? -1 : 1
@@ -270,11 +269,18 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
   }
   const leftover = picked.length % 2 === 1 ? picked[picked.length - 1] : null
 
-  const upperAb = pickAbAtomic('upper', c.skillLevel, offset, c.postpartum, c.injuries)
-  const lowerAb = pickAbAtomic('lower', c.skillLevel, offset + 2, c.postpartum, c.injuries, [upperAb?.name].filter((n): n is string => !!n))
-  const usedAbNames = [upperAb?.name, lowerAb?.name].filter((n): n is string => !!n)
-  let bonusAb: AtomicExercise | undefined
-  if (coreFocus) { bonusAb = pickAbAtomic('upper', c.skillLevel, offset + 5, c.postpartum, c.injuries, usedAbNames); usedAbNames.push(bonusAb.name) }
+  // Goal-driven, not a constant day structure: abs only when the day's
+  // focus actually calls for core work (core-focused, full-body, or a
+  // core-only request) — same gate buildHomeDay already used.
+  const wantsAb = coreFocus || isFullBody || coreOnly
+  const usedAbNames: string[] = []
+  let upperAb: AtomicExercise | undefined, lowerAb: AtomicExercise | undefined, bonusAb: AtomicExercise | undefined
+  if (wantsAb) {
+    upperAb = pickAbAtomic('upper', c.skillLevel, offset, c.postpartum, c.injuries)
+    lowerAb = pickAbAtomic('lower', c.skillLevel, offset + 2, c.postpartum, c.injuries, [upperAb?.name].filter((n): n is string => !!n))
+    usedAbNames.push(...[upperAb?.name, lowerAb?.name].filter((n): n is string => !!n))
+    if (coreFocus) { bonusAb = pickAbAtomic('upper', c.skillLevel, offset + 5, c.postpartum, c.injuries, usedAbNames); usedAbNames.push(bonusAb.name) }
+  }
 
   const wantsLegAccessory = bodyMuscles.some((m) => m === 'quads' || m === 'hamstrings' || m === 'glutes' || m === 'calves')
   const calfPool = filterLibrary(c, ['calves'])
@@ -285,20 +291,24 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
   const coreOnlyExtras = coreOnly ? (() => {
     const extraUpper = pickAbAtomic('upper', c.skillLevel, offset + 8, c.postpartum, c.injuries, usedAbNames)
     const extraLower = pickAbAtomic('lower', c.skillLevel, offset + 9, c.postpartum, c.injuries, [...usedAbNames, extraUpper.name])
-    return [extraUpper, extraLower].map((e) => ({ name: e.name, reps: AB_SCHEME[c.skillLevel], cue: e.cue, imageUrl: e.imageUrl }))
+    return [extraUpper, extraLower].map((e) => ({ name: e.name, reps: AB_SCHEME[c.skillLevel], cue: e.cue, imageUrl: e.imageUrl, kind: 'core' as const }))
   })() : []
   const accessory: GymDay['accessory'] = [
-    ...(wantsLegAccessory ? calfPool.slice(0, 2).map((e) => ({ name: e.name, reps: c.skillLevel === 1 ? '2 × 15–20' : '3 × 15–20', cue: e.cue, imageUrl: e.imageUrl })) : []),
-    ...(leftover ? [{ name: leftover.name, reps: repScheme(c.skillLevel, goal), cue: `${leftover.cue} (bonus set from today's session).`, imageUrl: leftover.imageUrl }] : []),
+    ...(wantsLegAccessory ? calfPool.slice(0, 2).map((e) => ({ name: e.name, reps: c.skillLevel === 1 ? '2 × 15–20' : '3 × 15–20', cue: e.cue, imageUrl: e.imageUrl, kind: 'calves' as const })) : []),
+    ...(leftover ? [{ name: leftover.name, reps: repScheme(c.skillLevel, goal), cue: `${leftover.cue} (bonus set from today's session).`, imageUrl: leftover.imageUrl, kind: 'bonus' as const }] : []),
     ...coreOnlyExtras,
   ]
 
+  // Goal-driven, not a constant day structure: a cardio finisher only rides
+  // along when the goal is fat loss, or trainingStyle explicitly wants one
+  // (compound finisher) — a muscle-gain or maintain day skips it entirely.
+  const wantsCardio = goal === 'lose' || trainingStyle === 'compound'
   return {
     dayNum, title, muscles: coreOnly ? ['Core'] : isFullBody ? ['Full Body'] : bodyMuscles.map((m) => m[0].toUpperCase() + m.slice(1)),
     warmup: bodyMuscles.includes('quads') || isFullBody ? ['15 bodyweight glute bridges', '10 hip circles each side', '10 arm circles', '10 leg swings each side'] : ['10 arm circles each direction', '10 shoulder rolls', '10 doorway chest stretches', '10 band pull-aparts'],
     supersets, accessory,
-    ab: { upper: toAbExerciseShim(upperAb), lower: toAbExerciseShim(lowerAb), scheme: AB_SCHEME[c.skillLevel], ...(bonusAb ? { bonus: toAbExerciseShim(bonusAb) } : {}) },
-    cardio: cardioFinisherFor(c.skillLevel, goal, trainingStyle, c.injuries, offset),
+    ...(upperAb && lowerAb ? { ab: { upper: toAbExerciseShim(upperAb), lower: toAbExerciseShim(lowerAb), scheme: AB_SCHEME[c.skillLevel], ...(bonusAb ? { bonus: toAbExerciseShim(bonusAb) } : {}) } } : {}),
+    ...(wantsCardio ? { cardio: cardioFinisherFor(c.skillLevel, goal, trainingStyle, c.injuries, offset) } : {}),
   }
 }
 
@@ -315,7 +325,7 @@ function estimateHomeCalories(inp: WorkoutInputs, level: SkillLevel, minutesLabe
   return Math.round(HOME_MET[level] * (bmr / 24) * (minutes / 60))
 }
 
-function buildHomeDay(dayNum: number, targetMuscles: MuscleGroup[], title: string, c: Constraints, goal: WorkoutInputs['goal'], offset: number, minutesAvailable: number | undefined, coreFocus: boolean, coreOnly = false): HomeDay {
+function buildHomeDay(dayNum: number, targetMuscles: MuscleGroup[], title: string, c: Constraints, goal: WorkoutInputs['goal'], offset: number, minutesAvailable: number | undefined, coreFocus: boolean, trainingStyle: WorkoutInputs['trainingStyle'], coreOnly = false): HomeDay {
   const isFullBody = targetMuscles.length === 0 && !coreOnly
   const wantsCore = coreFocus || isFullBody || coreOnly
   const nonCorePool = coreOnly ? [] : filterLibrary(c, isFullBody ? undefined : targetMuscles).filter((e) => e.movementPattern !== 'cardio' && e.movementPattern !== 'core_flexion' && e.movementPattern !== 'core_rotation' && e.movementPattern !== 'core_stability')
@@ -348,7 +358,11 @@ function buildHomeDay(dayNum: number, targetMuscles: MuscleGroup[], title: strin
       })()
     : pick(nonCorePool, targetMuscles, mainCount, offset, c.postpartum)
   const core = wantsCore ? pick(corePool, [], coreCount, offset + 4, c.postpartum) : []
-  const finisher = pick(cardioPool, [], 1, offset + 8, c.postpartum)[0]
+  // Goal-driven, not a constant day structure — same gate as the gym side:
+  // only fat-loss goals (or an explicit compound-finisher training style)
+  // get a cardio finisher tacked on.
+  const wantsCardio = goal === 'lose' || trainingStyle === 'compound'
+  const finisher = wantsCardio ? pick(cardioPool, [], 1, offset + 8, c.postpartum)[0] : undefined
 
   const exercises = [...main, ...core].map((e) => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl }))
   if (finisher) exercises.push({ name: finisher.name, duration: `${goal === 'lose' ? 90 : goal === 'gain' ? 45 : 60} sec`, imageUrl: finisher.imageUrl })
@@ -400,7 +414,7 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
     const homeDays: HomeDay[] = Array.from({ length: days }, (_, i) => {
       const muscles = dayMuscles(i)
       const isCoreOnly = i === 0 && overrideMuscles !== undefined && overrideMuscles.length === 0 && inp.overrideAreas?.includes('core')
-      const day = buildHomeDay(i + 1, isCoreOnly ? [] : muscles, `Day ${i + 1}: ${dayTitle(i, muscles)}`, c, inp.goal, week + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, isCoreOnly)
+      const day = buildHomeDay(i + 1, isCoreOnly ? [] : muscles, `Day ${i + 1}: ${dayTitle(i, muscles)}`, c, inp.goal, week + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, inp.trainingStyle, isCoreOnly)
       return day
     })
     const minutes = level === 1 && week <= 1 ? '20 min' : '15 min'

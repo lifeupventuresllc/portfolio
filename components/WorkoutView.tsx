@@ -88,21 +88,27 @@ export default function WorkoutView({ program, editable = false, level = 1, inju
             ))}
           </div>
 
-          <p className="text-gold text-[11px] uppercase tracking-wider mb-2 font-semibold">Abs — {d.ab.scheme}</p>
-          <div className="space-y-2 mb-4">
-            <div><p className="text-white text-sm font-semibold">{d.ab.upper.name}</p><Cue text={d.ab.upper.cue} /></div>
-            <div><p className="text-white text-sm font-semibold">{d.ab.lower.name}</p><Cue text={d.ab.lower.cue} /></div>
-            {d.ab.bonus && (
-              <div><p className="text-white text-sm font-semibold">{d.ab.bonus.name} <span className="text-gold/70 text-xs font-normal">— core focus</span></p><Cue text={d.ab.bonus.cue} /></div>
-            )}
-          </div>
+          {d.ab && (
+            <>
+              <p className="text-gold text-[11px] uppercase tracking-wider mb-2 font-semibold">Abs — {d.ab.scheme}</p>
+              <div className="space-y-2 mb-4">
+                <div><p className="text-white text-sm font-semibold">{d.ab.upper.name}</p><Cue text={d.ab.upper.cue} /></div>
+                <div><p className="text-white text-sm font-semibold">{d.ab.lower.name}</p><Cue text={d.ab.lower.cue} /></div>
+                {d.ab.bonus && (
+                  <div><p className="text-white text-sm font-semibold">{d.ab.bonus.name} <span className="text-gold/70 text-xs font-normal">— core focus</span></p><Cue text={d.ab.bonus.cue} /></div>
+                )}
+              </div>
+            </>
+          )}
 
-          <div className="bg-obsidian border border-smoke rounded-xl p-3">
-            <p className="text-gold/80 text-[10px] uppercase tracking-wider mb-1">Cardio finisher</p>
-            <p className="text-white text-sm font-semibold">{d.cardio.title} — {d.cardio.mins}</p>
-            <p className="text-ivory/50 text-xs">{d.cardio.speed} · incline {d.cardio.incline}</p>
-            <Cue text={d.cardio.note} />
-          </div>
+          {d.cardio && (
+            <div className="bg-obsidian border border-smoke rounded-xl p-3">
+              <p className="text-gold/80 text-[10px] uppercase tracking-wider mb-1">Cardio finisher</p>
+              <p className="text-white text-sm font-semibold">{d.cardio.title} — {d.cardio.mins}</p>
+              <p className="text-ivory/50 text-xs">{d.cardio.speed} · incline {d.cardio.incline}</p>
+              <Cue text={d.cardio.note} />
+            </div>
+          )}
         </div>
       ))}
 

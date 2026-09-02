@@ -156,9 +156,9 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
   // track/injury overrides above already do implicitly by regenerating
   // `program` itself.
   // overrideAreas above builds day 0 directly from exactly the requested
-  // areas (see daySpecFromAreas in lib/workout.ts), so it's already the
-  // right day by construction — no per-day scoring needed the way a single
-  // focusArea used to require.
+  // areas (lib/workout-assembly.ts maps them to FOCUS_MUSCLES and assembles
+  // day 0 from that), so it's already the right day by construction — no
+  // per-day scoring needed the way a single focusArea used to require.
   if (focusOverride?.length) startDay = 0
   // Real gap found live: a Coach Asa COLD-START build (no account/profile yet,
   // built right in chat) has no fos_adjustment at all, so focusOverride above

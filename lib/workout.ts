@@ -3,10 +3,8 @@
 //
 // 2026-09-01 rebuild (Asa's explicit directive): every previous version of
 // this file built workouts from fixed, pre-written templates tied to
-// location/skill/split (SLOT_SETS, ROTATION_CYCLE, daySpecFromAreas,
-// homeSplit, pickGym, pickAb — full history in git). All of that selection
-// logic is gone. This file is now a thin, stable entry point: it hands off
-// to the real two-layer engine —
+// location/skill/split. All of that selection logic is gone. This file is
+// now a thin, stable entry point: it hands off to the real two-layer engine —
 //   lib/exercise-library.ts   — layer one, the atomic tagged exercise pool
 //   lib/workout-assembly.ts   — layer two, the dynamic attribute-matching
 //                                assembly engine

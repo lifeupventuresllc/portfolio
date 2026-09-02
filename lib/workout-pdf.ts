@@ -117,26 +117,44 @@ function gymDayPage(doc: PDFDocument, f: Fonts, prog: WorkoutProgram, d: GymDay,
     })
     y -= h + 8
   })
-  // ab circuit
-  const ah = 50; cardBox(p, 36, y - ah, W - 72, ah, C.card, C.gold2, 1.4)
-  tL(p, 'AB CIRCUIT', 48, y - 16, 9, f.bold, C.gold2); tR(p, `${d.ab.scheme} · no rest between · 60s after both`, W - 48, y - 16, 7.5, f.reg, C.gray)
-  pill(p, 'UPPER', 48, y - 34, 6.5, f.bold, C.pink, C.pink); tL(p, d.ab.upper.name, 100, y - 33, 8.5, f.reg, C.white)
-  pill(p, 'LOWER', 300, y - 34, 6.5, f.bold, C.blue, C.blue); tL(p, d.ab.lower.name, 352, y - 33, 8.5, f.reg, C.white)
-  y -= ah + 8
-  // calves accessory
-  const ch = 34; cardBox(p, 36, y - ch, W - 72, ch, C.card, C.purple, 1.2)
-  tL(p, 'CALVES + TIBIALIS (every session)', 48, y - 14, 8, f.bold, C.purple)
-  tL(p, `${d.accessory[0].name} ${d.accessory[0].reps}  ·  ${d.accessory[1].name} ${d.accessory[1].reps}`, 48, y - 27, 8, f.reg, C.grayL)
-  y -= ch + 8
-  // cardio
-  const carh = d.cardio.mode === 'compound' ? 54 : 40
-  cardBox(p, 36, y - carh, W - 72, carh, C.card, C.blue, 1.4)
-  tL(p, `CARDIO FINISHER — ${d.cardio.title}`, 48, y - 15, 9, f.bold, C.blue)
-  if (d.cardio.mode === 'compound' && d.cardio.moves) {
-    tL(p, d.cardio.moves.map((m) => `${m.name} (${m.reps})`).join('  ·  '), 48, y - 30, 8, f.reg, C.grayL)
-    tL(p, 'Built in for your compound training style', 48, y - 43, 7.5, f.reg, C.gray)
-  } else {
-    tL(p, `${d.cardio.mins}  ·  ${d.cardio.speed}  ·  incline ${d.cardio.incline}`, 48, y - 30, 8.5, f.reg, C.grayL)
+  // ab circuit — goal-driven, not every session
+  if (d.ab) {
+    const ah = 50; cardBox(p, 36, y - ah, W - 72, ah, C.card, C.gold2, 1.4)
+    tL(p, 'AB CIRCUIT', 48, y - 16, 9, f.bold, C.gold2); tR(p, `${d.ab.scheme} · no rest between · 60s after both`, W - 48, y - 16, 7.5, f.reg, C.gray)
+    pill(p, 'UPPER', 48, y - 34, 6.5, f.bold, C.pink, C.pink); tL(p, d.ab.upper.name, 100, y - 33, 8.5, f.reg, C.white)
+    pill(p, 'LOWER', 300, y - 34, 6.5, f.bold, C.blue, C.blue); tL(p, d.ab.lower.name, 352, y - 33, 8.5, f.reg, C.white)
+    y -= ah + 8
+  }
+  // calves accessory — only real calf picks get this label, never assumed
+  // by array position (a core-only day's ab bonus picks used to land here
+  // mislabeled as "calves" purely because they filled the same slots)
+  const calfItems = d.accessory.filter((a) => a.kind === 'calves')
+  if (calfItems[0] && calfItems[1]) {
+    const ch = 34; cardBox(p, 36, y - ch, W - 72, ch, C.card, C.purple, 1.2)
+    tL(p, 'CALVES + TIBIALIS', 48, y - 14, 8, f.bold, C.purple)
+    tL(p, `${calfItems[0].name} ${calfItems[0].reps}  ·  ${calfItems[1].name} ${calfItems[1].reps}`, 48, y - 27, 8, f.reg, C.grayL)
+    y -= ch + 8
+  }
+  // non-calf accessory (bonus leftover set, core-only extra abs) — shown
+  // generically instead of silently dropped or mislabeled
+  const otherItems = d.accessory.filter((a) => a.kind !== 'calves')
+  if (otherItems.length) {
+    const oh = 34; cardBox(p, 36, y - oh, W - 72, oh, C.card, C.gray, 1.2)
+    tL(p, 'BONUS WORK', 48, y - 14, 8, f.bold, C.gray)
+    tL(p, otherItems.map((a) => `${a.name} ${a.reps}`).join('  ·  '), 48, y - 27, 8, f.reg, C.grayL)
+    y -= oh + 8
+  }
+  // cardio finisher — goal-driven, not every session
+  if (d.cardio) {
+    const carh = d.cardio.mode === 'compound' ? 54 : 40
+    cardBox(p, 36, y - carh, W - 72, carh, C.card, C.blue, 1.4)
+    tL(p, `CARDIO FINISHER — ${d.cardio.title}`, 48, y - 15, 9, f.bold, C.blue)
+    if (d.cardio.mode === 'compound' && d.cardio.moves) {
+      tL(p, d.cardio.moves.map((m) => `${m.name} (${m.reps})`).join('  ·  '), 48, y - 30, 8, f.reg, C.grayL)
+      tL(p, 'Built in for your compound training style', 48, y - 43, 7.5, f.reg, C.gray)
+    } else {
+      tL(p, `${d.cardio.mins}  ·  ${d.cardio.speed}  ·  incline ${d.cardio.incline}`, 48, y - 30, 8.5, f.reg, C.grayL)
+    }
   }
 }
 

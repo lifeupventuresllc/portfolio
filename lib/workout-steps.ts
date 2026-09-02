@@ -141,17 +141,21 @@ export function buildSteps(program: WorkoutProgram, dayIdx: number): WorkoutStep
       steps.push({ phase: 'Rest', name: 'Rest', seconds: 45, rest: true })
     }
   })
-  steps.push({ phase: `Abs · ${day.ab.scheme}`, name: day.ab.upper.name, detail: day.ab.scheme, cue: day.ab.upper.cue, imageUrl: day.ab.upper.imageUrl })
-  steps.push({ phase: `Abs · ${day.ab.scheme}`, name: day.ab.lower.name, detail: day.ab.scheme, cue: day.ab.lower.cue, imageUrl: day.ab.lower.imageUrl })
-  if (day.ab.bonus) {
-    steps.push({ phase: `Abs · Core focus`, name: day.ab.bonus.name, detail: day.ab.scheme, cue: day.ab.bonus.cue, imageUrl: day.ab.bonus.imageUrl })
+  if (day.ab) {
+    steps.push({ phase: `Abs · ${day.ab.scheme}`, name: day.ab.upper.name, detail: day.ab.scheme, cue: day.ab.upper.cue, imageUrl: day.ab.upper.imageUrl })
+    steps.push({ phase: `Abs · ${day.ab.scheme}`, name: day.ab.lower.name, detail: day.ab.scheme, cue: day.ab.lower.cue, imageUrl: day.ab.lower.imageUrl })
+    if (day.ab.bonus) {
+      steps.push({ phase: `Abs · Core focus`, name: day.ab.bonus.name, detail: day.ab.scheme, cue: day.ab.bonus.cue, imageUrl: day.ab.bonus.imageUrl })
+    }
   }
-  if (day.cardio.mode === 'compound' && day.cardio.moves) {
-    day.cardio.moves.forEach((m) => {
-      steps.push({ phase: 'Cardio finisher · Compound', name: m.name, detail: m.reps, cue: m.cue, imageUrl: m.imageUrl })
-    })
-  } else {
-    steps.push({ phase: 'Cardio finisher', name: day.cardio.title, detail: `${day.cardio.mins} · ${day.cardio.speed} · incline ${day.cardio.incline}`, cue: day.cardio.note })
+  if (day.cardio) {
+    if (day.cardio.mode === 'compound' && day.cardio.moves) {
+      day.cardio.moves.forEach((m) => {
+        steps.push({ phase: 'Cardio finisher · Compound', name: m.name, detail: m.reps, cue: m.cue, imageUrl: m.imageUrl })
+      })
+    } else {
+      steps.push({ phase: 'Cardio finisher', name: day.cardio.title, detail: `${day.cardio.mins} · ${day.cardio.speed} · incline ${day.cardio.incline}`, cue: day.cardio.note })
+    }
   }
   return steps
 }

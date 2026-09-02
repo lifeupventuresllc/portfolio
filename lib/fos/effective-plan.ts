@@ -20,11 +20,11 @@ const FOCUS_AREA_LABEL: Record<Exclude<FocusArea, 'overall'>, string> = {
 
 // A real, specific title for whichever area(s) she asked for — "Back Focus,"
 // not the generic day label underneath it. Needed because home-track day
-// TITLES don't carry per-muscle detail the way gym's do: homeSplit() gives
-// every day the literal title "Full Body" for a beginner (level < 2, see
-// lib/workout.ts), and even past beginner it only alternates "Leg Focus" /
-// "Upper Body & Core" — arms, chest, back, and shoulders all collapse into
-// that same "Upper Body & Core" label. So pickFocusDayIndex was already
+// TITLES don't carry per-muscle detail the way gym's do: buildHomeDay (lib/
+// workout-assembly.ts) titles a full-body day literally "Full Body," and
+// otherwise only alternates "Leg Focus" / "Upper Body & Core" — arms, chest,
+// back, and shoulders all collapse into that same "Upper Body & Core" label.
+// So pickFocusDayIndex was already
 // correctly selecting a day whose EXERCISES matched her ask (confirmed live
 // via Coach Asa's own reply text), but the title shown back to her never
 // reflected it — a beginner asking for "back" always saw "Full Body" on the
