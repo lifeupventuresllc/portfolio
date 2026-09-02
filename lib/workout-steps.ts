@@ -17,6 +17,23 @@ const parseSecs = (s?: string): number | undefined => {
   return m ? Number(m[1]) : undefined
 }
 
+// Real gap caught live, 2026-09-01 (Asa's spec, restated: "after each set,
+// the user provides a simple effort signal... through a minimal full-screen
+// tap interface shown during the rest timer"): a rep scheme like "3 ×
+// 12–15" was always rendered as ONE step — she'd do 3 real physical sets
+// against a single card, and the effort tap (WorkoutPlayer.tsx) only ever
+// fired once for the whole exercise, not once per set the way the spec
+// describes. Parses the leading set count off the reps string every rep
+// scheme in lib/workout-assembly.ts is built from ("3 × 12–15 (short
+// rest)", "2 × 15–20", ...) — falls back to 1 (today's old behavior) if a
+// scheme is ever written that doesn't start with a plain number, so this
+// can never crash or silently drop a step on an unexpected format.
+const parseSetCount = (reps: string): number => {
+  const m = reps.match(/^(\d+)/)
+  const n = m ? Number(m[1]) : 1
+  return Number.isFinite(n) && n > 0 ? n : 1
+}
+
 // Rough total session length. Timed steps (home exercises, rest) use their real
 // seconds; rep-based work steps (gym supersets/accessory/abs) get a ~40s working-set
 // estimate since reps aren't time-denominated. Good enough for "About N min" at the
@@ -100,18 +117,29 @@ export function buildSteps(program: WorkoutProgram, dayIdx: number): WorkoutStep
   if (!day) return steps
   steps.push({ phase: 'Warm-up', name: 'Warm-up', detail: day.warmup.join(' · ') })
   day.supersets.forEach((s, i) => {
-    steps.push({ phase: `Superset ${i + 1}`, name: s.push.name, detail: s.reps, cue: s.push.cue, imageUrl: s.push.imageUrl })
-    steps.push({ phase: 'Rest', name: 'Rest', seconds: 45, rest: true })
-    steps.push({ phase: `Superset ${i + 1}`, name: s.pull.name, detail: s.reps, cue: s.pull.cue, imageUrl: s.pull.imageUrl })
-    steps.push({ phase: 'Rest', name: 'Rest', seconds: 60, rest: true })
+    const setCount = parseSetCount(s.reps)
+    // Alternating push/pull PER SET, not all pushes then all pulls — a true
+    // superset stays paired every round (push set 1, pull set 1, push set
+    // 2, pull set 2, ...), same shape the original single-set version
+    // already had, just genuinely repeated for every real set instead of
+    // rendered once.
+    for (let set = 1; set <= setCount; set++) {
+      steps.push({ phase: `Superset ${i + 1} · Set ${set}/${setCount}`, name: s.push.name, detail: s.reps, cue: s.push.cue, imageUrl: s.push.imageUrl })
+      steps.push({ phase: 'Rest', name: 'Rest', seconds: 45, rest: true })
+      steps.push({ phase: `Superset ${i + 1} · Set ${set}/${setCount}`, name: s.pull.name, detail: s.reps, cue: s.pull.cue, imageUrl: s.pull.imageUrl })
+      steps.push({ phase: 'Rest', name: 'Rest', seconds: 60, rest: true })
+    }
   })
   day.accessory.forEach((a) => {
     // Real bug found live: every other exercise category (supersets, abs,
     // compound-cardio moves) passed imageUrl through to the step — this one
     // never did, so a matched accessory exercise (Standing Calf Raise is one)
     // could never show its real photo no matter what.
-    steps.push({ phase: 'Accessory', name: a.name, detail: a.reps, cue: a.cue, imageUrl: a.imageUrl })
-    steps.push({ phase: 'Rest', name: 'Rest', seconds: 45, rest: true })
+    const setCount = parseSetCount(a.reps)
+    for (let set = 1; set <= setCount; set++) {
+      steps.push({ phase: `Accessory · Set ${set}/${setCount}`, name: a.name, detail: a.reps, cue: a.cue, imageUrl: a.imageUrl })
+      steps.push({ phase: 'Rest', name: 'Rest', seconds: 45, rest: true })
+    }
   })
   steps.push({ phase: `Abs · ${day.ab.scheme}`, name: day.ab.upper.name, detail: day.ab.scheme, cue: day.ab.upper.cue, imageUrl: day.ab.upper.imageUrl })
   steps.push({ phase: `Abs · ${day.ab.scheme}`, name: day.ab.lower.name, detail: day.ab.scheme, cue: day.ab.lower.cue, imageUrl: day.ab.lower.imageUrl })
