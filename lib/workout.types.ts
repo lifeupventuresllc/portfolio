@@ -39,6 +39,14 @@ export interface WorkoutInputs {
   // heavier person can be very fit, a lighter one very deconditioned.
   // Deliberately independent of `level`, which still governs incline/form.
   activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
+  // Asa's explicit ask, 2026-09-02: "the nutrition engine and workout engine
+  // should connect — they're the two main brains that make the app work."
+  // The nutrition -> workout direction: true when she's logged nothing yet
+  // today and it's already past early afternoon (computeLowFuelToday in
+  // workout-assembly.ts owns the actual rule, shared by every caller so
+  // "low fuel" means the same real thing everywhere it's checked). Softens
+  // today's cardio finisher — never strength work, never a silent skip.
+  lowFuelToday?: boolean
   // New, 2026-09-01 rebuild: a stated time budget now genuinely changes how
   // MANY exercises get assembled (see countForMinutes in workout-assembly.ts)
   // — the old fixed-template system had no such concept; the operator route

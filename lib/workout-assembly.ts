@@ -133,6 +133,20 @@ interface Constraints {
   // Her real current capacity (see WorkoutInputs.activityLevel) — cardio
   // duration reads this, never skillLevel; incline still reads skillLevel.
   activityLevel?: WorkoutInputs['activityLevel']
+  // The nutrition -> workout half of the connection (see WorkoutInputs.
+  // lowFuelToday) — nothing logged today, already past early afternoon.
+  lowFuelToday?: boolean
+}
+
+// Shared rule for "she hasn't eaten today" — every caller computes its own
+// caloriesLoggedToday/hour from its own already-fetched data and calls this,
+// so "low fuel" means the identical real thing everywhere it's checked
+// instead of drifting into N slightly-different definitions. 13:00 (1pm
+// local) is the cutoff: early enough that a genuine skipped breakfast
+// hasn't yet become "hasn't eaten all day," late enough that a normal
+// pre-lunch gap doesn't false-positive.
+export function computeLowFuelToday(caloriesLoggedToday: number, localHour: number): boolean {
+  return caloriesLoggedToday <= 0 && localHour >= 13
 }
 
 // Ab/core picking, generalized off the same attribute-matching `pick()`
@@ -223,11 +237,19 @@ const ACTIVITY_MIN_ADJUST: Record<NonNullable<WorkoutInputs['activityLevel']>, n
 // the one cardio parameter that never scaled with her level while incline
 // and duration both did. Same three-tier progression as incline below.
 const CARDIO_SPEED: Record<SkillLevel, string> = { 1: '3.0 mph', 2: '3.3 mph', 3: '3.6 mph' }
-function walkFinisher(level: SkillLevel, goal: string, activityLevel?: WorkoutInputs['activityLevel']): CardioFinisher {
+// Asa's ask, 2026-09-02: "the nutrition engine and workout engine should
+// connect — they're the two main brains." This is the nutrition -> workout
+// half — nothing eaten yet today softens the cardio finisher specifically
+// (never strength work, never a silent skip of the whole session), same
+// shape as the goal/activity adjustments above, always disclosed in `note`
+// rather than just quietly shortened.
+const LOW_FUEL_MIN_ADJUST = -8
+function walkFinisher(level: SkillLevel, goal: string, activityLevel?: WorkoutInputs['activityLevel'], lowFuelToday?: boolean): CardioFinisher {
   const base = level === 1 ? { incline: '0–2.5%', minLow: 15, minHigh: 20 } : level === 2 ? { incline: '2.5–3.0%', minLow: 20, minHigh: 25 } : { incline: '3.0–4.0%', minLow: 25, minHigh: 30 }
-  const adjust = (CARDIO_MIN_ADJUST[goal] ?? 0) + (ACTIVITY_MIN_ADJUST[activityLevel ?? 'moderate'] ?? 0)
+  const adjust = (CARDIO_MIN_ADJUST[goal] ?? 0) + (ACTIVITY_MIN_ADJUST[activityLevel ?? 'moderate'] ?? 0) + (lowFuelToday ? LOW_FUEL_MIN_ADJUST : 0)
   const mins = `${Math.max(8, base.minLow + adjust)}–${Math.max(12, base.minHigh + adjust)} min`
-  const note = goal === 'lose' ? 'Your fat-burning finisher — walk tall, shoulders back, no handrails.'
+  const note = lowFuelToday ? "Kept lighter — looks like you haven't eaten yet today. Fuel up when you can."
+    : goal === 'lose' ? 'Your fat-burning finisher — walk tall, shoulders back, no handrails.'
     : goal === 'gain' ? 'Keeps heart rate up without burning muscle — walk tall, no handrails.'
     : 'Steady-state to hold where you\'re at — walk tall, shoulders back, no handrails.'
   return { title: 'Incline Treadmill Walk', mode: 'walk', speed: CARDIO_SPEED[level], incline: base.incline, mins, note }
@@ -245,7 +267,7 @@ function cardioFinisherFor(c: Constraints, goal: string, trainingStyle: WorkoutI
     const moves = rotate(pool, offset).slice(0, 3).map((m) => ({ name: m.name, reps: m.reps, cue: m.cue, imageUrl: m.imageUrl }))
     return { title: 'Compound Finisher', mode: 'compound', note: 'Full-body compound moves to close out your session — built in because that’s your training style.', moves }
   }
-  return walkFinisher(effectiveLevel, goal, c.activityLevel)
+  return walkFinisher(effectiveLevel, goal, c.activityLevel, c.lowFuelToday)
 }
 
 const AB_SCHEME: Record<SkillLevel, string> = { 1: '2 sets × 8–12', 2: '2–3 sets × 12–15', 3: '3–4 sets × 15+ (add weight)' }
@@ -402,7 +424,7 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
   const week = inp.weekNumber || 1
   const injuries = inp.injuries || []
   const location: Location = inp.track
-  const c: Constraints = { location, skillLevel: level, injuries, postpartum: !!inp.postpartum, progressionOverrides: inp.progressionOverrides, activityLevel: inp.activityLevel }
+  const c: Constraints = { location, skillLevel: level, injuries, postpartum: !!inp.postpartum, progressionOverrides: inp.progressionOverrides, activityLevel: inp.activityLevel, lowFuelToday: inp.lowFuelToday }
   const days = Math.min(Math.max(Math.round(inp.daysPerWeek || 3), 1), 6)
   const coreFocus = inp.focusArea === 'core' || !!inp.overrideAreas?.includes('core')
 

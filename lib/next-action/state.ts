@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
+import { computeLowFuelToday } from '@/lib/workout-assembly'
 import { getProgressionOverrides } from '@/lib/progression'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday } from '@/lib/fos/effective-plan'
@@ -92,12 +93,19 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     // instead of what months of actual logged performance say it should
     // be, even though /plan/workout's own regeneration always has.
     const progressionOverrides = await getProgressionOverrides(enrollmentId)
+    // Nutrition -> workout (Asa's ask: "the two main brains" should connect).
+    // Computed here from the same already-fetched foodToday rather than
+    // waiting for caloriesLoggedToday further below, since this call runs
+    // first — computeLowFuelToday is the single shared rule (workout-
+    // assembly.ts) so every caller means the identical thing by it.
+    const caloriesSoFar = (foodToday || []).reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
     program = generateWorkout({
       name: (enrollment!.name as string) || 'Your', sex, track: trackOverride || (intake.training_location === 'home' ? 'home' : 'gym'),
       level, goal, daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyle, focusArea,
       overrideAreas: focusOverride?.length ? focusOverride : undefined,
       progressionOverrides,
       activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
+      lowFuelToday: computeLowFuelToday(caloriesSoFar, localHourNumber(tz)),
     })
   }
 

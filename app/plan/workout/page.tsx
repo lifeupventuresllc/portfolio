@@ -7,7 +7,8 @@ import { getProgressionOverrides } from '@/lib/progression'
 import { generateCardioSession } from '@/lib/cardio-session'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { localDateISO, addDaysISO, currentWeekNumber } from '@/lib/localdate'
+import { localDateISO, addDaysISO, currentWeekNumber, getTimezone, localHourNumber } from '@/lib/localdate'
+import { computeLowFuelToday } from '@/lib/workout-assembly'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,12 +53,20 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
   // hasRealName gate, not just this page's own copy.
   const hasRealName = !!(enrollment.name || user.email)
   const firstName = (enrollment.name || user.email?.split('@')[0] || 'there').split(' ')[0]
-  const [{ data: workoutPlan }, { data: doneRows }, { data: intake }, todayAdjustment] = await Promise.all([
+  const today = localDateISO()
+  // Nutrition -> workout (Asa's ask: "the two main brains" should connect).
+  // Same shared rule as lib/next-action/state.ts's getUserState — this page
+  // and the chat/circle must mean the identical thing by "low fuel," not
+  // two independently-tuned thresholds.
+  const [{ data: workoutPlan }, { data: doneRows }, { data: intake }, todayAdjustment, { data: foodToday }] = await Promise.all([
     svc.from('challenge_workout_plans').select('*').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('measurements, logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
     svc.from('challenge_intake').select('*').eq('enrollment_id', enrollment.id).maybeSingle(),
-    getApprovedTodayAdjustment(enrollment.id as string, localDateISO()),
+    getApprovedTodayAdjustment(enrollment.id as string, today),
+    svc.from('challenge_food_log').select('calories').eq('enrollment_id', enrollment.id).eq('logged_on', today),
   ])
+  const caloriesSoFar = (foodToday || []).reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
+  const lowFuelToday = computeLowFuelToday(caloriesSoFar, localHourNumber(getTimezone()))
 
   if (!workoutPlan?.plan) {
     // The Sculpt Sessions fast lane — one photo, one question (home or gym),
@@ -128,6 +137,7 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
       overrideAreas: focusOverride?.length ? focusOverride : undefined,
       progressionOverrides,
       activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
+      lowFuelToday,
     })
   }
 
