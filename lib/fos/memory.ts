@@ -120,7 +120,9 @@ Her name is given below (NAME). Use it in every reply — naturally woven in, no
 
 If GOAL CONTEXT is present below, it's a quiet observation about her longer-term pace — not a score, not something to report. Only bring it up if it genuinely fits this specific reply, the way a person who's been paying attention might gently check in, never as a status update.
 
-Never say you're an AI, that you "track," "log," or "analyze" her. You remember her. Never guilt — no "you failed," no "you missed." She approves, modifies, or rejects what you recommend — you don't control her. Warm, direct, brief — a couple sentences, not a lecture.
+Never say you're an AI, that you "track," "log," or "analyze" her. You remember her. Never guilt — no "you failed," no "you missed." She approves, modifies, or rejects what you recommend — you don't control her.
+
+ONE short sentence. A second only if a real fact from DECISION genuinely doesn't fit in the first — never a third. No lecture, no list, no restating what she already knows or just said back to her.
 
 Reply with ONLY the message to send her. No preamble, no quotes, no explanation.`
 
@@ -137,7 +139,7 @@ export async function generateReply(input: {
     const client = new Anthropic()
     const msg = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 300,
+      max_tokens: 120,
       system: GENERATE_SYSTEM,
       messages: [{
         role: 'user',
@@ -146,7 +148,12 @@ export async function generateReply(input: {
     })
     const block = msg.content.find((b) => b.type === 'text')
     const text = block && block.type === 'text' ? block.text.trim() : ''
-    if (!text || text.length > 700) return null
+    // Real gap, Asa's direct ask 2026-09-02: replies were running long even
+    // with "brief" in the prompt — instructions alone weren't reliable
+    // enough. A hard length ceiling (~2 real sentences) backstops it: if the
+    // model still rambles, this discards the reply and the caller falls
+    // back to a short deterministic message instead of showing her a lecture.
+    if (!text || text.length > 280) return null
     return text
   } catch { return null }
 }
@@ -210,7 +217,7 @@ If TODAY is present below, it's her real, current, already-computed plan state (
 
 Never invent a plan detail, a number from her data, or a fact about her you don't actually know. If the question genuinely needs her real stats or plan to answer well and neither TODAY nor PROFILE has enough here to go on, say so plainly and ask the one thing you'd need — don't guess.
 
-2-4 sentences, warm and direct, like a text from a coach who knows her — not a lecture or a bulleted article. Reply with ONLY the message to send her. No preamble, no quotes, no explanation.`
+1-2 short sentences, like a text from a coach who knows her — never 3+ unless the question truly can't be answered in less, and never a lecture, a list, or a bulleted article. Reply with ONLY the message to send her. No preamble, no quotes, no explanation.`
 
 export async function answerGeneralQuestion(input: {
   herMessage: string
@@ -224,7 +231,7 @@ export async function answerGeneralQuestion(input: {
     const client = new Anthropic()
     const msg = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 350,
+      max_tokens: 150,
       system: ANSWER_SYSTEM,
       messages: [{
         role: 'user',
@@ -233,7 +240,10 @@ export async function answerGeneralQuestion(input: {
     })
     const block = msg.content.find((b) => b.type === 'text')
     const text = block && block.type === 'text' ? block.text.trim() : ''
-    if (!text || text.length > 700) return null
+    // Same hard ceiling as generateReply above, sized for "1-2 short
+    // sentences" with a little more room for the rare real 3-sentence
+    // answer the prompt allows when a question genuinely needs it.
+    if (!text || text.length > 340) return null
     return text
   } catch { return null }
 }
