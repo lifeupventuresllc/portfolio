@@ -118,6 +118,21 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
   // distinct logId, not once per render.
   const celebratedRef = useRef<Set<string>>(new Set())
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  // Real gap Asa caught live, 2026-09-02: unlike OperatorChat.tsx/
+  // CoachHero.tsx (both already auto-scroll), this transcript never did —
+  // she had to scroll down herself to see a new reply. Replies arrive
+  // whole, not token-streamed, so one instant snap per new turn is enough:
+  // no smooth-scroll fighting a still-arriving stream, no repeated
+  // re-triggers to glitch over. Two anchors, one for each transcript
+  // (compact dock + expanded "Ask your coach" card) — only whichever is
+  // actually mounted ever has a non-null ref, so this is a safe no-op for
+  // the other.
+  const turnsEndRef = useRef<HTMLDivElement>(null)
+  const turnsEndRef2 = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    turnsEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
+    turnsEndRef2.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
+  }, [turns.length])
 
   // Real, visible celebration (2026-08-28, Asa's direct call) — the reward
   // used to be silently woven into the instruction text, by original
@@ -488,6 +503,7 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
                 </div>
               </div>
             ))}
+            <div ref={turnsEndRef} />
           </div>
         )}
 
@@ -741,6 +757,7 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
                 </div>
               </div>
             ))}
+            <div ref={turnsEndRef2} />
           </div>
         )}
 
