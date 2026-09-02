@@ -15,7 +15,7 @@ import { winAffirmation } from '@/lib/affirmations'
 // same as everything else here. Approving a change refreshes the supporting
 // cards on the spot.
 type Msg = { role: 'user' | 'operator'; content: string }
-type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home'; injuryBodyPart?: string; focusOverride?: ('core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders')[] }
+type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; trackOverride?: 'gym' | 'home'; injuryBodyPart?: string; contentSwap?: 'cardio'; focusOverride?: ('core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders')[] }
 
 function joinAreas(areas: string[]): string {
   if (areas.length <= 1) return areas[0] || ''
@@ -172,6 +172,13 @@ export default function CoachHero({ firstName, hasPlan = true, maximized = false
   const adjLines = (a: Adjustment) => {
     const out: string[] = []; const w = a.workoutChange, n = a.nutritionChange
     if (w?.injuryBodyPart) out.push(`Workout → swapped to protect your ${w.injuryBodyPart.replace('_', ' ')}, from now on`)
+    // Real gap found live: she asked for "a hiit cardio workout at home" and
+    // got told "swapped to a bodyweight home session" — technically true but
+    // it silently dropped the actual thing she asked for. contentSwap always
+    // wins the headline (it's what she named), trackOverride still rides
+    // along in the same line when both are set, same "additive" pattern the
+    // focusOverride+trackOverride combo below already uses.
+    else if (w?.contentSwap === 'cardio') out.push(`Workout → cardio & conditioning session${w.trackOverride ? ` at ${w.trackOverride === 'home' ? 'home' : 'the gym'}` : ''} today`)
     else if (w?.trackOverride) out.push(`Workout → swapped to a ${w.trackOverride === 'home' ? 'bodyweight home' : 'gym'} session${w.toMinutes ? `, ${w.toMinutes} min` : ''}`)
     else if (w?.focusOverride?.length) out.push(`Workout → focused on ${joinAreas(w.focusOverride)} today`)
     else if (w?.toMinutes) out.push(`Workout → ${w.toMinutes}-min ${w.swapTo || 'session'}`)

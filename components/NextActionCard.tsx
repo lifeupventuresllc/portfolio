@@ -37,7 +37,7 @@ type NextAction = {
 // engine, same real gate questions, same approve/decline flow. Routes
 // through it now instead of duplicating a second, weaker parser.
 type ChatTurn = { role: 'user' | 'operator'; content: string }
-type WorkoutChange = { toMinutes?: number; swapTo?: string; reason?: string; injuryBodyPart?: string; trackOverride?: 'gym' | 'home'; focusOverride?: ('core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders')[] }
+type WorkoutChange = { toMinutes?: number; swapTo?: string; reason?: string; injuryBodyPart?: string; trackOverride?: 'gym' | 'home'; contentSwap?: 'cardio'; focusOverride?: ('core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders')[] }
 type NutritionChange = { calorieDelta?: number; dinnerSuggestion?: string; reason?: string; eatingOut?: boolean }
 type PendingAdjustment = { id: string | null; workoutChange?: WorkoutChange; nutritionChange?: NutritionChange }
 
@@ -50,6 +50,10 @@ function adjLines(a: PendingAdjustment): string[] {
   const out: string[] = []
   const w = a.workoutChange, n = a.nutritionChange
   if (w?.injuryBodyPart) out.push(`Workout → swapped to protect your ${w.injuryBodyPart.replace('_', ' ')}, from now on`)
+  // Same gap as CoachHero.tsx/OperatorChat.tsx: contentSwap is the thing she
+  // actually asked for ("hiit cardio at home"), so it wins the headline;
+  // trackOverride still rides along in the same line when both are set.
+  else if (w?.contentSwap === 'cardio') out.push(`Workout → cardio & conditioning session${w.trackOverride ? ` at ${w.trackOverride === 'home' ? 'home' : 'the gym'}` : ''} today`)
   else if (w?.trackOverride) out.push(`Workout → swapped to a ${w.trackOverride === 'home' ? 'bodyweight home' : 'gym'} session${w.toMinutes ? `, ${w.toMinutes} min` : ''}`)
   else if (w?.focusOverride?.length) out.push(`Workout → focused on ${joinAreas(w.focusOverride)} today`)
   else if (w?.toMinutes) out.push(`Workout → ${w.toMinutes}-min ${w.swapTo || 'session'}`)

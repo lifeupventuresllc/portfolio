@@ -10,7 +10,7 @@ import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
 // goal-protecting adjustment she can approve / modify / reject. "The goal never
 // changes. The path changes."
 type Msg = { role: 'user' | 'operator'; content: string }
-type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; injuryBodyPart?: string; trackOverride?: 'gym' | 'home'; focusOverride?: ('core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders')[] }
+type WorkoutChange = { fromMinutes?: number; toMinutes?: number; swapTo?: string; reason?: string; injuryBodyPart?: string; trackOverride?: 'gym' | 'home'; contentSwap?: 'cardio'; focusOverride?: ('core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders')[] }
 
 function joinAreas(areas: string[]): string {
   if (areas.length <= 1) return areas[0] || ''
@@ -153,6 +153,10 @@ export default function OperatorChat({ firstName }: { firstName: string }) {
     const out: string[] = []
     const w = a.workoutChange, n = a.nutritionChange
     if (w?.injuryBodyPart) out.push(`Workout → swapped to protect your ${w.injuryBodyPart.replace('_', ' ')}, from now on`)
+    // Same gap as CoachHero.tsx: contentSwap is the thing she actually asked
+    // for ("hiit cardio at home"), so it wins the headline; trackOverride
+    // still rides along in the same line when both are set.
+    else if (w?.contentSwap === 'cardio') out.push(`Workout → cardio & conditioning session${w.trackOverride ? ` at ${w.trackOverride === 'home' ? 'home' : 'the gym'}` : ''} today`)
     else if (w?.trackOverride) out.push(`Workout → swapped to a ${w.trackOverride === 'home' ? 'bodyweight home' : 'gym'} session${w.toMinutes ? `, ${w.toMinutes} min` : ''}`)
     else if (w?.focusOverride?.length) out.push(`Workout → focused on ${joinAreas(w.focusOverride)} today`)
     else if (w?.toMinutes) out.push(`Workout → ${w.toMinutes}-min ${w.swapTo || 'session'}`)

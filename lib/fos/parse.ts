@@ -158,9 +158,11 @@ export function parseSignal(text: string): LifeSignal | null {
 
 // Independent of whichever kind matched — the regex-fallback counterpart to
 // CLASSIFY_TOOL's workout_style field, used only when parseSignalAI is
-// unconfigured/failed (see app/api/plan/operator/route.ts).
+// unconfigured/failed (see app/api/plan/operator/route.ts). hi+tt matches
+// "hiit" and common typos like "hitt" (real one caught live) without also
+// matching plain "hit" (e.g. "hit legs today") — requires the double-t.
 export function detectWorkoutStyle(text: string): 'cardio' | undefined {
-  return /\b(cardio|hiit|high.intensity)\b/i.test(text) ? 'cardio' : undefined
+  return /\b(cardio|hi+tt|high.intensity|interval training)\b/i.test(text) ? 'cardio' : undefined
 }
 
 // Regex-fallback counterpart to CLASSIFY_TOOL's location field. "Traveling" checked

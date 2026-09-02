@@ -203,6 +203,10 @@ function pick(pool: AtomicExercise[], targetMuscles: MuscleGroup[], count: numbe
 }
 
 const CARDIO_MIN_ADJUST: Record<string, number> = { lose: 5, gain: -5, maintain: 0 }
+// Real gap caught live: speed sat as a literal '3.3 mph (fixed)' string —
+// the one cardio parameter that never scaled with her level while incline
+// and duration both did. Same three-tier progression as incline below.
+const CARDIO_SPEED: Record<SkillLevel, string> = { 1: '3.0 mph', 2: '3.3 mph', 3: '3.6 mph' }
 function walkFinisher(level: SkillLevel, goal: string): CardioFinisher {
   const base = level === 1 ? { incline: '0–2.5%', minLow: 15, minHigh: 20 } : level === 2 ? { incline: '2.5–3.0%', minLow: 20, minHigh: 25 } : { incline: '3.0–4.0%', minLow: 25, minHigh: 30 }
   const adjust = CARDIO_MIN_ADJUST[goal] ?? 0
@@ -210,7 +214,7 @@ function walkFinisher(level: SkillLevel, goal: string): CardioFinisher {
   const note = goal === 'lose' ? 'Your fat-burning finisher — walk tall, shoulders back, no handrails.'
     : goal === 'gain' ? 'Keeps heart rate up without burning muscle — walk tall, no handrails.'
     : 'Steady-state to hold where you\'re at — walk tall, shoulders back, no handrails.'
-  return { title: 'Incline Treadmill Walk', mode: 'walk', speed: '3.3 mph (fixed)', incline: base.incline, mins, note }
+  return { title: 'Incline Treadmill Walk', mode: 'walk', speed: CARDIO_SPEED[level], incline: base.incline, mins, note }
 }
 function cardioFinisherFor(level: SkillLevel, goal: string, trainingStyle: WorkoutInputs['trainingStyle'], injuries: Injury[], offset: number): CardioFinisher {
   if (trainingStyle === 'compound') {
