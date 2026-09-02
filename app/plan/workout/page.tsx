@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import WorkoutPlayer from '@/components/WorkoutPlayer'
 import QuickstartWorkout from '@/components/QuickstartWorkout'
-import { generateWorkout, pickFocusDayIndex, applyProgressiveOverload, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
+import { generateWorkout, pickFocusDayIndex, applyProgressiveOverload, type WorkoutProgram, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import { getProgressionOverrides } from '@/lib/progression'
 import { generateCardioSession } from '@/lib/cardio-session'
 import type { Level, Injury } from '@/lib/workout-exercises'
@@ -127,6 +127,7 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
       daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyle, focusArea,
       overrideAreas: focusOverride?.length ? focusOverride : undefined,
       progressionOverrides,
+      activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
     })
   }
 

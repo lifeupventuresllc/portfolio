@@ -130,6 +130,9 @@ interface Constraints {
   // pattern isn't here, filterLibrary falls back to the flat `skillLevel`
   // above exactly as it did before progression memory existed.
   progressionOverrides?: Partial<Record<MovementPattern, { skillLevel: SkillLevel; intensityLevel: IntensityLevel }>>
+  // Her real current capacity (see WorkoutInputs.activityLevel) — cardio
+  // duration reads this, never skillLevel; incline still reads skillLevel.
+  activityLevel?: WorkoutInputs['activityLevel']
 }
 
 // Ab/core picking, generalized off the same attribute-matching `pick()`
@@ -203,14 +206,27 @@ function pick(pool: AtomicExercise[], targetMuscles: MuscleGroup[], count: numbe
 }
 
 const CARDIO_MIN_ADJUST: Record<string, number> = { lose: 5, gain: -5, maintain: 0 }
+// Real gap caught live, Asa's explicit correction: duration only ever
+// scaled off `level` (TRAINING experience) and goal — a deconditioned
+// "advanced" lifter and a genuinely fit "beginner" got the identical
+// cardio finisher, and there was no way to avoid handing someone sedentary
+// a 30-minute session just because they'd logged strength sets before.
+// activityLevel (her real current capacity, already collected at intake
+// for calorie math, never read here) is the right variable — not weight,
+// which a fit heavier person and a deconditioned lighter person could
+// share identically. Deliberately independent of `level`: incline/speed
+// below still track training experience; only duration tracks capacity.
+const ACTIVITY_MIN_ADJUST: Record<NonNullable<WorkoutInputs['activityLevel']>, number> = {
+  sedentary: -10, light: -5, moderate: 0, active: 5, very_active: 10,
+}
 // Real gap caught live: speed sat as a literal '3.3 mph (fixed)' string —
 // the one cardio parameter that never scaled with her level while incline
 // and duration both did. Same three-tier progression as incline below.
 const CARDIO_SPEED: Record<SkillLevel, string> = { 1: '3.0 mph', 2: '3.3 mph', 3: '3.6 mph' }
-function walkFinisher(level: SkillLevel, goal: string): CardioFinisher {
+function walkFinisher(level: SkillLevel, goal: string, activityLevel?: WorkoutInputs['activityLevel']): CardioFinisher {
   const base = level === 1 ? { incline: '0–2.5%', minLow: 15, minHigh: 20 } : level === 2 ? { incline: '2.5–3.0%', minLow: 20, minHigh: 25 } : { incline: '3.0–4.0%', minLow: 25, minHigh: 30 }
-  const adjust = CARDIO_MIN_ADJUST[goal] ?? 0
-  const mins = `${Math.max(10, base.minLow + adjust)}–${Math.max(15, base.minHigh + adjust)} min`
+  const adjust = (CARDIO_MIN_ADJUST[goal] ?? 0) + (ACTIVITY_MIN_ADJUST[activityLevel ?? 'moderate'] ?? 0)
+  const mins = `${Math.max(8, base.minLow + adjust)}–${Math.max(12, base.minHigh + adjust)} min`
   const note = goal === 'lose' ? 'Your fat-burning finisher — walk tall, shoulders back, no handrails.'
     : goal === 'gain' ? 'Keeps heart rate up without burning muscle — walk tall, no handrails.'
     : 'Steady-state to hold where you\'re at — walk tall, shoulders back, no handrails.'
@@ -229,7 +245,7 @@ function cardioFinisherFor(c: Constraints, goal: string, trainingStyle: WorkoutI
     const moves = rotate(pool, offset).slice(0, 3).map((m) => ({ name: m.name, reps: m.reps, cue: m.cue, imageUrl: m.imageUrl }))
     return { title: 'Compound Finisher', mode: 'compound', note: 'Full-body compound moves to close out your session — built in because that’s your training style.', moves }
   }
-  return walkFinisher(effectiveLevel, goal)
+  return walkFinisher(effectiveLevel, goal, c.activityLevel)
 }
 
 const AB_SCHEME: Record<SkillLevel, string> = { 1: '2 sets × 8–12', 2: '2–3 sets × 12–15', 3: '3–4 sets × 15+ (add weight)' }
@@ -386,7 +402,7 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
   const week = inp.weekNumber || 1
   const injuries = inp.injuries || []
   const location: Location = inp.track
-  const c: Constraints = { location, skillLevel: level, injuries, postpartum: !!inp.postpartum, progressionOverrides: inp.progressionOverrides }
+  const c: Constraints = { location, skillLevel: level, injuries, postpartum: !!inp.postpartum, progressionOverrides: inp.progressionOverrides, activityLevel: inp.activityLevel }
   const days = Math.min(Math.max(Math.round(inp.daysPerWeek || 3), 1), 6)
   const coreFocus = inp.focusArea === 'core' || !!inp.overrideAreas?.includes('core')
 

@@ -30,6 +30,15 @@ export interface WorkoutInputs {
   weightLb?: number
   heightIn?: number
   age?: number
+  // Real gap found live, Asa's explicit correction: cardio duration/incline
+  // used to scale only by `level` (self-reported TRAINING experience) — a
+  // deconditioned "advanced" lifter and a genuinely fit "beginner" got the
+  // same cardio finisher. activityLevel is her actual current physical
+  // capacity (already collected at intake for calorie math, never used
+  // here before), a real signal weight/BMI alone can't stand in for — a
+  // heavier person can be very fit, a lighter one very deconditioned.
+  // Deliberately independent of `level`, which still governs incline/form.
+  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
   // New, 2026-09-01 rebuild: a stated time budget now genuinely changes how
   // MANY exercises get assembled (see countForMinutes in workout-assembly.ts)
   // — the old fixed-template system had no such concept; the operator route

@@ -1,5 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/server'
-import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
+import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import { getProgressionOverrides } from '@/lib/progression'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday } from '@/lib/fos/effective-plan'
@@ -97,6 +97,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
       level, goal, daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyle, focusArea,
       overrideAreas: focusOverride?.length ? focusOverride : undefined,
       progressionOverrides,
+      activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
     })
   }
 

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { generateWorkout, type TrainingStyle, type FocusArea } from '@/lib/workout'
+import { generateWorkout, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import type { Level, Injury } from '@/lib/workout-exercises'
 
 // Shared by /api/plan/rebuild-workout (generic "get me on the current engine") and
@@ -30,6 +30,7 @@ export async function regenerateWorkoutFromIntake(
     postpartum,
     trainingStyle,
     focusArea,
+    activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
   })
 
   const payload = {

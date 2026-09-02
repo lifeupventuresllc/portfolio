@@ -208,6 +208,7 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     trainingStyle: inp.training_style || 'none',
     focusArea: inp.focus_area || 'overall',
     overrideAreas: inp.override_areas,
+    activityLevel: inp.activity_level === 'none' ? 'sedentary' : inp.activity_level,
   })
 
   let weekPlan: ReturnType<typeof buildWeekFromSelections> | null = null

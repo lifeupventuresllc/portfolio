@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { localDateISO } from '@/lib/localdate'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
-import { generateWorkout, type TrainingStyle, type WorkoutProgram, type FocusArea } from '@/lib/workout'
+import { generateWorkout, type TrainingStyle, type WorkoutProgram, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import type { Level, Injury } from '@/lib/workout-exercises'
 
 async function resolve() {
@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
     const newProgram = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex, track, level, goal,
       daysPerWeek, weekNumber: 1, injuries, postpartum, trainingStyle, focusArea,
+      activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
     })
     await svc.from('challenge_workout_plans').update({ plan: newProgram }).eq('enrollment_id', eid).eq('week_number', 1)
     // experience_level persists too (not just days_per_week) — a reduced

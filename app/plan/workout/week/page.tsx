@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea } from '@/lib/workout'
+import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { currentWeekNumber } from '@/lib/localdate'
 
@@ -54,6 +54,7 @@ export default async function WorkoutWeekPage() {
     program = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex, track: intake.training_location === 'home' ? 'home' : 'gym',
       level, goal, daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyle, focusArea,
+      activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
     })
   }
 
