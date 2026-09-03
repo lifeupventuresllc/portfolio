@@ -192,7 +192,17 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
     setBusy(true)
     setDone(true)
     try {
-      await fetch('/api/plan/next-action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logId: action.logId, action: 'done' }) })
+      // Real gap found live, 2026-09-03 (Asa's report: "not showing up"):
+      // on a fast connection, the fetch + load() below could resolve in
+      // well under 200ms — the instruction swapped to the next thing
+      // almost instantly, so the gold fill/pop had no real moment to
+      // register before her eye moved on. minDelay guarantees the "done"
+      // state holds for a real beat no matter how fast the network is.
+      const minDelay = new Promise((resolve) => setTimeout(resolve, 700))
+      await Promise.all([
+        fetch('/api/plan/next-action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logId: action.logId, action: 'done' }) }),
+        minDelay,
+      ])
       await load()
     } finally {
       setDone(false)
@@ -428,8 +438,8 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
                at all. Purely additive: a one-shot ring that mounts and
                plays only while done is true, never touches markDone's real
                state logic. */
-            @keyframes luf-done-pop { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.5); opacity: 0; } }
-            .luf-done-pop { position: absolute; inset: -6px; border-radius: 9999px; border: 1.6px solid #E5A93C; animation: luf-done-pop 0.5s ease-out forwards; pointer-events: none; }
+            @keyframes luf-done-pop { 0% { transform: scale(0.55); opacity: 1; } 70% { opacity: 0.6; } 100% { transform: scale(2.1); opacity: 0; } }
+            .luf-done-pop { position: absolute; inset: -6px; border-radius: 9999px; border: 2.2px solid #E5A93C; animation: luf-done-pop 0.8s ease-out forwards; pointer-events: none; }
           `}</style>
           <div
             role={isTappable ? 'button' : undefined}
