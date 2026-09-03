@@ -16,11 +16,16 @@ export default function CalendarToggle() {
 
   return (
     <div className="flex items-center justify-between">
-      <span className="text-ivory/85 text-sm flex items-center gap-2"><span>📅</span> Calendar awareness</span>
+      <span className="text-ivory/85 text-sm flex items-center gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M3.5 9.5h17M8 3v4M16 3v4" /></svg>
+        Calendar awareness
+      </span>
       {connected ? (
         <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-green-500/15 text-green-400">Connected</span>
       ) : (
-        <a href="/api/calendar/connect" className="text-xs font-bold px-3 py-1.5 rounded-full bg-gold text-obsidian">Connect</a>
+        // Was "Connect" — collided with the bottom-nav Connect tab's own
+        // name (button audit, 2026-09-03).
+        <a href="/api/calendar/connect" className="text-xs font-bold px-3 py-1.5 rounded-full bg-gold text-obsidian">Link calendar</a>
       )}
     </div>
   )

@@ -4,13 +4,18 @@ import { useState, type ReactNode } from 'react'
 
 // The page itself stays a server component (real data fetching, redirects) —
 // this is just the tab chrome + active-tab state around two pre-rendered
-// halves it's handed. Match starts active: it's the one real reason this
-// page exists beyond the social feed now (Asa's framing), so it shouldn't
-// need a tap to find. Nothing in the Community tab's content changed or was
-// removed — same leaderboard/spotlight/feed, just behind its own tab instead
-// of always sharing the top of the page with the new feature.
+// halves it's handed.
+//
+// Real bug found live, 2026-09-03 (button audit): this used to default to
+// Match, but the page's own headline right above it ("You're not doing this
+// alone... our private circle of women walking it out together") describes
+// the Community tab, not Match — a new visitor read one thing and landed on
+// another. The dashboard's comment icon also links straight to this page
+// with no tab param, so it inherited the same mismatch. Community now
+// starts active to match the headline it sits under; Match is still one tap
+// away, just no longer the surprise default.
 export default function CommunityTabs({ match, community }: { match: ReactNode; community: ReactNode }) {
-  const [tab, setTab] = useState<'match' | 'community'>('match')
+  const [tab, setTab] = useState<'match' | 'community'>('community')
   return (
     <div>
       <div className="flex gap-1 bg-charcoal border border-smoke rounded-full p-1 mb-5">

@@ -29,7 +29,7 @@ export default function PostBox() {
       {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
       <div className="flex justify-end mt-2">
         <button onClick={post} disabled={posting || !body.trim()} className="bg-gold text-obsidian px-5 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl disabled:opacity-40">
-          {posting ? 'Posting…' : 'Share 💛'}
+          {posting ? 'Posting…' : 'Share'}
         </button>
       </div>
     </div>

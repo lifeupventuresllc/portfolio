@@ -68,7 +68,10 @@ export default function PushToggle() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <span className="text-ivory/85 text-sm flex items-center gap-2"><span>🔔</span> Daily reminders</span>
+        <span className="text-ivory/85 text-sm flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a5 5 0 0 0-5 5v3.5L5 15h14l-2-3.5V8a5 5 0 0 0-5-5Z" /><path d="M10 18a2 2 0 0 0 4 0" /></svg>
+          Daily reminders
+        </span>
         <button onClick={enabled ? disable : enable} disabled={busy} className={`text-xs font-bold px-3 py-1.5 rounded-full ${enabled ? 'bg-green-500/15 text-green-400' : 'bg-gold text-obsidian'} disabled:opacity-40`}>
           {busy ? '…' : enabled ? 'On' : 'Turn on'}
         </button>

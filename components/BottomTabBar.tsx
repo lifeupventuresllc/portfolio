@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useMealPhotoUpload } from '@/lib/useMealPhotoUpload'
@@ -104,7 +103,13 @@ export default function BottomTabBar() {
             className="rounded-lg flex items-center justify-center disabled:opacity-50 active:scale-95 transition-transform shrink-0"
             style={{ width: 42, height: 26, background: 'linear-gradient(135deg, #E5A93C, #EA5C87)' }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0A0A0F" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            {/* Was a bare "+" — didn't hint this specifically snaps a meal
+                photo (button audit, 2026-09-03: as easily read as "add a
+                friend" or "start a workout"). Camera glyph now matches what
+                it actually does. */}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0A0F" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="7" width="18" height="13" rx="2" /><path d="M8 7 9.5 4h5L16 7" /><circle cx="12" cy="13.5" r="3.4" />
+            </svg>
           </button>
         </div>
 
@@ -116,9 +121,15 @@ export default function BottomTabBar() {
         )}
 
         {/* Personal-stats spot — this page is now progress + today's plan,
-            not a content feed, so it sits like a profile tab, at the end. */}
+            not a content feed, so it sits like a profile tab, at the end.
+            Was a custom silhouette icon that read as ambiguous — either a
+            person with large hair or a trophy (button audit, 2026-09-03).
+            Plain profile-circle now, matching the icon already used for
+            "Edit my intake answers" in the ☰ menu. */}
         <Link href="/plan/today" className="flex flex-col items-center gap-[3px]">
-          <Image src="/images/brand/foryou-icon.png" alt="" width={19} height={19} className="object-contain" style={{ filter: forYouActive ? 'sepia(1) saturate(6) brightness(0.95)' : 'brightness(0) invert(1) opacity(0.4)' }} />
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={forYouActive ? '#E5A93C' : 'rgba(237,231,218,0.4)'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="8.3" r="3.4" /><path d="M5 20c0-3.9 3.1-6.5 7-6.5s7 2.6 7 6.5" />
+          </svg>
           <span className={`text-[10.5px] font-bold ${forYouActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>For You</span>
         </Link>
       </div>

@@ -76,7 +76,10 @@ function EmptyView({ inviteCode, prefillCode, router }: { inviteCode: string | n
         <Header title="Do this with someone" sub="One person you check in with. Not a feed — just you two, keeping each other honest." />
 
         <div className="rounded-2xl p-5 mb-4 text-center" style={{ background: 'linear-gradient(135deg, #0d3a2a, #044A34 60%, #08281d)', border: '1.5px solid #E5A93C' }}>
-          <p className="text-3xl mb-2">🤝</p>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E5A93C" strokeWidth="1.6" style={{ margin: '0 auto 8px' }}>
+            <circle cx="9" cy="9" r="3.2" /><circle cx="16.5" cy="10.3" r="2.4" />
+            <path d="M3 20c0-3.6 2.7-6.1 6-6.1s6 2.5 6 6.1" /><path d="M15 14.6c2.4 0 4 1.9 4 4.9" />
+          </svg>
           <h2 className="text-white font-semibold text-lg mb-1.5">Invite your accountability partner</h2>
           <p className="text-ivory/70 text-xs mb-4 leading-relaxed">Send this link to a real friend. Once they join, you&apos;ll see each other&apos;s streaks and check in together.</p>
           {inviteCode && (

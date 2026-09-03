@@ -37,10 +37,18 @@ type IconName = 'plate' | 'dumbbell' | 'trending' | 'chat' | 'video' | 'refresh'
 function MenuIcon({ name }: { name: IconName }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
   switch (name) {
-    case 'plate': return <svg {...common}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /></svg>
+    // Was two concentric circles — read as a "goal/target" glyph, not food,
+    // and was nearly identical to 'target' below (button audit, 2026-09-03:
+    // "My meals" vs. "Training style" were easy to mix up at a glance). Now
+    // a fork + knife, and 'target' is the only bullseye left in this menu.
+    case 'plate': return <svg {...common}><path d="M7 3v7M5 3v4a2 2 0 0 0 2 2 2 2 0 0 0 2-2V3" /><path d="M16 3c-1.5 0-2.5 1.5-2.5 4s1 3.5 2.5 3.5V21" /></svg>
     case 'dumbbell': return <svg {...common}><path d="M6.5 7v10M17.5 7v10M2.5 10v4M21.5 10v4M6.5 12h11" /></svg>
     case 'trending': return <svg {...common}><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></svg>
-    case 'chat': return <svg {...common}><path d="M21 12a8 8 0 1 1-3.3-6.5L21 4l-1 4.2A8 8 0 0 1 21 12Z" /></svg>
+    // Was drawn as a near-closed arc — read as a loading spinner, not chat,
+    // and was easy to confuse with 'refresh' below (button audit,
+    // 2026-09-03: "Talk to your coach" vs. "Reset my plan"). Now a real
+    // speech-bubble, matching the icon used elsewhere in the app.
+    case 'chat': return <svg {...common}><path d="M21 11.5a8.4 8.4 0 0 1-8.4 8.4H4.6L3 21l1.3-4.2A8.4 8.4 0 1 1 21 11.5Z" /></svg>
     case 'video': return <svg {...common}><rect x="2" y="6" width="14" height="12" rx="2" /><path d="M16 10l6-3v10l-6-3" /></svg>
     case 'refresh': return <svg {...common}><path d="M21 12a9 9 0 1 1-3-6.7" /><path d="M21 3v6h-6" /></svg>
     case 'user': return <svg {...common}><circle cx="12" cy="8" r="4" /><path d="M4 20c1-4 4-6 8-6s7 2 8 6" /></svg>
@@ -84,7 +92,13 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
         { href: '/plan/workout', label: 'My workout — today’s plan', icon: 'dumbbell' },
         { href: '/plan/meals', label: 'My meals — what I’m cooking & how', icon: 'plate' },
         { href: '/plan/checkin', label: 'My progress & previous weeks', icon: 'trending' },
-        { href: '/plan/intake', label: 'My profile & stats', icon: 'user' },
+        // Was "My profile & stats" — this opens the intake edit flow
+        // (re-asking name, goals, etc.), not a profile/stats page, which
+        // doesn't exist yet (button audit, 2026-09-03: this actively
+        // misled rather than just being unclear). Relabeled to match what
+        // it actually does; building a real profile/stats page is a
+        // separate, bigger project, not folded into this fix.
+        { href: '/plan/intake', label: 'Edit my intake answers', icon: 'user' },
         // Real gap found live (beta feedback Priority 1, 2026-08-25): the
         // optional tier (target weight, experience, training style, days/
         // week, cook days, postpartum, other info) only ever had an edit
