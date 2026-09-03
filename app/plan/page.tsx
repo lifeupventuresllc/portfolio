@@ -119,6 +119,16 @@ export default async function PlanDashboard() {
   // zeros; see hasPlan below. She can start from any feature — clicking Coach
   // Asa or a feature card builds the real plan via the cold-start flow, and
   // this same page then renders normally on her next visit.
+  //
+  // Real bug found live, 2026-09-03 (Asa's report — her own dashboard showed
+  // blank): this comment always described the intent, but the render below
+  // never actually matched it — the no-intake path fell through to an empty
+  // `shell(<div className="space-y-4" />, ...)`, a literal blank screen,
+  // instead of the real feed. Every brand-new anonymous visitor (no intake
+  // yet by definition) hit this. Fixed by always rendering the real feed
+  // dashboard below once she's enrolled at all — hasPlan now only decides
+  // which numbers show real data vs. a build-prompt, never whether the page
+  // has content.
   const hasPlan = !!enrollment.intake_completed
 
   const todayIso = localDateISO()
@@ -204,9 +214,8 @@ export default async function PlanDashboard() {
   // read directly from a live DOM measurement (getBoundingClientRect) after
   // two rounds of hand-computed guesses here both came up wrong — not
   // derived from the padding/row/border arithmetic, the actual number.
-  if (hasPlan) {
-    return (
-      <div className="h-[100dvh] -mb-16 flex flex-col overflow-hidden" style={{ background: '#021F16', paddingBottom: 'calc(63px + env(safe-area-inset-bottom))' }}>
+  return (
+    <div className="h-[100dvh] -mb-16 flex flex-col overflow-hidden" style={{ background: '#021F16', paddingBottom: 'calc(63px + env(safe-area-inset-bottom))' }}>
         <TimezoneSync />
         {user.is_anonymous ? <AnonymousSessionBanner /> : (!user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />)}
 
@@ -306,8 +315,5 @@ export default async function PlanDashboard() {
           </div>
         </div>
       </div>
-    )
-  }
-
-  return shell(<div className="space-y-4" />, menu, affirmation)
+  )
 }
