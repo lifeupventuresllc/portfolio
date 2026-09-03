@@ -63,9 +63,18 @@ export default function CollapsibleHeaderCard({
           <GoalProgressCompact startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} calorieLoggedToday={loggedCaloriesToday} calorieBudgetToday={calBudget} embedded />
         </div>
       ) : (
-        <Link href="/plan/intake" className="block mt-2" style={{ fontFamily: 'var(--font-poppins)' }}>
-          <p className="text-white font-bold text-xs">Add your starting weight & goal</p>
-          <p className="text-white/60 text-[11px] mt-0.5">90 seconds — then your real progress shows up here.</p>
+        // Was plain text inside a <Link> — technically tappable, but nothing
+        // about it looked like a button, so a brand-new user had no visual
+        // cue to press it (Asa's catch, 2026-09-03, comparing against the
+        // "For You" tab's now-obvious "Build my plan" button). Same real
+        // destination, now with an actual button underneath so it reads as
+        // a clear next step instead of a caption.
+        <Link href="/plan/intake" className="flex items-center justify-between gap-2 mt-2 rounded-lg px-2.5 py-2 active:scale-[0.98] transition-transform" style={{ fontFamily: 'var(--font-poppins)', background: 'rgba(229,169,60,0.1)', border: '1px solid rgba(229,169,60,0.5)' }}>
+          <div>
+            <p className="text-white font-bold text-xs">Add your starting weight & goal</p>
+            <p className="text-white/60 text-[11px] mt-0.5">90 seconds — then your real progress shows up here.</p>
+          </div>
+          <span className="shrink-0 bg-[#E5A93C] text-[#0A0A0F] text-[11px] font-bold px-3 py-1.5 rounded-full whitespace-nowrap">Get started →</span>
         </Link>
       )}
       <button
