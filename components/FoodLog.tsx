@@ -363,6 +363,15 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
                 </div>
               </div>
               <p className="text-ivory/50 text-xs">{scaled.calories} cal · {scaled.protein_g}g protein · {scaled.carbs_g}g carbs · {scaled.fats_g}g fat</p>
+              {/* Honest gap, not a silent one (Asa's catch, 2026-09-03: "this
+                  isn't just for eggs, right?") — this food isn't one of the
+                  ones we have a real per-piece weight for, so quantity here
+                  means weight, not count. Better to say so than let her
+                  assume "2" means "2 of them" the same way the original bug
+                  worked. */}
+              {!piece && (
+                <p className="text-ivory/40 text-xs">No piece size on file for this food yet — enter grams or ounces, not a count.</p>
+              )}
               {zeroCalorieWarning && (
                 <p className="text-amber-400 text-xs font-semibold">That works out to 0 calories — double-check the quantity before logging.</p>
               )}
