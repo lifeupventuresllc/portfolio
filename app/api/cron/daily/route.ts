@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { sendOnboardingDay3Email, sendOnboardingDay7Email, sendPurchaseOnboardingDay3Email, sendPurchaseOnboardingDay7Email, sendUpsellEmail, sendCheckinEmail } from '@/lib/email'
-import { sendFollowUpEmail, sendProspectFollowUpEmail, FUNNEL_NURTURE_SEQUENCE } from '@/lib/follow-up-emails'
-import { computeLeadScore } from '@/lib/lead-scoring'
+import { sendOnboardingDay3Email, sendOnboardingDay7Email, sendPurchaseOnboardingDay3Email, sendPurchaseOnboardingDay7Email, sendCheckinEmail } from '@/lib/email'
 import { publishToInstagram, publishToTikTok } from '@/lib/social'
 
 export async function GET(request: NextRequest) {
@@ -175,172 +173,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // --- 2c. Send upsell emails for completed projects (3-stage sequence) ---
-  // Stage 1: Day 3 after completion
-  // Stage 2: Day 7 after completion
-  // Stage 3: Day 14 after completion
-  const upsellStages = [
-    { daysAfter: 3, stage: 1 },
-    { daysAfter: 7, stage: 2 },
-    { daysAfter: 14, stage: 3 },
-  ]
-
-  for (const { daysAfter, stage } of upsellStages) {
-    const targetDate = new Date(now.getTime() - daysAfter * 24 * 60 * 60 * 1000)
-    const targetStart = new Date(targetDate)
-    targetStart.setHours(0, 0, 0, 0)
-    const targetEnd = new Date(targetDate)
-    targetEnd.setHours(23, 59, 59, 999)
-
-    const { data: completedProjects } = await supabase
-      .from('projects')
-      .select('id, client_name, client_email, service_type')
-      .eq('status', 'complete')
-      .gte('completed_at', targetStart.toISOString())
-      .lte('completed_at', targetEnd.toISOString())
-
-    for (const project of completedProjects || []) {
-      if (!project.client_email) continue
-
-      const { data: clientProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', project.client_email)
-        .single()
-
-      if (!clientProfile) continue
-
-      // Check if this stage already sent
-      const { data: alreadySent } = await supabase
-        .from('emails')
-        .select('id')
-        .eq('user_id', clientProfile.id)
-        .eq('type', `upsell-${stage}`)
-        .limit(1)
-
-      if (!alreadySent || alreadySent.length === 0) {
-        const firstName = project.client_name.split(' ')[0]
-        await sendUpsellEmail(project.client_email, firstName, project.service_type, stage)
-        await supabase.from('emails').insert({
-          user_id: clientProfile.id,
-          email: project.client_email,
-          type: `upsell-${stage}`,
-        })
-      }
-    }
-  }
-
-  // --- 3. Process funnel follow-up sequences ---
-  let followUpsSent = 0
-  const { data: pendingFollowUps } = await supabase
-    .from('follow_up_queue')
-    .select('id, lead_id, step, sequence_type')
-    .eq('status', 'pending')
-    .lte('scheduled_for', now.toISOString())
-    .limit(50)
-
-  for (const item of pendingFollowUps || []) {
-    if (item.sequence_type !== 'funnel-nurture') continue
-
-    const { data: lead } = await supabase
-      .from('funnel_leads')
-      .select('name, email, service, status')
-      .eq('id', item.lead_id)
-      .single()
-
-    if (!lead || lead.status === 'converted' || lead.status === 'lost') {
-      await supabase.from('follow_up_queue').update({ status: 'skipped' }).eq('id', item.id)
-      continue
-    }
-
-    const firstName = lead.name.split(' ')[0]
-    const sent = await sendFollowUpEmail(lead.email, firstName, lead.service, item.step)
-
-    await supabase.from('follow_up_queue').update({
-      status: sent ? 'sent' : 'skipped',
-      sent_at: sent ? now.toISOString() : null,
-    }).eq('id', item.id)
-
-    if (sent) {
-      await supabase.from('funnel_leads').update({
-        last_email_at: now.toISOString(),
-        follow_up_stage: item.step + 1,
-        lead_score: lead.status === 'new' ? 10 + (item.step * 5) : undefined,
-      }).eq('id', item.lead_id)
-
-      followUpsSent++
-    }
-  }
-
-  // --- 4. Auto-schedule follow-ups for new funnel leads ---
-  const { data: newLeads } = await supabase
-    .from('funnel_leads')
-    .select('id, created_at')
-    .eq('follow_up_stage', 0)
-    .eq('status', 'new')
-
-  for (const lead of newLeads || []) {
-    const leadDate = new Date(lead.created_at)
-
-    for (let i = 0; i < FUNNEL_NURTURE_SEQUENCE.length; i++) {
-      const step = FUNNEL_NURTURE_SEQUENCE[i]
-      const scheduledFor = new Date(leadDate.getTime() + step.delayDays * 24 * 60 * 60 * 1000)
-
-      // Only schedule if in the future
-      if (scheduledFor > now) {
-        await supabase.from('follow_up_queue').insert({
-          lead_id: lead.id,
-          sequence_type: 'funnel-nurture',
-          step: i,
-          scheduled_for: scheduledFor.toISOString(),
-          status: 'pending',
-        })
-      }
-    }
-
-    // Mark as scheduled
-    await supabase.from('funnel_leads').update({ follow_up_stage: 1 }).eq('id', lead.id)
-  }
-
-  // --- 5. Process prospect follow-ups ---
-  let prospectFollowUpsSent = 0
-  const { data: pendingProspectFollowUps } = await supabase
-    .from('follow_up_queue')
-    .select('id, prospect_id, step')
-    .eq('status', 'pending')
-    .not('prospect_id', 'is', null)
-    .lte('scheduled_for', now.toISOString())
-    .limit(50)
-
-  for (const item of pendingProspectFollowUps || []) {
-    const { data: prospect } = await supabase
-      .from('outreach_prospects')
-      .select('name, email, status')
-      .eq('id', item.prospect_id)
-      .single()
-
-    if (!prospect || !prospect.email || ['closed', 'lost', 'replied'].includes(prospect.status)) {
-      await supabase.from('follow_up_queue').update({ status: 'skipped' }).eq('id', item.id)
-      continue
-    }
-
-    const firstName = prospect.name.split(' ')[0]
-    const sent = await sendProspectFollowUpEmail(prospect.email, firstName, item.step)
-
-    await supabase.from('follow_up_queue').update({
-      status: sent ? 'sent' : 'skipped',
-      sent_at: sent ? now.toISOString() : null,
-    }).eq('id', item.id)
-
-    if (sent) {
-      await supabase.from('outreach_prospects').update({
-        touch_count: (prospect as Record<string, unknown>).touch_count as number + 1 || 1,
-        last_contacted_at: now.toISOString(),
-      }).eq('id', item.prospect_id)
-      prospectFollowUpsSent++
-    }
-  }
-
   // --- 6. Client check-ins (30/60/90 day) ---
   let checkinsSent = 0
   const checkinDays: Array<{ days: number; type: '30' | '60' | '90' }> = [
@@ -384,23 +216,6 @@ export async function GET(request: NextRequest) {
       })
       checkinsSent++
     }
-  }
-
-  // --- 7. Recalculate lead scores ---
-  const { data: activeLeads } = await supabase
-    .from('funnel_leads')
-    .select('id, status, follow_up_stage, last_email_at, phone, instagram, service, source')
-    .not('status', 'in', '("converted","lost")')
-    .limit(200)
-
-  for (const lead of activeLeads || []) {
-    const score = computeLeadScore(lead.status, lead.follow_up_stage || 0, lead.last_email_at, {
-      hasPhone: !!lead.phone,
-      hasInstagram: !!lead.instagram,
-      serviceInterest: lead.service,
-      funnelSource: lead.source,
-    })
-    await supabase.from('funnel_leads').update({ lead_score: score }).eq('id', lead.id)
   }
 
   // --- 8. Auto-publish scheduled posts ---
@@ -461,5 +276,5 @@ export async function GET(request: NextRequest) {
     if (success) postsPublished++
   }
 
-  return NextResponse.json({ ok: true, date: today, followUpsSent, prospectFollowUpsSent, checkinsSent, postsPublished })
+  return NextResponse.json({ ok: true, date: today, checkinsSent, postsPublished })
 }

@@ -87,7 +87,7 @@ export default function FitnessGuide() {
           <h1 className="text-4xl sm:text-5xl font-bold text-ink mb-6 leading-tight">
             <span className="text-gold">The Protein Cheat Sheet</span>
           </h1>
-          <p className="text-ink/70 max-w-lg mx-auto mb-6">5-day fast food meal plans for 3 weight classes, a 7-day progressive overload program, and the top 20 cheapest protein sources ranked by cost per gram. By Asa Luke.</p>
+          <p className="text-ink/70 max-w-lg mx-auto mb-6">5-day fast food meal plans for 3 weight classes, a 7-day progressive overload program, and the top 20 cheapest protein sources ranked by cost per gram.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4">
             <button onClick={() => window.print()} className="inline-flex items-center gap-2 border-2 border-gold text-gold px-6 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl hover:bg-gold/10 transition-all">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
@@ -290,7 +290,7 @@ export default function FitnessGuide() {
           </Link>
         </div>
 
-        <p className="text-center text-ink/40 text-xs mt-10">&copy; {new Date().getFullYear()} Asa Luke. All rights reserved.</p>
+        <p className="text-center text-ink/40 text-xs mt-10">&copy; {new Date().getFullYear()} Life-Up Fitness. All rights reserved.</p>
       </div>
     </div>
   )

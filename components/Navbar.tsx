@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -9,11 +9,8 @@ type Profile = {
   role: string
 }
 
-const FITNESS_PATHS = ['/challenge', '/blueprint', '/services/fitness', '/meal-plan', '/guides/fitness']
-
 export default function Navbar() {
   const router = useRouter()
-  const pathname = usePathname()
   // Built once per mount, not on every render — this was the REAL bug behind
   // Asa's sign-up typing report. createClient() was previously re-run on every
   // render, and the effect below depends on [supabase] — so every render made
@@ -28,10 +25,6 @@ export default function Navbar() {
   const [user, setUser] = useState<{ email?: string } | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
-
-  // On fitness-only marketing pages, don't distract with the other businesses'
-  // nav links — she's here for the app, not Content/Music/Bundles.
-  const isFitnessPage = FITNESS_PATHS.some((p) => pathname?.startsWith(p))
 
   useEffect(() => {
     async function getUser() {
@@ -76,7 +69,7 @@ export default function Navbar() {
         <div className="flex justify-between h-14 items-center">
           {/* Logo */}
           <Link href="/" className="text-base font-bold text-white tracking-[0.15em] uppercase">
-            Asa Luke
+            Life-Up Fitness
           </Link>
 
           {/* Desktop Nav */}
@@ -88,11 +81,6 @@ export default function Navbar() {
             {user && (
               <Link href="/plan" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
                 My Plan
-              </Link>
-            )}
-            {user && !isFitnessPage && (
-              <Link href="/content" className="text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
-                My Projects
               </Link>
             )}
             {(profile?.role === 'admin' || profile?.role === 'support') && (
@@ -144,11 +132,6 @@ export default function Navbar() {
                 <Link href="/plan" onClick={() => setMenuOpen(false)} className="block text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
                   My Plan
                 </Link>
-                {!isFitnessPage && (
-                  <Link href="/content" onClick={() => setMenuOpen(false)} className="block text-xs text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors">
-                    My Projects
-                  </Link>
-                )}
                 <button onClick={() => { handleSignOut(); setMenuOpen(false); }} className="block text-xs text-ivory/30 tracking-[0.15em] uppercase hover:text-gold transition-colors">
                   Sign Out
                 </button>
