@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { localDateISO } from '@/lib/localdate'
 
 // Snap-a-meal-photo logging — mirrors app/api/plan/photo/route.ts's upload
-// pattern (private per-user bucket, same 10MB cap), but writes to
-// challenge_food_log instead of challenge_progress: a real row with a real
-// photo_path (migration 037), zeroed macros and source:'photo' as a stub
-// for the future Cal-AI-style backend to fill in with a real estimate.
-// Never a fabricated calorie number — same "don't show a number we don't
-// have yet" rule as the rest of this app.
+// pattern (private per-user bucket, same 10MB cap).
+//
+// Real bug found live, 2026-09-03 (beta tester report, cross-checked): this
+// used to also insert a challenge_food_log row with zeroed macros and
+// name:'Meal photo — calories pending', as a stub for a future Cal-AI-style
+// backend to fill in with a real estimate. That backend was never built —
+// no cron, no webhook, nothing anywhere touches a photo-sourced row after
+// insert — so every meal logged this way was PERMANENTLY stuck at 0
+// calories forever, with no edit UI (see the food-log route's lack of a
+// PATCH handler) to ever fix it. Worse than the "don't show a fabricated
+// number" rule it was trying to follow: a real, wrong number the user can
+// never correct. Now just stores the photo (still useful, still free) and
+// hands the real logging job to the actual working flow — see
+// lib/useMealPhotoUpload.ts, which routes to /plan/nutrition right after.
 export async function POST(request: NextRequest) {
   try {
     const supabase = createClient()
@@ -37,16 +44,7 @@ export async function POST(request: NextRequest) {
     const { error: upErr } = await svc.storage.from('meal-photos').upload(path, buf, { contentType: file.type || 'image/jpeg', upsert: false })
     if (upErr) { console.error('meal photo upload error:', upErr); return NextResponse.json({ error: 'Upload failed.' }, { status: 500 }) }
 
-    const day = localDateISO()
-    const { data: row, error: insErr } = await svc.from('challenge_food_log').insert({
-      enrollment_id: enrollment.id, user_id: user.id, logged_on: day, meal: 'snack',
-      name: 'Meal photo — calories pending', servings: 1,
-      calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0,
-      source: 'photo', photo_path: path,
-    }).select('id').maybeSingle()
-    if (insErr) { console.error('meal photo log-row error:', insErr); return NextResponse.json({ error: 'Saved the photo, but logging it failed.' }, { status: 500 }) }
-
-    return NextResponse.json({ success: true, id: row?.id, path })
+    return NextResponse.json({ success: true, path })
   } catch (error) {
     console.error('Meal photo error:', error)
     return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 })

@@ -3,8 +3,10 @@
 // Flip either back to true once the feature's actually ready — nothing else
 // needs to change.
 export const SHOW_COMMUNITY_TAB = true
-// Narrowed 2026-08-31 — Asa asked for the dashboard's own $ calorie readout
-// back (GoalProgressBar.tsx no longer reads this flag at all) while
-// /plan/nutrition itself stays hidden as still-incomplete. This flag now
-// ONLY gates that page + the Next Action circle's meal-kind expansion route.
-export const SHOW_CALORIE_COUNTER = false
+// Flipped back on 2026-09-03 (Asa's beta-tester feedback, cross-checked):
+// the quantity picker, zero-calorie guard, and workout/rest-day calorie
+// chip this page needed were all already built and tested — the page was
+// just still hidden behind this flag from the 2026-08-31 pass. This flag
+// now ONLY gates /plan/nutrition + the Next Action circle's meal-kind
+// expansion route (see the comment history above for what it used to gate).
+export const SHOW_CALORIE_COUNTER = true

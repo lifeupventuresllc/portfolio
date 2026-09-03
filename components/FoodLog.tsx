@@ -6,6 +6,7 @@ import VoiceButton from '@/components/VoiceButton'
 import MealPhotoButton from '@/components/MealPhotoButton'
 import SessionExpiredNotice from '@/components/SessionExpiredNotice'
 import { pieceWeightFor } from '@/lib/food-portions'
+import { useLiveRefresh } from '@/lib/useLiveRefresh'
 
 type SearchFood = {
   name: string; brand: string | null; servings: number; serving_label: string | null
@@ -168,12 +169,19 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
     })
   }
 
-  useEffect(() => {
+  // Real bug found live, 2026-09-03 (beta tester report: "doesn't refresh /
+  // shows last entry"): this only ever fetched once, on mount — any write
+  // from outside this component's own post()/remove() (the meal-photo path
+  // chief among them) was invisible here until a hard reload. Same
+  // refetch-on-focus pattern already proven on NextActionCard.tsx, not a
+  // new mechanism.
+  const loadEntries = () => {
     fetch('/api/plan/food-log').then((r) => {
       if (r.status === 401) { setExpired(true); setLoading(false); return null }
       return r.json()
     }).then((d) => { if (d) setData(d); setLoading(false) }).catch(() => setLoading(false))
-  }, [])
+  }
+  useLiveRefresh(loadEntries)
 
   async function post(body: Record<string, unknown>) {
     setSaving(true)
@@ -315,8 +323,10 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
             </form>
           </div>
 
-          {/* Snap a photo — a real upload + a real log row (source:'photo'),
-              calories at 0 until the Cal-AI-style backend estimates them. */}
+          {/* Snap a photo — stores the photo, then routes here so the real
+              logging (search/manual, below) happens right after. No longer
+              creates its own log row directly (2026-09-03 fix — see
+              app/api/plan/food-photo/route.ts for why). */}
           <MealPhotoButton />
 
           {/* Results — verified DB facts (green) vs AI estimate (amber) */}
