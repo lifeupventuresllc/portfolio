@@ -389,6 +389,16 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
           </button>
         )}
 
+        {/* "Your next step" eyebrow — button audit, 2026-09-03: the
+            instruction below used the same italic serif style as the
+            "Today's self-talk" quote card above it, so a brand-new user had
+            no way to tell a live instruction apart from a static quote.
+            This label is the whole fix — no change to the instruction
+            styling itself, just something marking it as live. */}
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] mb-1.5" style={{ fontFamily: 'var(--font-poppins)', color: 'rgba(229,169,60,0.85)' }}>
+          Your next step
+        </p>
+
         <div className="flex items-start gap-2 mb-2">
           {/* Sonar/target button — Asa's ask, 2026-08-31: replaced the plain
               pulsating circle with a real target-dot + concentric ripple-ring
@@ -412,6 +422,14 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
               50% { box-shadow: 0 0 14px 4px rgba(229,169,60,0.95), 0 0 8px 2px rgba(127,191,148,0.85); transform: scale(1.06); }
             }
             .luf-sonar-ring { position: absolute; inset: 0; border-radius: 9999px; border-style: solid; animation: luf-sonar-ping 3.2s cubic-bezier(0,0,0.3,1) infinite; }
+            /* Checkmark tap confirmation — button audit, 2026-09-03: the
+               fill-on-tap (done ? gold : dark, below) already existed, but
+               nothing marked the moment itself, so it read as no feedback
+               at all. Purely additive: a one-shot ring that mounts and
+               plays only while done is true, never touches markDone's real
+               state logic. */
+            @keyframes luf-done-pop { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.5); opacity: 0; } }
+            .luf-done-pop { position: absolute; inset: -6px; border-radius: 9999px; border: 1.6px solid #E5A93C; animation: luf-done-pop 0.5s ease-out forwards; pointer-events: none; }
           `}</style>
           <div
             role={isTappable ? 'button' : undefined}
@@ -460,13 +478,14 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
               disabled={busy}
               aria-label={done ? 'Nice!' : 'Mark done'}
               aria-pressed={done}
-              className="rounded-full shrink-0 flex items-center justify-center disabled:opacity-60 active:scale-95 transition-all"
+              className="relative rounded-full shrink-0 flex items-center justify-center disabled:opacity-60 active:scale-95 transition-all"
               style={{
                 width: 26, height: 26,
                 background: done ? '#C9A84C' : 'rgba(0,0,0,0.35)',
                 border: done ? 'none' : '1.5px solid rgba(229,169,60,0.6)',
               }}
             >
+              {done && <span className="luf-done-pop" />}
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={done ? '#0A0A0F' : 'rgba(229,169,60,0.7)'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
             </button>
           )}
