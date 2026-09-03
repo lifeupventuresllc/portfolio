@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Ring from '@/components/Ring'
 import VoiceButton from '@/components/VoiceButton'
 import MealPhotoButton from '@/components/MealPhotoButton'
@@ -49,13 +49,23 @@ const OVER_BG = '#8B2E12'
 // the app actually coaches toward ("hit your protein and cravings get quieter"),
 // so it's the one macro shown by default.
 function MacroBar({ label, val, target }: { label: string; val: number; target: number }) {
-  const pct = target > 0 ? Math.min(100, Math.round((val / target) * 100)) : 0
-  const over = target > 0 && val > target
+  // Real bug found live, 2026-09-03 (novice glance-test audit): with no real
+  // target set yet (never done intake), this rendered "12 / 0g" — a
+  // numerator over a zero goal reads as broken math to someone who's never
+  // used a tracking app, not as "you haven't set a goal." Same fix pattern
+  // as the calorie ring below: never do arithmetic against an unset target.
+  const hasTarget = target > 0
+  const pct = hasTarget ? Math.min(100, Math.round((val / target) * 100)) : 0
+  const over = hasTarget && val > target
   return (
     <div>
       <div className="flex justify-between text-[11px] mb-1">
         <span style={{ color: MUTED }}>{label}</span>
-        <span style={{ color: over ? OVER_TEXT : INK, fontWeight: over ? 600 : 500 }}>{val}<span style={{ color: MUTED }}> / {target}g</span></span>
+        {hasTarget ? (
+          <span style={{ color: over ? OVER_TEXT : INK, fontWeight: over ? 600 : 500 }}>{val}<span style={{ color: MUTED }}> / {target}g</span></span>
+        ) : (
+          <span style={{ color: MUTED }}>{val}g logged &middot; no goal set</span>
+        )}
       </div>
       <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.14)' }}>
         <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: over ? OVER_BG : ACCENT }} />
@@ -81,7 +91,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
   const [pop, setPop] = useState(false)
   const [expired, setExpired] = useState(false)
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ name: '', meal: 'breakfast', servings: '1', calories: '', protein_g: '', carbs_g: '', fats_g: '' })
+  const [form, setForm] = useState({ name: '', servings: '1', calories: '', protein_g: '', carbs_g: '', fats_g: '' })
   // Accurate food search (USDA FoodData Central) + voice + AI-estimate fallback
   const [q, setQ] = useState('')
   const [searchMeal, setSearchMeal] = useState('breakfast')
@@ -196,12 +206,18 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
   async function addManual(e: React.FormEvent) {
     e.preventDefault()
     if (!form.name.trim()) return
+    // Was its own separate "meal" dropdown, duplicating the one already
+    // shown above the search bar (both defaulting to Breakfast, visible at
+    // the same time) — real bug found live, 2026-09-03 (novice glance-test
+    // audit): confusing even for a returning user, unclear which one
+    // actually governed where the food got logged. Now shares the one
+    // real meal selector (searchMeal).
     await post({
-      name: form.name.trim(), meal: form.meal, servings: Number(form.servings) || 1,
+      name: form.name.trim(), meal: searchMeal, servings: Number(form.servings) || 1,
       calories: Number(form.calories) || 0, protein_g: Number(form.protein_g) || 0,
       carbs_g: Number(form.carbs_g) || 0, fats_g: Number(form.fats_g) || 0, source: 'manual',
     })
-    setForm({ name: '', meal: form.meal, servings: '1', calories: '', protein_g: '', carbs_g: '', fats_g: '' })
+    setForm({ name: '', servings: '1', calories: '', protein_g: '', carbs_g: '', fats_g: '' })
     setOpen(false)
   }
 
@@ -218,6 +234,25 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
     if (d?.totals) setData(d)
   }
 
+  // Real bug found live, 2026-09-03 (novice glance-test audit): this was a
+  // single instant tap with zero confirmation and no undo — a mis-tap
+  // permanently loses a real logged meal, and there's no other way to edit
+  // an entry (only delete-and-redo). First tap now just arms it ("Remove?"
+  // for ~2.5s); the second tap on the SAME entry actually deletes. Tapping
+  // any other entry or letting it time out cancels, no accidental deletes.
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function handleRemoveTap(id: string) {
+    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+    if (confirmRemoveId === id) {
+      setConfirmRemoveId(null)
+      remove(id)
+      return
+    }
+    setConfirmRemoveId(id)
+    confirmTimerRef.current = setTimeout(() => setConfirmRemoveId(null), 2500)
+  }
+
   const grouped = useMemo(() => {
     const g: Record<string, Entry[]> = {}
     for (const e of data?.entries || []) (g[e.meal] ||= []).push(e)
@@ -228,9 +263,16 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
   const tar = data?.target || { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 }
   // Calories are money 💵 — TODAY'S budget = today's calorie target (workout day higher, rest day lower).
   const calBudget = budget != null && budget > 0 ? budget : tar.calories
-  const calPct = calBudget > 0 ? Math.round((t.calories / calBudget) * 100) : 0
+  // Real bug found live, 2026-09-03 (novice glance-test audit): with no real
+  // calorie target yet (never done intake), calBudget is 0, so logging any
+  // real food showed "-$148 OVER of $0" — nonsensical money-metaphor math
+  // to someone who's never set a calorie goal, reading as a broken
+  // calculator rather than "you haven't set a goal yet." Gated the whole
+  // ring + banner below on hasCalBudget instead.
+  const hasCalBudget = calBudget > 0
+  const calPct = hasCalBudget ? Math.round((t.calories / calBudget) * 100) : 0
   const remaining = calBudget - t.calories
-  const calOver = remaining < 0
+  const calOver = hasCalBudget && remaining < 0
 
   return (
     <div className="rounded-2xl p-5" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
@@ -254,9 +296,19 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
         <div className={pop ? 'luf-pop' : ''}>
           <Ring pct={calPct} size={104} stroke={9} color={calOver ? OVER_BG : ACCENT}>
             <div className="text-center leading-none">
-              <p className="text-[8px] uppercase tracking-wider mb-0.5" style={{ color: MUTED }}>{calOver ? 'over' : 'left'}</p>
-              <p className="font-bold text-xl" style={{ color: calOver ? OVER_TEXT : ACCENT }}>{calOver ? '-' : ''}${Math.abs(remaining)}</p>
-              <p className="text-[9px] tracking-wider mt-0.5" style={{ color: MUTED }}>of ${calBudget}</p>
+              {hasCalBudget ? (
+                <>
+                  <p className="text-[8px] uppercase tracking-wider mb-0.5" style={{ color: MUTED }}>{calOver ? 'over' : 'left'}</p>
+                  <p className="font-bold text-xl" style={{ color: calOver ? OVER_TEXT : ACCENT }}>{calOver ? '-' : ''}${Math.abs(remaining)}</p>
+                  <p className="text-[9px] tracking-wider mt-0.5" style={{ color: MUTED }}>of ${calBudget}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[8px] uppercase tracking-wider mb-0.5" style={{ color: MUTED }}>logged</p>
+                  <p className="font-bold text-xl" style={{ color: ACCENT }}>{t.calories}</p>
+                  <p className="text-[9px] tracking-wider mt-0.5" style={{ color: MUTED }}>no goal yet</p>
+                </>
+              )}
             </div>
           </Ring>
         </div>
@@ -267,8 +319,17 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
       </div>
       <div className="mb-4 rounded-2xl border px-4 py-3 text-center" style={{ borderColor: calOver ? `${OVER_BG}66` : `${ACCENT}66`, background: calOver ? `${OVER_BG}1A` : `${ACCENT}1A` }}>
         <p className="text-base font-bold" style={{ color: calOver ? OVER_TEXT : ACCENT }}>
-          {loading ? 'Loading your day…' : calOver ? `$${Math.abs(remaining)} over budget — no guilt, fresh budget tomorrow.` : `Spent $${t.calories} · $${remaining} left${t.calories === 0 ? ' — log your first meal below' : ''}`}
+          {loading
+            ? 'Loading your day…'
+            : !hasCalBudget
+            ? (t.calories === 0 ? 'Log your first meal below — set a calorie goal anytime to track against it.' : `Logged $${t.calories} so far — set a calorie goal to see what's left.`)
+            : calOver
+            ? `$${Math.abs(remaining)} over budget — no guilt, fresh budget tomorrow.`
+            : `Spent $${t.calories} · $${remaining} left${t.calories === 0 ? ' — log your first meal below' : ''}`}
         </p>
+        {!hasCalBudget && (
+          <a href="/plan/intake" className="inline-block mt-1.5 text-xs font-semibold underline" style={{ color: ACCENT }}>Set my calorie goal →</a>
+        )}
       </div>
 
       {/* Merged in from the old standalone "today's meals" card — whether a
@@ -339,7 +400,12 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
                 <button key={i} onClick={() => { if (f.source === 'usda') { setPicking(f) } else { logEstimatedFood(f) } }} disabled={saving} className="w-full text-left flex items-center gap-2 bg-charcoal border border-smoke rounded-lg px-3 py-2 hover:border-gold/50 transition-colors disabled:opacity-50">
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-xs font-medium truncate">{f.name}{f.brand ? <span className="text-ivory/40"> · {f.brand}</span> : null}</p>
-                    <p className="text-ivory/40 text-[10px]">{f.source === 'usda' ? 'per 100g' : `${f.servings} ${f.serving_label || 'serving'}`} · {f.calories} cal · {f.protein_g}P · {f.carbs_g}C · {f.fats_g}F</p>
+                    {/* Was "12P · 1C · 10F" — bare letter shorthand requires
+                        already knowing protein/carbs/fat abbreviations
+                        (novice glance-test audit, 2026-09-03). Spelled out
+                        to match the friendlier "12g protein" phrasing one
+                        screen later in the same flow (the quantity picker). */}
+                    <p className="text-ivory/40 text-[10px]">{f.source === 'usda' ? 'per 100g' : `${f.servings} ${f.serving_label || 'serving'}`} · {f.calories} cal · {f.protein_g}g protein · {f.carbs_g}g carbs · {f.fats_g}g fat</p>
                   </div>
                   <span className={`shrink-0 text-[8px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${f.source === 'usda' ? 'bg-green-500/15 text-green-400' : 'bg-amber-500/15 text-amber-400'}`}>{f.source === 'usda' ? '✓ verified' : '~ estimate'}</span>
                 </button>
@@ -396,15 +462,22 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
           <button onClick={() => setManual((m) => !m)} className="text-ivory/40 text-[11px] hover:text-gold underline">{manual ? 'Hide manual entry' : 'Enter a food manually'}</button>
           {manual && (
             <form onSubmit={addManual} className="space-y-2.5 pt-1">
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Food name" className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
-              <div className="grid grid-cols-2 gap-2">
-                <select value={form.meal} onChange={(e) => setForm({ ...form, meal: e.target.value })} className="bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm focus:border-gold/60 outline-none">
-                  {MEALS.map((m) => <option key={m} value={m}>{MEAL_LABEL[m]}</option>)}
-                </select>
-                <input value={form.servings} onChange={(e) => setForm({ ...form, servings: e.target.value })} inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} placeholder="Servings" className="bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+              <div>
+                <label className="text-ivory/40 text-[9px] uppercase tracking-wider block mb-1">Food name</label>
+                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Homemade chili" className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+              </div>
+              <div className="w-1/2 pr-1">
+                {/* Real bug found live, 2026-09-03 (novice glance-test
+                    audit): a bare "1" with no visible label (only a
+                    placeholder, hidden the moment it has a value) looked
+                    like an unlabeled 5th macro field next to Cal/Protein/
+                    Carbs/Fats below. Meal already has its own real selector
+                    above the search bar — no need to duplicate it here. */}
+                <label className="text-ivory/40 text-[9px] uppercase tracking-wider block mb-1">How many servings?</label>
+                <input value={form.servings} onChange={(e) => setForm({ ...form, servings: e.target.value })} inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
               </div>
               <div className="grid grid-cols-4 gap-2">
-                {([['calories', 'Cal'], ['protein_g', 'Protein'], ['carbs_g', 'Carbs'], ['fats_g', 'Fats']] as const).map(([k, lbl]) => (
+                {([['calories', 'Calories'], ['protein_g', 'Protein (g)'], ['carbs_g', 'Carbs (g)'], ['fats_g', 'Fat (g)']] as const).map(([k, lbl]) => (
                   <div key={k}>
                     <label className="text-ivory/40 text-[9px] uppercase tracking-wider block mb-1">{lbl}</label>
                     <input value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} inputMode="numeric" autoCorrect="off" autoCapitalize="off" spellCheck={false} placeholder="0" className="w-full bg-charcoal border border-smoke rounded-lg px-2 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
@@ -430,7 +503,11 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
                   <p className="text-xs font-medium truncate" style={{ color: INK }}>{e.name}{e.servings !== 1 ? <span style={{ color: MUTED }}> ×{e.servings}</span> : null}</p>
                   <p className="text-[10px]" style={{ color: MUTED }}>{e.calories} cal · {e.protein_g}g protein</p>
                 </div>
-                <button onClick={() => remove(e.id)} aria-label="Remove" className="text-lg leading-none px-1 opacity-60 group-hover:opacity-100 transition-opacity hover:text-red-500" style={{ color: MUTED }}>×</button>
+                {confirmRemoveId === e.id ? (
+                  <button onClick={() => handleRemoveTap(e.id)} aria-label="Tap again to remove" className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full text-white bg-red-500 shrink-0">Remove?</button>
+                ) : (
+                  <button onClick={() => handleRemoveTap(e.id)} aria-label="Remove" className="text-lg leading-none px-1 opacity-60 group-hover:opacity-100 transition-opacity hover:text-red-500" style={{ color: MUTED }}>×</button>
+                )}
               </div>
             ))}
           </div>
