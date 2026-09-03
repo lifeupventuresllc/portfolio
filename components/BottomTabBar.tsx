@@ -35,6 +35,18 @@ function HomeIcon({ active, size = 20 }: { active: boolean; size?: number }) {
   )
 }
 
+function FriendsIcon({ active, size = 20 }: { active: boolean; size?: number }) {
+  const color = active ? '#E5A93C' : 'rgba(237,231,218,0.4)'
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8.5" cy="8" r="3" />
+      <circle cx="16" cy="9.5" r="2.5" />
+      <path d="M2.5 20c0-3.5 2.7-6 6-6s6 2.5 6 6" />
+      <path d="M14.5 15c2.6 0 4.5 2 4.5 5" />
+    </svg>
+  )
+}
+
 export default function BottomTabBar() {
   const pathname = usePathname() || ''
   const { inputRef, uploading, onFile, trigger } = useMealPhotoUpload()
@@ -47,17 +59,23 @@ export default function BottomTabBar() {
   const homeActive = pathname === '/plan'
   const forYouActive = pathname.startsWith('/plan/today')
   const communityActive = pathname.startsWith('/plan/community')
+  const friendsActive = pathname.startsWith('/plan/friends')
 
   // Asa's approved mockup, 2026-09-02: back to a plain inline + button as
-  // the second of 4 equal columns (grid-template-columns, not flex — a flex
+  // one of N equal columns (grid-template-columns, not flex — a flex
   // row centers each item's own content width, which reads as uneven the
   // moment items differ in width; a grid gives every tab the exact same
   // real estate regardless of its content). Replaces the floating-FAB
   // version from the day before, which Asa asked to revert.
-  const columns = SHOW_COMMUNITY_TAB ? 4 : 3
+  //
+  // 5-tab TikTok layout (2026-09-02, Asa's spec): Home, Friends, +, Connect
+  // (renamed from Community — same feed, same SHOW_COMMUNITY_TAB flag),
+  // For You. Friends always shows — it's not gated behind the same
+  // still-being-tested flag as the open community feed.
+  const columns = SHOW_COMMUNITY_TAB ? 5 : 4
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)]">
+    <nav data-bottom-tabbar className="fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)]">
       <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={onFile} className="hidden" />
 
       <div
@@ -71,6 +89,11 @@ export default function BottomTabBar() {
         <Link href="/plan" className="flex flex-col items-center gap-[3px]">
           <HomeIcon active={homeActive} size={19} />
           <span className={`text-[10.5px] font-bold ${homeActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Home</span>
+        </Link>
+
+        <Link href="/plan/friends" className="flex flex-col items-center gap-[3px]">
+          <FriendsIcon active={friendsActive} size={19} />
+          <span className={`text-[10.5px] font-bold ${friendsActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Friends</span>
         </Link>
 
         <div className="flex justify-center">
@@ -88,7 +111,7 @@ export default function BottomTabBar() {
         {SHOW_COMMUNITY_TAB && (
           <Link href="/plan/community" className="flex flex-col items-center gap-[3px]">
             <HeartIcon active={communityActive} size={17} />
-            <span className={`text-[10.5px] font-bold ${communityActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Community</span>
+            <span className={`text-[10.5px] font-bold ${communityActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Connect</span>
           </Link>
         )}
 
