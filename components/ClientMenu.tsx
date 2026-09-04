@@ -70,23 +70,14 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
   // UI chrome (address bar, bottom toolbar) is showing — the browser can
   // size a `fixed` element against the taller layout viewport instead of
   // the shorter visual one, so the drawer's own box ended before the
-  // actual bottom of the screen. The result wasn't a scroll problem at
-  // all: the real page underneath (Next Action circle, the chat input,
-  // the bottom tab bar) was showing through, unobscured, and visually
-  // overlapping the drawer's last rows. Same root cause already solved
-  // once in this codebase for BuilderView.tsx's Garden card — measure the
-  // real height via window.visualViewport (not CSS alone) and set it
-  // explicitly, updating live as Safari's chrome shows/hides.
-  // Real bug found live (Asa's follow-up report, 2026-09-04): this first
-  // attempt also listened to visualViewport's `scroll` event — which
-  // fires continuously during ANY touch-scroll/momentum-scroll gesture
-  // anywhere on the page, not just when Safari's chrome actually shows or
-  // hides. So the instant she dragged to scroll the menu list, this fired
-  // on every frame of her own gesture, re-rendering the dialog with a
-  // freshly-recalculated height WHILE she was mid-scroll — which reads
-  // exactly like "the whole screen moves" instead of the list scrolling
-  // cleanly. `resize` alone is the correct signal for chrome show/hide;
-  // `scroll` was never needed here and was actively fighting her gesture.
+  // actual bottom of the screen, with the real page showing through and
+  // overlapping the drawer's last rows. Asa pointed out this exact class
+  // of bug was already solved once in this codebase, for BuilderView.tsx's
+  // Garden card — this now copies that proven recipe as literally as
+  // possible instead of a modified variant: same measure()/rAF pattern,
+  // same event set (window resize + visualViewport resize + visualViewport
+  // scroll — a same-value setState here is a no-op in React, so the
+  // scroll listener isn't the re-render risk a prior pass here assumed).
   const [dialogHeight, setDialogHeight] = useState<number | null>(null)
   useEffect(() => {
     if (!open) return
@@ -94,11 +85,15 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
       setDialogHeight(window.visualViewport?.height ?? window.innerHeight)
     }
     measure()
-    window.visualViewport?.addEventListener('resize', measure)
+    const raf = requestAnimationFrame(measure)
     window.addEventListener('resize', measure)
+    window.visualViewport?.addEventListener('resize', measure)
+    window.visualViewport?.addEventListener('scroll', measure)
     return () => {
-      window.visualViewport?.removeEventListener('resize', measure)
+      cancelAnimationFrame(raf)
       window.removeEventListener('resize', measure)
+      window.visualViewport?.removeEventListener('resize', measure)
+      window.visualViewport?.removeEventListener('scroll', measure)
     }
   }, [open])
 
@@ -214,7 +209,10 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
           role="dialog"
           aria-modal="true"
         >
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          {/* touch-action: none — a drag that starts on the dimmed backdrop
+              (as opposed to the drawer's own nav) should never be able to
+              pan/scroll anything; only a tap-to-dismiss is meaningful here. */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" style={{ touchAction: 'none' }} onClick={() => setOpen(false)} />
           {/* Real bug fixed 2026-08-27: this drawer sized itself with an
               independent `100dvh` value instead of matching its own parent
               (the `fixed inset-0` wrapper immediately above, which the
@@ -234,7 +232,7 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
               </div>
               <button onClick={() => setOpen(false)} aria-label="Close menu" className="text-ivory/50 hover:text-white text-2xl leading-none px-2">×</button>
             </div>
-            <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
               {sections.map((sec) => (
                 <div key={sec.title} className="mb-4">
                   <p className="text-ivory/35 text-[10px] uppercase tracking-wider font-semibold px-2 mb-1.5">{sec.title}</p>
