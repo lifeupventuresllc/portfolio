@@ -386,14 +386,36 @@ export async function POST(request: NextRequest) {
       // directly from those exact areas (see lib/workout.ts), so there's
       // nothing left to search for the way pickFocusDayIndex used to.
       const dayIndex = 0
+      // Real bug found live, 2026-09-04: targets.calories/protein_g are a
+      // genuine 0 (not a real number) whenever requiredTierCompleted isn't
+      // true — buildBlueprint deliberately never fabricates a target here
+      // (see lib/plan-builder.ts) — but this reply used to interpolate that
+      // 0 straight into a sentence regardless, so a nutrition build with no
+      // real weight/goal on file read back as "target's 0 cal/day (0g
+      // protein)," broken-looking math instead of an honest "not set yet."
+      // Same never-do-arithmetic-on-an-unset-target principle FoodLog.tsx's
+      // MacroBar already follows.
+      const hasRealTarget = targets.calories > 0
+      // Deliberately no "tell me your weight/goal" ask bolted on here when
+      // it's not real yet — usedDefaults already covers that exact case
+      // below (its own dedicated sentence), and when she DID state real
+      // numbers and it's still zero (requiredTierCompleted just never gets
+      // set true on this cold-start path), asking her to repeat info she
+      // just gave would be its own real bug. Just don't state a fake number.
       let reply: string
       if (intent.scope === 'today' && intent.wantsWorkout) {
         reply = `${namePrefix}here's what to do: ${summarizeTodaysWorkout(program, intent.minutesAvailable, dayIndex, focus_areas)}.`
-        if (intent.wantsNutrition) reply += ` Calorie target's ${targets.calories}/day (${targets.protein_g}g protein)${mealSample ? ` — try ${mealSample}` : ''}. Full week's on your dashboard.`
+        if (intent.wantsNutrition) {
+          reply += hasRealTarget
+            ? ` Calorie target's ${targets.calories}/day (${targets.protein_g}g protein)${mealSample ? ` — try ${mealSample}` : ''}. Full week's on your dashboard.`
+            : ` Meals are on your dashboard too${mealSample ? ` — try ${mealSample}` : ''}.`
+        }
       } else if (intent.wantsNutrition && !intent.wantsWorkout) {
-        reply = `${namePrefix}built your week — target's ${targets.calories} cal/day (${targets.protein_g}g protein)${mealSample ? `. First up: ${mealSample}` : ''}. Full week's on your dashboard.`
+        reply = hasRealTarget
+          ? `${namePrefix}built your week — target's ${targets.calories} cal/day (${targets.protein_g}g protein)${mealSample ? `. First up: ${mealSample}` : ''}. Full week's on your dashboard.`
+          : `${namePrefix}built your week${mealSample ? ` — first up: ${mealSample}` : ''}. Full week's on your dashboard.`
       } else {
-        reply = `${namePrefix}built it — ${summarizeWeekProgram(program)}${intent.wantsNutrition ? `, target's ${targets.calories} cal/day (${targets.protein_g}g protein)` : ''}. Full breakdown's on your dashboard.`
+        reply = `${namePrefix}built it — ${summarizeWeekProgram(program)}${intent.wantsNutrition && hasRealTarget ? `, target's ${targets.calories} cal/day (${targets.protein_g}g protein)` : ''}. Full breakdown's on your dashboard.`
       }
       // Injury-safe confirmation — she may have just told us about an injury
       // via the ask above (needsInjuryAsk), and buildInitialPlans already
