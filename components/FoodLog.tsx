@@ -28,21 +28,24 @@ const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const
 const MEAL_LABEL: Record<string, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks' }
 const SLOT_TO_MEAL: Record<string, string> = { BF: 'breakfast', LN: 'lunch', DN: 'dinner', SN: 'snack', DS: 'snack' }
 
-// "Gold Flip" scheme (see app/plan/today/page.tsx for the full note) — this
-// card now shares the same warm gold-to-amber card treatment as the rest of
-// the For You page, sitting on the dashboard's forest field. Roles flip
-// accordingly: dark-ink accent/primary text, translucent-dark muted text.
-// OVER_TEXT/OVER_BG shift away from amber specifically because amber-on-gold
-// has almost no contrast — the "over budget" warning needs its own hue here,
-// not just its old value carried over.
-const ACCENT = '#241705'
-const INK = '#241705'
-const MUTED = 'rgba(36,23,5,0.72)'
-const CARD_BG = 'linear-gradient(135deg, #E9B24E, #D89A2E 55%, #B37D22)'
-const CARD_BORDER = '1px solid rgba(2,31,22,0.16)'
-const CARD_GLOW = '0 10px 22px -14px rgba(0,0,0,0.5)'
-const OVER_TEXT = '#8B2E12'
-const OVER_BG = '#8B2E12'
+// Cinematic black+green pass (Asa's ask, 2026-09-04 — "too technical, a 13
+// year old couldn't understand this... keep the complexity under the hood,
+// simplify the design, black and green"): replaces the "Gold Flip" warm
+// card with the app's own real forest gradient (the exact background
+// app/plan/page.tsx's dashboard uses) plus the real green from today's
+// food-edit decision (#4CAF7D) — not an invented color, both already real
+// and shipped elsewhere in this app. Roles flip back to light-on-dark
+// (white/INK primary text, translucent-white MUTED) now that the card
+// itself is dark. OVER_TEXT/OVER_BG stay a warm amber — a distinct
+// semantic (over budget) from the green "on track" accent everywhere else.
+const ACCENT = '#4CAF7D'
+const INK = '#FFFFFF'
+const MUTED = 'rgba(255,255,255,0.6)'
+const CARD_BG = 'radial-gradient(80% 55% at 50% 28%, rgba(76,175,125,0.30), transparent 62%), radial-gradient(140% 100% at 50% 115%, rgba(0,0,0,0.82), transparent 55%), linear-gradient(180deg, #073322 0%, #021F16 45%, #010b07 100%)'
+const CARD_BORDER = '1px solid rgba(76,175,125,0.22)'
+const CARD_GLOW = '0 20px 40px -20px rgba(76,175,125,0.35)'
+const OVER_TEXT = '#F59E0B'
+const OVER_BG = '#F59E0B'
 
 // Just protein — carbs/fat bars used to sit here too, but three number-vs-target
 // bars next to a calorie ring read as a math problem. Protein is the one macro
@@ -351,14 +354,21 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
   const calOver = hasCalBudget && remaining < 0
 
   return (
-    <div className="rounded-2xl p-5" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }}>
+    <div className="rounded-3xl p-5" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW, position: 'relative', overflow: 'hidden' }}>
+      <style>{`
+        @keyframes luf-foodlog-ring-breathe {
+          0%, 100% { box-shadow: 0 0 50px 10px rgba(76,175,125,0.42), 0 0 110px 28px rgba(76,175,125,0.18); }
+          50% { box-shadow: 0 0 70px 16px rgba(76,175,125,0.62), 0 0 140px 38px rgba(76,175,125,0.3); }
+        }
+        @keyframes luf-foodlog-btn-breathe {
+          0%, 100% { box-shadow: 0 16px 34px -8px rgba(76,175,125,0.7); }
+          50% { box-shadow: 0 16px 44px -6px rgba(76,175,125,0.95); }
+        }
+      `}</style>
       {expired && <div className="mb-4"><SessionExpiredNotice /></div>}
       <div className="flex items-center justify-between mb-1">
-        <div>
-          <p className="text-[10px] uppercase tracking-wider font-semibold mb-0.5" style={{ color: ACCENT }}>Today&apos;s budget</p>
-          <p className="font-semibold text-sm" style={{ color: INK }}>Calories are your money — spend them well</p>
-        </div>
-        <button onClick={() => setOpen((o) => !o)} className="text-white px-3.5 py-2 font-bold text-[11px] uppercase tracking-wider rounded-xl hover:scale-[1.03] transition-transform" style={{ background: ACCENT }}>{open ? 'Close' : '+ Log food'}</button>
+        <p className="text-[11px] uppercase tracking-[0.14em] font-bold" style={{ color: '#7fe6b3' }}>Today</p>
+        <button onClick={() => setOpen((o) => !o)} className="text-[#021F16] px-4 py-2.5 font-bold text-[13px] rounded-2xl transition-transform active:scale-95" style={{ background: 'linear-gradient(135deg, #7fe6b3, #4CAF7D 60%, #2f8a5c)', animation: open ? undefined : 'luf-foodlog-btn-breathe 4.5s ease-in-out infinite' }}>{open ? 'Close' : 'Log food'}</button>
       </div>
       {dayType && (
         <p className="text-[11px] mb-4" style={{ color: MUTED }}>
@@ -367,21 +377,34 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
         </p>
       )}
 
-      {/* Money ring (calories = dollars) + the one macro bar that matters */}
+      {/* Money ring (calories = dollars) + the one macro bar that matters —
+          gradient stroke + a soft breathing glow behind it, same layered-
+          radial-gradient technique the app's own Next Action circle uses,
+          recolored green for this screen (Asa's cinematic-pass ask). */}
       <div className="flex items-center gap-5 mb-4">
-        <div className={pop ? 'luf-pop' : ''}>
-          <Ring pct={calPct} size={104} stroke={9} color={calOver ? OVER_BG : ACCENT}>
+        <div className={pop ? 'luf-pop' : ''} style={{ position: 'relative', width: 104, height: 104, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {!calOver && <div style={{ position: 'absolute', width: 84, height: 84, borderRadius: '50%', animation: 'luf-foodlog-ring-breathe 4.5s ease-in-out infinite' }} />}
+          <svg width="0" height="0" style={{ position: 'absolute' }}>
+            <defs>
+              <radialGradient id="foodlogRingGrad" cx="35%" cy="30%" r="75%">
+                <stop offset="0%" stopColor="#c8f9dd" />
+                <stop offset="45%" stopColor="#4CAF7D" />
+                <stop offset="100%" stopColor="#164d33" />
+              </radialGradient>
+            </defs>
+          </svg>
+          <Ring pct={calPct} size={104} stroke={9} color={calOver ? OVER_BG : 'url(#foodlogRingGrad)'}>
             <div className="text-center leading-none">
               {hasCalBudget ? (
                 <>
                   <p className="text-[8px] uppercase tracking-wider mb-0.5" style={{ color: MUTED }}>{calOver ? 'over' : 'left'}</p>
-                  <p className="font-bold text-xl" style={{ color: calOver ? OVER_TEXT : ACCENT }}>{calOver ? '-' : ''}${Math.abs(remaining)}</p>
+                  <p className="font-bold text-xl" style={{ color: '#fff', textShadow: calOver ? undefined : '0 0 18px rgba(76,175,125,0.65)' }}>{calOver ? '-' : ''}${Math.abs(remaining)}</p>
                   <p className="text-[9px] tracking-wider mt-0.5" style={{ color: MUTED }}>of ${calBudget}</p>
                 </>
               ) : (
                 <>
                   <p className="text-[8px] uppercase tracking-wider mb-0.5" style={{ color: MUTED }}>logged</p>
-                  <p className="font-bold text-xl" style={{ color: ACCENT }}>{t.calories}</p>
+                  <p className="font-bold text-xl" style={{ color: '#fff', textShadow: '0 0 18px rgba(76,175,125,0.65)' }}>{t.calories}</p>
                   <p className="text-[9px] tracking-wider mt-0.5" style={{ color: MUTED }}>no goal yet</p>
                 </>
               )}
@@ -390,43 +413,52 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
         </div>
         <div className="flex-1 space-y-2.5">
           <MacroBar label="Protein" val={t.protein_g} target={tar.protein_g} />
-          <p className="text-[10px]" style={{ color: MUTED }}>Hit your protein and cravings get quieter — that&apos;s the goal, not just the number.</p>
         </div>
       </div>
-      <div className="mb-4 rounded-2xl border px-4 py-3 text-center" style={{ borderColor: calOver ? `${OVER_BG}66` : `${ACCENT}66`, background: calOver ? `${OVER_BG}1A` : `${ACCENT}1A` }}>
-        <p className="text-base font-bold" style={{ color: calOver ? OVER_TEXT : ACCENT }}>
-          {loading
-            ? 'Loading your day…'
-            : !hasCalBudget
-            ? (t.calories === 0 ? 'Log your first meal below — set a calorie goal anytime to track against it.' : `Logged $${t.calories} so far — set a calorie goal to see what's left.`)
-            : calOver
-            ? `$${Math.abs(remaining)} over budget — no guilt, fresh budget tomorrow.`
-            : `Spent $${t.calories} · $${remaining} left${t.calories === 0 ? ' — log your first meal below' : ''}`}
-        </p>
-        {!hasCalBudget && (
-          <a href="/plan/intake" className="inline-block mt-1.5 text-xs font-semibold underline" style={{ color: ACCENT }}>Set my calorie goal →</a>
-        )}
-      </div>
+
+      {/* Real gap this closes (Asa's cinematic-pass ask): the ring already
+          says how much is left — repeating "Spent $X · $Y left" right below
+          it in a second sentence was the exact redundancy the redesign was
+          asked to cut. Only the states with NEW information (loading, no
+          goal set yet, over budget) still get a line; a plain on-track day
+          with something logged gets no banner at all now. */}
+      {(loading || !hasCalBudget || calOver) && (
+        <div className="mb-4 rounded-2xl border px-4 py-3 text-center" style={{ borderColor: calOver ? `${OVER_BG}66` : `${ACCENT}66`, background: calOver ? `${OVER_BG}1A` : `${ACCENT}1A` }}>
+          <p className="text-base font-bold" style={{ color: calOver ? OVER_TEXT : ACCENT }}>
+            {loading
+              ? 'Loading your day…'
+              : !hasCalBudget
+              ? (t.calories === 0 ? 'Log your first meal below — set a calorie goal anytime to track against it.' : `Logged $${t.calories} so far — set a calorie goal to see what's left.`)
+              : `$${Math.abs(remaining)} over budget — no guilt, fresh budget tomorrow.`}
+          </p>
+          {!hasCalBudget && !loading && (
+            <a href="/plan/intake" className="inline-block mt-1.5 text-xs font-semibold underline" style={{ color: ACCENT }}>Set my calorie goal →</a>
+          )}
+        </div>
+      )}
+      {!loading && hasCalBudget && !calOver && t.calories === 0 && (
+        <p className="text-center text-xs mb-4" style={{ color: MUTED }}>Nothing logged yet</p>
+      )}
 
       {/* Merged in from the old standalone "today's meals" card — whether a
           real meal plan exists for today at all, distinct from the ring
           above (which only shows a budget number, not whether it's planned). */}
       {mealStatus?.kind === 'eatingOut' && (
-        <a href="/plan/eating-out" className="mb-4 flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5" style={{ background: 'rgba(2,31,22,0.08)', border: `1px solid ${ACCENT}33` }}>
+        <a href="/plan/eating-out" className="mb-4 flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5" style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${ACCENT}33` }}>
           <span className="text-xs font-semibold" style={{ color: INK }}>Eat-out day — see exactly what to order</span>
           <span className="text-xs shrink-0" style={{ color: ACCENT }}>→</span>
         </a>
       )}
       {mealStatus?.kind === 'planned' && (
-        <a href="/plan/meals" className="mb-4 flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5" style={{ background: 'rgba(2,31,22,0.08)', border: `1px solid ${ACCENT}33` }}>
+        <a href="/plan/meals" className="mb-4 flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5" style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${ACCENT}33` }}>
           <span className="text-xs" style={{ color: MUTED }}>{mealStatus.totalProtein}g protein planned today</span>
           <span className="text-xs font-semibold shrink-0" style={{ color: ACCENT }}>Edit my meals →</span>
         </a>
       )}
       {mealStatus?.kind === 'empty' && (
-        <div className="mb-4 rounded-xl px-3.5 py-3 text-center" style={{ background: 'rgba(2,31,22,0.08)', border: `1px solid ${ACCENT}33` }}>
+        <div className="mb-4 rounded-xl px-3.5 py-3 text-center" style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${ACCENT}33` }}>
           <p className="text-xs mb-2" style={{ color: MUTED }}>{mealStatus.isSunday ? 'Sunday — no cook plan, eat mindful and log whatever you have.' : "No meal plan yet — build this week's and it'll show up here."}</p>
-          {!mealStatus.isSunday && <a href="/plan/meals" className="inline-block text-white px-4 py-2 font-bold text-[10px] uppercase tracking-wider rounded-lg" style={{ background: ACCENT }}>Build my meals</a>}
+          {!mealStatus.isSunday && <a href="/plan/meals" className="inline-block px-4 py-2 font-bold text-[10px] uppercase tracking-wider rounded-lg" style={{ background: ACCENT, color: '#021F16' }}>Build my meals</a>}
         </div>
       )}
 
@@ -450,13 +482,13 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
         <div className="bg-obsidian/60 border border-smoke rounded-xl p-3 mb-4 space-y-3">
           {/* Meal + search bar with mic */}
           <div className="flex gap-2">
-            <select value={searchMeal} onChange={(e) => setSearchMeal(e.target.value)} className="bg-charcoal border border-smoke rounded-lg px-2 py-2 text-white text-xs focus:border-gold/60 outline-none">
+            <select value={searchMeal} onChange={(e) => setSearchMeal(e.target.value)} className="bg-charcoal border border-smoke rounded-lg px-2 py-2 text-white text-xs focus:border-[#4CAF7D]/60 outline-none">
               {MEALS.map((m) => <option key={m} value={m}>{MEAL_LABEL[m]}</option>)}
             </select>
             <form onSubmit={(e) => { e.preventDefault(); runSearch(q) }} className="flex-1 flex gap-2">
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a food, or say it" autoFocus className="flex-1 min-w-0 bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a food, or say it" autoFocus className="flex-1 min-w-0 bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-[#4CAF7D]/60 outline-none" />
               <VoiceButton onInterim={(t) => setQ(t)} onResult={(t) => { setQ(t); runSearch(t) }} />
-              <button type="submit" disabled={searching || !q.trim()} className="shrink-0 bg-gold text-obsidian px-3 rounded-lg font-bold text-xs uppercase disabled:opacity-50">{searching ? '…' : 'Go'}</button>
+              <button type="submit" disabled={searching || !q.trim()} className="shrink-0 bg-[#4CAF7D] text-[#021F16] px-3 rounded-lg font-bold text-xs uppercase disabled:opacity-50">{searching ? '…' : 'Go'}</button>
             </form>
           </div>
 
@@ -473,7 +505,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
                 <p className="text-ivory/35 text-[10px] px-0.5">Don&apos;t see your exact brand? Pick the generic one at the top — macros are close across brands unless you know yours specifically.</p>
               )}
               {results.map((f, i) => (
-                <button key={i} onClick={() => { if (f.source === 'usda') { setPicking(f) } else { logEstimatedFood(f) } }} disabled={saving} className="w-full text-left flex items-center gap-2 bg-charcoal border border-smoke rounded-lg px-3 py-2 hover:border-gold/50 transition-colors disabled:opacity-50">
+                <button key={i} onClick={() => { if (f.source === 'usda') { setPicking(f) } else { logEstimatedFood(f) } }} disabled={saving} className="w-full text-left flex items-center gap-2 bg-charcoal border border-smoke rounded-lg px-3 py-2 hover:border-[#4CAF7D]/50 transition-colors disabled:opacity-50">
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-xs font-medium truncate">{f.name}{f.brand ? <span className="text-ivory/40"> · {f.brand}</span> : null}</p>
                     {/* Was "12P · 1C · 10F" — bare letter shorthand requires
@@ -491,16 +523,16 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
 
           {/* Quantity picker — how much did she actually have? */}
           {picking && scaled && (
-            <div className="bg-charcoal border border-gold/40 rounded-lg p-3 space-y-3">
+            <div className="bg-charcoal border border-[#4CAF7D]/40 rounded-lg p-3 space-y-3">
               <p className="text-white text-sm font-semibold">{picking.brand ? `${picking.name} (${picking.brand})` : picking.name}</p>
               <div className="flex gap-2 items-center">
-                <input value={qty} onChange={(e) => setQty(e.target.value)} inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="w-24 bg-obsidian border border-smoke rounded-lg px-3 py-2 text-white text-sm focus:border-gold/60 outline-none" />
+                <input value={qty} onChange={(e) => setQty(e.target.value)} inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="w-24 bg-obsidian border border-smoke rounded-lg px-3 py-2 text-white text-sm focus:border-[#4CAF7D]/60 outline-none" />
                 <div className="flex rounded-lg overflow-hidden border border-smoke">
                   {/* "piece" only offered when we have a real, verified gram
                       weight for this food (see lib/food-portions.ts) — never
                       a fabricated conversion for something we don't know. */}
                   {(piece ? ['piece', 'g', 'oz'] : ['g', 'oz'] as const).map((u) => (
-                    <button key={u} onClick={() => setUnit(u as 'g' | 'oz' | 'piece')} className={`px-3 py-2 text-xs font-bold uppercase ${unit === u ? 'bg-gold text-obsidian' : 'bg-obsidian text-ivory/50'}`}>{u === 'piece' ? (piece?.label || 'piece') : u}</button>
+                    <button key={u} onClick={() => setUnit(u as 'g' | 'oz' | 'piece')} className={`px-3 py-2 text-xs font-bold uppercase ${unit === u ? 'bg-[#4CAF7D] text-[#021F16]' : 'bg-obsidian text-ivory/50'}`}>{u === 'piece' ? (piece?.label || 'piece') : u}</button>
                   ))}
                 </div>
               </div>
@@ -518,7 +550,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
                 <p className="text-amber-400 text-xs font-semibold">That works out to 0 calories — double-check the quantity before logging.</p>
               )}
               <div className="flex gap-2">
-                <button onClick={confirmLogFood} disabled={saving || grams <= 0 || zeroCalorieWarning} className="flex-1 bg-gold text-obsidian py-2.5 font-bold text-xs uppercase tracking-wider rounded-lg disabled:opacity-50">{saving ? 'Logging…' : 'Log it'}</button>
+                <button onClick={confirmLogFood} disabled={saving || grams <= 0 || zeroCalorieWarning} className="flex-1 bg-[#4CAF7D] text-[#021F16] py-2.5 font-bold text-xs uppercase tracking-wider rounded-lg disabled:opacity-50">{saving ? 'Logging…' : 'Log it'}</button>
                 <button onClick={() => setPicking(null)} className="px-4 py-2.5 text-ivory/50 text-xs font-semibold hover:text-white">Cancel</button>
               </div>
             </div>
@@ -535,12 +567,12 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
           {notConfigured && <p className="text-ivory/30 text-[11px] text-center py-1">Food search comes online once the database is connected. Enter macros manually below for now.</p>}
 
           {/* Manual entry (fallback / custom foods) */}
-          <button onClick={() => setManual((m) => !m)} className="text-ivory/40 text-[11px] hover:text-gold underline">{manual ? 'Hide manual entry' : 'Enter a food manually'}</button>
+          <button onClick={() => setManual((m) => !m)} className="text-ivory/40 text-[11px] hover:text-[#4CAF7D] underline">{manual ? 'Hide manual entry' : 'Enter a food manually'}</button>
           {manual && (
             <form onSubmit={addManual} className="space-y-2.5 pt-1">
               <div>
                 <label className="text-ivory/40 text-[9px] uppercase tracking-wider block mb-1">Food name</label>
-                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Homemade chili" className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Homemade chili" className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-[#4CAF7D]/60 outline-none" />
               </div>
               <div className="flex gap-2">
                 <div className="flex-1">
@@ -551,7 +583,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
                       Carbs/Fats below. Meal already has its own real selector
                       above the search bar — no need to duplicate it here. */}
                   <label className="text-ivory/40 text-[9px] uppercase tracking-wider block mb-1">How many?</label>
-                  <input value={form.servings} onChange={(e) => setForm({ ...form, servings: e.target.value })} inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+                  <input value={form.servings} onChange={(e) => setForm({ ...form, servings: e.target.value })} inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-[#4CAF7D]/60 outline-none" />
                 </div>
                 <div className="flex-1">
                   {/* Real gap found live, 2026-09-04 (beta tester: "no
@@ -561,18 +593,18 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
                       Free text since a real per-100g/piece picker doesn't
                       apply here (she's already typed the total macros). */}
                   <label className="text-ivory/40 text-[9px] uppercase tracking-wider block mb-1">Of what unit?</label>
-                  <input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="e.g. cup, bowl, slice" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+                  <input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="e.g. cup, bowl, slice" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-[#4CAF7D]/60 outline-none" />
                 </div>
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {([['calories', 'Calories'], ['protein_g', 'Protein (g)'], ['carbs_g', 'Carbs (g)'], ['fats_g', 'Fat (g)']] as const).map(([k, lbl]) => (
                   <div key={k}>
                     <label className="text-ivory/40 text-[9px] uppercase tracking-wider block mb-1">{lbl}</label>
-                    <input value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} inputMode="numeric" autoCorrect="off" autoCapitalize="off" spellCheck={false} placeholder="0" className="w-full bg-charcoal border border-smoke rounded-lg px-2 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+                    <input value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} inputMode="numeric" autoCorrect="off" autoCapitalize="off" spellCheck={false} placeholder="0" className="w-full bg-charcoal border border-smoke rounded-lg px-2 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-[#4CAF7D]/60 outline-none" />
                   </div>
                 ))}
               </div>
-              <button type="submit" disabled={saving || !form.name.trim()} className="w-full bg-gold text-obsidian py-2.5 font-bold text-xs uppercase tracking-wider rounded-lg disabled:opacity-50">{saving ? 'Saving…' : 'Add to today'}</button>
+              <button type="submit" disabled={saving || !form.name.trim()} className="w-full bg-[#4CAF7D] text-[#021F16] py-2.5 font-bold text-xs uppercase tracking-wider rounded-lg disabled:opacity-50">{saving ? 'Saving…' : 'Add to today'}</button>
             </form>
           )}
         </div>
