@@ -93,7 +93,7 @@ const ENCOURAGEMENTS = [
   "Progress doesn't have to be big.",
 ]
 
-export default function NextActionCard({ variant = 'full' }: { variant?: 'full' | 'dock' }) {
+export default function NextActionCard({ variant = 'full', hasPlan = true }: { variant?: 'full' | 'dock'; hasPlan?: boolean }) {
   const router = useRouter()
   const [action, setAction] = useState<NextAction | null>(null)
   const [loading, setLoading] = useState(true)
@@ -110,6 +110,13 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
   // justApproved exactly (same copy, same routing) rather than leaving her
   // to notice the circle above changed on its own.
   const [justApproved, setJustApproved] = useState<PendingAdjustment | null>(null)
+  // Real gap found live, 2026-09-04 (Asa's report): unlike CoachHero.tsx, a
+  // cold-start build here (planBuilt) only ever produced a plain text reply
+  // describing what got built — no clickable "go see it" card, so she had
+  // to type something else just to get anywhere. Same justBuilt pattern
+  // CoachHero.tsx already has, ported here so this card behaves the same
+  // way for the one thing most anonymous/new visitors actually do first.
+  const [justBuilt, setJustBuilt] = useState<{ workout: boolean; nutrition: boolean } | null>(null)
   const [encouragement, setEncouragement] = useState<string | null>(null)
   const [celebration, setCelebration] = useState<string | null>(null)
   // Guards against re-showing the same reward's celebration every time this
@@ -132,7 +139,7 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
   useEffect(() => {
     turnsEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
     turnsEndRef2.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
-  }, [turns.length])
+  }, [turns.length, justBuilt])
 
   // Real, visible celebration (2026-08-28, Asa's direct call) — the reward
   // used to be silently woven into the instruction text, by original
@@ -263,6 +270,7 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
     setQuickReplies(null)
     setPendingAdjustment(null)
     setJustApproved(null)
+    setJustBuilt(null)
     // Real, visible echo of what she actually sent — the old version had no
     // transcript at all, just a single note line that silently overwrote
     // itself, so sending something real read as "did nothing" even when it
@@ -280,6 +288,15 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
       setTurns((t) => [...t, { role: 'operator', content: json.reply || "I didn't quite catch that — try again." }])
       if (json.quickReplies) setQuickReplies(json.quickReplies as string[])
       if (json.adjustment) setPendingAdjustment(json.adjustment as PendingAdjustment)
+      // Real gap found live, 2026-09-04: a cold-start build (planBuilt) never
+      // surfaced a "go see it" card here — CoachHero.tsx already does this.
+      // router.refresh() same as decide()'s approved branch below, so the
+      // page she taps through to is actually fresh, not a stale pre-build one.
+      if (json.planBuilt) {
+        router.refresh()
+        broadcastRefresh()
+        setJustBuilt({ workout: !!json.builtWorkout, nutrition: !!json.builtNutrition })
+      }
       // A cold-start build (planBuilt) or a food log both apply immediately,
       // no approval step — refetch the real current action so the circle
       // reflects it right away, same as every other live card on this app.
@@ -582,6 +599,31 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
           </div>
         )}
 
+        {/* Cold-start build — same "go see it" card CoachHero.tsx already
+            has, routed to the specific thing built, not always the generic
+            dashboard (no single page shows both). */}
+        {justBuilt && (
+          <div className="flex flex-col gap-1.5 mb-2">
+            {justBuilt.workout && justBuilt.nutrition ? (
+              <Link href="/plan" className="flex items-center justify-center gap-1.5 bg-[#C9A84C] text-obsidian px-3 py-1.5 font-bold text-[10.5px] uppercase tracking-wide rounded-lg active:scale-95 transition-transform">
+                View my new plan →
+              </Link>
+            ) : justBuilt.workout ? (
+              <Link href="/plan/workout" className="flex items-center justify-center gap-1.5 bg-[#C9A84C] text-obsidian px-3 py-1.5 font-bold text-[10.5px] uppercase tracking-wide rounded-lg active:scale-95 transition-transform">
+                View my new workout →
+              </Link>
+            ) : justBuilt.nutrition ? (
+              <Link href="/plan/today" className="flex items-center justify-center gap-1.5 bg-[#C9A84C] text-obsidian px-3 py-1.5 font-bold text-[10.5px] uppercase tracking-wide rounded-lg active:scale-95 transition-transform">
+                View my new nutrition plan →
+              </Link>
+            ) : (
+              <Link href="/plan" className="flex items-center justify-center gap-1.5 bg-[#C9A84C] text-obsidian px-3 py-1.5 font-bold text-[10.5px] uppercase tracking-wide rounded-lg active:scale-95 transition-transform">
+                View my new plan →
+              </Link>
+            )}
+          </div>
+        )}
+
         {/* Gold gradient + thin glow — Asa's ask, 2026-08-29/30, after
             trying white glow then a stronger gold glow: matches the app's
             real accent (same gold as the Next Action circle's own glow)
@@ -599,7 +641,7 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-            placeholder="Ask anything about your plan…"
+            placeholder={hasPlan ? "Ask anything about your plan…" : "Try me — ask for your first workout or nutrition plan…"}
             rows={1}
             className="flex-1 bg-transparent text-white text-xs placeholder:text-white/40 focus:outline-none min-w-0 resize-none py-1.5 max-h-32 overflow-y-auto leading-snug"
           />
@@ -834,6 +876,31 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
           </div>
         )}
 
+        {/* Cold-start build — same "go see it" card CoachHero.tsx already
+            has, routed to the specific thing built, not always the generic
+            dashboard (no single page shows both). */}
+        {justBuilt && (
+          <div className="flex flex-col gap-2 mb-2.5">
+            {justBuilt.workout && justBuilt.nutrition ? (
+              <Link href="/plan" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+                View my new plan →
+              </Link>
+            ) : justBuilt.workout ? (
+              <Link href="/plan/workout" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+                View my new workout →
+              </Link>
+            ) : justBuilt.nutrition ? (
+              <Link href="/plan/today" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+                View my new nutrition plan →
+              </Link>
+            ) : (
+              <Link href="/plan" className="flex items-center justify-center gap-1.5 bg-gold text-obsidian px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-transform">
+                View my new plan →
+              </Link>
+            )}
+          </div>
+        )}
+
         <div className="flex items-end gap-2" style={{ fontFamily: 'var(--font-poppins)' }}>
           {/* A textarea, not a single-line input — Asa's ask, 2026-08-26:
               the full transcript must stay visible no matter how long it
@@ -844,7 +911,7 @@ export default function NextActionCard({ variant = 'full' }: { variant?: 'full' 
             value={message}
             onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-            placeholder="Ask anything about your plan…"
+            placeholder={hasPlan ? "Ask anything about your plan…" : "Try me — ask for your first workout or nutrition plan…"}
             rows={1}
             className="flex-1 bg-black/20 border border-white/15 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-ivory/30 focus:outline-none focus:border-gold/60 resize-none max-h-60 overflow-y-auto"
           />

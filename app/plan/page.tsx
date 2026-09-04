@@ -315,7 +315,7 @@ export default async function PlanDashboard() {
                 // — stacking both was the actual bug (Asa's catch, 2026-08-31:
                 // a real gap of empty video between the chat box and the nav).
                 <div className="px-4 pb-3.5" style={{ paddingRight: 58 }}>
-                  <NextActionCard variant="dock" />
+                  <NextActionCard variant="dock" hasPlan={hasPlan} />
                 </div>
               }
             />
