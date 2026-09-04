@@ -77,6 +77,16 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
   // once in this codebase for BuilderView.tsx's Garden card — measure the
   // real height via window.visualViewport (not CSS alone) and set it
   // explicitly, updating live as Safari's chrome shows/hides.
+  // Real bug found live (Asa's follow-up report, 2026-09-04): this first
+  // attempt also listened to visualViewport's `scroll` event — which
+  // fires continuously during ANY touch-scroll/momentum-scroll gesture
+  // anywhere on the page, not just when Safari's chrome actually shows or
+  // hides. So the instant she dragged to scroll the menu list, this fired
+  // on every frame of her own gesture, re-rendering the dialog with a
+  // freshly-recalculated height WHILE she was mid-scroll — which reads
+  // exactly like "the whole screen moves" instead of the list scrolling
+  // cleanly. `resize` alone is the correct signal for chrome show/hide;
+  // `scroll` was never needed here and was actively fighting her gesture.
   const [dialogHeight, setDialogHeight] = useState<number | null>(null)
   useEffect(() => {
     if (!open) return
@@ -85,11 +95,9 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
     }
     measure()
     window.visualViewport?.addEventListener('resize', measure)
-    window.visualViewport?.addEventListener('scroll', measure)
     window.addEventListener('resize', measure)
     return () => {
       window.visualViewport?.removeEventListener('resize', measure)
-      window.visualViewport?.removeEventListener('scroll', measure)
       window.removeEventListener('resize', measure)
     }
   }, [open])
