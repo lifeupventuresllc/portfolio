@@ -436,9 +436,6 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
           )}
         </div>
       )}
-      {!loading && hasCalBudget && !calOver && t.calories === 0 && (
-        <p className="text-center text-xs mb-4" style={{ color: MUTED }}>Nothing logged yet</p>
-      )}
 
       {/* Merged in from the old standalone "today's meals" card — whether a
           real meal plan exists for today at all, distinct from the ring
