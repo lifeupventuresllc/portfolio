@@ -72,10 +72,36 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
     router.refresh()
   }
 
-  // Lock body scroll while the drawer is open
+  // Lock body scroll while the drawer is open. Real bug found live (Asa's
+  // report, 2026-09-04, new/anonymous users unable to reach Sign Out at
+  // the bottom of this exact menu): plain `overflow: hidden` on the body
+  // is well known to NOT reliably stop iOS Safari's touch/rubber-band
+  // scroll, and can fight the nested `nav` below for the same touch
+  // gesture instead of letting it scroll internally — so on a real phone,
+  // a touch that should scroll the drawer's own list could scroll (or
+  // fail to scroll) the page behind it instead, with content past the
+  // fold unreachable either way. `position: fixed` on the body is the
+  // standard robust fix: it makes the background truly non-scrollable
+  // (not just visually clipped) so touch events land on the drawer's own
+  // `overflow-y-auto` nav instead, and the saved scroll position is
+  // restored exactly on close.
   useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
+    if (!open) return
+    const scrollY = window.scrollY
+    const body = document.body.style
+    body.position = 'fixed'
+    body.top = `-${scrollY}px`
+    body.left = '0'
+    body.right = '0'
+    body.overflow = 'hidden'
+    return () => {
+      body.position = ''
+      body.top = ''
+      body.left = ''
+      body.right = ''
+      body.overflow = ''
+      window.scrollTo(0, scrollY)
+    }
   }, [open])
 
   const sections: { title: string; items: Item[] }[] = [

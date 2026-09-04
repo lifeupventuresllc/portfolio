@@ -121,9 +121,20 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu — real bug fixed 2026-09-04 (Asa's report, new/
+            anonymous users on the home screen): this `<nav>` is `fixed
+            top-0` with no height cap of its own, so once this dropdown's
+            content grew taller than the viewport (a real case on shorter
+            screens), the overflow — including Login, always the last item
+            — rendered below the visible screen edge with no way to reach
+            it: `fixed` elements sit outside the page's own scroll, and
+            this div had no scroll container of its own either. Capping
+            it to the remaining space below the h-14 bar and letting it
+            scroll internally (same fix already applied to ClientMenu's
+            drawer for the identical class of bug) means it always stays
+            reachable regardless of how tall the menu content gets. */}
         {menuOpen && (
-          <div className="md:hidden py-6 border-t border-smoke/30 space-y-5 animate-slide-down">
+          <div className="md:hidden py-6 border-t border-smoke/30 space-y-5 animate-slide-down max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain">
             <Link href="/services/fitness" onClick={() => setMenuOpen(false)} className="block text-sm text-ivory/50 tracking-[0.15em] uppercase hover:text-gold transition-colors py-1">
               Fitness
             </Link>
