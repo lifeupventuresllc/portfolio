@@ -253,6 +253,63 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
     confirmTimerRef.current = setTimeout(() => setConfirmRemoveId(null), 2500)
   }
 
+  // Real gap found live, 2026-09-03 (beta tester report + novice glance-test
+  // audit): the only way to fix a logged entry was delete-and-redo. Checked
+  // how MyFitnessPal/Lose It! handle this — tap the entry, adjust the
+  // quantity, watch the macros update live, save. Same pattern here:
+  // tapping a row (not the × ) opens this instead of the × 's remove-confirm.
+  //
+  // Already-logged entries only ever store the FINAL calories/macros +
+  // `servings` (a multiplier) and `serving_label` (display text like
+  // "2 eggs" or "150g") — not the original per-100g base the search
+  // picker scales from. So editing here scales from calories/servings
+  // (the per-serving amount), not from a re-fetched per-100g value —
+  // always correct regardless of how the entry was originally logged
+  // (search, manual, or an AI estimate), and needs no extra API call.
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editQty, setEditQty] = useState('1')
+  const editingEntry = data?.entries.find((e) => e.id === editingId) || null
+  const editPerUnit: Macros | null = editingEntry
+    ? {
+        calories: editingEntry.calories / (editingEntry.servings || 1),
+        protein_g: editingEntry.protein_g / (editingEntry.servings || 1),
+        carbs_g: editingEntry.carbs_g / (editingEntry.servings || 1),
+        fats_g: editingEntry.fats_g / (editingEntry.servings || 1),
+      }
+    : null
+  const editQtyNum = Number(editQty) || 0
+  const editScaled: Macros | null = editPerUnit
+    ? {
+        calories: Math.round(editPerUnit.calories * editQtyNum),
+        protein_g: Math.round(editPerUnit.protein_g * editQtyNum),
+        carbs_g: Math.round(editPerUnit.carbs_g * editQtyNum),
+        fats_g: Math.round(editPerUnit.fats_g * editQtyNum),
+      }
+    : null
+
+  function startEdit(e: Entry) {
+    setConfirmRemoveId(null)
+    setEditingId(editingId === e.id ? null : e.id)
+    setEditQty(String(e.servings || 1))
+  }
+
+  async function saveEdit() {
+    if (!editingEntry || !editScaled || editQtyNum <= 0) return
+    setSaving(true)
+    try {
+      const r = await fetch('/api/plan/food-log', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingEntry.id, servings: editQtyNum, serving_label: editingEntry.serving_label,
+          calories: editScaled.calories, protein_g: editScaled.protein_g, carbs_g: editScaled.carbs_g, fats_g: editScaled.fats_g,
+        }),
+      })
+      const d = await r.json()
+      if (d?.totals) setData(d)
+      setEditingId(null)
+    } finally { setSaving(false) }
+  }
+
   const grouped = useMemo(() => {
     const g: Record<string, Entry[]> = {}
     for (const e of data?.entries || []) (g[e.meal] ||= []).push(e)
@@ -498,15 +555,44 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
           <p className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: MUTED }}>{MEAL_LABEL[m]}</p>
           <div className="space-y-1.5">
             {grouped[m].map((e) => (
-              <div key={e.id} className="flex items-center gap-2 rounded-lg px-3 py-2 group" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate" style={{ color: INK }}>{e.name}{e.servings !== 1 ? <span style={{ color: MUTED }}> ×{e.servings}</span> : null}</p>
-                  <p className="text-[10px]" style={{ color: MUTED }}>{e.calories} cal · {e.protein_g}g protein</p>
+              <div key={e.id}>
+                <div className="flex items-center gap-2 rounded-lg px-3 py-2 group" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                  {/* Tap the row (not the × ) to edit — same MyFitnessPal/
+                      Lose It! pattern researched live, 2026-09-03. */}
+                  <button onClick={() => startEdit(e)} className="flex-1 min-w-0 text-left flex items-center gap-1.5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate" style={{ color: INK }}>{e.name}{e.servings !== 1 ? <span style={{ color: MUTED }}> ×{e.servings}</span> : null}</p>
+                      <p className="text-[10px]" style={{ color: MUTED }}>{e.calories} cal · {e.protein_g}g protein</p>
+                    </div>
+                    <span className="shrink-0 text-sm" style={{ color: MUTED }}>{editingId === e.id ? '⌄' : '›'}</span>
+                  </button>
+                  {confirmRemoveId === e.id ? (
+                    <button onClick={() => handleRemoveTap(e.id)} aria-label="Tap again to remove" className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full text-white bg-red-500 shrink-0">Remove?</button>
+                  ) : (
+                    <button onClick={() => handleRemoveTap(e.id)} aria-label="Remove" className="text-lg leading-none px-1 opacity-60 group-hover:opacity-100 transition-opacity hover:text-red-500" style={{ color: MUTED }}>×</button>
+                  )}
                 </div>
-                {confirmRemoveId === e.id ? (
-                  <button onClick={() => handleRemoveTap(e.id)} aria-label="Tap again to remove" className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full text-white bg-red-500 shrink-0">Remove?</button>
-                ) : (
-                  <button onClick={() => handleRemoveTap(e.id)} aria-label="Remove" className="text-lg leading-none px-1 opacity-60 group-hover:opacity-100 transition-opacity hover:text-red-500" style={{ color: MUTED }}>×</button>
+
+                {/* Edit card — black + green, distinct from this page's own
+                    gold "budget" styling on purpose (Asa's pick after a
+                    live mockup review, 2026-09-03). Doesn't touch the
+                    budget ring, search, or new-entry quantity picker above,
+                    which all keep their existing look. */}
+                {editingId === e.id && (
+                  <div className="mt-1.5 rounded-xl p-3 space-y-2.5" style={{ background: '#000', border: '1.5px solid #4CAF7D' }}>
+                    <p className="text-white text-sm font-semibold">{e.name}</p>
+                    <div className="flex items-center gap-2">
+                      <input value={editQty} onChange={(ev) => setEditQty(ev.target.value)} inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="w-20 rounded-lg px-3 py-2 text-white text-sm text-center" style={{ background: '#000', border: '1px solid rgba(76,175,125,0.4)' }} />
+                      <span className="text-white/50 text-xs">{e.serving_label || 'serving'}{editQtyNum === 1 ? '' : 's'}</span>
+                    </div>
+                    {editScaled && (
+                      <p className="text-white/70 text-xs">{editScaled.calories} cal &middot; {editScaled.protein_g}g protein &middot; {editScaled.carbs_g}g carbs &middot; {editScaled.fats_g}g fat</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button onClick={saveEdit} disabled={saving || editQtyNum <= 0} className="flex-1 py-2.5 font-bold text-xs uppercase tracking-wider rounded-lg disabled:opacity-50" style={{ background: '#4CAF7D', color: '#000' }}>{saving ? 'Saving…' : 'Save changes'}</button>
+                      <button onClick={() => setEditingId(null)} className="px-4 py-2.5 text-white/50 text-xs font-semibold hover:text-white">Cancel</button>
+                    </div>
+                  </div>
                 )}
               </div>
             ))}

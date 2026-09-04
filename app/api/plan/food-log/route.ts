@@ -78,6 +78,28 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(await loadDay(svc, enrollment.id as string, day))
 }
 
+// Real gap found live, 2026-09-03 (beta tester report + novice glance-test
+// audit): editing a logged entry only ever meant delete-and-redo — no way
+// to just fix the quantity. Same MyFitnessPal/Lose It! pattern researched
+// live: tap the entry, adjust it, save — this is that save.
+export async function PATCH(request: NextRequest) {
+  const { user, enrollment, svc } = await resolve()
+  if (!user || !enrollment || !svc) return NextResponse.json({ error: 'Not enrolled.' }, { status: 401 })
+  const b = await request.json()
+  const id = (b.id || '').toString()
+  if (!id) return NextResponse.json({ error: 'Missing id.' }, { status: 400 })
+  const day = (b.logged_on || localDateISO()).toString().slice(0, 10)
+  const servings = Math.max(0.1, num(b.servings, 1))
+  // Scope to this enrollment so a user can only ever update their own rows.
+  const { error } = await svc.from('challenge_food_log').update({
+    servings, serving_label: b.serving_label ? b.serving_label.toString().slice(0, 60) : null,
+    calories: Math.round(num(b.calories)), protein_g: Math.round(num(b.protein_g)),
+    carbs_g: Math.round(num(b.carbs_g)), fats_g: Math.round(num(b.fats_g)),
+  }).eq('id', id).eq('enrollment_id', enrollment.id)
+  if (error) return NextResponse.json({ error: 'Could not update that entry.' }, { status: 500 })
+  return NextResponse.json(await loadDay(svc, enrollment.id as string, day))
+}
+
 export async function DELETE(request: NextRequest) {
   const { user, enrollment, svc } = await resolve()
   if (!user || !enrollment || !svc) return NextResponse.json({ error: 'Not enrolled.' }, { status: 401 })
