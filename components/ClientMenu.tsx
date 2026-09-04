@@ -65,6 +65,35 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
   const router = useRouter()
   const supabase = createClient()
 
+  // Real bug found live (Asa's screenshot, 2026-09-04): `fixed inset-0`
+  // doesn't reliably equal the real visible screen on iOS Safari when its
+  // UI chrome (address bar, bottom toolbar) is showing — the browser can
+  // size a `fixed` element against the taller layout viewport instead of
+  // the shorter visual one, so the drawer's own box ended before the
+  // actual bottom of the screen. The result wasn't a scroll problem at
+  // all: the real page underneath (Next Action circle, the chat input,
+  // the bottom tab bar) was showing through, unobscured, and visually
+  // overlapping the drawer's last rows. Same root cause already solved
+  // once in this codebase for BuilderView.tsx's Garden card — measure the
+  // real height via window.visualViewport (not CSS alone) and set it
+  // explicitly, updating live as Safari's chrome shows/hides.
+  const [dialogHeight, setDialogHeight] = useState<number | null>(null)
+  useEffect(() => {
+    if (!open) return
+    function measure() {
+      setDialogHeight(window.visualViewport?.height ?? window.innerHeight)
+    }
+    measure()
+    window.visualViewport?.addEventListener('resize', measure)
+    window.visualViewport?.addEventListener('scroll', measure)
+    window.addEventListener('resize', measure)
+    return () => {
+      window.visualViewport?.removeEventListener('resize', measure)
+      window.visualViewport?.removeEventListener('scroll', measure)
+      window.removeEventListener('resize', measure)
+    }
+  }, [open])
+
   async function handleSignOut() {
     await supabase.auth.signOut()
     setOpen(false)
@@ -171,7 +200,12 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+        <div
+          className="fixed top-0 left-0 right-0 z-50"
+          style={{ height: dialogHeight ?? '100dvh' }}
+          role="dialog"
+          aria-modal="true"
+        >
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
           {/* Real bug fixed 2026-08-27: this drawer sized itself with an
               independent `100dvh` value instead of matching its own parent
