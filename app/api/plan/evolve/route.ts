@@ -5,6 +5,7 @@ import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-ev
 import { generateWorkout, type TrainingStyle, type WorkoutProgram, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { parseStoredGoal } from '@/lib/goals'
+import { parseStoredTrainingStyles } from '@/lib/training-styles'
 
 async function resolve() {
   const supabase = createClient()
@@ -89,11 +90,14 @@ export async function POST(request: NextRequest) {
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
     const injuries = (Array.isArray((intake.form_data as { injuries?: Injury[] } | null)?.injuries) ? (intake.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
-    const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle
+    // Real bug found live, 2026-09-04: same narrow single-style read as
+    // app/plan/workout/page.tsx (lib/training-styles.ts).
+    const formDataStyles = intake.form_data as { training_style?: TrainingStyle; training_styles?: string[] } | null
+    const trainingStyles = Array.from(parseStoredTrainingStyles(formDataStyles?.training_styles, formDataStyles?.training_style))
     const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
     const newProgram = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex, track, level, goal,
-      daysPerWeek, weekNumber: 1, injuries, postpartum, trainingStyle, focusArea,
+      daysPerWeek, weekNumber: 1, injuries, postpartum, trainingStyles, focusArea,
       activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
     })
     await svc.from('challenge_workout_plans').update({ plan: newProgram }).eq('enrollment_id', eid).eq('week_number', 1)

@@ -129,6 +129,22 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
     setI(0); setDone(false); setPaused(false); setSwitching(false)
     handledRestIdx.current = new Set()
   }
+  // Real gap, beta feedback (Priority 12, 2026-08-25): "log a workout at the
+  // gym" — no way to mark today done outside this guided flow, e.g. she
+  // trained with a real coach at her actual gym instead of following the
+  // on-screen player. Reuses finish()'s exact save/streak/celebration path
+  // (same daily-log call, same "That's done" screen) — this is a second
+  // real entry point into that path, not a second logging mechanism.
+  // Two-tap arm (same pattern as FoodLog's delete confirm) since one tap
+  // instantly completes today's session with no undo.
+  const [confirmElsewhere, setConfirmElsewhere] = useState(false)
+  const elsewhereTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function tapElsewhere() {
+    if (elsewhereTimerRef.current) clearTimeout(elsewhereTimerRef.current)
+    if (confirmElsewhere) { setConfirmElsewhere(false); finish(); return }
+    setConfirmElsewhere(true)
+    elsewhereTimerRef.current = setTimeout(() => setConfirmElsewhere(false), 2500)
+  }
   function finish() {
     setDone(true)
     hapticTap(30) // one satisfying buzz on the moment she actually finishes
@@ -253,6 +269,10 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
           <button onClick={() => router.push('/plan/workout/week')} className="text-ivory/50 hover:text-gold text-xs font-semibold">← My week</button>
           <span className="text-ivory/20 text-xs">·</span>
           <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} className="text-ivory/50 hover:text-gold text-xs font-semibold">Home</button>
+          <span className="text-ivory/20 text-xs">·</span>
+          <button onClick={tapElsewhere} className={`text-xs font-semibold ${confirmElsewhere ? 'text-gold' : 'text-ivory/50 hover:text-gold'}`}>
+            {confirmElsewhere ? 'Tap again to confirm' : 'Trained elsewhere?'}
+          </button>
         </div>
         <button onClick={() => setSwitching((s) => !s)} className="text-center">
           <p className="text-gold text-[10px] font-semibold tracking-[0.2em] uppercase">

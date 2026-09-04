@@ -29,6 +29,10 @@ export interface WorkoutInputs {
   overrideAreas?: FocusArea[]
   postpartum?: boolean
   trainingStyle?: TrainingStyle
+  // Real source of truth when present — see lib/training-styles.ts. Every
+  // caller should pass this (not just the single trainingStyle above) so a
+  // member who picked more than one style actually gets both effects.
+  trainingStyles?: TrainingStyle[]
   weightLb?: number
   heightIn?: number
   age?: number

@@ -5,6 +5,7 @@ import { compoundExercisesForLevel } from '@/lib/compound-exercises'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { localDayNumber } from '@/lib/localdate'
 import CompoundDayClient from '@/components/CompoundDayClient'
+import { parseStoredTrainingStyles } from '@/lib/training-styles'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +30,11 @@ export default async function CompoundDayPage() {
   const level = (intake?.experience_level === 'advanced' ? 3 : intake?.experience_level === 'intermediate' ? 2 : 1) as Level
   const injuries = (Array.isArray((intake?.form_data as { injuries?: Injury[] } | null)?.injuries)
     ? (intake!.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
-  const isCompoundStyle = (intake?.form_data as { training_style?: string } | null)?.training_style === 'compound'
+  // Real bug found live, 2026-09-04: only checked the single training_style,
+  // so a member who picked 'compound' alongside another style never got this
+  // flagged as her style (lib/training-styles.ts).
+  const formDataStyles = intake?.form_data as { training_style?: string; training_styles?: string[] } | null
+  const isCompoundStyle = parseStoredTrainingStyles(formDataStyles?.training_styles, formDataStyles?.training_style).has('compound')
   const isInnerCircle = enrollment.tier === 'inner_circle'
 
   const pool = compoundExercisesForLevel(level, injuries, isInnerCircle)

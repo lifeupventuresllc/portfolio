@@ -11,6 +11,7 @@ import { localDateISO, addDaysISO, currentWeekNumber, getTimezone, localHourNumb
 import { computeLowFuelToday } from '@/lib/workout-assembly'
 import { getRecentlyTrainedMuscles } from '@/lib/progression'
 import { parseStoredGoal } from '@/lib/goals'
+import { parseStoredTrainingStyles } from '@/lib/training-styles'
 
 export const dynamic = 'force-dynamic'
 
@@ -127,7 +128,11 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
     const goal = parseStoredGoal(intake.goal as string | null)
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
-    const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle
+    // Real bug found live, 2026-09-04: this only ever read the single
+    // `training_style` (styles[0]), dropping any others she'd picked —
+    // same shape as the goal bug above, same fix pattern (lib/training-styles.ts).
+    const formDataStyles = intake.form_data as { training_style?: TrainingStyle; training_styles?: string[] } | null
+    const trainingStyles = Array.from(parseStoredTrainingStyles(formDataStyles?.training_styles, formDataStyles?.training_style))
     const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
     const weekNumber = currentWeekNumber((enrollment.created_at as string) || new Date().toISOString())
     // Layer three (lib/progression.ts) — real logged set-effort history,
@@ -143,7 +148,7 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
       name: (enrollment.name as string) || 'Your', sex,
       track: trackOverride || (intake.training_location === 'home' ? 'home' : 'gym'),
       level, goal,
-      daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyle, focusArea,
+      daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyles, focusArea,
       overrideAreas: focusOverride?.length ? focusOverride : undefined,
       progressionOverrides,
       activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],

@@ -4,6 +4,7 @@ import { generateWorkout, type TrainingStyle, type FocusArea } from '@/lib/worko
 import { buildWeekFromSelections, autoSelectMeals, type DayType } from '@/lib/meal-plan'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { parseStoredGoal } from '@/lib/goals'
+import { effectiveTrainingStyles } from '@/lib/training-styles'
 
 // Shared by the structured intake form (app/api/challenge/intake/route.ts) and
 // Coach Asa's conversational cold-start build (app/api/plan/operator/route.ts) —
@@ -55,8 +56,10 @@ export interface PlanBuildInput {
   injuries?: Injury[]
   postpartum?: boolean
   training_style?: TrainingStyle
-  // Same pattern as goals above — training_style stays the single derived
-  // value (training_styles[0]) the workout generator already expects.
+  // training_styles (plural) is now the real source of truth passed to the
+  // generator — see lib/training-styles.ts. training_style (singular) is
+  // kept only as the fallback for callers that never offer multi-select
+  // (Quickstart, Coach Asa's chat build).
   training_styles?: string[]
   other_info?: string
   focus_area?: FocusArea
@@ -129,11 +132,12 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
       injuries: inp.injuries ?? [],
       postpartum: !!inp.postpartum,
       training_style: inp.training_style || 'none',
-      // Real multi-select capture (Priority 1, 2026-08-25 beta feedback) —
-      // goal/training_style above stay single-value for the generation code
-      // below, derived as the first entry (her top priority when she picks
-      // more than one). These arrays are the actual source of truth the
-      // Settings/intake UI reads back for editing.
+      // Real multi-select capture (Priority 1, 2026-08-25 beta feedback).
+      // `goal`/`training_style` above stay single-value (first entry) as a
+      // display/back-compat column only — the generation code below reads
+      // the real goal/style SETS via lib/goals.ts / lib/training-styles.ts.
+      // These arrays are the actual source of truth, both for generation
+      // and for what the Settings/intake UI reads back for editing.
       goals: inp.goals?.length ? inp.goals : [inp.goal],
       training_styles: inp.training_styles?.length ? inp.training_styles : (inp.training_style && inp.training_style !== 'none' ? [inp.training_style] : []),
       other_info: inp.other_info || '',
@@ -214,7 +218,11 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     weekNumber: 1,
     injuries: inp.injuries ?? [],
     postpartum: !!inp.postpartum,
-    trainingStyle: inp.training_style || 'none',
+    // Real bug found live, 2026-09-04: this is the VERY FIRST workout ever
+    // built at intake time — same narrow single-style read as the goal bug
+    // above meant a member who picked more than one training style never
+    // got the real blended behavior, from day one (lib/training-styles.ts).
+    trainingStyles: Array.from(effectiveTrainingStyles(inp.training_styles?.length ? inp.training_styles : (inp.training_style && inp.training_style !== 'none' ? [inp.training_style] : []))),
     focusArea: inp.focus_area || 'overall',
     overrideAreas: inp.override_areas,
     activityLevel: inp.activity_level === 'none' ? 'sedentary' : inp.activity_level,

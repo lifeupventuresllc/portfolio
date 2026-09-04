@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateWorkout, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { parseStoredGoal } from '@/lib/goals'
+import { parseStoredTrainingStyles } from '@/lib/training-styles'
 
 // Shared by /api/plan/rebuild-workout (generic "get me on the current engine") and
 // /api/plan/life-reset (Inner Circle's one-tap "life happened" reset) — both just
@@ -19,10 +20,12 @@ export async function regenerateWorkoutFromIntake(
   // generic rebuild both need her real goal, not a silently downgraded one.
   const goal = parseStoredGoal(intake.goal as string | null)
   const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
-  const formData = intake.form_data as { injuries?: Injury[]; postpartum?: boolean; training_style?: TrainingStyle; focus_area?: FocusArea } | null
+  const formData = intake.form_data as { injuries?: Injury[]; postpartum?: boolean; training_style?: TrainingStyle; training_styles?: string[]; focus_area?: FocusArea } | null
   const injuries = (Array.isArray(formData?.injuries) ? formData!.injuries! : []) as Injury[]
   const postpartum = !!formData?.postpartum
-  const trainingStyle = (formData?.training_style || 'none') as TrainingStyle
+  // Real bug found live, 2026-09-04: same narrow single-style read as
+  // app/plan/workout/page.tsx (lib/training-styles.ts).
+  const trainingStyles = Array.from(parseStoredTrainingStyles(formData?.training_styles, formData?.training_style))
   const focusArea = (formData?.focus_area || 'overall') as FocusArea
 
   const program = generateWorkout({
@@ -32,7 +35,7 @@ export async function regenerateWorkoutFromIntake(
     weekNumber: 1,
     injuries,
     postpartum,
-    trainingStyle,
+    trainingStyles,
     focusArea,
     activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
   })

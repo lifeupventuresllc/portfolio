@@ -21,8 +21,9 @@ import type { Injury, Equip, Muscle } from './workout-exercises'
 import { injuryNotes } from './workout-exercises'
 import { compoundExercisesForLevel } from './compound-exercises'
 import type {
-  WorkoutInputs, WorkoutProgram, GymDay, HomeDay, Superset, CardioFinisher, FocusArea,
+  WorkoutInputs, WorkoutProgram, GymDay, HomeDay, Superset, CardioFinisher, FocusArea, TrainingStyle,
 } from './workout.types'
+import { effectiveTrainingStyles } from './training-styles'
 
 const LEVEL_LABEL: Record<SkillLevel, string> = { 1: 'Beginner', 2: 'Intermediate', 3: 'Advanced' }
 // 'recomp' reads "Fat Loss + Tone" here, not the fitness-jargon term
@@ -232,18 +233,26 @@ const CARDIO_SPEED: Record<SkillLevel, string> = { 1: '3.0 mph', 2: '3.3 mph', 3
 // shape as the goal/activity adjustments above, always disclosed in `note`
 // rather than just quietly shortened.
 const LOW_FUEL_MIN_ADJUST = -8
-function walkFinisher(level: SkillLevel, goal: string, activityLevel?: WorkoutInputs['activityLevel'], lowFuelToday?: boolean): CardioFinisher {
+// Real gap found live, 2026-09-04: 'cardio' ("Cardio-first") was a fully
+// selectable training style that did NOTHING — no code path anywhere ever
+// checked for it, so picking it produced a workout byte-for-byte identical
+// to picking 'none'. Gives it the one real, honest difference a finisher-only
+// architecture can offer: a genuinely bigger cardio block, not just a longer
+// label.
+const CARDIO_FIRST_MIN_ADJUST = 10
+function walkFinisher(level: SkillLevel, goal: string, activityLevel?: WorkoutInputs['activityLevel'], lowFuelToday?: boolean, cardioFirst?: boolean): CardioFinisher {
   const base = level === 1 ? { incline: '0–2.5%', minLow: 15, minHigh: 20 } : level === 2 ? { incline: '2.5–3.0%', minLow: 20, minHigh: 25 } : { incline: '3.0–4.0%', minLow: 25, minHigh: 30 }
-  const adjust = (CARDIO_MIN_ADJUST[goal] ?? 0) + (ACTIVITY_MIN_ADJUST[activityLevel ?? 'moderate'] ?? 0) + (lowFuelToday ? LOW_FUEL_MIN_ADJUST : 0)
+  const adjust = (CARDIO_MIN_ADJUST[goal] ?? 0) + (ACTIVITY_MIN_ADJUST[activityLevel ?? 'moderate'] ?? 0) + (lowFuelToday ? LOW_FUEL_MIN_ADJUST : 0) + (cardioFirst && !lowFuelToday ? CARDIO_FIRST_MIN_ADJUST : 0)
   const mins = `${Math.max(8, base.minLow + adjust)}–${Math.max(12, base.minHigh + adjust)} min`
   const note = lowFuelToday ? "Kept lighter — looks like you haven't eaten yet today. Fuel up when you can."
+    : cardioFirst ? 'Cardio-first — a bigger chunk of today\'s session on purpose, that\'s your training style.'
     : goal === 'lose' ? 'Your fat-burning finisher — walk tall, shoulders back, no handrails.'
     : goal === 'gain' ? 'Keeps heart rate up without burning muscle — walk tall, no handrails.'
     : goal === 'recomp' ? 'Burns fat without eating into the muscle you\'re building — walk tall, no handrails.'
     : 'Steady-state to hold where you\'re at — walk tall, shoulders back, no handrails.'
   return { title: 'Incline Treadmill Walk', mode: 'walk', speed: CARDIO_SPEED[level], incline: base.incline, mins, note }
 }
-function cardioFinisherFor(c: Constraints, goal: string, trainingStyle: WorkoutInputs['trainingStyle'], offset: number): CardioFinisher {
+function cardioFinisherFor(c: Constraints, goal: string, styles: Set<TrainingStyle>, offset: number): CardioFinisher {
   // Same override lookup filterLibrary already uses for every other pattern
   // — real gap found live: the cardio finisher was the one place that read
   // her flat intake-level skillLevel even after months of logged cardio
@@ -251,12 +260,16 @@ function cardioFinisherFor(c: Constraints, goal: string, trainingStyle: WorkoutI
   // alongside this in lib/workout-steps.ts). Falls back to c.skillLevel
   // exactly like filterLibrary until real cardio tap history exists.
   const effectiveLevel = c.progressionOverrides?.cardio?.skillLevel ?? c.skillLevel
-  if (trainingStyle === 'compound') {
+  // Both styles can be picked together (multi-select, see lib/training-styles.ts)
+  // — compound's structural move-swap takes priority since it's the bigger
+  // content difference; cardio-first still gets its longer-duration walk
+  // finisher on every OTHER day/track that isn't running the compound branch.
+  if (styles.has('compound')) {
     const pool = compoundExercisesForLevel(effectiveLevel, c.injuries)
     const moves = rotate(pool, offset).slice(0, 3).map((m) => ({ name: m.name, reps: m.reps, cue: m.cue, imageUrl: m.imageUrl }))
     return { title: 'Compound Finisher', mode: 'compound', note: 'Full-body compound moves to close out your session — built in because that’s your training style.', moves }
   }
-  return walkFinisher(effectiveLevel, goal, c.activityLevel, c.lowFuelToday)
+  return walkFinisher(effectiveLevel, goal, c.activityLevel, c.lowFuelToday, styles.has('cardio'))
 }
 
 const AB_SCHEME: Record<SkillLevel, string> = { 1: '2 sets × 8–12', 2: '2–3 sets × 12–15', 3: '3–4 sets × 15+ (add weight)' }
@@ -293,7 +306,7 @@ function countForMinutes(minutesAvailable: number | undefined, avgDurationSec: n
   return Math.max(2, Math.min(fallback * 2, Math.round(minutesAvailable / perExerciseMin)))
 }
 
-function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string, c: Constraints, goal: WorkoutInputs['goal'], offset: number, minutesAvailable: number | undefined, coreFocus: boolean, trainingStyle: WorkoutInputs['trainingStyle'], coreOnly = false): GymDay {
+function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string, c: Constraints, goal: WorkoutInputs['goal'], offset: number, minutesAvailable: number | undefined, coreFocus: boolean, styles: Set<TrainingStyle>, coreOnly = false): GymDay {
   // Asa's follow-up, 2026-09-02: low fuel benefits from touching the real
   // session, not just the cardio tail — but only how hard she's asked to
   // push, never WHICH exercises she gets. One tier down on the rep/set
@@ -351,16 +364,17 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
 
   // Goal-driven, not a constant day structure: a cardio finisher only rides
   // along when the goal includes fat loss (straight 'lose', or 'recomp' —
-  // both lose+gain selected, see lib/goals.ts), or trainingStyle explicitly
-  // wants one (compound finisher) — a pure muscle-gain or maintain day
-  // skips it entirely.
-  const wantsCardio = goal === 'lose' || goal === 'recomp' || trainingStyle === 'compound'
+  // both lose+gain selected, see lib/goals.ts), or a picked training style
+  // explicitly wants one (compound finisher, or cardio-first — see
+  // lib/training-styles.ts; both can be true at once) — a pure muscle-gain
+  // or maintain day with neither style picked skips it entirely.
+  const wantsCardio = goal === 'lose' || goal === 'recomp' || styles.has('compound') || styles.has('cardio')
   return {
     dayNum, title, muscles: coreOnly ? ['Core'] : isFullBody ? ['Full Body'] : bodyMuscles.map((m) => m[0].toUpperCase() + m.slice(1)),
     warmup: bodyMuscles.includes('quads') || isFullBody ? ['15 bodyweight glute bridges', '10 hip circles each side', '10 arm circles', '10 leg swings each side'] : ['10 arm circles each direction', '10 shoulder rolls', '10 doorway chest stretches', '10 band pull-aparts'],
     supersets, accessory,
     ...(upperAb && lowerAb ? { ab: { upper: toAbExerciseShim(upperAb), lower: toAbExerciseShim(lowerAb), scheme: AB_SCHEME[repLevel], ...(bonusAb ? { bonus: toAbExerciseShim(bonusAb) } : {}) } } : {}),
-    ...(wantsCardio ? { cardio: cardioFinisherFor(c, goal, trainingStyle, offset) } : {}),
+    ...(wantsCardio ? { cardio: cardioFinisherFor(c, goal, styles, offset) } : {}),
   }
 }
 
@@ -377,7 +391,7 @@ function estimateHomeCalories(inp: WorkoutInputs, level: SkillLevel, minutesLabe
   return Math.round(HOME_MET[level] * (bmr / 24) * (minutes / 60))
 }
 
-function buildHomeDay(dayNum: number, targetMuscles: MuscleGroup[], title: string, c: Constraints, goal: WorkoutInputs['goal'], offset: number, minutesAvailable: number | undefined, coreFocus: boolean, trainingStyle: WorkoutInputs['trainingStyle'], coreOnly = false): HomeDay {
+function buildHomeDay(dayNum: number, targetMuscles: MuscleGroup[], title: string, c: Constraints, goal: WorkoutInputs['goal'], offset: number, minutesAvailable: number | undefined, coreFocus: boolean, styles: Set<TrainingStyle>, coreOnly = false): HomeDay {
   const isFullBody = targetMuscles.length === 0 && !coreOnly
   const wantsCore = coreFocus || isFullBody || coreOnly
   const nonCorePool = coreOnly ? [] : filterLibrary(c, isFullBody ? undefined : targetMuscles).filter((e) => e.movementPattern !== 'cardio' && e.movementPattern !== 'core_flexion' && e.movementPattern !== 'core_rotation' && e.movementPattern !== 'core_stability')
@@ -411,13 +425,21 @@ function buildHomeDay(dayNum: number, targetMuscles: MuscleGroup[], title: strin
     : pick(nonCorePool, targetMuscles, mainCount, offset, c.postpartum)
   const core = wantsCore ? pick(corePool, [], coreCount, offset + 4, c.postpartum) : []
   // Goal-driven, not a constant day structure — same gate as the gym side:
-  // fat-loss goals ('lose' or 'recomp' — see lib/goals.ts) or an explicit
-  // compound-finisher training style get a cardio finisher tacked on.
-  const wantsCardio = goal === 'lose' || goal === 'recomp' || trainingStyle === 'compound'
-  const finisher = wantsCardio ? pick(cardioPool, [], 1, offset + 8, c.postpartum)[0] : undefined
+  // fat-loss goals ('lose' or 'recomp' — see lib/goals.ts), an explicit
+  // compound-finisher training style, or cardio-first (both can be picked
+  // together — see lib/training-styles.ts) get a cardio finisher tacked on.
+  const wantsCardio = goal === 'lose' || goal === 'recomp' || styles.has('compound') || styles.has('cardio')
+  // Real gap found live, 2026-09-04: 'cardio' training style did nothing on
+  // the home track either — same single random cardio pick regardless of
+  // whether she'd asked for cardio-first. A second real cardio move (not
+  // just a longer label on the same one) is the honest home-track
+  // equivalent of the gym side's longer walk finisher.
+  const finisherCount = wantsCardio && styles.has('cardio') ? 2 : wantsCardio ? 1 : 0
+  const finishers = finisherCount ? pick(cardioPool, [], finisherCount, offset + 8, c.postpartum) : []
 
   const exercises = [...main, ...core].map((e) => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl }))
-  if (finisher) exercises.push({ name: finisher.name, duration: `${goal === 'lose' ? 90 : goal === 'recomp' ? 75 : goal === 'gain' ? 45 : 60} sec`, imageUrl: finisher.imageUrl })
+  const finisherSec = goal === 'lose' ? 90 : goal === 'recomp' ? 75 : goal === 'gain' ? 45 : 60
+  finishers.forEach((f) => exercises.push({ name: f.name, duration: `${finisherSec} sec`, imageUrl: f.imageUrl }))
 
   return { dayNum, title, exercises }
 }
@@ -430,6 +452,13 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
   const c: Constraints = { location, skillLevel: level, injuries, postpartum: !!inp.postpartum, progressionOverrides: inp.progressionOverrides, activityLevel: inp.activityLevel, lowFuelToday: inp.lowFuelToday }
   const days = Math.min(Math.max(Math.round(inp.daysPerWeek || 3), 1), 6)
   const coreFocus = inp.focusArea === 'core' || !!inp.overrideAreas?.includes('core')
+  // Real bug found live, 2026-09-04: every caller used to pass just
+  // inp.trainingStyle (whichever style she clicked FIRST), silently
+  // dropping any others she'd picked — same shape as the goal-blending bug
+  // fixed in lib/goals.ts. trainingStyles (plural) is the real source of
+  // truth when a caller passes it; falls back to the single value for
+  // callers that don't (Quickstart, Coach Asa's chat build).
+  const styles = effectiveTrainingStyles(inp.trainingStyles?.length ? inp.trainingStyles : (inp.trainingStyle ? [inp.trainingStyle] : []))
 
   // Which muscles day 0 targets: a live chat/override ask always wins for
   // "today." Every OTHER day now targets whatever she genuinely hasn't
@@ -482,7 +511,7 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
     const homeDays: HomeDay[] = Array.from({ length: days }, (_, i) => {
       const muscles = dayMuscles(i)
       const isCoreOnly = i === 0 && overrideMuscles !== undefined && overrideMuscles.length === 0 && inp.overrideAreas?.includes('core')
-      const day = buildHomeDay(i + 1, isCoreOnly ? [] : muscles, `Day ${i + 1}: ${dayTitle(i, muscles)}`, c, inp.goal, week + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, inp.trainingStyle, isCoreOnly)
+      const day = buildHomeDay(i + 1, isCoreOnly ? [] : muscles, `Day ${i + 1}: ${dayTitle(i, muscles)}`, c, inp.goal, week + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, styles, isCoreOnly)
       return day
     })
     const minutes = level === 1 && week <= 1 ? '20 min' : '15 min'
@@ -498,7 +527,7 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
     base.gymDays = Array.from({ length: days }, (_, i) => {
       const muscles = dayMuscles(i)
       const isCoreOnly = i === 0 && overrideMuscles !== undefined && overrideMuscles.length === 0 && inp.overrideAreas?.includes('core')
-      return buildGymDay(i + 1, isCoreOnly ? [] : muscles, dayTitle(i, muscles), c, inp.goal, week + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, inp.trainingStyle, isCoreOnly)
+      return buildGymDay(i + 1, isCoreOnly ? [] : muscles, dayTitle(i, muscles), c, inp.goal, week + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, styles, isCoreOnly)
     })
   }
   return base

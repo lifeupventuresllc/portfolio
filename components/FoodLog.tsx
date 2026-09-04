@@ -91,7 +91,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
   const [pop, setPop] = useState(false)
   const [expired, setExpired] = useState(false)
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ name: '', servings: '1', calories: '', protein_g: '', carbs_g: '', fats_g: '' })
+  const [form, setForm] = useState({ name: '', servings: '1', unit: 'serving', calories: '', protein_g: '', carbs_g: '', fats_g: '' })
   // Accurate food search (USDA FoodData Central) + voice + AI-estimate fallback
   const [q, setQ] = useState('')
   const [searchMeal, setSearchMeal] = useState('breakfast')
@@ -212,12 +212,23 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
     // audit): confusing even for a returning user, unclear which one
     // actually governed where the food got logged. Now shares the one
     // real meal selector (searchMeal).
+    const servingsNum = Number(form.servings) || 1
+    // Real gap found live, 2026-09-04 (beta tester: "no quantity selector"):
+    // manual entries typed their own already-computed macros, so a real
+    // per-100g/per-piece picker (like search's) doesn't apply — but the
+    // "How many servings?" field had no unit of its own, so a saved entry
+    // and its later edit view both just showed a bare "2" with nothing to
+    // say what a serving even was. A free-text unit (defaulting to
+    // "serving") turns that into a real label ("2 cups", "1 bowl"), same
+    // serving_label shape the search/edit paths already produce and parse.
+    const unitWord = (form.unit || 'serving').trim() || 'serving'
+    const label = `${form.servings} ${unitWord}${servingsNum === 1 || /s$/i.test(unitWord) ? '' : 's'}`
     await post({
-      name: form.name.trim(), meal: searchMeal, servings: Number(form.servings) || 1,
+      name: form.name.trim(), meal: searchMeal, servings: servingsNum, serving_label: label,
       calories: Number(form.calories) || 0, protein_g: Number(form.protein_g) || 0,
       carbs_g: Number(form.carbs_g) || 0, fats_g: Number(form.fats_g) || 0, source: 'manual',
     })
-    setForm({ name: '', servings: '1', calories: '', protein_g: '', carbs_g: '', fats_g: '' })
+    setForm({ name: '', servings: '1', unit: 'serving', calories: '', protein_g: '', carbs_g: '', fats_g: '' })
     setOpen(false)
   }
 
@@ -531,15 +542,27 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
                 <label className="text-ivory/40 text-[9px] uppercase tracking-wider block mb-1">Food name</label>
                 <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Homemade chili" className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
               </div>
-              <div className="w-1/2 pr-1">
-                {/* Real bug found live, 2026-09-03 (novice glance-test
-                    audit): a bare "1" with no visible label (only a
-                    placeholder, hidden the moment it has a value) looked
-                    like an unlabeled 5th macro field next to Cal/Protein/
-                    Carbs/Fats below. Meal already has its own real selector
-                    above the search bar — no need to duplicate it here. */}
-                <label className="text-ivory/40 text-[9px] uppercase tracking-wider block mb-1">How many servings?</label>
-                <input value={form.servings} onChange={(e) => setForm({ ...form, servings: e.target.value })} inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  {/* Real bug found live, 2026-09-03 (novice glance-test
+                      audit): a bare "1" with no visible label (only a
+                      placeholder, hidden the moment it has a value) looked
+                      like an unlabeled 5th macro field next to Cal/Protein/
+                      Carbs/Fats below. Meal already has its own real selector
+                      above the search bar — no need to duplicate it here. */}
+                  <label className="text-ivory/40 text-[9px] uppercase tracking-wider block mb-1">How many?</label>
+                  <input value={form.servings} onChange={(e) => setForm({ ...form, servings: e.target.value })} inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+                </div>
+                <div className="flex-1">
+                  {/* Real gap found live, 2026-09-04 (beta tester: "no
+                      quantity selector"): manual entries only ever had a
+                      bare number with no unit — logged and later edited as
+                      an unlabeled "2" with no way to say what "2" of.
+                      Free text since a real per-100g/piece picker doesn't
+                      apply here (she's already typed the total macros). */}
+                  <label className="text-ivory/40 text-[9px] uppercase tracking-wider block mb-1">Of what unit?</label>
+                  <input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="e.g. cup, bowl, slice" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none" />
+                </div>
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {([['calories', 'Calories'], ['protein_g', 'Protein (g)'], ['carbs_g', 'Carbs (g)'], ['fats_g', 'Fat (g)']] as const).map(([k, lbl]) => (

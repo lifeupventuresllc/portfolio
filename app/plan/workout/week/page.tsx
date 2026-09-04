@@ -5,6 +5,7 @@ import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusAre
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { currentWeekNumber } from '@/lib/localdate'
 import { parseStoredGoal } from '@/lib/goals'
+import { parseStoredTrainingStyles } from '@/lib/training-styles'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,12 +54,15 @@ export default async function WorkoutWeekPage() {
     const goal = parseStoredGoal(intake.goal as string | null)
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
-    const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle
+    // Real bug found live, 2026-09-04: same narrow single-style read as
+    // app/plan/workout/page.tsx (lib/training-styles.ts).
+    const formDataStyles = intake.form_data as { training_style?: TrainingStyle; training_styles?: string[] } | null
+    const trainingStyles = Array.from(parseStoredTrainingStyles(formDataStyles?.training_styles, formDataStyles?.training_style))
     const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
     const weekNumber = currentWeekNumber((enrollment.created_at as string) || new Date().toISOString())
     program = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex, track: intake.training_location === 'home' ? 'home' : 'gym',
-      level, goal, daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyle, focusArea,
+      level, goal, daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyles, focusArea,
       activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
     })
   }
