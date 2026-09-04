@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import PushToggle from '@/components/PushToggle'
 import CalendarToggle from '@/components/CalendarToggle'
 import { createClient } from '@/lib/supabase/client'
@@ -202,7 +203,23 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
         <span className="block h-0.5 w-5 bg-ivory/80 rounded-full" />
       </button>
 
-      {open && (
+      {/* Real root cause found live (Asa's screenshot, 2026-09-04, after
+          three earlier rounds on this exact drawer that didn't hold): this
+          whole subtree renders inside `app/plan/template.tsx`'s `.luf-page`
+          wrapper, whose entrance animation (`app/globals.css`, `lufPage`)
+          leaves it with a permanent computed `transform` (an identity
+          matrix, from `animation-fill-mode: both` holding the end
+          keyframe) — confirmed directly via getComputedStyle() on the live
+          site, not just theorized. Per spec, any non-`none` transform on
+          an ancestor becomes the containing block for a `position: fixed`
+          descendant, so this drawer was never actually fixed to the real
+          screen — it was pinned to `.luf-page`'s box instead, which is why
+          it drifted in size and dragged along when the page under it
+          scrolled. `app/plan/page.tsx` already hit and worked around this
+          same `.luf-page` transform issue for the video feed. createPortal
+          renders this drawer as a direct child of <body>, outside
+          `.luf-page` entirely, so `fixed` means the real viewport again. */}
+      {open && createPortal(
         <div
           className="fixed top-0 left-0 right-0 z-50"
           style={{ height: dialogHeight ?? '100dvh' }}
@@ -274,7 +291,8 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
               </div>
             </nav>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
