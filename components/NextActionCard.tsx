@@ -641,7 +641,7 @@ export default function NextActionCard({ variant = 'full', hasPlan = true }: { v
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-            placeholder={hasPlan ? "Ask anything about your plan…" : "Try me — ask for your first workout or nutrition plan…"}
+            placeholder={hasPlan ? "Ask anything about your plan…" : "Let's build together — a workout or nutrition plan…"}
             rows={1}
             className="flex-1 bg-transparent text-white text-xs placeholder:text-white/40 focus:outline-none min-w-0 resize-none py-1.5 max-h-32 overflow-y-auto leading-snug"
           />
@@ -911,7 +911,7 @@ export default function NextActionCard({ variant = 'full', hasPlan = true }: { v
             value={message}
             onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-            placeholder={hasPlan ? "Ask anything about your plan…" : "Try me — ask for your first workout or nutrition plan…"}
+            placeholder={hasPlan ? "Ask anything about your plan…" : "Let's build together — a workout or nutrition plan…"}
             rows={1}
             className="flex-1 bg-black/20 border border-white/15 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-ivory/30 focus:outline-none focus:border-gold/60 resize-none max-h-60 overflow-y-auto"
           />
