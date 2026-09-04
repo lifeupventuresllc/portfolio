@@ -286,6 +286,14 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
         fats_g: Math.round(editPerUnit.fats_g * editQtyNum),
       }
     : null
+  // serving_label already has the ORIGINAL quantity baked into the string
+  // (e.g. "1 egg", "150g" — see confirmLogFood/addManual above), so just
+  // appending a plural "s" onto the whole thing produced "1 eggs" once she
+  // changed the number. Strip the leading digits to get just the unit word,
+  // then pluralize that against the new quantity instead. Skip pluralizing
+  // short unit abbreviations (g, oz) — "2 ozs" reads worse than "2 oz".
+  const editUnitWord = (editingEntry?.serving_label || 'serving').replace(/^[\d.]+\s*/, '').replace(/s$/, '') || 'serving'
+  const editUnitLabel = editUnitWord.length > 2 && editQtyNum !== 1 ? `${editUnitWord}s` : editUnitWord
 
   function startEdit(e: Entry) {
     setConfirmRemoveId(null)
@@ -583,7 +591,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
                     <p className="text-white text-sm font-semibold">{e.name}</p>
                     <div className="flex items-center gap-2">
                       <input value={editQty} onChange={(ev) => setEditQty(ev.target.value)} inputMode="decimal" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="w-20 rounded-lg px-3 py-2 text-white text-sm text-center" style={{ background: '#000', border: '1px solid rgba(76,175,125,0.4)' }} />
-                      <span className="text-white/50 text-xs">{e.serving_label || 'serving'}{editQtyNum === 1 ? '' : 's'}</span>
+                      <span className="text-white/50 text-xs">{editUnitLabel}</span>
                     </div>
                     {editScaled && (
                       <p className="text-white/70 text-xs">{editScaled.calories} cal &middot; {editScaled.protein_g}g protein &middot; {editScaled.carbs_g}g carbs &middot; {editScaled.fats_g}g fat</p>
