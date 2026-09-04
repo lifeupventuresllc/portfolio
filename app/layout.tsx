@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import { Playfair_Display, Poppins, Fraunces } from "next/font/google";
+import { Playfair_Display, Poppins, Fraunces, Orbitron, Rajdhani } from "next/font/google";
 import "./globals.css";
 import SiteChrome from "@/components/SiteChrome";
 import JsonLd, { organizationSchema } from "@/components/JsonLd";
@@ -28,6 +28,13 @@ const poppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "700"], var
 // premium font not available via Google Fonts. Warm, editorial serif,
 // used italic specifically inside the circle (components/NextActionCard.tsx).
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["500", "600"], style: ["italic", "normal"], variable: "--font-fraunces" });
+// For You page HUD redesign (2026-09-04, Asa's pick after a published mockup
+// comparison — the "video game" direction over the plain isolated one):
+// Orbitron for numbers/eyebrows/CTAs, Rajdhani for the quest-plate body text.
+// Scoped as CSS vars site-wide (same pattern as the others) but only actually
+// used on app/plan/today/page.tsx and its LifePatternCard/PlanEvolutionCard.
+const orbitron = Orbitron({ subsets: ["latin"], weight: ["700", "900"], variable: "--font-orbitron" });
+const rajdhani = Rajdhani({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-rajdhani" });
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.asaluke.io'),
@@ -85,7 +92,7 @@ export default function RootLayout({
         <JsonLd data={organizationSchema} />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${poppins.variable} ${fraunces.variable} antialiased bg-obsidian min-h-[100dvh] flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${poppins.variable} ${fraunces.variable} ${orbitron.variable} ${rajdhani.variable} antialiased bg-obsidian min-h-[100dvh] flex flex-col`}
       >
         <PWARegister />
         <SiteChrome>{children}</SiteChrome>

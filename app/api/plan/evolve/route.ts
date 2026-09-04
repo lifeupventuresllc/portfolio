@@ -78,6 +78,10 @@ export async function POST(request: NextRequest) {
   // without an intake row, generateWorkout() has nothing safe to build
   // from, so nothing is written and nothing should be claimed either.
   const changes: string[] = []
+  // Hoisted so the "what's next" week preview below can read the actual
+  // generated program's day titles once this block runs, instead of
+  // re-deriving them from a description of the change.
+  let newProgram: WorkoutProgram | null = null
   if (workoutChanged && intake) {
     let level = (intake.experience_level === 'advanced' ? 3 : intake.experience_level === 'intermediate' ? 2 : 1) as Level
     let intensityChanged = false
@@ -95,7 +99,7 @@ export async function POST(request: NextRequest) {
     const formDataStyles = intake.form_data as { training_style?: TrainingStyle; training_styles?: string[] } | null
     const trainingStyles = Array.from(parseStoredTrainingStyles(formDataStyles?.training_styles, formDataStyles?.training_style))
     const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
-    const newProgram = generateWorkout({
+    newProgram = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex, track, level, goal,
       daysPerWeek, weekNumber: 1, injuries, postpartum, trainingStyles, focusArea,
       activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
@@ -149,5 +153,15 @@ export async function POST(request: NextRequest) {
   const reply = [workoutPart, nutritionPart].filter(Boolean).join(' ')
     || (workoutChanged && !intake ? "I found the pattern, but couldn't update your plan yet — finish your profile first and I'll pick this back up." : 'Updated. Same goal, a path that actually fits your real life now. 💛')
 
-  return NextResponse.json({ reply, changes, flaggedNutrition: !!eatOutSignal })
+  // Real preview data for the "what's next" screen (2026-09-04, Asa's ask):
+  // the newly-generated program's own day titles, not a description of the
+  // change — so approving shows exactly what the upcoming rotation looks
+  // like, not just a list of settings that moved.
+  const week = newProgram
+    ? (track === 'home'
+        ? (newProgram.home?.days || []).map((d) => ({ dayNum: d.dayNum, title: d.title }))
+        : (newProgram.gymDays || []).map((d) => ({ dayNum: d.dayNum, title: d.title })))
+    : []
+
+  return NextResponse.json({ reply, changes, flaggedNutrition: !!eatOutSignal, week })
 }

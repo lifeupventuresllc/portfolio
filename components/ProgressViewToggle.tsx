@@ -34,12 +34,20 @@ export default function ProgressViewToggle({ plan, garden }: { plan: ReactNode; 
     // Today keeps flexShrink:0 so its long scrollable content is never
     // compressed — it just grows the page and scrolls, same as before.
     <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 }}>
-      <div className="flex gap-1 bg-charcoal border border-smoke rounded-full p-1 mb-4" style={{ flex: '0 0 auto' }}>
+      {/* HUD redesign (2026-09-04, Asa's pick): green active state instead of
+          gold, matching the rest of this page's recolor — angled corners
+          instead of a full pill, same family as the quest-plate/CTA shapes
+          elsewhere on /plan/today. Still just a visual restyle: same tabs,
+          same localStorage-remembered pick, same Garden underneath. */}
+      <div className="flex gap-1.5 mb-4" style={{ flex: '0 0 auto' }}>
         {([['garden', 'Progress'], ['plan', 'Today']] as const).map(([t, label]) => (
           <button
             key={t}
             onClick={() => pick(t)}
-            className={`flex-1 text-center text-xs font-bold tracking-wide py-2 rounded-full transition-colors ${tab === t ? 'bg-gold text-obsidian' : 'text-ivory/55'}`}
+            className="flex-1 text-center text-[10.5px] font-bold uppercase tracking-[0.14em] py-2.5 transition-colors"
+            style={tab === t
+              ? { background: 'linear-gradient(135deg, rgba(127,230,179,0.22), rgba(76,175,125,0.12))', border: '1px solid rgba(127,230,179,0.6)', color: '#eafff2', clipPath: 'polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)' }
+              : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(76,175,125,0.22)', color: '#6fae8e', clipPath: 'polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)' }}
           >
             {label}
           </button>

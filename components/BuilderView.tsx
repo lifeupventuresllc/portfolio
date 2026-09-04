@@ -641,6 +641,65 @@ export default function BuilderView() {
     return () => cancelAnimationFrame(id)
   }, [pendingIds])
 
+  // Real-measured fill height, not a CSS guess. Two prior rounds of
+  // calc(100dvh - Npx) both looked correct in testing but still left a real
+  // gap on Asa's actual phone — mobile Safari resolves dvh against its
+  // dynamic toolbar in ways that don't reproduce in a desktop test browser,
+  // so no CSS constant here can be trusted. This instead measures, after
+  // render, exactly where the card starts (getBoundingClientRect) and how
+  // tall the real fixed nav is, subtracts both from the live viewport
+  // height, and sets that as an explicit pixel height — correct by
+  // construction on any device, not by guessing what a device will do.
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [fillHeight, setFillHeight] = useState<number | null>(null)
+
+  useEffect(() => {
+    function measure() {
+      const el = rootRef.current
+      // Skip while hidden — ProgressViewToggle hides the "plan" tab's
+      // sibling via display:none on an ancestor, not on this component, so
+      // this can run while off-screen (0 layout box) and cache a wrong
+      // number. offsetParent is null exactly when an ancestor is
+      // display:none. The IntersectionObserver below re-triggers a real
+      // measurement the moment it's back in flow.
+      if (!el || el.offsetParent === null) return
+      const top = el.getBoundingClientRect().top
+      // Scoped selector, not a bare 'nav' — ClientMenu's slide-out drawer
+      // (components/ClientMenu.tsx) renders its own <nav> for its own
+      // scrollable link list, earlier in the DOM than BottomTabBar. A bare
+      // querySelector('nav') would grab whichever renders first, and if the
+      // drawer happens to be open when a resize fires, its height (not the
+      // real ~64px bottom bar) would corrupt this measurement.
+      const nav = document.querySelector('nav[data-bottom-tabbar]')
+      const navHeight = nav ? nav.getBoundingClientRect().height : 0
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight
+      setFillHeight(Math.max(200, Math.round(viewportHeight - top - navHeight)))
+    }
+    measure()
+    // A second pass one frame later self-corrects the rare case where the
+    // very first measure() ran mid-scroll (getBoundingClientRect().top is
+    // relative to whatever the scroll position was at that instant).
+    const raf = requestAnimationFrame(measure)
+    window.addEventListener('resize', measure)
+    window.visualViewport?.addEventListener('resize', measure)
+    window.visualViewport?.addEventListener('scroll', measure)
+    const io = new IntersectionObserver(() => measure())
+    if (rootRef.current) io.observe(rootRef.current)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', measure)
+      window.visualViewport?.removeEventListener('resize', measure)
+      window.visualViewport?.removeEventListener('scroll', measure)
+      io.disconnect()
+    }
+    // elements.length/totalCount, not just loading: a background refetch
+    // (the visibilitychange listener above) can flip the empty-state branch
+    // to the real card — which is the only branch that attaches rootRef —
+    // without loading ever toggling back to true. Re-running this effect on
+    // that transition is what actually attaches the observer to the real
+    // node instead of leaving fillHeight stuck at its pre-content value.
+  }, [loading, elements.length, totalCount])
+
   // Negative side margins bleed the card past its padded page container to
   // the true screen edges (the mockup's edge-to-edge look) without needing
   // an extra wrapper div — a wrapper here would sit outside the flex chain
@@ -653,28 +712,31 @@ export default function BuilderView() {
     return <div className="animate-pulse" style={{ ...BLEED, flex: '1 1 auto', minHeight: 0, background: CARD_BG }} />
   }
 
-  if (!elements.length && !totalCount) {
-    return (
-      <div className="p-6 text-center" style={{ ...BLEED, flex: '1 1 auto', minHeight: 0, background: CARD_BG }}>
-        <p className="text-ivory/50 text-sm">Your garden will start growing here once you log your first action.</p>
-      </div>
-    )
-  }
-
+  // Real gap found live (Asa's ask, 2026-09-04): a brand-new user with
+  // zero logged elements used to skip the whole scene for a flat line of
+  // text on bare background — even though the foundation phase's own sky/
+  // moon/ground/bushes below already render fine with an empty `elements`
+  // array. Removed the early return so a new user sees the real scene from
+  // day one, just with nothing planted in it yet; only the caption changes.
   const cfg = PHASE_CONFIG[phase]
+  const isEmpty = !elements.length && !totalCount
 
   return (
-    // flex:1+minHeight:0 fills exactly whatever real space its flex parent
-    // (ProgressViewToggle's garden slot) hands it — no guessed viewport
-    // subtraction, so it can never fall short of the real available height
-    // the way a static calc(100dvh - Npx) does the moment header content
-    // above it changes size on any given device.
+    // fillHeight (see the measurement effect above) is an explicit pixel
+    // height read from the real DOM/viewport, authoritative the moment it's
+    // set — flex:'0 0 auto' so the surrounding flex chain can't stretch it
+    // any further and undo the measurement. Before that first measurement
+    // lands (initial paint), flex:1+minHeight:0 is a reasonable placeholder
+    // fill so there's no flash of collapsed content.
     <div
+      ref={rootRef}
       style={{
         ...BLEED,
         boxSizing: 'border-box', overflow: 'hidden', position: 'relative',
         display: 'flex', flexDirection: 'column',
-        flex: '1 1 auto', minHeight: 0,
+        ...(fillHeight !== null
+          ? { flex: '0 0 auto', height: fillHeight }
+          : { flex: '1 1 auto', minHeight: 0 }),
         background: CARD_BG,
       }}
     >
@@ -686,7 +748,7 @@ export default function BuilderView() {
           {cfg.label}
         </div>
         <p style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, color: '#ffffff', fontSize: 16, lineHeight: 1.35, margin: 0, textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>
-          {cfg.caption}
+          {isEmpty ? 'This is where it all grows — your first logged action plants the first thing here.' : cfg.caption}
         </p>
       </div>
     </div>

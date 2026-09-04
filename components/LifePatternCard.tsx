@@ -31,32 +31,49 @@ export default function LifePatternCard({ title, body, showWorkoutAction, moves 
 
   if (done) {
     return (
-      <div className="bg-charcoal border border-gold/40 rounded-2xl p-5 text-center">
+      <div className="rounded-2xl p-5 text-center" style={{ background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(127,230,179,0.32)' }}>
         <p className="text-white font-semibold text-sm">You showed up on a hard week. That&apos;s what a consistent person does. 💛</p>
       </div>
     )
   }
 
+  // HUD redesign (2026-09-04, Asa's vision, mocked up and approved before
+  // any of this was built): moved from mid-scroll on /plan/today to the very
+  // top of the page, above the Progress/Today toggle — pushes everything
+  // else down instead of competing with the ring for attention. The whole
+  // message shows every time (title + body, real fallback moves when
+  // offered), not a truncated teaser, with an explicit × always available
+  // so dismissing doesn't require reading to the very end first.
   return (
-    <div className="bg-charcoal bg-gradient-to-br from-gold/10 to-charcoal border border-gold/40 rounded-2xl p-5">
-      <p className="text-white font-semibold text-sm mb-1">{title}</p>
-      <p className="text-ivory/60 text-xs mb-4">{body}</p>
-      {showWorkoutAction ? (
+    <div className="relative rounded-2xl p-4 pt-4" style={{ background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(127,230,179,0.32)' }}>
+      <button
+        onClick={() => setDismissed(true)}
+        aria-label="Dismiss"
+        className="absolute top-2.5 right-3 text-lg leading-none px-1 text-ivory/40 hover:text-white transition-colors"
+      >
+        &times;
+      </button>
+      <p className="text-white text-base pr-5 mb-1.5" style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600 }}>{title}</p>
+      <p className="text-ivory/70 text-xs leading-relaxed mb-3.5">{body}</p>
+      {showWorkoutAction && (
         <>
-          <div className="space-y-2 mb-4">
+          <div className="space-y-1.5 mb-3">
             {moves.map((m, i) => (
-              <div key={i} className="flex items-center justify-between bg-obsidian/40 rounded-xl px-3 py-2">
-                <span className="text-white text-sm">{m.name}</span>
-                <span className="text-ivory/40 text-xs">{m.note}</span>
+              <div key={i} className="flex items-center justify-between rounded-lg px-3 py-2" style={{ background: 'rgba(0,0,0,0.28)' }}>
+                <span className="text-white text-sm font-semibold">{m.name}</span>
+                <span className="text-ivory/45 text-xs">{m.note}</span>
               </div>
             ))}
           </div>
-          <button onClick={markDone} disabled={busy} className="w-full bg-gold text-obsidian py-3 font-bold text-xs uppercase tracking-wider rounded-xl disabled:opacity-50">
+          <button
+            onClick={markDone}
+            disabled={busy}
+            className="w-full py-2.5 font-black text-[11.5px] uppercase tracking-wider rounded-lg disabled:opacity-50"
+            style={{ background: 'linear-gradient(135deg, #7fe6b3, #4CAF7D 60%, #2f8a5c)', color: '#021F16' }}
+          >
             {busy ? '…' : 'Done — that counts'}
           </button>
         </>
-      ) : (
-        <button onClick={() => setDismissed(true)} className="text-gold text-xs font-semibold">Got it — reset tomorrow →</button>
       )}
     </div>
   )
