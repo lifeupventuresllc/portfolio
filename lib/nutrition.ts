@@ -7,7 +7,10 @@
 // ============================================================
 
 export type Sex = 'female' | 'male'
-export type Goal = 'lose' | 'gain' | 'maintain'
+// 'recomp' = both "Lose fat" and "Build & tone" selected together (see
+// lib/goals.ts) — a small deficit + high protein, not the same as a
+// straight cut or a straight bulk.
+export type Goal = 'lose' | 'gain' | 'maintain' | 'recomp'
 export type Activity = 'none' | 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
 export type WorkoutLength = 'none' | '30_cardio' | '45_strength' | '45_60_both' | '60_both' | '90_intense'
 
@@ -100,20 +103,23 @@ function round(n: number): number {
 
 // Step 7 — gender + goal protein target (grams/lb) with floors
 function proteinGrams(inputs: BlueprintInputs): { grams: number; label: string } {
-  // While cutting, protein is anchored to CURRENT weight, not goal — it's insurance
-  // against muscle loss, and that insurance shouldn't shrink as the goal weight (a
-  // moving, lower target) gets closer. Gain/maintain aren't in a deficit, so those
-  // stay goal-weight-based (falls back to current weight if no goal weight is set).
+  // While cutting (or recomping — a deficit either way), protein is anchored to
+  // CURRENT weight, not goal — it's insurance against muscle loss, and that
+  // insurance shouldn't shrink as the goal weight (a moving, lower target) gets
+  // closer. Gain/maintain aren't in a deficit, so those stay goal-weight-based
+  // (falls back to current weight if no goal weight is set).
   const goalBasis = inputs.goal_weight_lbs || inputs.weight_lbs
-  const w = inputs.goal === 'lose' ? inputs.weight_lbs : goalBasis
-  const basisLabel = inputs.goal === 'lose' ? 'current weight' : 'goal weight'
+  const inDeficit = inputs.goal === 'lose' || inputs.goal === 'recomp'
+  const w = inDeficit ? inputs.weight_lbs : goalBasis
+  const basisLabel = inDeficit ? 'current weight' : 'goal weight'
   if (inputs.sex === 'male') {
-    // 1.0g/lb on a cut (anchored to current weight, real insurance against muscle
-    // loss) — 1.25 lean gain, 1.0 maintenance (both still goal-weight-based).
-    const factor = inputs.goal === 'gain' ? 1.25 : inputs.goal === 'maintain' ? 1.0 : 1.0
+    // 1.0g/lb on a straight cut — recomp goes slightly higher (1.1g/lb): she's
+    // building muscle AND in a deficit at the same time, real recomposition
+    // guidance calls for MORE protein than either goal alone needs, not less.
+    const factor = inputs.goal === 'gain' ? 1.25 : inputs.goal === 'recomp' ? 1.1 : inputs.goal === 'maintain' ? 1.0 : 1.0
     return { grams: Math.max(140, round(w * factor)), label: `${factor}g/lb ${basisLabel} (min 140g)` }
   }
-  const factor = inputs.goal === 'gain' ? 0.8 : inputs.goal === 'maintain' ? 0.7 : 0.75
+  const factor = inputs.goal === 'gain' ? 0.8 : inputs.goal === 'recomp' ? 0.85 : inputs.goal === 'maintain' ? 0.7 : 0.75
   return { grams: Math.max(100, round(w * factor)), label: `${factor}g/lb ${basisLabel} (min 100g)` }
 }
 
@@ -147,6 +153,11 @@ function adjustments(goal: Goal, aggressive: boolean): { rest: number; workout: 
   }
   if (goal === 'gain') {
     return aggressive ? { rest: 500, workout: 500 } : { rest: 250, workout: 250 }
+  }
+  if (goal === 'recomp') {
+    // Smaller than a straight cut on purpose — a deficit that's too steep
+    // leaves nothing left over for the muscle-building side of recomp.
+    return aggressive ? { rest: -350, workout: -350 } : { rest: -150, workout: -150 }
   }
   // maintain: current = at maintenance; aggressive = light recomp cut
   return aggressive ? { rest: -250, workout: -250 } : { rest: 0, workout: 0 }
@@ -207,6 +218,18 @@ const TIMELINE_LOSS: Milestone[] = [
   { label: 'Month 6', lbs: '~10–16 lbs', desc: 'Major transformation, goal approaching' },
 ]
 
+// Real recomposition milestones, not a guess dressed up as one of the other
+// two timelines — the scale genuinely isn't the right signal here (muscle
+// gain offsets fat loss), so this never claims a specific lbs number the
+// way the pure lose/gain timelines do. Same "don't show a number we don't
+// have" rule as everywhere else in this app.
+const TIMELINE_RECOMP: Milestone[] = [
+  { label: 'Month 1', lbs: 'Scale may barely move', desc: 'Strength climbing, fat loss + muscle gain offsetting each other' },
+  { label: 'Month 2', lbs: 'Scale still unreliable', desc: 'Clothes fitting differently before the scale agrees' },
+  { label: 'Month 3', lbs: 'Visible change, scale secondary', desc: 'Leaner and more defined at close to the same weight' },
+  { label: 'Month 6', lbs: 'A real recomposition', desc: 'Meaningfully different body at a similar number on the scale' },
+]
+
 export function buildBlueprint(inputs: BlueprintInputs): Blueprint {
   // Step 1 — BMR (Mifflin-St Jeor)
   const kg = inputs.weight_lbs / 2.205
@@ -248,7 +271,7 @@ export function buildBlueprint(inputs: BlueprintInputs): Blueprint {
     splitLabel,
     current,
     aggressive,
-    timeline: inputs.goal === 'gain' ? TIMELINE_GAIN : TIMELINE_LOSS,
+    timeline: inputs.goal === 'gain' ? TIMELINE_GAIN : inputs.goal === 'recomp' ? TIMELINE_RECOMP : TIMELINE_LOSS,
   }
 }
 

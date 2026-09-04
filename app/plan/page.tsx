@@ -161,9 +161,16 @@ export default async function PlanDashboard() {
   // app/api/challenge/intake/route.ts computes it at intake time.
   const startWeight = statsProvided ? Number(intakeRow?.weight_lbs) || 0 : 0
   const targetDelta = Number(intakeRow?.target_lbs) || 10
-  const goalWeight = statsProvided ? (intakeRow?.goal === 'gain' ? startWeight + targetDelta : startWeight - targetDelta) : 0
+  // 'recomp' (both "Lose fat" and "Build & tone" selected — lib/goals.ts)
+  // deliberately reads as 'maintain' for THIS weight-progress display only —
+  // real recomposition often shows little scale movement (muscle gain
+  // offsets fat loss), so a flat goal-weight target is more honest here
+  // than implying a clean loss-style delta the scale may never show. The
+  // workout/nutrition engines still get her real 'recomp' goal everywhere
+  // else — this is cosmetic to this one progress bar, not a downgrade.
+  const goalWeight = statsProvided ? (intakeRow?.goal === 'gain' ? startWeight + targetDelta : intakeRow?.goal === 'recomp' ? startWeight : startWeight - targetDelta) : 0
   const currentWeight = statsProvided ? (Number(latestCheckin?.weight_lbs) || startWeight) : 0
-  const goalDirection = (intakeRow?.goal === 'gain' || intakeRow?.goal === 'maintain' ? intakeRow.goal : 'lose') as 'lose' | 'gain' | 'maintain'
+  const goalDirection = (intakeRow?.goal === 'gain' ? 'gain' : intakeRow?.goal === 'maintain' || intakeRow?.goal === 'recomp' ? 'maintain' : 'lose') as 'lose' | 'gain' | 'maintain'
 
   // Today's calories for the progress card — mirrors app/plan/today/page.tsx's
   // calBudget/loggedCalories exactly (same todayMeals-aware target, same

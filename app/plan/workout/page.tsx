@@ -10,6 +10,7 @@ import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { localDateISO, addDaysISO, currentWeekNumber, getTimezone, localHourNumber } from '@/lib/localdate'
 import { computeLowFuelToday } from '@/lib/workout-assembly'
 import { getRecentlyTrainedMuscles } from '@/lib/progression'
+import { parseStoredGoal } from '@/lib/goals'
 
 export const dynamic = 'force-dynamic'
 
@@ -118,7 +119,12 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
   // visit makes that genuinely true, while a same-day chat override still
   // wins for today specifically via trackOverride/overrideAreas below.
   if (intake) {
-    const goal = (intake.goal === 'gain' || intake.goal === 'maintain' ? intake.goal : 'lose') as 'lose' | 'gain' | 'maintain'
+    // Real bug found live, 2026-09-03: this silently downgraded 'recomp'
+    // (both "Lose fat" and "Build & tone" selected — see lib/goals.ts) back
+    // to a plain 'lose' plan on every single regeneration, right at the one
+    // real-time call site that rebuilds her workout on every visit —
+    // undoing the fix at intake time before it ever reached the engine.
+    const goal = parseStoredGoal(intake.goal as string | null)
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
     const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle

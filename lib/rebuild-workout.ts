@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateWorkout, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import type { Level, Injury } from '@/lib/workout-exercises'
+import { parseStoredGoal } from '@/lib/goals'
 
 // Shared by /api/plan/rebuild-workout (generic "get me on the current engine") and
 // /api/plan/life-reset (Inner Circle's one-tap "life happened" reset) — both just
@@ -13,7 +14,10 @@ export async function regenerateWorkoutFromIntake(
 ) {
   const level = (intake.experience_level === 'advanced' ? 3 : intake.experience_level === 'intermediate' ? 2 : 1) as Level
   const track: 'gym' | 'home' = intake.training_location === 'home' ? 'home' : 'gym'
-  const goal = (intake.goal === 'gain' || intake.goal === 'maintain' ? intake.goal : 'lose') as 'lose' | 'gain' | 'maintain'
+  // Real bug found live, 2026-09-03: same narrow-cast bug as
+  // app/plan/workout/page.tsx — the one-tap "life happened" reset and the
+  // generic rebuild both need her real goal, not a silently downgraded one.
+  const goal = parseStoredGoal(intake.goal as string | null)
   const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
   const formData = intake.form_data as { injuries?: Injury[]; postpartum?: boolean; training_style?: TrainingStyle; focus_area?: FocusArea } | null
   const injuries = (Array.isArray(formData?.injuries) ? formData!.injuries! : []) as Injury[]

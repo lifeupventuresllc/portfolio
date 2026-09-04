@@ -3,6 +3,7 @@ import { buildBlueprint, type Activity } from '@/lib/nutrition'
 import { generateWorkout, type TrainingStyle, type FocusArea } from '@/lib/workout'
 import { buildWeekFromSelections, autoSelectMeals, type DayType } from '@/lib/meal-plan'
 import type { Level, Injury } from '@/lib/workout-exercises'
+import { parseStoredGoal } from '@/lib/goals'
 
 // Shared by the structured intake form (app/api/challenge/intake/route.ts) and
 // Coach Asa's conversational cold-start build (app/api/plan/operator/route.ts) —
@@ -29,14 +30,17 @@ export interface PlanBuildInput {
   sex: 'female' | 'male' | 'other'
   height_in: number
   weight_lbs: number
-  goal: 'lose' | 'gain' | 'maintain'
   // Real multi-select goal support (e.g. "lose fat AND tone/build") — `goal`
-  // above stays the single derived value every existing calorie/workout
-  // calculation already keys off (goals[0], her top priority when she
-  // selects more than one), so nothing downstream needs to change type.
-  // `goals` is the real source of truth for display/editing. Optional so
-  // Coach Asa's chat build and Quickstart (neither ever offer multi-select)
-  // keep working unchanged.
+  // is now the real EFFECTIVE goal (see lib/goals.ts's effectiveGoal()),
+  // which is 'recomp' when both "lose" and "gain" are selected together
+  // rather than silently keeping only whichever was clicked first. Callers
+  // (the intake form, preferences form, the intake API route) compute this
+  // via effectiveGoal(goals) before calling in here.
+  goal: 'lose' | 'gain' | 'maintain' | 'recomp'
+  // `goals` is the real source of truth for display/editing (which boxes
+  // show checked when she comes back to edit). Optional so Coach Asa's chat
+  // build and Quickstart (neither ever offer multi-select) keep working
+  // unchanged.
   goals?: string[]
   target_lbs: number
   activity_level: Activity
@@ -194,7 +198,12 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
 
   const level = (inp.experience_level === 'advanced' ? 3 : inp.experience_level === 'intermediate' ? 2 : 1) as Level
   const track: 'gym' | 'home' = inp.training_location === 'home' ? 'home' : 'gym'
-  const workoutGoal = (inp.goal === 'gain' || inp.goal === 'maintain' ? inp.goal : 'lose') as 'lose' | 'gain' | 'maintain'
+  // Real bug found live, 2026-09-03: same narrow-cast bug as
+  // app/plan/workout/page.tsx — this is the VERY FIRST workout ever built at
+  // intake time. Silently downgrading 'recomp' here meant a member who
+  // picked both "Lose fat" and "Build & tone" never got a real blended plan
+  // even once, from day one.
+  const workoutGoal = parseStoredGoal(inp.goal)
   const program = generateWorkout({
     name: inp.name,
     sex: inp.sex,

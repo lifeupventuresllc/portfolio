@@ -109,10 +109,12 @@ export function buildCandidates(state: UserStateSnapshot, opts?: { forceFallback
     // Goal-alignment layer (prompt 6): logging an off-track/over-budget day
     // feeds back into the workout side too — but only when it actually
     // matters for HER stated goal. More food eaten isn't a problem to solve
-    // for a 'gain' goal, so this nudge is fat-loss-specific, not universal.
-    // This adjusts the copy only — it never rewrites her stored program —
-    // bounded, invisible-to-her-as-math, and reversible day to day.
-    if (state.goal === 'lose' && state.calorieBudget != null && state.caloriesLoggedToday > state.calorieBudget) {
+    // for a 'gain' goal, so this nudge is fat-loss-specific (including
+    // 'recomp' — both "Lose fat" and "Build & tone" selected, see
+    // lib/goals.ts — she's still in a real deficit there too), not
+    // universal. This adjusts the copy only — it never rewrites her stored
+    // program — bounded, invisible-to-her-as-math, and reversible day to day.
+    if ((state.goal === 'lose' || state.goal === 'recomp') && state.calorieBudget != null && state.caloriesLoggedToday > state.calorieBudget) {
       instruction += ' Keep it shorter today if you need to, love — a lighter version still fully counts.'
     }
     candidates.push({ kind: 'workout', actionKey: `workout:${state.workoutCandidate.title}`, instruction, estMinutes: 30 })

@@ -18,7 +18,9 @@ export interface WorkoutInputs {
   sex?: 'male' | 'female' | 'other'
   track: 'gym' | 'home'
   level: Level
-  goal: 'lose' | 'gain' | 'maintain'
+  // 'recomp' = both "Lose fat" and "Build & tone" selected together (see
+  // lib/goals.ts) — a real body-recomposition goal, not a UI glitch.
+  goal: 'lose' | 'gain' | 'maintain' | 'recomp'
   daysPerWeek?: number
   weekNumber?: number
   injuries?: Injury[]

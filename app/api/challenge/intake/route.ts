@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { buildInitialPlans } from '@/lib/plan-builder'
 import type { Injury } from '@/lib/workout-exercises'
+import { effectiveGoal } from '@/lib/goals'
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,12 +42,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Real multi-select support (Priority 1, 2026-08-25 beta feedback) — the
-    // form now sends `goals`/`training_styles` arrays; derive the single
-    // legacy value every existing calculation still expects from the first
-    // (top-priority) selection, same as buildInitialPlans does internally.
+    // form sends `goals`/`training_styles` arrays. Real bug found live,
+    // 2026-09-03: this used to derive the single value every downstream
+    // calculation uses from just the first (top-priority) selection,
+    // silently discarding a second goal she genuinely picked. Selecting
+    // "lose" + "gain" together is a real training goal (body recomposition,
+    // see lib/goals.ts's effectiveGoal()), not noise to collapse away.
     const goals: string[] = Array.isArray(body.goals) && body.goals.length ? body.goals : (body.goal ? [body.goal] : [])
     const trainingStyles: string[] = Array.isArray(body.training_styles) ? body.training_styles : (body.training_style && body.training_style !== 'none' ? [body.training_style] : [])
-    const primaryGoal = (goals[0] || body.goal || 'lose') as 'lose' | 'gain' | 'maintain'
+    const primaryGoal = goals.length ? effectiveGoal(goals) : (body.goal || 'lose')
     const primaryTrainingStyle = trainingStyles[0] || body.training_style || 'none'
 
     const { targets } = await buildInitialPlans({

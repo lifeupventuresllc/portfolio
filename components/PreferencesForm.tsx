@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { effectiveGoal } from '@/lib/goals'
 
 type Current = {
   name: string; age: number; sex: string; height_in: number; weight_lbs: number
@@ -62,7 +63,7 @@ export default function PreferencesForm({ current }: { current: Current }) {
           food_preferences: current.food_preferences, dislikes_allergies: current.dislikes_allergies,
           injuries: current.injuries, postpartum: current.postpartum, other_info: current.other_info,
           refining: true,
-          goals, goal: goals[0], focus_area: focusArea,
+          goals, goal: effectiveGoal(goals), focus_area: focusArea,
           training_styles: trainingStyles, training_style: trainingStyles[0] || 'none',
         }),
       })

@@ -4,6 +4,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { buildBlueprint } from '@/lib/nutrition'
 import MealBuilder from '@/components/MealBuilder'
 import GroceryPricing from '@/components/GroceryPricing'
+import { parseStoredGoal } from '@/lib/goals'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,7 +47,9 @@ export default async function MealsPage() {
   const bp = buildBlueprint({
     age: Number(intake.age), sex: intake.sex === 'male' ? 'male' : 'female',
     height_in: Number(intake.height_in), weight_lbs: Number(intake.weight_lbs),
-    goal: intake.goal === 'gain' || intake.goal === 'maintain' ? intake.goal : 'lose',
+    // Real bug found live, 2026-09-03: same narrow-cast bug as
+    // app/plan/workout/page.tsx — meal targets need her real goal too.
+    goal: parseStoredGoal(intake.goal as string | null),
     activity: intake.activity_level || 'moderate',
     workout_days_per_week: Number(intake.days_per_week) || 4,
     workout_length: '45_60_both',

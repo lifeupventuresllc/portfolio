@@ -25,7 +25,10 @@ import type {
 } from './workout.types'
 
 const LEVEL_LABEL: Record<SkillLevel, string> = { 1: 'Beginner', 2: 'Intermediate', 3: 'Advanced' }
-export const GOAL_LABEL: Record<WorkoutInputs['goal'], string> = { lose: 'Fat Loss', gain: 'Muscle Gain', maintain: 'Maintain' }
+// 'recomp' reads "Fat Loss + Tone" here, not the fitness-jargon term
+// "recomposition" — matches the exact wording of the two goal checkboxes
+// she actually picked (novice glance-test standard applied session-wide).
+export const GOAL_LABEL: Record<WorkoutInputs['goal'], string> = { lose: 'Fat Loss', gain: 'Muscle Gain', maintain: 'Maintain', recomp: 'Fat Loss + Tone' }
 
 const FOCUS_MUSCLES: Record<FocusArea, MuscleGroup[]> = {
   legs: ['quads', 'hamstrings', 'glutes'],
@@ -201,7 +204,10 @@ function pick(pool: AtomicExercise[], targetMuscles: MuscleGroup[], count: numbe
   return ranked.concat(rotate([...pool].sort(sortFn), offset)).slice(0, count)
 }
 
-const CARDIO_MIN_ADJUST: Record<string, number> = { lose: 5, gain: -5, maintain: 0 }
+// 'recomp' (lose + gain both selected — see lib/goals.ts) gets a modest
+// cardio bump, real but smaller than a pure fat-loss goal, since muscle-
+// building recovery still matters here.
+const CARDIO_MIN_ADJUST: Record<string, number> = { lose: 5, gain: -5, maintain: 0, recomp: 2 }
 // Real gap caught live, Asa's explicit correction: duration only ever
 // scaled off `level` (TRAINING experience) and goal — a deconditioned
 // "advanced" lifter and a genuinely fit "beginner" got the identical
@@ -233,6 +239,7 @@ function walkFinisher(level: SkillLevel, goal: string, activityLevel?: WorkoutIn
   const note = lowFuelToday ? "Kept lighter — looks like you haven't eaten yet today. Fuel up when you can."
     : goal === 'lose' ? 'Your fat-burning finisher — walk tall, shoulders back, no handrails.'
     : goal === 'gain' ? 'Keeps heart rate up without burning muscle — walk tall, no handrails.'
+    : goal === 'recomp' ? 'Burns fat without eating into the muscle you\'re building — walk tall, no handrails.'
     : 'Steady-state to hold where you\'re at — walk tall, shoulders back, no handrails.'
   return { title: 'Incline Treadmill Walk', mode: 'walk', speed: CARDIO_SPEED[level], incline: base.incline, mins, note }
 }
@@ -253,10 +260,16 @@ function cardioFinisherFor(c: Constraints, goal: string, trainingStyle: WorkoutI
 }
 
 const AB_SCHEME: Record<SkillLevel, string> = { 1: '2 sets × 8–12', 2: '2–3 sets × 12–15', 3: '3–4 sets × 15+ (add weight)' }
+// 'recomp' (lose + gain both selected — see lib/goals.ts) sits deliberately
+// between the two: moderate-to-higher reps like a hypertrophy block (real
+// muscle-building stimulus), without lose's "short rest" metabolic-circuit
+// framing or gain's low-rep/heavy emphasis — the actual, real rep range
+// body-recomposition training uses (roughly 10-15 reps), not a blind
+// average of the other two rows.
 const REP_SCHEME: Record<SkillLevel, Record<WorkoutInputs['goal'], string>> = {
-  1: { lose: '3 × 12–15 (short rest)', gain: '3 × 8–10', maintain: '2 × 10–12' },
-  2: { lose: '3 × 18 / 15 / 12 (short rest)', gain: '4 × 10 / 8 / 8', maintain: '3 × 15 / 12 / 10' },
-  3: { lose: '4 × 20 / 15 / 12 / 12 (short rest)', gain: '4 × 10 / 8 / 6 / 6', maintain: '3 × 20 / 15 / 12' },
+  1: { lose: '3 × 12–15 (short rest)', gain: '3 × 8–10', maintain: '2 × 10–12', recomp: '3 × 10–12' },
+  2: { lose: '3 × 18 / 15 / 12 (short rest)', gain: '4 × 10 / 8 / 8', maintain: '3 × 15 / 12 / 10', recomp: '3 × 15 / 12 / 10' },
+  3: { lose: '4 × 20 / 15 / 12 / 12 (short rest)', gain: '4 × 10 / 8 / 6 / 6', maintain: '3 × 20 / 15 / 12', recomp: '4 × 15 / 12 / 10 / 10' },
 }
 const repScheme = (level: SkillLevel, goal: WorkoutInputs['goal']) => REP_SCHEME[level][goal] || REP_SCHEME[level].maintain
 
@@ -337,9 +350,11 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
   ]
 
   // Goal-driven, not a constant day structure: a cardio finisher only rides
-  // along when the goal is fat loss, or trainingStyle explicitly wants one
-  // (compound finisher) — a muscle-gain or maintain day skips it entirely.
-  const wantsCardio = goal === 'lose' || trainingStyle === 'compound'
+  // along when the goal includes fat loss (straight 'lose', or 'recomp' —
+  // both lose+gain selected, see lib/goals.ts), or trainingStyle explicitly
+  // wants one (compound finisher) — a pure muscle-gain or maintain day
+  // skips it entirely.
+  const wantsCardio = goal === 'lose' || goal === 'recomp' || trainingStyle === 'compound'
   return {
     dayNum, title, muscles: coreOnly ? ['Core'] : isFullBody ? ['Full Body'] : bodyMuscles.map((m) => m[0].toUpperCase() + m.slice(1)),
     warmup: bodyMuscles.includes('quads') || isFullBody ? ['15 bodyweight glute bridges', '10 hip circles each side', '10 arm circles', '10 leg swings each side'] : ['10 arm circles each direction', '10 shoulder rolls', '10 doorway chest stretches', '10 band pull-aparts'],
@@ -396,13 +411,13 @@ function buildHomeDay(dayNum: number, targetMuscles: MuscleGroup[], title: strin
     : pick(nonCorePool, targetMuscles, mainCount, offset, c.postpartum)
   const core = wantsCore ? pick(corePool, [], coreCount, offset + 4, c.postpartum) : []
   // Goal-driven, not a constant day structure — same gate as the gym side:
-  // only fat-loss goals (or an explicit compound-finisher training style)
-  // get a cardio finisher tacked on.
-  const wantsCardio = goal === 'lose' || trainingStyle === 'compound'
+  // fat-loss goals ('lose' or 'recomp' — see lib/goals.ts) or an explicit
+  // compound-finisher training style get a cardio finisher tacked on.
+  const wantsCardio = goal === 'lose' || goal === 'recomp' || trainingStyle === 'compound'
   const finisher = wantsCardio ? pick(cardioPool, [], 1, offset + 8, c.postpartum)[0] : undefined
 
   const exercises = [...main, ...core].map((e) => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl }))
-  if (finisher) exercises.push({ name: finisher.name, duration: `${goal === 'lose' ? 90 : goal === 'gain' ? 45 : 60} sec`, imageUrl: finisher.imageUrl })
+  if (finisher) exercises.push({ name: finisher.name, duration: `${goal === 'lose' ? 90 : goal === 'recomp' ? 75 : goal === 'gain' ? 45 : 60} sec`, imageUrl: finisher.imageUrl })
 
   return { dayNum, title, exercises }
 }

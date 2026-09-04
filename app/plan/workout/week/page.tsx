@@ -4,6 +4,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { currentWeekNumber } from '@/lib/localdate'
+import { parseStoredGoal } from '@/lib/goals'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,7 +46,11 @@ export default async function WorkoutWeekPage() {
   if (intake) {
     const level = (intake.experience_level === 'advanced' ? 3 : intake.experience_level === 'intermediate' ? 2 : 1) as Level
     const injuries = (Array.isArray((intake.form_data as { injuries?: Injury[] } | null)?.injuries) ? (intake.form_data as { injuries: Injury[] }).injuries : []) as Injury[]
-    const goal = (intake.goal === 'gain' || intake.goal === 'maintain' ? intake.goal : 'lose') as 'lose' | 'gain' | 'maintain'
+    // Real bug found live, 2026-09-03: same narrow-cast bug as
+    // app/plan/workout/page.tsx — this page proves what "the rest of your
+    // week" actually looks like, so it needs the real goal too, not a
+    // silently downgraded one.
+    const goal = parseStoredGoal(intake.goal as string | null)
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
     const trainingStyle = ((intake.form_data as { training_style?: TrainingStyle } | null)?.training_style || 'none') as TrainingStyle

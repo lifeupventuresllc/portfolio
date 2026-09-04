@@ -10,6 +10,7 @@ import { currentWeekNumber, getTimezone, localDateISO, localMondayIndex, localHo
 import type { WeekPlan } from '@/lib/meal-plan'
 import { weightClassFor, budgetTierFromWeekly, pickForNow, pickForRestaurant, parseDietaryRestrictions, type FastFoodMeal } from '@/lib/escape-plan'
 import type { UserStateSnapshot, EnergyLevel, StateOverrides } from './types'
+import { parseStoredGoal } from '@/lib/goals'
 
 // Deliberately a flat, documented estimate, not a per-person calculation —
 // there's no heart-rate/effort data to compute a real one from. Mid-range
@@ -65,7 +66,10 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
 
   const userId = (enrollment?.user_id as string | null) ?? null
   const injuries = (Array.isArray((intake?.form_data as { injuries?: Injury[] } | null)?.injuries) ? (intake!.form_data as { injuries: Injury[] }).injuries : []) as Injury[]
-  const goal = (intake?.goal === 'gain' || intake?.goal === 'maintain' ? intake.goal : 'lose') as 'lose' | 'gain' | 'maintain'
+  // Real bug found live, 2026-09-03: same narrow-cast bug as
+  // app/plan/workout/page.tsx — the Next Action circle regenerates her real
+  // workout too, so it needs her real goal, not a silently downgraded one.
+  const goal = parseStoredGoal(intake?.goal as string | null)
 
   // Same real regeneration every other surface uses (see effective-plan.ts),
   // now genuinely matching /plan/workout/page.tsx's own regeneration block —

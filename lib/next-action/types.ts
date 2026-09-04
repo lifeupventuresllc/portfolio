@@ -49,7 +49,8 @@ export type UserStateSnapshot = {
   // ---- Goal-alignment layer (prompt 6) ----
   // Her stated goal — every candidate/instruction gets calculated against
   // THIS, even when the visible action is minimized for low capacity.
-  goal: 'lose' | 'gain' | 'maintain'
+  // 'recomp' = both "Lose fat" and "Build & tone" selected (lib/goals.ts).
+  goal: 'lose' | 'gain' | 'maintain' | 'recomp'
   // True only when she was actually shown a workout action today (via THIS
   // engine) and explicitly skipped it — a real signal, never guessed from
   // time of day. Drives the calorie-burn adjustment below.

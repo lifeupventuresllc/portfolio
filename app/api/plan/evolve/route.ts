@@ -4,6 +4,7 @@ import { localDateISO } from '@/lib/localdate'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
 import { generateWorkout, type TrainingStyle, type WorkoutProgram, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import type { Level, Injury } from '@/lib/workout-exercises'
+import { parseStoredGoal } from '@/lib/goals'
 
 async function resolve() {
   const supabase = createClient()
@@ -81,7 +82,10 @@ export async function POST(request: NextRequest) {
     let intensityChanged = false
     if (reduceIntensity && level > 1) { level = (level - 1) as Level; intensityChanged = true }
     const experienceLevel = level === 3 ? 'advanced' : level === 2 ? 'intermediate' : 'beginner'
-    const goal = (intake.goal === 'gain' || intake.goal === 'maintain' ? intake.goal : 'lose') as 'lose' | 'gain' | 'maintain'
+    // Real bug found live, 2026-09-03: same narrow-cast bug as
+    // app/plan/workout/page.tsx — plan evolution rebuilds her real workout,
+    // so it needs her real goal, not a silently downgraded one.
+    const goal = parseStoredGoal(intake.goal as string | null)
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
     const injuries = (Array.isArray((intake.form_data as { injuries?: Injury[] } | null)?.injuries) ? (intake.form_data as { injuries?: Injury[] }).injuries! : []) as Injury[]
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum

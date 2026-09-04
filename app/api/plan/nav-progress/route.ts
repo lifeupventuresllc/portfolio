@@ -27,7 +27,11 @@ export async function GET() {
       svc.from('challenge_checkins').select('weight_lbs').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('submitted_at', { ascending: false }).limit(1).maybeSingle(),
     ])
 
-    if (!intakeRow || intakeRow.goal === 'maintain') return NextResponse.json({ pct: 0 })
+    // 'recomp' (both "Lose fat" and "Build & tone" selected — lib/goals.ts)
+    // gets the same treatment as 'maintain' here: the scale genuinely isn't
+    // a clean progress signal during recomposition (muscle gain offsets fat
+    // loss), so a scale-based percentage would be misleading, not helpful.
+    if (!intakeRow || intakeRow.goal === 'maintain' || intakeRow.goal === 'recomp') return NextResponse.json({ pct: 0 })
 
     const startWeight = Number(intakeRow.weight_lbs) || 0
     const targetDelta = Number(intakeRow.target_lbs) || 10
