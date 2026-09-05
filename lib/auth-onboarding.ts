@@ -23,10 +23,21 @@ export async function ensureEnrollmentAndWelcome(user: User) {
     }
   }
   if (!enrollment) {
+    // Real bug found live, 2026-09-05: falling back to the email's local
+    // part here is truthy, which permanently defeats the
+    // `enrollment.name || body.name || 'Your'` fallback that both
+    // app/api/challenge/intake/route.ts and lib/plan-builder.ts's
+    // "never overwrite a real name with a placeholder" guard rely on --
+    // a plain email/password signup (no Google full_name) kept showing
+    // her raw email as her dashboard greeting forever, even after she
+    // typed her real name on intake's first screen, because that
+    // truthy placeholder always won the `||` before body.name was ever
+    // reached. ensureAnonEnrollment below already leaves `name: null`
+    // for exactly this reason (see its own comment) -- match that here.
     await service.from('challenge_enrollments').insert({
       user_id: user.id,
       email: user.email,
-      name: (user.user_metadata?.full_name as string | undefined) || user.email.split('@')[0],
+      name: (user.user_metadata?.full_name as string | undefined) || null,
       tier: 'inner_circle', status: 'active', amount: 0,
       tier_started_at: new Date().toISOString(), started_at: new Date().toISOString(),
     })
