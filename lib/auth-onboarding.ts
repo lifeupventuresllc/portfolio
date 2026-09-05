@@ -45,8 +45,22 @@ export async function ensureEnrollmentAndWelcome(user: User) {
 
   const { data: existing } = await service.from('emails').select('id').eq('user_id', user.id).eq('type', 'welcome').limit(1)
   if (!existing || existing.length === 0) {
-    await sendWelcomeEmail(user.email)
-    await service.from('emails').insert({ user_id: user.id, email: user.email, type: 'welcome' })
+    // Real bug found live, 2026-09-05: this call was unguarded, and every
+    // email in this app currently fails (the project's Resend account is
+    // suspended) -- an unhandled throw here propagated straight out of
+    // this function to its callers, and app/api/auth/callback/route.ts
+    // (Google OAuth + email-confirmation-link signups) awaits this with no
+    // try/catch of its own, so a first-time Google sign-up 500'd and never
+    // completed its redirect. Enrollment must never depend on email
+    // deliverability -- log and move on instead of throwing, matching how
+    // signup-complete/route.ts already tolerated this (its fetch() call
+    // doesn't check response.ok), just made explicit and safe everywhere.
+    try {
+      await sendWelcomeEmail(user.email)
+      await service.from('emails').insert({ user_id: user.id, email: user.email, type: 'welcome' })
+    } catch (err) {
+      console.error('sendWelcomeEmail failed (enrollment still succeeded):', err)
+    }
   }
 }
 

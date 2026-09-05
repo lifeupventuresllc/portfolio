@@ -59,54 +59,41 @@ export default function AuthForm({ mode }: AuthFormProps) {
         const params = new URLSearchParams(window.location.search)
         const redirect = params.get('redirect') || '/plan'
         window.location.href = redirect
-      } else if (mode === 'signup') {
+      } else if (mode === 'signup' || mode === 'claim') {
         if (password.length < 6) {
           throw new Error('Password must be at least 6 characters')
         }
         if (!accepted) {
-          throw new Error('Please accept the Terms of Service and EULA to create your account.')
+          throw new Error(`Please accept the Terms of Service and EULA to ${mode === 'claim' ? 'save your progress' : 'create your account'}.`)
         }
-        // Carry ?redirect= through to the confirmation link so paying customers
-        // land back on /plan/intake (or wherever they came from) instead of the
-        // homepage once they confirm their email — was previously dropped here.
         const params = new URLSearchParams(window.location.search)
-        const redirect = params.get('redirect') || '/plan'
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(redirect)}`,
-          },
+        const redirect = mode === 'claim' ? '/plan' : (params.get('redirect') || '/plan')
+
+        // Goes through the server-side admin API (app/api/auth/create-account),
+        // not supabase.auth.signUp()/updateUser() directly — Supabase's own
+        // Auth service relays its confirmation emails through this project's
+        // Resend account, which is currently suspended (real bug found live,
+        // 2026-09-05: every signUp()/updateUser() call 500'd with "Error
+        // sending confirmation email", blocking every new account). The admin
+        // API applies the change with no confirmation email at all, so it
+        // works regardless of that outage. mode === 'claim' promotes her
+        // EXISTING anonymous session in place (same user.id, so every row
+        // already linked to it stays attached); mode === 'signup' creates a
+        // fresh one. Either way there's no session back from this call, so
+        // sign in with the same password right after to get a real one.
+        const createRes = await fetch('/api/auth/create-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
         })
+        const createBody = await createRes.json().catch(() => ({}))
+        if (!createRes.ok) throw new Error(createBody.error || 'Something went wrong. Please try again.')
+
+        const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-        // "Confirm email" off in Supabase → signUp() already returns a real,
-        // usable session — let her straight in instead of making her leave the
-        // app to click a link. Falls back to the confirmation-email message
-        // below if a session isn't there (confirmation still required).
-        if (data.session) {
-          await fetch('/api/auth/signup-complete', { method: 'POST' })
-          window.location.href = redirect
-          return
-        }
-        setMessage('Check your email to confirm your account.')
-      } else if (mode === 'claim') {
-        // Anonymous-access, Phase 1: turns her EXISTING signInAnonymously()
-        // session into a real account via updateUser(), not signUp() — the
-        // same user.id carries over, so every row already linked to it
-        // (challenge_intake, workout/nutrition plans, fos_messages) stays
-        // correctly attached automatically. No email confirmation gate here
-        // by design: she's already been using the app for real, unlike a
-        // brand-new signup.
-        if (password.length < 6) {
-          throw new Error('Password must be at least 6 characters')
-        }
-        if (!accepted) {
-          throw new Error('Please accept the Terms of Service and EULA to save your progress.')
-        }
-        const { error } = await supabase.auth.updateUser({ email, password })
-        if (error) throw error
+
         await fetch('/api/auth/signup-complete', { method: 'POST' })
-        window.location.href = '/plan'
+        window.location.href = redirect
       } else if (mode === 'reset') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password?step=update`,
