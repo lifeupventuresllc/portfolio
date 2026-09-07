@@ -1,5 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/server'
-import { buildBlueprint, type Activity } from '@/lib/nutrition'
+import { buildBlueprint, averageDayTargets, type Activity } from '@/lib/nutrition'
 import { generateWorkout, type TrainingStyle, type FocusArea } from '@/lib/workout'
 import { buildWeekFromSelections, autoSelectMeals, type DayType } from '@/lib/meal-plan'
 import type { Level, Injury } from '@/lib/workout-exercises'
@@ -193,12 +193,10 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
   // out of sync with what the dashboard actually shows. Zeroed out (not a fake
   // number) when bp is null — callers report these back to her, so a Quickstart
   // return value must read as "nothing calculated yet," not a fabricated target.
-  let targets = bp ? {
-    calories: Math.round(bp.current.weeklyEat / 7),
-    protein_g: bp.current.workout.macros.protein_g,
-    carbs_g: bp.current.workout.macros.carbs_g,
-    fats_g: bp.current.workout.macros.fats_g,
-  } : { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 }
+  let targets = bp ? (() => {
+    const t = averageDayTargets(bp)
+    return { calories: t.calories, protein_g: t.protein_g, carbs_g: t.carbs_g, fats_g: t.fats_g }
+  })() : { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 }
 
   const level = (inp.experience_level === 'advanced' ? 3 : inp.experience_level === 'intermediate' ? 2 : 1) as Level
   const track: 'gym' | 'home' = inp.training_location === 'home' ? 'home' : 'gym'

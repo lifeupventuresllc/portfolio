@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { buildBlueprint, type Sex, type Goal, type Activity, type WorkoutLength } from '@/lib/nutrition'
+import { buildBlueprint, averageDayTargets, type Sex, type Goal, type Activity, type WorkoutLength } from '@/lib/nutrition'
 import { generateBlueprintPDF } from '@/lib/blueprint-pdf'
 import { sendBlueprintEmail, sendCoachBlueprintNotification } from '@/lib/email'
 
@@ -53,11 +53,12 @@ export async function POST(request: NextRequest) {
     const filename = `${safeName}_Calorie_Blueprint.pdf`
 
     // Email summary (representative daily numbers; full detail is in the PDF)
+    const t = averageDayTargets(bp)
     const summary = {
-      calories: Math.round(bp.current.weeklyEat / 7),
-      protein_g: bp.current.workout.macros.protein_g,
-      carbs_g: bp.current.workout.macros.carbs_g,
-      fats_g: bp.current.workout.macros.fats_g,
+      calories: t.calories,
+      protein_g: t.protein_g,
+      carbs_g: t.carbs_g,
+      fats_g: t.fats_g,
     }
 
     // Send it (attachment) — non-blocking failure

@@ -275,6 +275,27 @@ export function buildBlueprint(inputs: BlueprintInputs): Blueprint {
   }
 }
 
+// Real bug found live, 2026-09-05: every caller that wants ONE representative
+// "daily calories + macros" figure (the app's intake/dashboard target, and the
+// Calorie Blueprint funnel's own summary email) was computing `calories` as
+// the WEEKLY AVERAGE (workout days blended with cheaper rest days) but
+// `protein_g/carbs_g/fats_g` from the WORKOUT DAY's macros specifically —
+// always the higher of the two, since it includes Exercise Burn. Protein +
+// carbs + fat calories summed to MORE than the stated "Daily calories"
+// number (confirmed live: a real intake showed "1,556 cal, 113g protein /
+// 171g carbs / 62g fats" — 113×4 + 171×4 + 62×9 = 1,694, ~9% over the
+// headline figure). The 7-page Blueprint PDF itself was never affected — it
+// already shows workout-day and rest-day numbers/macros separately, each
+// internally consistent — only this single-blended-number simplification
+// was wrong, copy-pasted into three places (this function,
+// lib/plan-builder.ts, app/api/blueprint/route.ts). One shared helper now
+// computes macros AT the same average-day calorie level the headline number
+// actually uses, so they always reconcile.
+export function averageDayTargets(bp: Blueprint, plan: Plan = bp.current) {
+  const calories = round(plan.weeklyEat / 7)
+  return { calories, ...macrosFor(calories, bp.protein_g, bp.inputs.goal) }
+}
+
 // ---- Backward-compatible helper for the challenge client intake ----
 // Returns a single representative daily target + macros (average day, current plan).
 export function calcNutritionTargets(inputs: {
@@ -293,14 +314,13 @@ export function calcNutritionTargets(inputs: {
     workout_length: inputs.workout_length ?? '45_60_both',
     goal_weight_lbs: inputs.goal_weight_lbs,
   })
-  const avgDaily = round(bp.current.weeklyEat / 7)
-  const m = bp.current.workout.macros
+  const t = averageDayTargets(bp)
   return {
     bmr: bp.bmr,
     tdee: bp.workoutMaintenance,
-    calories: avgDaily,
-    protein_g: m.protein_g,
-    carbs_g: m.carbs_g,
-    fats_g: m.fats_g,
+    calories: t.calories,
+    protein_g: t.protein_g,
+    carbs_g: t.carbs_g,
+    fats_g: t.fats_g,
   }
 }
