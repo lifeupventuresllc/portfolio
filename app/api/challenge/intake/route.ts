@@ -13,6 +13,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+
+    // Real gap found live, 2026-09-07: unlike the public Calorie Blueprint
+    // funnel (app/api/blueprint/route.ts), which already rejects an
+    // out-of-range age/height/weight so a typo can't generate nonsense
+    // numbers, this route had no such guardrail at all -- a fat-fingered
+    // extra zero on weight or a wrong age would silently compute and save
+    // a real target with nothing catching it. Same bounds as the Blueprint
+    // route, so the two stay consistent.
+    const ageN = Number(body.age), heightN = Number(body.height_in), weightN = Number(body.weight_lbs)
+    if (!(ageN >= 13 && ageN <= 100) || !(heightN >= 36 && heightN <= 90) || !(weightN >= 60 && weightN <= 700)) {
+      return NextResponse.json({ error: 'Please double-check your age, height, and weight — those values look off.' }, { status: 400 })
+    }
+
     const svc = createServiceClient()
 
     // Find this user's enrollment. If they bought as a guest, link by email now.
