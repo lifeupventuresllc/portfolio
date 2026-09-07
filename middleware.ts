@@ -77,7 +77,17 @@ export async function middleware(request: NextRequest) {
     // honors via /try. Scoped to just this one page (not the rest of
     // /plan, and never /admin or /content, which must keep requiring a
     // real account) since that's what was actually asked for.
-    if (pathname === '/plan/today') {
+    //
+    // Real gap found live (Asa's report, 2026-09-07): bare /plan — the
+    // literal link she shares with real testers — had the exact same bug.
+    // /plan/page.tsx already renders a full anonymous-friendly dashboard
+    // (root "/" itself gets there via /try today), so this was purely a
+    // middleware gap, not a page-level requirement for a real account.
+    // Added alongside /plan/today rather than switching the `some()` check
+    // to a blanket /plan prefix, since deeper routes (/plan/coach,
+    // /plan/checkin, etc.) haven't been individually confirmed safe for an
+    // anonymous session the same way these two have.
+    if (pathname === '/plan/today' || pathname === '/plan') {
       const tryUrl = new URL('/try', request.url)
       tryUrl.searchParams.set('to', pathname)
       return NextResponse.redirect(tryUrl)
