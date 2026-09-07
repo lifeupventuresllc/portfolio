@@ -14,6 +14,16 @@ export const metadata = {
 // Linked from the hamburger menu (components/ClientMenu.tsx). No intake gate
 // here on purpose: even a pre-intake or anonymous session should be able to
 // fix a typo'd email or add a real one, not just someone with a full plan.
+//
+// Real bug found live testing (Asa's ask, 2026-09-07): an anonymous session
+// couldn't save just a phone number, since the form unconditionally required
+// email — and worse, if she HAD typed one in while still anonymous, this
+// form would have attached a real email with no password ever set (this
+// form never collected one), leaving her with no way to log back in as that
+// same identity later. isAnonymous is passed down so the form can drop
+// email entirely for her (name + phone only) and point to the real,
+// already-correct claim flow (/plan/save, which collects email + password
+// together) instead of half-doing that job itself.
 export default async function ProfilePage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -37,6 +47,7 @@ export default async function ProfilePage() {
           initialName={(enrollment.name as string) || ''}
           initialEmail={(enrollment.email as string) || user.email || ''}
           initialPhone={(enrollment.phone as string) || ''}
+          isAnonymous={!!user.is_anonymous}
         />
       </div>
     </div>
