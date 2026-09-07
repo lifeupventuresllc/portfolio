@@ -158,6 +158,13 @@ export async function sendBlueprintEmail(
     if (b64) { attachments.push({ filename: 'Lifestyle-Fit-Workout-Guide.pdf', content: b64 }); bundledNames.push('your Lifestyle-Fit Workout Guide') }
   }
   const bundleLine = bundledNames.length ? ` I've also attached ${bundledNames.join(' and ')} — everything you need in one place.` : ''
+  // Real feature, 2026-09-07 (Asa's ask): the app now builds her real plan
+  // the moment she submits the Blueprint (app/api/blueprint/route.ts), under
+  // a guest enrollment keyed by this exact email — so "claiming" it here is
+  // just setting a password, not redoing the intake. Pre-filling ?email=
+  // on the signup link (components/AuthForm.tsx) means literally the only
+  // thing left for her to type is a password.
+  const claimUrl = `${APP_URL}/signup?redirect=/plan&email=${encodeURIComponent(email)}`
 
   const { error } = await resend().emails.send({
     from: `Asa Luke <${FROM_EMAIL}>`,
@@ -166,7 +173,7 @@ export async function sendBlueprintEmail(
     subject: `${firstName}, here's your Calorie Blueprint`,
     headers: UNSUB_HEADERS,
     attachments: attachments.length ? attachments : undefined,
-    text: `Hey ${firstName}!\n\nHere's your personalized Nutrition Blueprint to ${goalWord} weight:\n\nDaily Calories: ${targets.calories}\nProtein: ${targets.protein_g}g\nCarbs: ${targets.carbs_g}g\nFats: ${targets.fats_g}g\n\nHitting these every day is how you ${goalWord} the right way — without starving.${bundleLine}\n\nWant me to build the actual meals, workouts, and check in on you every week so you actually hit it? That's my Snatched Without Starving challenge:\n${APP_URL}/challenge\n\n— Coach\nasaluke.io`,
+    text: `Hey ${firstName}!\n\nHere's your personalized Nutrition Blueprint to ${goalWord} weight:\n\nDaily Calories: ${targets.calories}\nProtein: ${targets.protein_g}g\nCarbs: ${targets.carbs_g}g\nFats: ${targets.fats_g}g\n\nHitting these every day is how you ${goalWord} the right way — without starving.${bundleLine}\n\nYour full plan (workouts + meals built around these exact numbers) is already sitting there waiting — just set a password to see it, free:\n${claimUrl}\n\nWant me to build the actual meals, workouts, and check in on you every week so you actually hit it? That's my Snatched Without Starving challenge:\n${APP_URL}/challenge\n\n— Coach\nasaluke.io`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #C9A84C;">Your Nutrition Blueprint 📊</h1>
@@ -177,10 +184,11 @@ export async function sendBlueprintEmail(
           <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color:#6b7280;">Carbs</td><td style="padding:10px 0; border-bottom:1px solid #e5e7eb; text-align:right; font-weight:bold;">${targets.carbs_g}g</td></tr>
           <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color:#6b7280;">Fats</td><td style="padding:10px 0; border-bottom:1px solid #e5e7eb; text-align:right; font-weight:bold;">${targets.fats_g}g</td></tr>
         </table>
-        <p style="color:#374151;">Knowing your numbers is step one. Actually hitting them — with the meals, workouts, and someone in your corner every week — is where the real change happens.${bundleLine}</p>
+        <p style="color:#374151;">Knowing your numbers is step one. Your full plan — real workouts and meals already built around them — is sitting there waiting on you.${bundleLine}</p>
         <p style="margin: 24px 0;">
-          <a href="${APP_URL}/challenge" style="display:inline-block; background:#C9A84C; color:#0A0A0F; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold;">Get Snatched Without Starving →</a>
+          <a href="${claimUrl}" style="display:inline-block; background:#C9A84C; color:#0A0A0F; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold;">See my full plan, free →</a>
         </p>
+        <p style="color:#374151; font-size:14px;">Want me to check in on you every week and coach you through it personally? That's my <a href="${APP_URL}/challenge" style="color:#C9A84C;">Snatched Without Starving</a> challenge.</p>
         <p style="color:#9ca3af; font-size:12px; margin-top:40px;">— Coach · asaluke.io</p>
         ${FOOTER}
       </div>

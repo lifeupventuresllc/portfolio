@@ -25,7 +25,14 @@ function dayTypesForFrequency(daysPerWeek: number): DayType[] {
 
 export interface PlanBuildInput {
   enrollmentId: string
-  userId: string
+  // Nullable for a genuine guest build — the Calorie Blueprint lead-magnet
+  // (app/api/blueprint/route.ts) now builds a real plan the moment someone
+  // submits it, before any account exists, same "guest, keyed by email"
+  // shape the Stripe purchase webhook already uses for challenge_enrollments.
+  // Every write site below already stores this straight into a nullable FK
+  // column (see supabase/migrations/011_challenge_system.sql) — no schema
+  // change needed, this was purely a TS-contract restriction.
+  userId: string | null
   name: string
   age: number
   sex: 'female' | 'male' | 'other'

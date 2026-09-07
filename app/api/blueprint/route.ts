@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { buildBlueprint, averageDayTargets, type Sex, type Goal, type Activity, type WorkoutLength } from '@/lib/nutrition'
 import { generateBlueprintPDF } from '@/lib/blueprint-pdf'
 import { sendBlueprintEmail, sendCoachBlueprintNotification } from '@/lib/email'
+import { buildInitialPlans } from '@/lib/plan-builder'
 
 // Public lead magnet — no login. Computes the full Calorie Blueprint,
 // generates the 7-page PDF, emails it, captures the lead, and returns
@@ -52,6 +53,66 @@ export async function POST(request: NextRequest) {
     const safeName = (name || 'Your').replace(/[^a-zA-Z0-9]/g, '_')
     const filename = `${safeName}_Calorie_Blueprint.pdf`
 
+    const svc = createServiceClient()
+
+    // Real feature, 2026-09-07 (Asa's ask): a Blueprint lead used to have to
+    // re-answer every one of these same questions again from scratch if she
+    // later created a real account — pure duplicate work for someone who
+    // already gave us this exact info. Now the plan gets built immediately,
+    // under a GUEST enrollment (challenge_enrollments row with email set,
+    // user_id null) — the exact same "no account yet" shape the Stripe
+    // purchase webhook already uses. The existing by-email linking logic
+    // (lib/auth-onboarding.ts's ensureEnrollmentAndWelcome, plus the
+    // fallback in app/api/challenge/intake/route.ts) already looks up
+    // `.eq('email', ...).is('user_id', null)` and attaches it the moment
+    // she signs up with the same email — zero changes needed there. Never
+    // lets this touch a REAL member's existing account/plan: if this email
+    // already belongs to a signed-up user, skip entirely rather than
+    // silently overwriting something she's since customized.
+    try {
+      const { data: existingEnrollment } = await svc
+        .from('challenge_enrollments')
+        .select('id, user_id')
+        .eq('email', email)
+        .order('created_at', { ascending: false })
+        .maybeSingle()
+
+      if (!existingEnrollment || !existingEnrollment.user_id) {
+        let enrollmentId = existingEnrollment?.id
+        if (!enrollmentId) {
+          const { data: created } = await svc.from('challenge_enrollments').insert({
+            user_id: null, email, name: name || null,
+            tier: 'inner_circle', status: 'active', amount: 0,
+            tier_started_at: new Date().toISOString(), started_at: new Date().toISOString(),
+          }).select('id').single()
+          enrollmentId = created?.id
+        }
+
+        // Fields the Blueprint form never asks (it's a nutrition-only lead
+        // magnet — no workout-location/experience/injuries questions) get a
+        // safe, clearly-a-default value here; she can correct any of them
+        // in "Edit my intake answers" the moment she's in the app, same as
+        // Quickstart's already-established defaulted-fields pattern.
+        if (enrollmentId) {
+          const goalWeightN = goal_weight_lbs ? Number(goal_weight_lbs) : undefined
+          await buildInitialPlans({
+            enrollmentId, userId: null,
+            name: name || 'Your',
+            age: Number(age), sex: sex === 'male' ? 'male' : 'female',
+            height_in: Number(height_in), weight_lbs: Number(weight_lbs),
+            goal: goal as Goal, target_lbs: goalWeightN ? Math.abs(Number(weight_lbs) - goalWeightN) : 10,
+            activity_level: activity as Activity,
+            experience_level: 'beginner', training_location: 'gym', focus_area: 'overall',
+            days_per_week: Number.isFinite(workoutDaysN) ? workoutDaysN : 4,
+            workout_days_per_week: Number.isFinite(workoutDaysN) ? workoutDaysN : 4,
+            requiredTierCompleted: true, autoFillMeals: true,
+          })
+        }
+      }
+    } catch (e) {
+      console.error('Blueprint guest-plan build failed (PDF/email still send):', e)
+    }
+
     // Email summary (representative daily numbers; full detail is in the PDF)
     const t = averageDayTargets(bp)
     const summary = {
@@ -81,7 +142,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Capture / refresh the lead
-    const svc = createServiceClient()
     const noteSummary = `Blueprint: ${goal} · workout ${fmtSafe(bp.current.workout.eat)} / rest ${fmtSafe(bp.current.rest.eat)} cal · ${bp.protein_g}g protein`
     const { data: existingLead } = await svc
       .from('funnel_leads')

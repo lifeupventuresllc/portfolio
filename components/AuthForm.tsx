@@ -19,7 +19,12 @@ export default function AuthForm({ mode }: AuthFormProps) {
     ? mapAuthError({ message: searchParams.get('reason') || '' })
     : null
 
-  const [email, setEmail] = useState('')
+  // Pre-filled (still editable) when arriving from a matching Calorie
+  // Blueprint lead — she already gave us this email once, no reason to
+  // retype it. Real-looking check (has an "@") so a stray/garbage query
+  // param never silently pre-fills junk into the field.
+  const emailParam = searchParams.get('email') || ''
+  const [email, setEmail] = useState(emailParam.includes('@') ? emailParam : '')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(callbackReason)
