@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { ensureEnrollmentAndWelcome } from '@/lib/auth-onboarding'
+import { createServiceClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -36,7 +37,26 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) await ensureEnrollmentAndWelcome(user)
+    if (user) {
+      await ensureEnrollmentAndWelcome(user)
+
+      // Real gap found live (Asa's report, 2026-09-07): a brand-new Google
+      // sign-up always landed back on the dashboard, which then required a
+      // SECOND "Get Started" tap just to reach the very intake form that
+      // tap already meant to start — pure click friction at exactly the
+      // moment a new user is most likely to bounce. Send her straight to
+      // intake instead, but only when `next` is still the generic
+      // dashboard default (an explicit deep-link `next` is left alone) and
+      // she genuinely hasn't completed intake yet — a returning, already-
+      // onboarded user lands on the dashboard as normal.
+      if (next === '/plan' || next === '/') {
+        const svc = createServiceClient()
+        const { data: enrollment } = await svc.from('challenge_enrollments').select('intake_completed').eq('user_id', user.id).maybeSingle()
+        if (enrollment && !enrollment.intake_completed) {
+          response.headers.set('Location', `${origin}/plan/intake`)
+        }
+      }
+    }
 
     return response
   }
