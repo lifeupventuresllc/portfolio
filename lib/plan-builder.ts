@@ -205,6 +205,20 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     return { calories: t.calories, protein_g: t.protein_g, carbs_g: t.carbs_g, fats_g: t.fats_g }
   })() : { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 }
 
+  // Real rest-day vs workout-day split (Asa's ask, 2026-09-07 — see
+  // lib/fos/effective-plan.ts's DayTargets comment for the full story). Every
+  // caller gets this now, not just autoFillMeals builds — the structured
+  // intake form (the path nearly every real signup goes through) used to
+  // save only the flat blended `targets` above, with no rest/workout split
+  // and no day-of-week schedule at all. `bp.current.rest`/`.workout` are the
+  // exact same numbers the Calorie Blueprint itself shows; `schedule` reuses
+  // the same Mon-Sat spread the meal auto-fill path already used.
+  const dayTargets = bp ? {
+    schedule: dayTypesForFrequency(inp.days_per_week),
+    rest: { calories: bp.current.rest.eat, protein_g: bp.current.rest.macros.protein_g, carbs_g: bp.current.rest.macros.carbs_g, fats_g: bp.current.rest.macros.fats_g },
+    workout: { calories: bp.current.workout.eat, protein_g: bp.current.workout.macros.protein_g, carbs_g: bp.current.workout.macros.carbs_g, fats_g: bp.current.workout.macros.fats_g },
+  } : null
+
   const level = (inp.experience_level === 'advanced' ? 3 : inp.experience_level === 'intermediate' ? 2 : 1) as Level
   const track: 'gym' | 'home' = inp.training_location === 'home' ? 'home' : 'gym'
   // Real bug found live, 2026-09-03: same narrow-cast bug as
@@ -242,6 +256,7 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     protein_g: targets.protein_g,
     carbs_g: targets.carbs_g,
     fats_g: targets.fats_g,
+    day_targets: dayTargets,
     status: 'draft',
   }
   if (inp.autoFillMeals && bp) {

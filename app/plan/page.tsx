@@ -14,7 +14,7 @@ import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
 import { localDateISO, localDayNumber, localMondayIndex } from '@/lib/localdate'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { getEffectiveCalorieBudget } from '@/lib/fos/effective-plan'
+import { getEffectiveCalorieBudget, resolveTodayCalorieTarget, type DayTargets } from '@/lib/fos/effective-plan'
 import type { WeekPlan } from '@/lib/meal-plan'
 
 export const dynamic = 'force-dynamic'
@@ -144,7 +144,7 @@ export default async function PlanDashboard() {
         // was dropped from this page's compact merged line (2026-08-29 feed
         // redesign) — just today's rows needed now.
         svc.from('challenge_food_log').select('calories').eq('enrollment_id', enrollment.id).eq('logged_on', todayIso),
-        svc.from('challenge_nutrition_plans').select('meals, calories').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
+        svc.from('challenge_nutrition_plans').select('meals, calories, day_targets').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
         getApprovedTodayAdjustment(enrollment.id as string, todayIso),
       ])
     : [{ data: null }, { data: null }, { data: null }, { data: null }, null] as const
@@ -185,7 +185,8 @@ export default async function PlanDashboard() {
     ? (nutritionPlan.meals as WeekPlan) : null
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
   const flatCalTarget = Number(nutritionPlan?.calories) || null
-  const baseCalTarget = todayMeals?.target ?? flatCalTarget ?? undefined
+  const dayTargets = (nutritionPlan?.day_targets as DayTargets) || null
+  const baseCalTarget = resolveTodayCalorieTarget(todayMeals?.target, dayTargets, mealIdx, flatCalTarget)
   const calBudget = baseCalTarget != null ? getEffectiveCalorieBudget(baseCalTarget, todayAdjustment) : null
   const loggedCaloriesToday = (foodLogRows || []).reduce((sum, r) => sum + (Number((r as { calories?: number }).calories) || 0), 0)
 

@@ -4,7 +4,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { weightClassFor, budgetTierFromWeekly, pickForNow, pickForRestaurant, parseDietaryRestrictions, doordashSearchUrl, priceTierFor, type FastFoodMeal } from '@/lib/escape-plan'
 import { localDateISO, localHourNumber, localMondayIndex } from '@/lib/localdate'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { getEffectiveCalorieBudget } from '@/lib/fos/effective-plan'
+import { getEffectiveCalorieBudget, resolveTodayCalorieTarget, type DayTargets } from '@/lib/fos/effective-plan'
 import type { WeekPlan } from '@/lib/meal-plan'
 import EatingOutPicks from '@/components/EatingOutPicks'
 import { getOpenAction } from '@/lib/next-action'
@@ -39,7 +39,7 @@ export default async function EatingOutNow({ searchParams }: { searchParams: { r
   const todayIso = localDateISO()
   const [{ data: intake }, { data: nutritionPlan }, { data: foodRows }, todayAdjustment] = await Promise.all([
     svc.from('challenge_intake').select('weight_lbs, weekly_food_budget, dislikes_allergies').eq('enrollment_id', enrollment.id).maybeSingle(),
-    svc.from('challenge_nutrition_plans').select('calories, meals').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
+    svc.from('challenge_nutrition_plans').select('calories, meals, day_targets').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_food_log').select('calories').eq('enrollment_id', enrollment.id).eq('logged_on', todayIso),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
   ])
@@ -56,7 +56,8 @@ export default async function EatingOutNow({ searchParams }: { searchParams: { r
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
     ? (nutritionPlan.meals as WeekPlan) : null
   const mealIdx = localMondayIndex()
-  const todayTarget = (weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx]?.target : null) || Number(nutritionPlan?.calories) || 0
+  const dayTargets = (nutritionPlan?.day_targets as DayTargets) || null
+  const todayTarget = resolveTodayCalorieTarget(weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx]?.target : null, dayTargets, mealIdx, Number(nutritionPlan?.calories) || null) || 0
   const effectiveTarget = getEffectiveCalorieBudget(todayTarget, todayAdjustment)
   const loggedToday = (foodRows || []).reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
   const remainingCal = Math.max(0, effectiveTarget - loggedToday)

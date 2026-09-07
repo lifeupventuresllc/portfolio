@@ -1,5 +1,6 @@
 import { pickFocusDayIndex, type WorkoutProgram, type FocusArea } from '@/lib/workout'
 import type { WorkoutChange, NutritionChange } from './types'
+import type { DayType } from '@/lib/meal-plan'
 
 // The one shared place that knows how to combine a stored plan with an
 // approved today-only adjustment. Previously this merge (today's workout by
@@ -65,6 +66,49 @@ export function getEffectiveTodayWorkout(program: WorkoutProgram | null, complet
     return { title: 'Cardio & Conditioning' }
   }
   return workout
+}
+
+// Real per-person rest-day vs workout-day split (Asa's ask, 2026-09-07: "no
+// logic that shows their rest day calories versus their workout calories" —
+// the Calorie Blueprint at /blueprint already computes this via
+// lib/nutrition.ts's buildBlueprint, but the structured intake form — the
+// path nearly every real signup goes through — only ever saved ONE flat
+// weekly-average number, with `schedule` (which weekdays are workout days,
+// Sun always rest) never persisted at all. Only Coach Asa's chat build and
+// the Blueprint's own guest build got a real split, via a full auto-filled
+// week of meals. Persisted on challenge_nutrition_plans.day_targets by
+// lib/plan-builder.ts for every plan now, not just those two.
+export type DayTargets = {
+  schedule: DayType[] // Mon..Sat; Sunday is never in this array, always 'rest'
+  rest: { calories: number; protein_g: number; carbs_g: number; fats_g: number }
+  workout: { calories: number; protein_g: number; carbs_g: number; fats_g: number }
+} | null
+
+// mealIdx: Mon=0 … Sat=5 (lib/localdate's localMondayIndex), Sun=6+.
+export function scheduleDayType(dayTargets: DayTargets, mealIdx: number): DayType {
+  if (!dayTargets || mealIdx < 0 || mealIdx > 5) return 'rest'
+  return dayTargets.schedule[mealIdx] === 'workout' ? 'workout' : 'rest'
+}
+
+// Resolves TODAY's real calorie target: a full auto-filled week (Coach Asa /
+// Blueprint builds) already carries a per-day target on `todayMeals`, which
+// wins when present; otherwise falls back to the schedule-based split every
+// plan now has; otherwise the old flat weekly-average column, for plans built
+// before day_targets existed. Never returns a made-up number.
+export function resolveTodayCalorieTarget(todayMealsTarget: number | undefined | null, dayTargets: DayTargets, mealIdx: number, flatTarget: number | null): number | undefined {
+  if (todayMealsTarget != null) return todayMealsTarget
+  if (dayTargets) return dayTargets[scheduleDayType(dayTargets, mealIdx)].calories
+  return flatTarget ?? undefined
+}
+
+// The real, personalized Exercise Burn (today's workout-day target minus its
+// rest-day target — straight from the same Mifflin-St Jeor + NEAT + Exercise
+// Burn formula the Calorie Blueprint uses) when the plan has it. Only plans
+// built before day_targets existed fall back to one flat generic guess.
+const FALLBACK_WORKOUT_BURN_ESTIMATE = 300
+export function workoutBurnEstimate(dayTargets: DayTargets): number {
+  if (!dayTargets) return FALLBACK_WORKOUT_BURN_ESTIMATE
+  return Math.max(0, dayTargets.workout.calories - dayTargets.rest.calories)
 }
 
 // Base calorie target + any approved today-only delta, floored at 0.

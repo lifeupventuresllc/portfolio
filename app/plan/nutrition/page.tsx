@@ -4,7 +4,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import FoodLog, { type PlannedItem } from '@/components/FoodLog'
 import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { getEffectiveCalorieBudget, isEatingOutToday } from '@/lib/fos/effective-plan'
+import { getEffectiveCalorieBudget, isEatingOutToday, resolveTodayCalorieTarget, scheduleDayType, type DayTargets } from '@/lib/fos/effective-plan'
 import type { WeekPlan } from '@/lib/meal-plan'
 import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
 
@@ -40,7 +40,7 @@ export default async function NutritionPage() {
   const todayIso = localDateISO(tz)
   const mealIdx = localMondayIndex(tz)
   const [{ data: nutritionPlan }, todayAdjustment] = await Promise.all([
-    svc.from('challenge_nutrition_plans').select('meals, calories').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
+    svc.from('challenge_nutrition_plans').select('meals, calories, day_targets').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
   ])
 
@@ -51,8 +51,10 @@ export default async function NutritionPage() {
   // Same fallback as /plan/today and /api/plan/food-log's own loadTarget() —
   // a real calorie goal can exist as a flat column here with no weekly meals
   // JSON at all (e.g. set without ever building a full week of meals).
-  const baseCalTarget = todayMeals?.target ?? (Number(nutritionPlan?.calories) || undefined)
+  const dayTargets = (nutritionPlan?.day_targets as DayTargets) || null
+  const baseCalTarget = resolveTodayCalorieTarget(todayMeals?.target, dayTargets, mealIdx, Number(nutritionPlan?.calories) || null)
   const calBudget = baseCalTarget != null ? getEffectiveCalorieBudget(baseCalTarget, todayAdjustment) : null
+  const todaysDayType = todayMeals?.dayType ?? scheduleDayType(dayTargets, mealIdx)
   const eatingOutToday = isEatingOutToday(todayMeals?.eatOut, todayAdjustment)
 
   return (
@@ -60,7 +62,7 @@ export default async function NutritionPage() {
       <div className="max-w-2xl mx-auto">
         <Link href="/plan" className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all mb-6" style={{ background: '#12241a', border: '1px solid #24402f', color: '#c9a84c' }}>← Home</Link>
         <FoodLog
-          planned={planned} budget={calBudget} dayType={todayMeals?.dayType ?? null}
+          planned={planned} budget={calBudget} dayType={todaysDayType}
           mealStatus={
             eatingOutToday ? { kind: 'eatingOut' }
               : todayMeals ? { kind: 'planned', totalProtein: todayMeals.totalProtein }

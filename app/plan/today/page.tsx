@@ -12,7 +12,7 @@ import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday } from '@/lib/fos/effective-plan'
+import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday, resolveTodayCalorieTarget, scheduleDayType, type DayTargets } from '@/lib/fos/effective-plan'
 import { shortVersionFor } from '@/lib/workout-short'
 import { LIVE_CALL } from '@/lib/live-call'
 import { pickFocusDayIndex, type WorkoutProgram, type FocusArea } from '@/lib/workout'
@@ -75,7 +75,7 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   const todayIso = localDateISO(tz)
   const [{ data: workoutPlan }, { data: nutritionPlan }, { data: doneRows }, todayAdjustment, { data: intakeRow }, { data: foodRows }, { data: recentWorkoutActions }] = await Promise.all([
     svc.from('challenge_workout_plans').select('plan').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
-    svc.from('challenge_nutrition_plans').select('meals, calories, protein_g').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
+    svc.from('challenge_nutrition_plans').select('meals, calories, protein_g, day_targets').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('measurements, logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
     svc.from('challenge_intake').select('form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
@@ -120,7 +120,11 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   // This page needs the same fallback so it never disagrees with FoodLog.
   const flatCalTarget = Number(nutritionPlan?.calories) || null
   const flatProteinTarget = Number(nutritionPlan?.protein_g) || null
-  const baseCalTarget = todayMeals?.target ?? flatCalTarget ?? undefined
+  const dayTargets = (nutritionPlan?.day_targets as DayTargets) || null
+  const todaysDayType = todayMeals?.dayType ?? scheduleDayType(dayTargets, mealIdx)
+  const baseCalTarget = resolveTodayCalorieTarget(todayMeals?.target, dayTargets, mealIdx, flatCalTarget)
+  // Protein anchors to bodyweight, not day type (buildBlueprint passes the
+  // same protein_g into rest AND workout macrosFor calls) — no split needed.
   const baseProteinTarget = todayMeals?.totalProtein ?? flatProteinTarget ?? undefined
   // Coach Asa adjusted today's calories? Reflect it in the budget — same as /plan's dashboard.
   const calBudget = baseCalTarget != null ? getEffectiveCalorieBudget(baseCalTarget, todayAdjustment) : null
@@ -384,7 +388,12 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
                   after the ring, with a real spent/left bar and a one-tap log
                   action instead of only a link to go find one. */}
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] mb-2" style={{ color: '#6fae8e', fontFamily: 'var(--font-orbitron)' }}>Calories</p>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: '#6fae8e', fontFamily: 'var(--font-orbitron)' }}>Calories</p>
+                  {baseCalTarget != null && (
+                    <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ color: todaysDayType === 'workout' ? '#7fe6b3' : '#6fae8e', background: todaysDayType === 'workout' ? 'rgba(76,175,125,0.18)' : 'rgba(255,255,255,0.06)' }}>{todaysDayType === 'workout' ? 'Workout day' : 'Rest day'}</span>
+                  )}
+                </div>
                 {eatingOutToday ? (
                   <Link href="/plan/eating-out" className="block rounded-2xl px-5 py-4" style={cardStyle}>
                     <span className="text-sm font-semibold" style={{ color: CARD_TEXT }}>Eating out today — see exactly what to order</span>

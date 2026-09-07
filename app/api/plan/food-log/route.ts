@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { localDateISO } from '@/lib/localdate'
+import { localDateISO, getTimezone, localMondayIndex } from '@/lib/localdate'
+import { resolveTodayCalorieTarget, scheduleDayType, type DayTargets } from '@/lib/fos/effective-plan'
+import type { WeekPlan } from '@/lib/meal-plan'
 
 // Food log — what she ACTUALLY ate today (MyFitnessPal-style), tracked vs her daily target.
 // Rows live in challenge_food_log (migration 016). One row per food, grouped by `meal`.
@@ -23,12 +25,25 @@ async function resolve() {
 
 // Her daily macro target — from the stored nutrition plan (week 1). carbs/fats can be null on
 // the row, so derive a sensible split from calories + protein when they're missing.
+//
+// Real gap found+fixed (Asa's ask, 2026-09-07): this always returned the flat
+// weekly-average column, with zero rest-day/workout-day awareness — the only
+// consumer here that never got the real split lib/fos/effective-plan.ts's
+// DayTargets provides everywhere else. Same schedule-based resolution as
+// /plan/today, /plan/nutrition, /plan (dashboard) and /plan/eating-out now.
 async function loadTarget(svc: ReturnType<typeof createServiceClient>, enrollmentId: string) {
-  const { data } = await svc.from('challenge_nutrition_plans').select('calories, protein_g, carbs_g, fats_g').eq('enrollment_id', enrollmentId).eq('week_number', 1).maybeSingle()
-  const calories = num(data?.calories)
+  const { data } = await svc.from('challenge_nutrition_plans').select('calories, protein_g, carbs_g, fats_g, meals, day_targets').eq('enrollment_id', enrollmentId).eq('week_number', 1).maybeSingle()
+  const dayTargets = (data?.day_targets as DayTargets) || null
+  const weekPlan = (data?.meals && typeof data.meals === 'object' && 'days' in data.meals) ? (data.meals as WeekPlan) : null
+  const mealIdx = localMondayIndex(getTimezone())
+  const todayMealsTarget = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx]?.target : null
+  const calories = num(resolveTodayCalorieTarget(todayMealsTarget, dayTargets, mealIdx, num(data?.calories) || null))
   const protein_g = num(data?.protein_g)
-  let carbs_g = data?.carbs_g == null ? null : num(data.carbs_g)
-  let fats_g = data?.fats_g == null ? null : num(data.fats_g)
+  // Same day-type split as calories (from buildBlueprint's macrosFor) when
+  // day_targets has it, else the flat stored column, else derived below.
+  const todaysDayType = dayTargets ? scheduleDayType(dayTargets, mealIdx) : null
+  let carbs_g = todaysDayType ? dayTargets![todaysDayType].carbs_g : data?.carbs_g == null ? null : num(data.carbs_g)
+  let fats_g = todaysDayType ? dayTargets![todaysDayType].fats_g : data?.fats_g == null ? null : num(data.fats_g)
   if ((carbs_g == null || fats_g == null) && calories > 0) {
     const remaining = Math.max(0, calories - protein_g * 4)
     if (fats_g == null) fats_g = Math.round((remaining * 0.30) / 9)

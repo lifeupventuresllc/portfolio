@@ -3,7 +3,7 @@ import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusAre
 import { computeLowFuelToday } from '@/lib/workout-assembly'
 import { getProgressionOverrides, getRecentlyTrainedMuscles } from '@/lib/progression'
 import type { Level, Injury } from '@/lib/workout-exercises'
-import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday } from '@/lib/fos/effective-plan'
+import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday, workoutBurnEstimate, type DayTargets } from '@/lib/fos/effective-plan'
 import { getApprovedTodayAdjustment, getProfile } from '@/lib/fos/context'
 import { assessLifePattern } from '@/lib/fos/pattern'
 import { currentWeekNumber, getTimezone, localDateISO, localMondayIndex, localHourNumber } from '@/lib/localdate'
@@ -13,11 +13,13 @@ import type { UserStateSnapshot, EnergyLevel, StateOverrides } from './types'
 import { parseStoredGoal } from '@/lib/goals'
 import { parseStoredTrainingStyles } from '@/lib/training-styles'
 
-// Deliberately a flat, documented estimate, not a per-person calculation —
-// there's no heart-rate/effort data to compute a real one from. Mid-range
-// for a typical 30-45min moderate session; good enough to nudge a daily
-// calorie target in the right direction without pretending false precision.
-const WORKOUT_CALORIE_BURN_ESTIMATE = 300
+// Real gap found+fixed (Asa's ask, 2026-09-07, "the two main brains" —
+// nutrition and workout — should connect): this used to be one flat,
+// generic 300-cal guess for every member regardless of her real stats. Now
+// uses her actual personal Exercise Burn (workoutBurnEstimate, from the same
+// buildBlueprint math the Calorie Blueprint runs) when the plan has it —
+// still falling back to this flat guess only for plans built before that
+// split existed.
 const WORKOUT_REDUCED_BURN_FACTOR = 0.5
 
 // The User State Model — the "one thing" this whole engine gets built on
@@ -34,7 +36,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     svc.from('challenge_enrollments').select('*').eq('id', enrollmentId).maybeSingle(),
     svc.from('challenge_intake').select('*').eq('enrollment_id', enrollmentId).maybeSingle(),
     svc.from('challenge_workout_plans').select('*').eq('enrollment_id', enrollmentId).eq('week_number', 1).maybeSingle(),
-    svc.from('challenge_nutrition_plans').select('calories, protein_g, meals').eq('enrollment_id', enrollmentId).maybeSingle(),
+    svc.from('challenge_nutrition_plans').select('calories, protein_g, meals, day_targets').eq('enrollment_id', enrollmentId).maybeSingle(),
     svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollmentId).eq('note', '__daily__').eq('logged_on', todayISO).maybeSingle(),
     svc.from('challenge_food_log').select('calories, protein_g').eq('enrollment_id', enrollmentId).eq('logged_on', todayISO),
     // Goal-alignment layer (prompt 6): was a workout action from THIS engine
@@ -140,7 +142,9 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const todaysWorkoutAction = (recentWorkoutActions || []).find((r) => localDateISO(tz, new Date(r.shown_at as string)) === todayISO)
   const workoutSkippedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)
   const workoutReducedToday = !workoutDoneToday && !workoutSkippedToday && !!effectiveTodayAdjustment?.workoutChange
-  const workoutBurnAdjustment = workoutSkippedToday ? WORKOUT_CALORIE_BURN_ESTIMATE : workoutReducedToday ? Math.round(WORKOUT_CALORIE_BURN_ESTIMATE * WORKOUT_REDUCED_BURN_FACTOR) : 0
+  const dayTargets = (nutritionPlan?.day_targets as DayTargets) || null
+  const realWorkoutBurn = workoutBurnEstimate(dayTargets)
+  const workoutBurnAdjustment = workoutSkippedToday ? realWorkoutBurn : workoutReducedToday ? Math.round(realWorkoutBurn * WORKOUT_REDUCED_BURN_FACTOR) : 0
   // See types.ts — independent of workoutReducedToday on purpose: a live
   // approved override should keep outranking stale-history candidates all
   // day, even after an earlier same-day approval already flipped
