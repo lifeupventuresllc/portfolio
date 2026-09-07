@@ -3,7 +3,7 @@ import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusAre
 import { computeLowFuelToday } from '@/lib/workout-assembly'
 import { getProgressionOverrides, getRecentlyTrainedMuscles } from '@/lib/progression'
 import type { Level, Injury } from '@/lib/workout-exercises'
-import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday, workoutBurnEstimate, type DayTargets } from '@/lib/fos/effective-plan'
+import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday, workoutBurnEstimate, resolveTodayCalorieTarget, scheduleDayType, workoutTodayStatus, type DayTargets } from '@/lib/fos/effective-plan'
 import { getApprovedTodayAdjustment, getProfile } from '@/lib/fos/context'
 import { assessLifePattern } from '@/lib/fos/pattern'
 import { currentWeekNumber, getTimezone, localDateISO, localMondayIndex, localHourNumber } from '@/lib/localdate'
@@ -144,14 +144,30 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const workoutReducedToday = !workoutDoneToday && !workoutSkippedToday && !!effectiveTodayAdjustment?.workoutChange
   const dayTargets = (nutritionPlan?.day_targets as DayTargets) || null
   const realWorkoutBurn = workoutBurnEstimate(dayTargets)
-  const workoutBurnAdjustment = workoutSkippedToday ? realWorkoutBurn : workoutReducedToday ? Math.round(realWorkoutBurn * WORKOUT_REDUCED_BURN_FACTOR) : 0
   // See types.ts — independent of workoutReducedToday on purpose: a live
   // approved override should keep outranking stale-history candidates all
   // day, even after an earlier same-day approval already flipped
   // workoutSkippedToday true by superseding a prior row.
   const workoutOverrideActive = !workoutDoneToday && !!effectiveTodayAdjustment?.workoutChange
 
-  const baseCalorieBudget = nutritionPlan?.calories != null ? getEffectiveCalorieBudget(Number(nutritionPlan.calories), effectiveTodayAdjustment) : null
+  // Hoisted above the calorie block below it (real gap found+fixed, Asa's
+  // ask 2026-09-07: "the two brains" have to mean the same thing everywhere
+  // — this engine's own calorie reasoning used to run off the flat weekly
+  // average, never the real rest/workout split every visible page now uses,
+  // so a meal/eating-out suggestion here could silently disagree with what
+  // the ring on /plan/today already showed her).
+  const weekPlanForToday = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals) ? (nutritionPlan.meals as WeekPlan) : null
+  const mealIdxToday = localMondayIndex(tz)
+  const todayMealsForCalorie = weekPlanForToday && mealIdxToday <= 5 ? weekPlanForToday.days[mealIdxToday] : null
+  const scheduledDayType = todayMealsForCalorie?.dayType ?? scheduleDayType(dayTargets, mealIdxToday)
+  const workoutStatus = workoutTodayStatus(workoutDoneToday, workoutSkippedToday)
+  const rawCalorieTarget = resolveTodayCalorieTarget(todayMealsForCalorie?.target, scheduledDayType, dayTargets, nutritionPlan?.calories != null ? Number(nutritionPlan.calories) : null, workoutStatus)
+  const baseCalorieBudget = rawCalorieTarget != null ? getEffectiveCalorieBudget(rawCalorieTarget, effectiveTodayAdjustment) : null
+  // A live approved change short of a full skip (e.g. a cardio swap) still
+  // gets partial burn credit removed — the 'done'/'skipped' cases above are
+  // already baked into rawCalorieTarget itself, so this only ever fires for
+  // the in-between "reduced" case, never double-counted with those.
+  const workoutBurnAdjustment = workoutReducedToday ? Math.round(realWorkoutBurn * WORKOUT_REDUCED_BURN_FACTOR) : 0
   // Cross-domain adjustment (prompt 6): an unburned workout tightens today's
   // remaining calorie allowance immediately, before the next meal/eating-out
   // recommendation is made — never surfaced as its own line item, just baked

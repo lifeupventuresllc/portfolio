@@ -90,14 +90,45 @@ export function scheduleDayType(dayTargets: DayTargets, mealIdx: number): DayTyp
   return dayTargets.schedule[mealIdx] === 'workout' ? 'workout' : 'rest'
 }
 
-// Resolves TODAY's real calorie target: a full auto-filled week (Coach Asa /
-// Blueprint builds) already carries a per-day target on `todayMeals`, which
-// wins when present; otherwise falls back to the schedule-based split every
-// plan now has; otherwise the old flat weekly-average column, for plans built
-// before day_targets existed. Never returns a made-up number.
-export function resolveTodayCalorieTarget(todayMealsTarget: number | undefined | null, dayTargets: DayTargets, mealIdx: number, flatTarget: number | null): number | undefined {
+// Real gap found+fixed (Asa's ask, 2026-09-07 — the follow-up to the
+// rest/workout split above: "does it actually know if she's on a workout day
+// or a rest day," not just guess from a Mon-Sat calendar). The workout
+// engine is rotation-based by design (lib/workout.ts picks the next day by
+// # workouts completed, not by day-of-week) — she can genuinely train on any
+// day. `schedule` above is only ever a planning-ahead GUESS for "how many
+// workout days this week." The real signal from the workout brain — did she
+// actually do (or explicitly skip) a workout today — has to win when it
+// disagrees with that guess, the same way lib/next-action/state.ts's
+// workoutSkippedToday/workoutDoneToday already override its own calorie math.
+export type WorkoutTodayStatus = 'done' | 'skipped' | 'pending'
+export function workoutTodayStatus(doneToday: boolean, skippedToday: boolean): WorkoutTodayStatus {
+  return doneToday ? 'done' : skippedToday ? 'skipped' : 'pending'
+}
+export function resolvedDayType(scheduled: DayType, workoutStatus: WorkoutTodayStatus): DayType {
+  if (workoutStatus === 'done') return 'workout' // trained today even on a scheduled rest day — real burn, real credit
+  if (workoutStatus === 'skipped') return 'rest' // scheduled workout, explicitly skipped/simplified — no burn to credit
+  return scheduled // undecided yet — the honest planning-ahead default
+}
+
+// Resolves TODAY's real calorie target. A full auto-filled week (Coach Asa /
+// Blueprint builds) carries a per-day target AND day type on `todayMeals` —
+// still wins when the real workout status agrees with it (its own baked-in
+// number), but a real status that disagrees (e.g. `todayMeals.dayType` was
+// 'rest' and she trained anyway) is re-priced off `dayTargets` directly
+// rather than trusting the stale baked-in number. Falls back to the flat
+// weekly-average column for plans built before day_targets existed. Never
+// returns a made-up number.
+export function resolveTodayCalorieTarget(
+  todayMealsTarget: number | undefined | null,
+  scheduledType: DayType | null,
+  dayTargets: DayTargets,
+  flatTarget: number | null,
+  workoutStatus: WorkoutTodayStatus = 'pending'
+): number | undefined {
+  const effectiveType = scheduledType ? resolvedDayType(scheduledType, workoutStatus) : null
+  if (effectiveType && effectiveType !== scheduledType && dayTargets) return dayTargets[effectiveType].calories
   if (todayMealsTarget != null) return todayMealsTarget
-  if (dayTargets) return dayTargets[scheduleDayType(dayTargets, mealIdx)].calories
+  if (dayTargets && effectiveType) return dayTargets[effectiveType].calories
   return flatTarget ?? undefined
 }
 

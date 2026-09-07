@@ -12,7 +12,7 @@ import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday, resolveTodayCalorieTarget, scheduleDayType, type DayTargets } from '@/lib/fos/effective-plan'
+import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday, resolveTodayCalorieTarget, resolvedDayType, scheduleDayType, workoutTodayStatus, type DayTargets } from '@/lib/fos/effective-plan'
 import { shortVersionFor } from '@/lib/workout-short'
 import { LIVE_CALL } from '@/lib/live-call'
 import { pickFocusDayIndex, type WorkoutProgram, type FocusArea } from '@/lib/workout'
@@ -121,8 +121,17 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   const flatCalTarget = Number(nutritionPlan?.calories) || null
   const flatProteinTarget = Number(nutritionPlan?.protein_g) || null
   const dayTargets = (nutritionPlan?.day_targets as DayTargets) || null
-  const todaysDayType = todayMeals?.dayType ?? scheduleDayType(dayTargets, mealIdx)
-  const baseCalTarget = resolveTodayCalorieTarget(todayMeals?.target, dayTargets, mealIdx, flatCalTarget)
+  const scheduledDayType = todayMeals?.dayType ?? scheduleDayType(dayTargets, mealIdx)
+  // The real signal from the workout brain — did she actually do (or
+  // explicitly skip) a workout today — same doneRows/recentWorkoutActions
+  // this page already fetches for the workout card below, read here first so
+  // the calorie number can't disagree with what the workout card itself
+  // shows just a few lines down.
+  const workoutDoneToday = (doneRows || []).some((r) => r.logged_on === todayIso && (r.measurements as { workout?: boolean } | null)?.workout)
+  const todaysWorkoutAction = (recentWorkoutActions || []).find((r) => localDateISO(tz, new Date(r.shown_at as string)) === todayIso)
+  const workoutSimplifiedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)
+  const todaysDayType = resolvedDayType(scheduledDayType, workoutTodayStatus(workoutDoneToday, workoutSimplifiedToday))
+  const baseCalTarget = resolveTodayCalorieTarget(todayMeals?.target, scheduledDayType, dayTargets, flatCalTarget, workoutTodayStatus(workoutDoneToday, workoutSimplifiedToday))
   // Protein anchors to bodyweight, not day type (buildBlueprint passes the
   // same protein_g into rest AND workout macrosFor calls) — no split needed.
   const baseProteinTarget = todayMeals?.totalProtein ?? flatProteinTarget ?? undefined
@@ -154,20 +163,9 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   const program = (workoutPlan?.plan as WorkoutProgram) || null
   const numDays = program ? (program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)) : 1
   const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
-  // Layout-simplify pass (Option A, Asa's pick from 3 real-app-inspired
-  // mockups — Whoop's "one score" move): the hero ring below needs a real,
-  // honest TODAY-specific signal, not the cumulative `completed` count above
-  // (that one's for rotation position, answers "how many ever," not "did she
-  // already go today"). logged_on was already being selected for doneRows —
-  // this was one filter away, not a new query.
-  const workoutDoneToday = (doneRows || []).some((r) => r.logged_on === todayIso && (r.measurements as { workout?: boolean } | null)?.workout)
-  // "Keep it simple" via the circle supersedes today's workout row rather
-  // than completing it — a deliberate, real choice, not the same as never
-  // showing up at all. Same today-local-date match as
-  // lib/next-action/state.ts's workoutSkippedToday (same underlying signal,
-  // a second real consumer of it here).
-  const todaysWorkoutAction = (recentWorkoutActions || []).find((r) => localDateISO(tz, new Date(r.shown_at as string)) === todayIso)
-  const workoutSimplifiedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)
+  // workoutDoneToday/todaysWorkoutAction/workoutSimplifiedToday now computed
+  // above, before the calorie section, so that number can't disagree with
+  // this card — see the comment there.
   // The hero ring's real "1/2" — two genuine today-specific wins (workout,
   // real logged food), not an arbitrary made-up score.
   const dailyScore = (workoutDoneToday ? 1 : 0) + (foodLoggedToday ? 1 : 0)

@@ -2,9 +2,9 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { weightClassFor, budgetTierFromWeekly, pickForNow, pickForRestaurant, parseDietaryRestrictions, doordashSearchUrl, priceTierFor, type FastFoodMeal } from '@/lib/escape-plan'
-import { localDateISO, localHourNumber, localMondayIndex } from '@/lib/localdate'
+import { localDateISO, localHourNumber, localMondayIndex, getTimezone } from '@/lib/localdate'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { getEffectiveCalorieBudget, resolveTodayCalorieTarget, type DayTargets } from '@/lib/fos/effective-plan'
+import { getEffectiveCalorieBudget, resolveTodayCalorieTarget, scheduleDayType, workoutTodayStatus, type DayTargets } from '@/lib/fos/effective-plan'
 import type { WeekPlan } from '@/lib/meal-plan'
 import EatingOutPicks from '@/components/EatingOutPicks'
 import { getOpenAction } from '@/lib/next-action'
@@ -37,11 +37,15 @@ export default async function EatingOutNow({ searchParams }: { searchParams: { r
   if (!enrollment) redirect('/plan')
 
   const todayIso = localDateISO()
-  const [{ data: intake }, { data: nutritionPlan }, { data: foodRows }, todayAdjustment] = await Promise.all([
+  const [{ data: intake }, { data: nutritionPlan }, { data: foodRows }, todayAdjustment, { data: todayProgress }, { data: recentWorkoutActions }] = await Promise.all([
     svc.from('challenge_intake').select('weight_lbs, weekly_food_budget, dislikes_allergies').eq('enrollment_id', enrollment.id).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('calories, meals, day_targets').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_food_log').select('calories').eq('enrollment_id', enrollment.id).eq('logged_on', todayIso),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
+    // Same real workout-brain signal /plan/today reads — "fits my calories"
+    // here has to mean the exact same number as there.
+    svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__').eq('logged_on', todayIso).maybeSingle(),
+    svc.from('next_action_log').select('shown_at, skipped_at, superseded_at').eq('enrollment_id', enrollment.id).eq('kind', 'workout').gte('shown_at', new Date(Date.now() - 2 * 86400000).toISOString()).order('shown_at', { ascending: false }),
   ])
   const wc = weightClassFor(Number(intake?.weight_lbs) || 170)
   // Rotate by calendar day (not day-of-week) so she cycles through every option
@@ -57,7 +61,11 @@ export default async function EatingOutNow({ searchParams }: { searchParams: { r
     ? (nutritionPlan.meals as WeekPlan) : null
   const mealIdx = localMondayIndex()
   const dayTargets = (nutritionPlan?.day_targets as DayTargets) || null
-  const todayTarget = resolveTodayCalorieTarget(weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx]?.target : null, dayTargets, mealIdx, Number(nutritionPlan?.calories) || null) || 0
+  const scheduledDayType = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx]?.dayType ?? scheduleDayType(dayTargets, mealIdx) : scheduleDayType(dayTargets, mealIdx)
+  const workoutDoneToday = !!(todayProgress?.measurements as { workout?: boolean } | null)?.workout
+  const todaysWorkoutAction = (recentWorkoutActions || []).find((r) => localDateISO(getTimezone(), new Date(r.shown_at as string)) === todayIso)
+  const workoutSkippedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)
+  const todayTarget = resolveTodayCalorieTarget(weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx]?.target : null, scheduledDayType, dayTargets, Number(nutritionPlan?.calories) || null, workoutTodayStatus(workoutDoneToday, workoutSkippedToday)) || 0
   const effectiveTarget = getEffectiveCalorieBudget(todayTarget, todayAdjustment)
   const loggedToday = (foodRows || []).reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
   const remainingCal = Math.max(0, effectiveTarget - loggedToday)

@@ -12,9 +12,9 @@ import FeedEngagementRail from '@/components/FeedEngagementRail'
 import { getFeedVideos } from '@/lib/feed-videos'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
-import { localDateISO, localDayNumber, localMondayIndex } from '@/lib/localdate'
+import { localDateISO, localDayNumber, localMondayIndex, getTimezone } from '@/lib/localdate'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { getEffectiveCalorieBudget, resolveTodayCalorieTarget, type DayTargets } from '@/lib/fos/effective-plan'
+import { getEffectiveCalorieBudget, resolveTodayCalorieTarget, scheduleDayType, workoutTodayStatus, type DayTargets } from '@/lib/fos/effective-plan'
 import type { WeekPlan } from '@/lib/meal-plan'
 
 export const dynamic = 'force-dynamic'
@@ -136,7 +136,7 @@ export default async function PlanDashboard() {
   const hasPlan = !!enrollment.intake_completed
 
   const todayIso = localDateISO()
-  const [{ data: intakeRow }, { data: latestCheckin }, { data: foodLogRows }, { data: nutritionPlan }, todayAdjustment] = hasPlan
+  const [{ data: intakeRow }, { data: latestCheckin }, { data: foodLogRows }, { data: nutritionPlan }, todayAdjustment, { data: todayProgress }, { data: recentWorkoutActions }] = hasPlan
     ? await Promise.all([
         svc.from('challenge_intake').select('weight_lbs, target_lbs, goal, days_per_week, form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
         svc.from('challenge_checkins').select('weight_lbs, submitted_at').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('submitted_at', { ascending: false }).limit(1).maybeSingle(),
@@ -146,8 +146,12 @@ export default async function PlanDashboard() {
         svc.from('challenge_food_log').select('calories').eq('enrollment_id', enrollment.id).eq('logged_on', todayIso),
         svc.from('challenge_nutrition_plans').select('meals, calories, day_targets').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
         getApprovedTodayAdjustment(enrollment.id as string, todayIso),
+        // Same real workout-brain signal /plan/today reads, so this card's
+        // number never disagrees with the dashboard she lands on right after.
+        svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__').eq('logged_on', todayIso).maybeSingle(),
+        svc.from('next_action_log').select('shown_at, skipped_at, superseded_at').eq('enrollment_id', enrollment.id).eq('kind', 'workout').gte('shown_at', new Date(Date.now() - 2 * 86400000).toISOString()).order('shown_at', { ascending: false }),
       ])
-    : [{ data: null }, { data: null }, { data: null }, { data: null }, null] as const
+    : [{ data: null }, { data: null }, { data: null }, { data: null }, null, { data: null }, { data: null }] as const
 
   const affirmation = affirmationForDay(localDayNumber())
 
@@ -186,7 +190,11 @@ export default async function PlanDashboard() {
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
   const flatCalTarget = Number(nutritionPlan?.calories) || null
   const dayTargets = (nutritionPlan?.day_targets as DayTargets) || null
-  const baseCalTarget = resolveTodayCalorieTarget(todayMeals?.target, dayTargets, mealIdx, flatCalTarget)
+  const scheduledDayType = todayMeals?.dayType ?? scheduleDayType(dayTargets, mealIdx)
+  const workoutDoneToday = !!(todayProgress?.measurements as { workout?: boolean } | null)?.workout
+  const todaysWorkoutAction = (recentWorkoutActions || []).find((r) => localDateISO(getTimezone(), new Date(r.shown_at as string)) === todayIso)
+  const workoutSkippedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)
+  const baseCalTarget = resolveTodayCalorieTarget(todayMeals?.target, scheduledDayType, dayTargets, flatCalTarget, workoutTodayStatus(workoutDoneToday, workoutSkippedToday))
   const calBudget = baseCalTarget != null ? getEffectiveCalorieBudget(baseCalTarget, todayAdjustment) : null
   const loggedCaloriesToday = (foodLogRows || []).reduce((sum, r) => sum + (Number((r as { calories?: number }).calories) || 0), 0)
 

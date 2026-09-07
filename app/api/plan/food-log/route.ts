@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { localDateISO, getTimezone, localMondayIndex } from '@/lib/localdate'
-import { resolveTodayCalorieTarget, scheduleDayType, type DayTargets } from '@/lib/fos/effective-plan'
+import { resolveTodayCalorieTarget, resolvedDayType, scheduleDayType, workoutTodayStatus, type DayTargets } from '@/lib/fos/effective-plan'
 import type { WeekPlan } from '@/lib/meal-plan'
 
 // Food log — what she ACTUALLY ate today (MyFitnessPal-style), tracked vs her daily target.
@@ -32,16 +32,28 @@ async function resolve() {
 // DayTargets provides everywhere else. Same schedule-based resolution as
 // /plan/today, /plan/nutrition, /plan (dashboard) and /plan/eating-out now.
 async function loadTarget(svc: ReturnType<typeof createServiceClient>, enrollmentId: string) {
-  const { data } = await svc.from('challenge_nutrition_plans').select('calories, protein_g, carbs_g, fats_g, meals, day_targets').eq('enrollment_id', enrollmentId).eq('week_number', 1).maybeSingle()
+  const todayIso = localDateISO(getTimezone())
+  const [{ data }, { data: todayProgress }, { data: recentWorkoutActions }] = await Promise.all([
+    svc.from('challenge_nutrition_plans').select('calories, protein_g, carbs_g, fats_g, meals, day_targets').eq('enrollment_id', enrollmentId).eq('week_number', 1).maybeSingle(),
+    // Same real workout-brain signal /plan/today reads — the ring here can't
+    // disagree with the one on the dashboard (Asa's ask, 2026-09-07).
+    svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollmentId).eq('note', '__daily__').eq('logged_on', todayIso).maybeSingle(),
+    svc.from('next_action_log').select('shown_at, skipped_at, superseded_at').eq('enrollment_id', enrollmentId).eq('kind', 'workout').gte('shown_at', new Date(Date.now() - 2 * 86400000).toISOString()).order('shown_at', { ascending: false }),
+  ])
   const dayTargets = (data?.day_targets as DayTargets) || null
   const weekPlan = (data?.meals && typeof data.meals === 'object' && 'days' in data.meals) ? (data.meals as WeekPlan) : null
   const mealIdx = localMondayIndex(getTimezone())
   const todayMealsTarget = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx]?.target : null
-  const calories = num(resolveTodayCalorieTarget(todayMealsTarget, dayTargets, mealIdx, num(data?.calories) || null))
+  const workoutDoneToday = !!(todayProgress?.measurements as { workout?: boolean } | null)?.workout
+  const todaysWorkoutAction = (recentWorkoutActions || []).find((r) => localDateISO(getTimezone(), new Date(r.shown_at as string)) === todayIso)
+  const workoutSkippedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)
+  const workoutStatus = workoutTodayStatus(workoutDoneToday, workoutSkippedToday)
+  const scheduledDayType = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx]?.dayType ?? scheduleDayType(dayTargets, mealIdx) : scheduleDayType(dayTargets, mealIdx)
+  const calories = num(resolveTodayCalorieTarget(todayMealsTarget, scheduledDayType, dayTargets, num(data?.calories) || null, workoutStatus))
   const protein_g = num(data?.protein_g)
   // Same day-type split as calories (from buildBlueprint's macrosFor) when
   // day_targets has it, else the flat stored column, else derived below.
-  const todaysDayType = dayTargets ? scheduleDayType(dayTargets, mealIdx) : null
+  const todaysDayType = dayTargets ? resolvedDayType(scheduledDayType, workoutStatus) : null
   let carbs_g = todaysDayType ? dayTargets![todaysDayType].carbs_g : data?.carbs_g == null ? null : num(data.carbs_g)
   let fats_g = todaysDayType ? dayTargets![todaysDayType].fats_g : data?.fats_g == null ? null : num(data.fats_g)
   if ((carbs_g == null || fats_g == null) && calories > 0) {
