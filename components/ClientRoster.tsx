@@ -7,6 +7,7 @@ export type RosterRow = {
   id: string
   name: string | null
   email: string | null
+  phone: string | null
   tier: string
   status: string
   intakeDone: boolean
@@ -115,7 +116,7 @@ export default function ClientRoster({ rows }: { rows: RosterRow[] }) {
                   {r.tier === 'inner_circle' && <span className="ml-2 text-[9px] bg-gold/15 text-gold px-2 py-0.5 rounded-full uppercase tracking-wider">Inner Circle</span>}
                   {r.isBeta && <span className="ml-2 text-[9px] bg-blue-500/15 text-blue-300 px-2 py-0.5 rounded-full uppercase tracking-wider">🎁 Beta</span>}
                 </p>
-                <p className="text-ivory/40 text-xs truncate">{r.email} · {ago(r.lastCheckin)}</p>
+                <p className="text-ivory/40 text-xs truncate">{r.email}{r.phone ? ` · ${r.phone}` : ''} · {ago(r.lastCheckin)}</p>
               </div>
               <div className="flex items-center gap-2 flex-none">
                 {(() => { const a = activityStatus(r.lastActiveAt); return (

@@ -33,7 +33,7 @@ import { createClient } from '@/lib/supabase/client'
 // that inherits the row's own text color via currentColor. Feather-style thin
 // stroke, matching the icons already established in BottomTabBar.tsx/
 // VoiceButton.tsx elsewhere in this app.
-type IconName = 'plate' | 'dumbbell' | 'trending' | 'chat' | 'video' | 'refresh' | 'user' | 'target' | 'mail' | 'logout'
+type IconName = 'plate' | 'dumbbell' | 'trending' | 'chat' | 'video' | 'refresh' | 'user' | 'target' | 'mail' | 'logout' | 'contact'
 
 function MenuIcon({ name }: { name: IconName }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
@@ -56,6 +56,10 @@ function MenuIcon({ name }: { name: IconName }) {
     case 'target': return <svg {...common}><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4.2" /><circle cx="12" cy="12" r="0.6" fill="currentColor" /></svg>
     case 'mail': return <svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /></svg>
     case 'logout': return <svg {...common}><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="M10 17l5-5-5-5M15 12H3" /></svg>
+    // A contact card (not the plain 'user' silhouette already used for
+    // "Edit my intake answers") — distinct glyph for a genuinely different
+    // destination: name/email/phone, not fitness stats.
+    case 'contact': return <svg {...common}><rect x="2.5" y="4.5" width="19" height="15" rx="2.5" /><circle cx="9" cy="10.5" r="2.2" /><path d="M6 16c.5-2 1.6-3 3-3s2.5 1 3 3" /><path d="M15 9.5h4M15 13h4" /></svg>
   }
 }
 
@@ -141,6 +145,12 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
     {
       title: 'My Plan',
       items: [
+        // Real gap closed 2026-09-07 (Asa's ask) — a genuine profile page
+        // finally exists (name/email/phone), the thing the old "My profile
+        // & stats" label used to promise before it got relabeled to match
+        // what it actually did (see the comment below). First in the list
+        // on purpose: same "your account" convention most apps put up top.
+        { href: '/plan/profile', label: 'My Profile — name, email, phone', icon: 'contact' },
         // Re-added 2026-08-28 (bug #13, real gap from testing): the
         // 2026-08-27 trim removed this on the theory the circle always
         // routes here when a workout is the current action — but once the

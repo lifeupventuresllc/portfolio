@@ -90,7 +90,7 @@ export default async function ClientProfile({ params }: { params: { id: string }
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-3xl font-bold text-white">{name}</h1>
-            <p className="text-ivory/50 text-sm">{e.email as string}</p>
+            <p className="text-ivory/50 text-sm">{e.email as string}{e.phone ? ` · ${e.phone as string}` : ''}</p>
           </div>
           <div className="flex gap-2">
             <span className="text-[10px] bg-gold/15 text-gold px-2.5 py-1 rounded-full uppercase tracking-wider font-semibold">{(e.tier as string) === 'inner_circle' ? 'Inner Circle' : (e.tier as string) === 'app' ? 'App Access' : 'Challenge'}</span>

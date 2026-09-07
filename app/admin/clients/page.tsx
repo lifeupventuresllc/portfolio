@@ -9,7 +9,7 @@ export default async function ClientsPage() {
 
   const [{ data: enrollments }, { data: checkins }, { data: feedback }] = await Promise.all([
     svc.from('challenge_enrollments')
-      .select('id, name, email, tier, status, intake_completed, created_at, amount, last_active_at')
+      .select('id, name, email, phone, tier, status, intake_completed, created_at, amount, last_active_at')
       .order('created_at', { ascending: false }),
     svc.from('challenge_checkins').select('enrollment_id, status, submitted_at'),
     svc.from('challenge_progress').select('enrollment_id, measurements').eq('note', '__feedback__'),
@@ -35,6 +35,7 @@ export default async function ClientsPage() {
       id: e.id as string,
       name: (e.name as string) || null,
       email: (e.email as string) || null,
+      phone: (e.phone as string) || null,
       tier: (e.tier as string) || 'challenge',
       status: (e.status as string) || 'pending',
       intakeDone: !!e.intake_completed,
