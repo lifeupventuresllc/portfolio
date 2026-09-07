@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
+import { useMemo, useState } from 'react'
+import { createBrowserClient } from '@supabase/ssr'
 import StreakChip from '@/components/StreakChip'
 import { GoalProgressCompact } from '@/components/GoalProgressBar'
 
@@ -25,6 +25,37 @@ export default function CollapsibleHeaderCard({
   calBudget: number | null
 }) {
   const [collapsed, setCollapsed] = useState(false)
+  const [starting, setStarting] = useState(false)
+
+  // Same client/env-sanitizing pattern as components/AuthForm.tsx's Google
+  // button — built once per mount, not recreated on every render/keystroke.
+  const supabase = useMemo(() => createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!.replace(/\s/g, ''),
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.replace(/[^A-Za-z0-9._-]/g, ''),
+    { isSingleton: false }
+  ), [])
+
+  // Real course-correction (Asa's call, 2026-09-07): "Get Started" used to
+  // link straight to /plan/intake on her existing anonymous session — real,
+  // but not a real account, so nothing here actually survived losing the
+  // device/clearing cookies unless she separately found and tapped the
+  // "save your progress" banner elsewhere on this same dashboard. That
+  // banner is gone now (redundant, once this button does the same job) —
+  // this is the one and only door into a real account. Same
+  // signInWithOAuth() AuthForm.tsx's own Google button uses; the shared
+  // app/api/auth/callback/route.ts already sends a no-intake account
+  // straight to /plan/intake, so naming it explicitly here just skips a
+  // pointless bounce through the dashboard for the one flow that already
+  // knows for certain where she's headed.
+  async function handleGetStarted() {
+    setStarting(true)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent('/plan/intake')}` },
+    })
+    if (error) setStarting(false)
+    // On success the browser redirects to Google — no further handling here.
+  }
 
   if (collapsed) {
     return (
@@ -69,13 +100,16 @@ export default function CollapsibleHeaderCard({
         // "For You" tab's now-obvious "Build my plan" button). Same real
         // destination, now with an actual button underneath so it reads as
         // a clear next step instead of a caption.
-        <Link href="/plan/intake" className="flex items-center justify-between gap-2 mt-2 rounded-lg px-2.5 py-2 active:scale-[0.98] transition-transform" style={{ fontFamily: 'var(--font-poppins)', background: 'rgba(229,169,60,0.1)', border: '1px solid rgba(229,169,60,0.5)' }}>
-          <div>
+        //
+        // Now a real button, not a Link — this is Google sign-in, not
+        // in-app navigation (see handleGetStarted above).
+        <button onClick={handleGetStarted} disabled={starting} className="w-full flex items-center justify-between gap-2 mt-2 rounded-lg px-2.5 py-2 active:scale-[0.98] transition-transform disabled:opacity-60" style={{ fontFamily: 'var(--font-poppins)', background: 'rgba(229,169,60,0.1)', border: '1px solid rgba(229,169,60,0.5)' }}>
+          <div className="text-left">
             <p className="text-white font-bold text-xs">Add your starting weight & goal</p>
             <p className="text-white/60 text-[11px] mt-0.5">90 seconds — then your real progress shows up here.</p>
           </div>
-          <span className="shrink-0 bg-[#E5A93C] text-[#0A0A0F] text-[11px] font-bold px-3 py-1.5 rounded-full whitespace-nowrap">Get started →</span>
-        </Link>
+          <span className="shrink-0 bg-[#E5A93C] text-[#0A0A0F] text-[11px] font-bold px-3 py-1.5 rounded-full whitespace-nowrap">{starting ? '…' : 'Get started →'}</span>
+        </button>
       )}
       <button
         onClick={() => setCollapsed(true)}

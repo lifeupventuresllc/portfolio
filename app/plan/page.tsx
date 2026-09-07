@@ -5,7 +5,6 @@ import ClientMenu from '@/components/ClientMenu'
 import StreakChip from '@/components/StreakChip'
 import CollapsibleHeaderCard from '@/components/CollapsibleHeaderCard'
 import VerifyEmailBanner from '@/components/VerifyEmailBanner'
-import AnonymousSessionBanner from '@/components/AnonymousSessionBanner'
 import TimezoneSync from '@/components/TimezoneSync'
 import NextActionCard from '@/components/NextActionCard'
 import DashboardVideoFeed from '@/components/DashboardVideoFeed'
@@ -54,7 +53,12 @@ export default async function PlanDashboard() {
     <div className="min-h-[100dvh] px-4 py-6" style={{ background: '#021F16' }}>
       <TimezoneSync />
       <div className="max-w-3xl mx-auto">
-        {user.is_anonymous ? <AnonymousSessionBanner /> : (!user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />)}
+        {/* Real course-correction (Asa's call, 2026-09-07): the anonymous
+            "save your progress" banner was a second, redundant place to
+            trigger Google sign-in — Get Started below is now the one and
+            only entry point into a real account, so there's no separate
+            anonymous state left to prompt her to go back and save. */}
+        {!user.is_anonymous && !user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />}
         <div className="flex items-center justify-between mb-4 px-1 pt-2">
           <p className="text-[#E5A93C] text-xs font-semibold tracking-[0.25em] uppercase" style={{ fontFamily: 'var(--font-poppins)' }}>Life-Up Fitness</p>
           <div className="flex items-center gap-2">
@@ -224,7 +228,12 @@ export default async function PlanDashboard() {
   return (
     <div className="h-[100dvh] -mb-16 flex flex-col overflow-hidden" style={{ background: '#021F16', paddingBottom: 'calc(63px + env(safe-area-inset-bottom))' }}>
         <TimezoneSync />
-        {user.is_anonymous ? <AnonymousSessionBanner /> : (!user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />)}
+        {/* Real course-correction (Asa's call, 2026-09-07): the anonymous
+            "save your progress" banner was a second, redundant place to
+            trigger Google sign-in — Get Started below is now the one and
+            only entry point into a real account, so there's no separate
+            anonymous state left to prompt her to go back and save. */}
+        {!user.is_anonymous && !user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />}
 
         {/* No separate header bar above the video (Asa's catch on his real
             phone, 2026-08-29: the wordmark/gear/menu were sitting in their
