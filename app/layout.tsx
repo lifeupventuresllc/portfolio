@@ -5,6 +5,7 @@ import "./globals.css";
 import SiteChrome from "@/components/SiteChrome";
 import JsonLd, { organizationSchema } from "@/components/JsonLd";
 import PWARegister from "@/components/PWARegister";
+import FeedbackWidget from "@/components/FeedbackWidget";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -96,6 +97,7 @@ export default function RootLayout({
       >
         <PWARegister />
         <SiteChrome>{children}</SiteChrome>
+        <FeedbackWidget />
       </body>
     </html>
   );
