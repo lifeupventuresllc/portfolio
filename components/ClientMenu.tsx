@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import PushToggle from '@/components/PushToggle'
 import CalendarToggle from '@/components/CalendarToggle'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, clearLocalSession } from '@/lib/supabase/client'
 
 // The ☰ menu on the client home dashboard. Trimmed hard 2026-08-27 (Asa's
 // direct ask): this app exists to reduce willpower/decision fatigue — the
@@ -113,7 +113,17 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
     // for this exact "must not show stale identity" moment: "A full
     // navigation guarantees the browser sends its current, complete cookie
     // jar with the request, closing that race for good."
-    await supabase.auth.signOut()
+    //
+    // Real gap found live, 2026-09-09 (independent regression review,
+    // verified against @supabase/auth-js source): signOut() only clears the
+    // LOCAL session after its server-side call succeeds -- on a network
+    // failure (offline, gym wifi) it resolves without throwing but never
+    // clears local storage/cookies, so this same stale-identity bug could
+    // resurface via a different path. .catch() so a network failure never
+    // blocks the navigation, and clearLocalSession() always runs regardless
+    // of whether the server call actually succeeded.
+    await supabase.auth.signOut().catch(() => {})
+    clearLocalSession()
     setOpen(false)
     window.location.href = '/'
   }

@@ -6,7 +6,7 @@ import Image from 'next/image'
 import CountUp from '@/components/CountUp'
 import FocusAreaPhoto from '@/components/FocusAreaPhoto'
 import { hapticTap } from '@/lib/haptics'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, clearLocalSession } from '@/lib/supabase/client'
 
 type Targets = { calories: number; protein_g: number; carbs_g: number; fats_g: number; bmr: number; tdee: number }
 
@@ -97,8 +97,11 @@ function ConversationalIntakeInner() {
     // Real bug found live, 2026-09-09: router.push('/') + router.refresh()
     // (in that order) let a signed-out name/session linger on screen — see
     // components/ClientMenu.tsx's handleSignOut for the full explanation.
-    // A hard navigation sidesteps the whole class of risk.
-    await createClient().auth.signOut()
+    // A hard navigation sidesteps the whole class of risk. Also see that
+    // same file's comment on clearLocalSession() -- signOut() alone doesn't
+    // clear the local session if its network call fails.
+    await createClient().auth.signOut().catch(() => {})
+    clearLocalSession()
     window.location.href = '/'
   }
 
