@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import PushToggle from '@/components/PushToggle'
@@ -67,7 +66,6 @@ type Item = { href: string; label: string; icon: IconName; external?: boolean }
 
 export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstName: string; liveUrl?: string; callAccess?: 'none' | 'monthly' | 'weekly' }) {
   const [open, setOpen] = useState(false)
-  const router = useRouter()
   const supabase = createClient()
 
   // Real bug found live (Asa's screenshot, 2026-09-04): `fixed inset-0`
@@ -103,10 +101,21 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
   }, [open])
 
   async function handleSignOut() {
+    // Real bug found live, 2026-09-09: router.push('/') + router.refresh()
+    // (in that order) is backwards from the proven-working pattern already
+    // established elsewhere in this exact codebase for this exact class of
+    // bug (see app/plan/intake/page.tsx's "See my plan" button and its own
+    // comment) -- refresh() has to invalidate the CURRENT route's cache
+    // before push() navigates away, not after. Calling them in this order
+    // let a signed-out name/session linger on screen. A full page
+    // navigation sidesteps the whole class of risk rather than just
+    // reordering two calls -- same reasoning app/try/page.tsx already used
+    // for this exact "must not show stale identity" moment: "A full
+    // navigation guarantees the browser sends its current, complete cookie
+    // jar with the request, closing that race for good."
     await supabase.auth.signOut()
     setOpen(false)
-    router.push('/')
-    router.refresh()
+    window.location.href = '/'
   }
 
   // Lock body scroll while the drawer is open. Real bug found live (Asa's

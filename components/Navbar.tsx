@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -10,7 +9,6 @@ type Profile = {
 }
 
 export default function Navbar() {
-  const router = useRouter()
   // Built once per mount, not on every render — this was the REAL bug behind
   // Asa's sign-up typing report. createClient() was previously re-run on every
   // render, and the effect below depends on [supabase] — so every render made
@@ -56,11 +54,14 @@ export default function Navbar() {
   }, [supabase])
 
   async function handleSignOut() {
+    // Real bug found live, 2026-09-09: router.push('/') + router.refresh()
+    // (in that order) let a signed-out name/session linger on screen — see
+    // components/ClientMenu.tsx's handleSignOut for the full explanation.
+    // A hard navigation sidesteps the whole class of risk.
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
-    router.push('/')
-    router.refresh()
+    window.location.href = '/'
   }
 
   return (

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
 import Image from 'next/image'
 import CountUp from '@/components/CountUp'
 import FocusAreaPhoto from '@/components/FocusAreaPhoto'
@@ -95,9 +94,12 @@ function ConversationalIntakeInner() {
   }, [])
 
   async function handleSignOut() {
+    // Real bug found live, 2026-09-09: router.push('/') + router.refresh()
+    // (in that order) let a signed-out name/session linger on screen — see
+    // components/ClientMenu.tsx's handleSignOut for the full explanation.
+    // A hard navigation sidesteps the whole class of risk.
     await createClient().auth.signOut()
-    router.push('/')
-    router.refresh()
+    window.location.href = '/'
   }
 
   const [tier, setTier] = useState<'required' | 'optional'>(startInOptional ? 'optional' : 'required')
@@ -387,7 +389,15 @@ function ConversationalIntakeInner() {
               <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
             </div>
             <span className="text-ink/30 text-xs tabular-nums">{step + 1}/{total}</span>
-            <Link href="/plan" className="text-ink/30 hover:text-gold text-xs whitespace-nowrap">Home</Link>
+            {/* Real bug found live, 2026-09-09: this was a plain Link — no
+                router.refresh() — visible throughout the WHOLE intake flow,
+                not just the "See my plan" completion button (which already
+                had the fix below). Tapping Home right after saving anything
+                served /plan's stale pre-save cached page instead of a fresh
+                one, reading as "sent back to intake again." Same fix,
+                applied everywhere this exists now, not just the one button
+                that happened to already have it. */}
+            <button onClick={() => { router.refresh(); router.push('/plan') }} className="text-ink/30 hover:text-gold text-xs whitespace-nowrap">Home</button>
             {!isAnonymous && <button onClick={handleSignOut} className="text-ink/30 hover:text-gold text-xs whitespace-nowrap">Sign out</button>}
           </div>
         </div>
@@ -609,7 +619,8 @@ function ConversationalIntakeInner() {
             <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
           <span className="text-ivory/50 text-xs tabular-nums">{step + 1}/{total}</span>
-          <Link href="/plan" className="text-ivory/40 hover:text-gold text-xs whitespace-nowrap">Home</Link>
+          {/* Same real bug + fix as the required-tier header above — see its comment. */}
+          <button onClick={() => { router.refresh(); router.push('/plan') }} className="text-ivory/40 hover:text-gold text-xs whitespace-nowrap">Home</button>
           {!isAnonymous && <button onClick={handleSignOut} className="text-ivory/40 hover:text-gold text-xs whitespace-nowrap">Sign out</button>}
         </div>
       </div>
