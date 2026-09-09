@@ -26,11 +26,31 @@ export async function POST(request: Request) {
   const { data: { user: currentUser } } = await cookieClient.auth.getUser()
   const service = createServiceClient()
 
-  // An existing session here is always the anonymous one from the "no
-  // signup wall" flow (app/plan/save's "claim" mode) -- promote it in
-  // place, same user.id, so every row already linked to it (challenge_intake,
-  // workout/nutrition plans, fos_messages) stays correctly attached, exactly
-  // like the updateUser() call this replaces was already designed to do.
+  // Real bug found live, 2026-09-09: this comment used to claim "an existing
+  // session here is always the anonymous one from the 'no signup wall' flow"
+  // -- that assumption was wrong, and it was a real, live account-hijacking
+  // bug, not just a theoretical one. A live QA pass hit /signup from a
+  // browser that still had an active REAL session (a Google-linked account
+  // that was never signed out) and this route silently overwrote THAT
+  // account's login email and password with whatever was typed into the
+  // signup form -- no confirmation, no error, indistinguishable from a
+  // normal successful signup. Anyone landing on /signup while already
+  // signed in for real (a stale tab, a shared/public computer, a link
+  // clicked from an old session) would have had their real account's
+  // credentials silently reset out from under them.
+  //
+  // The claim flow this was actually written for only ever promotes a true
+  // anonymous session (currentUser.is_anonymous) -- a real, already-signed-in
+  // account must sign out first rather than have this route act on it.
+  if (currentUser && !currentUser.is_anonymous) {
+    return NextResponse.json({ error: "You're already signed in — sign out first to create a different account." }, { status: 409 })
+  }
+
+  // An anonymous session here is the "no signup wall" flow (app/plan/save's
+  // "claim" mode) -- promote it in place, same user.id, so every row already
+  // linked to it (challenge_intake, workout/nutrition plans, fos_messages)
+  // stays correctly attached, exactly like the updateUser() call this
+  // replaces was already designed to do.
   const { error } = currentUser
     ? await service.auth.admin.updateUserById(currentUser.id, { email, password, email_confirm: true })
     : await service.auth.admin.createUser({ email, password, email_confirm: true })
