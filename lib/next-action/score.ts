@@ -33,9 +33,24 @@ const KIND_BASE: Record<ActionCandidate['kind'], number> = {
 // applies (see FOS_PRINCIPLES). High energy gives a small nudge the other
 // way. Deliberately modest relative to KIND_BASE's own spread: this should
 // tip a close call, not override a real, doable workout outright.
+//
+// Real bug fixed 2026-09-18 (beta feedback: "next-action defaults to drink
+// water instead of the actual user's workout, goals, or plan" — the doc's
+// own "one thing"): this used to be -20/+25, a 45-point swing against
+// KIND_BASE's 40-point workout/fallback gap. That's not "tipping a close
+// call" the way the comment above claims — it's a guaranteed override, every
+// single time she reports low energy or a dip gets flagged, regardless of
+// how personalized or doable her real workout is. A generic tester saying
+// "I'm tired" (an ordinary, expected daily-checkin answer, not an edge case)
+// always lost her real workout title to "a glass of water" outright. 15/15
+// keeps the swing (30) under the base gap (40) so a fresh real candidate
+// still wins on a normal day — fallback only overtakes it when completion
+// history ALSO argues for it (e.g. she reliably doesn't finish this size
+// task when low-energy), which is a real personalization signal instead of
+// a blanket rule that ignores her data entirely.
 function energyAdjustment(kind: ActionCandidate['kind'], state: UserStateSnapshot): number {
   const lowCapacity = state.energy === 'low' || state.dipRiskBand === 'high'
-  if (lowCapacity) return kind === 'fallback' ? 25 : -20
+  if (lowCapacity) return kind === 'fallback' ? 15 : -15
   if (state.energy === 'high') return kind === 'fallback' ? -10 : 10
   return 0
 }
