@@ -171,7 +171,15 @@ export default function NextActionCard({ variant = 'full', hasPlan = true }: { v
   }, [message])
 
   const load = async () => {
-    setLoading(true)
+    // Real bug found live, 2026-09-18 (click-through on the standing test
+    // account: tapping the dock's orb and text "did nothing"): this used to
+    // setLoading(true) on EVERY refetch, and useLiveRefresh fires load() on
+    // every window focus / tab-visible event — including the focus a real
+    // click itself causes. Each one swapped the whole card for the pulsing
+    // skeleton for a beat, unmounting the very orb being tapped mid-click,
+    // so the tap was eaten. `loading` already starts true, so the skeleton
+    // still shows for the first load; later refetches now swap the text in
+    // place instead of blanking the card.
     try {
       const res = await fetch('/api/plan/next-action')
       if (res.ok) {
@@ -489,7 +497,17 @@ export default function NextActionCard({ variant = 'full', hasPlan = true }: { v
               }}
             />
           </div>
-          <span className="flex-1 leading-snug text-white" style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, fontSize: 15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          {/* Instruction text is tappable for the same real-screen kinds the
+              orb opens (workout/meal/location) — the expand() comment above
+              always said "tapping the instruction," but in the dock only the
+              42px orb ever had a handler. Deliberately NOT wired for the
+              passive fallback kind: there a stray text tap must never mark
+              something done (do-vs-decide spec). */}
+          <span
+            onClick={!isPassive && isTappable ? expand : undefined}
+            className="flex-1 leading-snug text-white"
+            style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, fontSize: 15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', cursor: !isPassive && isTappable ? 'pointer' : undefined }}
+          >
             {encouragement && <span className="block not-italic font-semibold text-white/70" style={{ fontFamily: 'var(--font-poppins)', fontSize: 11 }}>{encouragement}</span>}
             {action.instruction}
           </span>
