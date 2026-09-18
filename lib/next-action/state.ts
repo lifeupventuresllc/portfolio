@@ -85,7 +85,27 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   // change made here.
   const focusOverride = effectiveTodayAdjustment?.workoutChange?.focusOverride
   let program: WorkoutProgram | null = (workoutPlan?.plan as WorkoutProgram) ?? null
-  if (program && intake) {
+  // Real bug fixed 2026-09-18 (beta feedback's "one thing": next-action
+  // defaulting to "drink water" instead of her real workout/goals/plan).
+  // This used to gate on `program` (a challenge_workout_plans row already
+  // existing) before ever touching her real intake — so any account with
+  // real, complete intake data but no persisted plan row yet (a build that
+  // failed partway, a future signup path that hasn't caught up to
+  // buildInitialPlans, any other gap) silently got workoutCandidate=null
+  // here, with no equivalent to /plan/workout's own QuickstartWorkout/
+  // regenerateWorkoutFromIntake fallback. That left buildCandidates with
+  // nothing but the universal fallback tier, which for a fresh account (zero
+  // completion history) always resolves to the first entry — water — a
+  // result indistinguishable from "the app knows nothing about her," even
+  // though her real goal/level/focus area were sitting right there in
+  // `intake`. Gating on `intake` alone (same signal every other real
+  // regeneration site in this codebase uses) means her real data always
+  // produces a real candidate; the DB write below then makes that plan
+  // permanent so every OTHER surface (/plan/workout, /plan/today, this
+  // engine's next call) sees the identical persisted plan too, not just
+  // this one in-memory read.
+  const hadPersistedPlan = !!program
+  if (intake) {
     const level = (intake.experience_level === 'advanced' ? 3 : intake.experience_level === 'intermediate' ? 2 : 1) as Level
     const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
     const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
@@ -123,6 +143,29 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
       lowFuelToday: computeLowFuelToday(caloriesSoFar, localHourNumber(tz)),
       recentlyTrainedMuscles,
     })
+    // Only ever an INSERT here (an existing row already got its own real
+    // update via /plan/workout's own regeneration path when she visits it —
+    // this engine isn't the place to overwrite an already-published plan
+    // with a today-only-flavored one, trackOverride/focusOverride included).
+    // This exists purely to fill the gap: a real plan should exist on disk
+    // the moment real intake data does, not only after she happens to open
+    // /plan/workout first.
+    if (!hadPersistedPlan) {
+      // Best-effort backfill, same insert shape buildInitialPlans itself
+      // uses — an error here still leaves workoutCandidate correct for THIS
+      // response either way, so it's never worth failing the whole request.
+      // week_number: 1, not the `weekNumber` variable above — that's the
+      // dynamic current-week number generateWorkout uses purely for
+      // exercise-SELECTION variety inside the one stored slot; every write
+      // site in this codebase (buildInitialPlans, regenerateWorkoutFromIntake)
+      // persists that slot at a fixed week_number=1, matching the `.eq
+      // ('week_number', 1)` this very function reads from above.
+      await svc.from('challenge_workout_plans').insert({
+        enrollment_id: enrollmentId, user_id: userId, week_number: 1,
+        location: intake.training_location, difficulty: intake.experience_level,
+        plan: program, status: 'published',
+      })
+    }
   }
 
   const doneRows = await svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollmentId).eq('note', '__daily__')
