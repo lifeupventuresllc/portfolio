@@ -98,7 +98,14 @@ function explicitContextAdjustment(candidate: ActionCandidate, state: UserStateS
 // actually finished this specific action_key, historically, vs. skipped it.
 // A brand-new action_key with no history yet scores neutral (0), not
 // punished for being unproven.
-const COMPLETION_WEIGHT = 15
+//
+// Real bug found live, 2026-09-18 (click-through on the standing test
+// account): at 15, a well-worn stable key like 'meal:log_next' (rate 1.0 →
+// +15 → 65) beat a real, doable, pending workout (60) on a completely normal
+// day, because the workout key is the day's title and is always new (0).
+// Kept strictly under the 10-point workout/meal gap in KIND_BASE so history
+// can tip a close call but never, on its own, flip workout below meal.
+const COMPLETION_WEIGHT = 9
 
 async function completionRates(enrollmentId: string, actionKeys: string[]): Promise<Record<string, number>> {
   if (actionKeys.length === 0) return {}
