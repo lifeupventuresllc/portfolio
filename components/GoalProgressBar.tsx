@@ -90,12 +90,19 @@ export function GoalProgressCompact({
     <>
       {/* Calorie readout pushed to the far right of the row instead of
           inline after the weight text — Asa's ask, 2026-08-30. */}
+      {/* Item 3 of the beta list (2026-09-21, one-tap goal): the weight
+          line + track open "My progress" in one tap, and the calorie
+          number opens the meal log in one tap — both used to be plain
+          text that did nothing (progress was 2 taps via the menu). */}
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-[12px] font-semibold text-white m-0">
-          {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} lbs to go` : moved > 0 ? ' · goal reached' : ''}
-        </p>
-        {budgetLabel && <span className="text-[12px] font-bold text-[#E5A93C] whitespace-nowrap">{budgetLabel}</span>}
+        <Link href="/plan/checkin" aria-label="See my progress" className="flex-1 min-w-0 py-1">
+          <p className="text-[12px] font-semibold text-white m-0">
+            {moved > 0 ? `${moved} lbs ${verb}` : "Let's get started"}{remaining > 0 ? ` · ${remaining} lbs to go` : moved > 0 ? ' · goal reached' : ''}
+          </p>
+        </Link>
+        {budgetLabel && <Link href="/plan/nutrition" aria-label="Log a meal" className="text-[12px] font-bold text-[#E5A93C] whitespace-nowrap py-1 pl-2">{budgetLabel}</Link>}
       </div>
+      <Link href="/plan/checkin" aria-label="See my progress" className="block py-1 -my-1">
       <div className="relative h-2 rounded-full mt-2.5" style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.4)' }}>
         <div className="h-full rounded-full" style={{ width: `${Math.max(pct, 4)}%`, background: 'linear-gradient(90deg, #E5A93C, #f2c879, #E9A0A0)', boxShadow: '0 0 6px rgba(229,169,60,0.6)' }} />
         <span
@@ -106,6 +113,7 @@ export function GoalProgressCompact({
           🏃🏿‍♀️
         </span>
       </div>
+      </Link>
     </>
   )
 
