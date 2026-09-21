@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { hapticTap } from '@/lib/haptics'
+import ReminderPrompt from '@/components/ReminderPrompt'
 import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
 import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
 import { useLiveRefresh, broadcastRefresh } from '@/lib/useLiveRefresh'
@@ -99,6 +100,9 @@ export default function NextActionCard({ variant = 'full', hasPlan = true }: { v
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
+  // Beta item 3 (2026-09-21): flips after her first finished step so the one-time
+  // "Want a daily reminder?" prompt can appear (ReminderPrompt decides if eligible).
+  const [askReminder, setAskReminder] = useState(false)
   const [message, setMessage] = useState('')
   const [turns, setTurns] = useState<ChatTurn[]>([])
   const [quickReplies, setQuickReplies] = useState<string[] | null>(null)
@@ -219,6 +223,7 @@ export default function NextActionCard({ variant = 'full', hasPlan = true }: { v
         minDelay,
       ])
       await load()
+      setAskReminder(true)
     } finally {
       setDone(false)
       setBusy(false)
@@ -551,11 +556,22 @@ export default function NextActionCard({ variant = 'full', hasPlan = true }: { v
           )}
         </div>
 
+        <ReminderPrompt trigger={askReminder} />
+
         {action.kind !== 'complete' && (
           <div className="flex items-center gap-1.5 mb-2">
             <button onClick={dayChanged} disabled={busy} className="text-white/80 text-[10.5px] font-bold bg-white/10 border border-white/20 rounded-full px-3 py-1 disabled:opacity-60">
               Keep it simple
             </button>
+            {/* Real gap found live, 2026-09-21 (beta item 3): eating-out picks were
+                only reachable via For You -> scroll -> link. One labeled tap from
+                Home now. Plain link to the picks screen (a doing screen, not chat).
+                Hidden when the card is already the eating-out step itself. */}
+            {action.kind !== 'location' && (
+              <Link href="/plan/eating-out" className="text-white/80 text-[10.5px] font-bold bg-white/10 border border-white/20 rounded-full px-3 py-1">
+                Eating out?
+              </Link>
+            )}
             {/* "Something else?" removed (Asa's spec, 2026-08-31): it looked
                 like a plain button but actually sent a canned phrase through
                 the same AI message pipeline the chat box below uses — a real

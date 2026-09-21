@@ -178,6 +178,9 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
         // assigned workout at all. This always points at TODAY's workout —
         // /plan/workout computes that itself, same logic the circle reads.
         { href: '/plan/workout', label: 'My workout — today’s plan', icon: 'dumbbell' },
+        // Real gap found live, 2026-09-21 (beta item 3): eating-out picks were buried
+        // under For You -> scroll -> link. Menu = 2 taps; Home has a 1-tap pill too.
+        { href: '/plan/eating-out', label: 'Eating out? — what to order', icon: 'plate' },
         { href: '/plan/meals', label: 'My meals — what I’m cooking & how', icon: 'plate' },
         { href: '/plan/checkin', label: 'My progress & previous weeks', icon: 'trending' },
         // Was "My profile & stats" — this opens the intake edit flow

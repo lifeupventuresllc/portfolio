@@ -14,6 +14,23 @@ function urlB64ToUint8Array(base64String: string) {
   return arr
 }
 
+// Real gap found live, 2026-09-21 (beta item 3, "everything one tap"): the
+// subscribe steps used to live only inside the component below, so the
+// one-time "Want a daily reminder?" prompt (ReminderPrompt.tsx) could not reuse
+// them. Pulled out unchanged so both surfaces run the exact same logic.
+export async function enablePushSubscription(): Promise<{ ok: boolean; msg: string }> {
+  if (!PUBLIC) return { ok: false, msg: 'Reminders come online once the app is connected.' }
+  try {
+    const perm = await Notification.requestPermission()
+    if (perm !== 'granted') return { ok: false, msg: 'Allow notifications to turn on reminders.' }
+    const reg = await navigator.serviceWorker.ready
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(PUBLIC) })
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const res = await fetch('/api/plan/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), timezone }) })
+    return res.ok ? { ok: true, msg: 'Reminders on. 💛' } : { ok: false, msg: 'Could not save — try again.' }
+  } catch { return { ok: false, msg: 'Could not turn on reminders on this device.' } }
+}
+
 // Opt-in toggle for daily push reminders. Lives in the ☰ menu. Handles the iPhone
 // case (Web Push only works once the app is added to the Home Screen).
 export default function PushToggle() {
@@ -29,17 +46,10 @@ export default function PushToggle() {
   }, [])
 
   async function enable() {
-    if (!PUBLIC) { setMsg('Reminders come online once the app is connected.'); return }
     setBusy(true); setMsg('')
-    try {
-      const perm = await Notification.requestPermission()
-      if (perm !== 'granted') { setMsg('Allow notifications to turn on reminders.'); setBusy(false); return }
-      const reg = await navigator.serviceWorker.ready
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(PUBLIC) })
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-      const res = await fetch('/api/plan/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), timezone }) })
-      if (res.ok) { setEnabled(true); setMsg('Reminders on. 💛') } else setMsg('Could not save — try again.')
-    } catch { setMsg('Could not turn on reminders on this device.') }
+    const r = await enablePushSubscription()
+    if (r.ok) setEnabled(true)
+    setMsg(r.msg)
     setBusy(false)
   }
 
