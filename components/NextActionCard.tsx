@@ -67,7 +67,7 @@ function adjLines(a: PendingAdjustment): string[] {
 // The ONE destination per kind — fully determined by what the engine
 // decided, never a choice presented to her (prompt 3's core rule). Fallback
 // actions have nothing to expand into; tapping does nothing.
-const EXPANSION_ROUTE: Partial<Record<ActionKind, string>> = {
+export const EXPANSION_ROUTE: Partial<Record<ActionKind, string>> = {
   workout: '/plan/workout',
   // Hidden from testers for now (Asa's ask, 2026-08-30) — /plan/nutrition
   // itself redirects away while this is off, so a meal instruction has
@@ -511,6 +511,21 @@ export default function NextActionCard({ variant = 'full', hasPlan = true }: { v
             {encouragement && <span className="block not-italic font-semibold text-white/70" style={{ fontFamily: 'var(--font-poppins)', fontSize: 11 }}>{encouragement}</span>}
             {action.instruction}
           </span>
+          {/* Item 2 of the beta list (2026-09-21, Asa's approved mockup): a real
+              "Start" button — same label and look as the bar on every other
+              screen (components/NextStepBar.tsx). Only for app-assisted kinds
+              that actually have a screen to open; passive fallbacks keep the
+              check-mark alone (do-vs-decide spec). */}
+          {!isPassive && isTappable && action.kind !== 'complete' && (
+            <button
+              onClick={expand}
+              aria-label="Start"
+              className="shrink-0 rounded-full px-3.5 h-[30px] text-[12px] font-bold active:scale-95 transition-transform"
+              style={{ background: '#E5A93C', color: '#0A0A0F', fontFamily: 'var(--font-poppins)' }}
+            >
+              Start
+            </button>
+          )}
           {action.kind !== 'complete' && (
             // Real unchecked/checked states, not a permanently-filled icon —
             // Asa's catch, live: this always looked already-checked, even

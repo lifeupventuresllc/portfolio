@@ -1,5 +1,6 @@
 import BottomTabBar from '@/components/BottomTabBar'
 import TrackAppOpen from '@/components/TrackAppOpen'
+import NextStepBar from '@/components/NextStepBar'
 
 // Persistent 3-tab bottom nav across every /plan/* page — Today, Progress,
 // Community. Padding-bottom on the wrapper keeps the fixed bar from ever
@@ -10,6 +11,7 @@ export default function PlanLayout({ children }: { children: React.ReactNode }) 
     <>
       <TrackAppOpen />
       <div className="pb-16">{children}</div>
+      <NextStepBar />
       <BottomTabBar />
     </>
   )
