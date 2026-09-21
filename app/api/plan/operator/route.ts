@@ -443,9 +443,18 @@ export async function POST(request: NextRequest) {
   // just "yes." Pulling a real recent window and formatting it the same way
   // the cold-start classifier already does (which never had this problem)
   // gives it actual conversational memory instead of message-by-message amnesia.
-  const { data: recentHistory } = await svc
-    .from('fos_messages').select('role, content').eq('enrollment_id', eid)
+  //
+  // Real bug found live, 2026-09-21 (test account): "im really tired today"
+  // came back as a 20-minute home LEGS session, because this window had no
+  // date limit — the last 10 messages included a "legs focus, home" request
+  // from 2026-09-02, and parseSignalAI carried that focus forward onto a
+  // message that named no area at all. Keep only TODAY's messages (local
+  // day, same helper as `today` above) so an old request can never stand in
+  // for what she's saying now; a same-day back-and-forth still has its memory.
+  const { data: recentHistoryRaw } = await svc
+    .from('fos_messages').select('role, content, created_at').eq('enrollment_id', eid)
     .order('created_at', { ascending: false }).limit(10)
+  const recentHistory = (recentHistoryRaw || []).filter((h) => localDateISO(undefined, new Date(h.created_at as string)) === today)
   const conversationText = [...(recentHistory || [])].reverse().map((h) => `${h.role}: ${h.content}`).join('\n')
 
   // Real bug found live, 2026-09-01: the location/equipment/injury gates below
