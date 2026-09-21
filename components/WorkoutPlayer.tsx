@@ -214,8 +214,15 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
   // with what she's actually looking at, on both real exercise holds and
   // rest periods (both just have a `seconds` value, nothing rest-specific
   // needed here).
+  // Real gap found live, 2026-09-21: a rest step already runs on this timer
+  // and moves on by itself, but the easy/difficult question (SetEffortTap)
+  // is shown over the SAME rest — if she was still answering when the clock
+  // hit zero the step changed and the question (and its progression signal)
+  // was silently lost. So the countdown holds while that question is open
+  // and unanswered; the moment she answers or dismisses it, the same
+  // interval resumes. Nothing about the question itself changed.
   useEffect(() => {
-    if (!isTimed || paused || done) return
+    if (!isTimed || paused || done || showEffortTap) return
     const id = setInterval(() => {
       setLeft((l) => {
         if (l == null) return l
@@ -227,7 +234,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
       })
     }, 1000)
     return () => clearInterval(id)
-  }, [i, dayIdx, paused, isTimed, done])
+  }, [i, dayIdx, paused, isTimed, done, showEffortTap])
 
   // ---------- Finished ----------
   if (done) {
@@ -371,6 +378,15 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
             <SkipForwardIcon />
           </button>
         </div>
+        {/* Rest runs itself (countdown above); this is the big, obvious way to
+            cut it short. Held off while the effort question is open so that
+            question can't be skipped past by accident. */}
+        {step.rest && (
+          <button onClick={() => { hapticTap(); advanceRef.current() }} disabled={showEffortTap}
+            className="w-full mt-5 py-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-bold text-sm uppercase tracking-wider active:scale-95 transition-transform disabled:opacity-40">
+            Skip rest
+          </button>
+        )}
         <p className="text-center text-ivory/40 text-xs mt-4">
           {i + 1 < steps.length
             ? <>Up next · <span className="text-ivory/70 font-medium">{steps[i + 1].name}</span></>
