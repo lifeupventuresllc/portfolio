@@ -231,9 +231,17 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
     }
   }
 
+  // Real gap found live, 2026-09-21 (new-visitor test): quickstart-built plan
+  // (marker set by the quickstart route) with no goal answered yet -> the
+  // player may ask its one rest-step goal question. Anonymous -> the finish
+  // screen may offer "Save my plan" (never shown to real accounts).
+  const fd = (intake?.form_data || {}) as { quickstart_built?: boolean; quickstart_goal_answered?: boolean }
+  const askQuickstartGoal = !!fd.quickstart_built && !fd.quickstart_goal_answered
+  const isGuest = !!user.is_anonymous
+
   return (
     <div className="min-h-[100dvh] bg-obsidian px-4 py-8">
-      <WorkoutPlayer program={program} firstName={firstName} hasRealName={hasRealName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} />
+      <WorkoutPlayer program={program} firstName={firstName} hasRealName={hasRealName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} askQuickstartGoal={askQuickstartGoal} isGuest={isGuest} />
       {/* The quickstart flow (QuickstartWorkout) only ever shows its home/gym
           picker once, on the very first build — real behavior, not a bug, since
           re-showing it every visit would defeat the "no wall" point. But she

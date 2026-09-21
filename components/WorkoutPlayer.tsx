@@ -7,6 +7,7 @@ import Confetti from '@/components/Confetti'
 import QuickFeedback from '@/components/QuickFeedback'
 import EffortTap from '@/components/EffortTap'
 import SetEffortTap, { type Effort } from '@/components/SetEffortTap'
+import QuickstartGoalAsk from '@/components/QuickstartGoalAsk'
 import WorkoutMusicPlayer from '@/components/WorkoutMusicPlayer'
 import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { buildSteps, dayLabels, estimateWorkoutMinutes, trimStepsToTarget, type WorkoutStep } from '@/lib/workout-steps'
@@ -48,7 +49,7 @@ function DumbbellIcon() {
 // Guided in-workout player. Opens straight into TODAY'S session (no picker
 // screen); a compact switcher lets her change the day. One countdown interval
 // per step (not recreated every second) so the timer runs smooth.
-export default function WorkoutPlayer({ program, firstName, hasRealName = true, startDay = 0, targetMinutes }: {
+export default function WorkoutPlayer({ program, firstName, hasRealName = true, startDay = 0, targetMinutes, askQuickstartGoal = false, isGuest = false }: {
   program: WorkoutProgram
   firstName: string
   // Real bug found live: "there" (firstName's fallback for a nameless guest
@@ -63,6 +64,11 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
   // Set when Coach Asa's chat approved a time-crunch/low-energy/re-entry adjustment
   // for today — genuinely shortens the session instead of just relabeling it.
   targetMinutes?: number
+  // Quickstart-built plan whose goal hasn't been answered — may show ONE goal
+  // question on a rest step (after the effort question, never over it).
+  askQuickstartGoal?: boolean
+  // Anonymous guest — finish screen offers "Save my plan" (/plan/save).
+  isGuest?: boolean
 }) {
   const router = useRouter()
   const labels = dayLabels(program)
@@ -93,6 +99,13 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
   // matching how `steps` itself resets on a day switch.
   const [showEffortTap, setShowEffortTap] = useState(false)
   const handledRestIdx = useRef<Set<number>>(new Set())
+  // Real gap found live, 2026-09-21 (new-visitor test): the goal question is
+  // hidden once answered/skipped for this session (sessionStorage in try/catch
+  // — a failure just means it may show again next visit, never an error).
+  const [goalHidden, setGoalHidden] = useState(() => {
+    try { return sessionStorage.getItem('luf_qs_goal_skip') === '1' } catch { return false }
+  })
+  const [saveHidden, setSaveHidden] = useState(false)
 
   // Real bug found live: the countdown beep's AudioContext only ever got
   // created/resumed from inside the countdown's own setInterval tick, never
@@ -245,6 +258,16 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
         <h1 className="text-3xl font-bold text-white mb-2">That&apos;s done{hasRealName ? `, ${firstName}` : ''}.</h1>
         <p className="text-ivory/60 text-sm mb-8">You showed up and you finished. That&apos;s the whole game. I logged it for your streak.</p>
         <EffortTap />
+        {/* Real gap found live, 2026-09-21 (new-visitor test): sign-in only
+            AFTER value. Guests only; reuses the existing save flow. */}
+        {isGuest && !saveHidden && (
+          <div className="mt-6 rounded-2xl border border-gold/30 bg-gold/10 px-5 py-5">
+            <p className="text-white text-base font-bold">You did it. Tomorrow&apos;s is made for you.</p>
+            <p className="text-ivory/60 text-sm mt-1 mb-4">Keep your plan and progress? One tap.</p>
+            <a href="/plan/save" className="luf-glow block w-full bg-gold text-obsidian px-6 py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl">Save my plan</a>
+            <button onClick={() => setSaveHidden(true)} className="mt-3 text-ivory/40 text-xs underline underline-offset-4">Not now</button>
+          </div>
+        )}
         <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} className="luf-glow w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl mt-6">← Home</button>
         <p className="text-gold text-sm font-semibold mt-4">— Coach</p>
         <QuickFeedback category="workout" context={`${labels[dayIdx]} · day ${dayIdx + 1}`} dark reviewGate emphasize />
@@ -378,6 +401,15 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
             <SkipForwardIcon />
           </button>
         </div>
+        {/* Goal question — only on a rest step, only once the effort question is
+            out of the way (answered/dismissed), so it can never cover it. Plain
+            state updates only: no router.refresh(), the open program stays put. */}
+        {askQuickstartGoal && !goalHidden && step.rest && !showEffortTap && handledRestIdx.current.has(i) && (
+          <QuickstartGoalAsk
+            onDone={() => setGoalHidden(true)}
+            onSkip={() => { try { sessionStorage.setItem('luf_qs_goal_skip', '1') } catch { /* ignore */ } setGoalHidden(true) }}
+          />
+        )}
         {/* Rest runs itself (countdown above); this is the big, obvious way to
             cut it short. Held off while the effort question is open so that
             question can't be skipped past by accident. */}

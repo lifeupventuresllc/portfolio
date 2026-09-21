@@ -51,5 +51,17 @@ export async function POST(request: NextRequest) {
     autoFillMeals: true,
   })
 
+  // Real gap found live, 2026-09-21 (new-visitor test: the first workout has
+  // to be able to ask ONE goal question during a rest, but only for a plan
+  // that came from this hardcoded Quickstart). buildInitialPlans rewrites
+  // form_data wholesale, so the marker is merged in AFTER it. A later real
+  // intake rewrites form_data again and clears it on its own.
+  const { data: row } = await svc.from('challenge_intake').select('id, form_data').eq('enrollment_id', enrollment.id).maybeSingle()
+  if (row) {
+    await svc.from('challenge_intake')
+      .update({ form_data: { ...((row.form_data as Record<string, unknown>) || {}), quickstart_built: true } })
+      .eq('id', row.id)
+  }
+
   return NextResponse.json({ ok: true })
 }
