@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { EXPANSION_ROUTE } from '@/components/NextActionCard'
 import { useLiveRefresh } from '@/lib/useLiveRefresh'
@@ -25,6 +25,11 @@ export default function NextStepBar() {
   const pathname = usePathname() || ''
   const router = useRouter()
   const [action, setAction] = useState<Bar | null>(null)
+  // Tucked away while she scrolls down or types in a box, back on scroll up
+  // — a floating bar over a form hid the check-in field, meal-builder
+  // options and the feedback box in the live audit (2026-09-21).
+  const [tucked, setTucked] = useState(false)
+  const lastY = useRef(0)
 
   const load = useCallback(async () => {
     try {
@@ -36,6 +41,29 @@ export default function NextStepBar() {
   }, [])
 
   useEffect(() => { load() }, [load, pathname])
+
+  useEffect(() => {
+    setTucked(false)
+    lastY.current = window.scrollY
+    const onScroll = () => {
+      const y = window.scrollY
+      if (y < 60) setTucked(false)
+      else if (y > lastY.current + 8) setTucked(true)
+      else if (y < lastY.current - 8) setTucked(false)
+      lastY.current = y
+    }
+    const isField = (t: EventTarget | null) => t instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName)
+    const onFocusIn = (e: FocusEvent) => { if (isField(e.target)) setTucked(true) }
+    const onFocusOut = (e: FocusEvent) => { if (isField(e.target)) setTucked(false) }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('focusout', onFocusOut)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('focusout', onFocusOut)
+    }
+  }, [pathname])
   useLiveRefresh(load)
 
   const dest = action ? (EXPANSION_ROUTE as Record<string, string | undefined>)[action.kind] : undefined
@@ -69,6 +97,10 @@ export default function NextStepBar() {
           border: '1.5px solid #E5A93C',
           boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
           fontFamily: 'var(--font-poppins)',
+          transform: tucked ? 'translateY(140%)' : 'translateY(0)',
+          opacity: tucked ? 0 : 1,
+          pointerEvents: tucked ? 'none' : 'auto',
+          transition: 'transform 0.25s ease, opacity 0.2s ease',
         }}
       >
         <span
