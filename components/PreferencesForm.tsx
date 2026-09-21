@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useRef, useEffect } from 'react'
 import { effectiveGoal } from '@/lib/goals'
 
 type Current = {
@@ -35,7 +34,6 @@ const opt = (active: boolean) =>
   `w-full text-left px-4 py-3 rounded-xl border transition-all ${active ? 'bg-gold/10 border-gold text-white' : 'bg-charcoal border-smoke text-ivory/70 hover:border-gold/40'}`
 
 export default function PreferencesForm({ current }: { current: Current }) {
-  const router = useRouter()
   const [goals, setGoals] = useState<string[]>(current.goals)
   const [focusArea, setFocusArea] = useState(current.focus_area)
   const [trainingStyles, setTrainingStyles] = useState<string[]>(current.training_styles)
@@ -43,11 +41,38 @@ export default function PreferencesForm({ current }: { current: Current }) {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
 
-  const toggleGoal = (v: string) => setGoals((a) => (a.includes(v) ? a.filter((x) => x !== v) : [...a, v]))
-  const toggleStyle = (v: string) => setTrainingStyles((a) => (v === 'none' ? ['none'] : (a.includes(v) ? a.filter((x) => x !== v) : [...a.filter((x) => x !== 'none'), v])))
+  // Real gap found live, 2026-09-21 (beta feedback item 3, "everything ONE
+  // tap"): pick goal + focus + style, THEN find and tap Save = 3-5 taps plus a
+  // Save. Now every pick saves itself. Latest picks live in a ref so a burst
+  // of taps (multi-select goals/styles) is debounced ~400ms into ONE save of
+  // the final selection, and a tap during an in-flight save queues one more
+  // save instead of being lost. Same endpoint + payload as the old button.
+  const latest = useRef({ goals, focusArea, trainingStyles })
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const inFlight = useRef(false)
+  const queued = useRef(false)
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
+
+  function change(next: Partial<typeof latest.current>) {
+    latest.current = { ...latest.current, ...next }
+    if (next.goals) setGoals(next.goals)
+    if (next.focusArea !== undefined) setFocusArea(next.focusArea)
+    if (next.trainingStyles) setTrainingStyles(next.trainingStyles)
+    setSaved(false); setError('')
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(save, 400)
+  }
+  const toggleGoal = (v: string) => { const a = latest.current.goals; change({ goals: a.includes(v) ? a.filter((x) => x !== v) : [...a, v] }) }
+  const toggleStyle = (v: string) => {
+    const a = latest.current.trainingStyles
+    change({ trainingStyles: v === 'none' ? ['none'] : (a.includes(v) ? a.filter((x) => x !== v) : [...a.filter((x) => x !== 'none'), v]) })
+  }
 
   async function save() {
+    const { goals, focusArea, trainingStyles } = latest.current
     if (!goals.length) { setError('Pick at least one goal.'); return }
+    if (inFlight.current) { queued.current = true; return }
+    inFlight.current = true
     setSaving(true); setError(''); setSaved(false)
     try {
       const res = await fetch('/api/challenge/intake', {
@@ -70,18 +95,13 @@ export default function PreferencesForm({ current }: { current: Current }) {
       const data = await res.json()
       if (!data.success) throw new Error(data.error || 'Failed to save')
       setSaved(true)
-      // Real gap found live (beta feedback Priority 1, 2026-08-25): "I saved
-      // my preferences and my workout still shows a Full Body day" — a plain
-      // refresh left her right here, not looking at the thing that was
-      // supposed to change, and the destination pages only ever jumped to a
-      // focus-matching day before her FIRST-EVER completed workout. Navigate
-      // straight to the actual workout with a real signal (?focusUpdated=1)
-      // so what she just asked for is visible immediately, not "eventually."
-      setTimeout(() => router.push('/plan/today?focusUpdated=1'), 700)
     } catch {
-      setError("Couldn't save just now — try again in a sec.")
+      // Selection is kept on screen; only the message changes.
+      setError("Couldn't save just now — tap again to retry.")
     } finally {
+      inFlight.current = false
       setSaving(false)
+      if (queued.current) { queued.current = false; save() }
     }
   }
 
@@ -91,7 +111,7 @@ export default function PreferencesForm({ current }: { current: Current }) {
         <a href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold active:scale-95 transition-all mb-6">← Back to my plan</a>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Update your plan</p>
         <h1 className="text-white text-2xl font-bold mb-2">What do you want to work on?</h1>
-        <p className="text-ivory/50 text-sm mb-8">Just your goals and workout style — everything else stays as it is. Saving rebuilds your plan right away.</p>
+        <p className="text-ivory/50 text-sm mb-8">Just your goals and workout style — everything else stays as it is. Every tap saves and rebuilds your plan right away.</p>
 
         <p className="text-ivory/40 text-xs font-semibold uppercase tracking-wider mb-2">Goal — pick all that apply</p>
         <div className="space-y-2 mb-6">
@@ -106,7 +126,7 @@ export default function PreferencesForm({ current }: { current: Current }) {
         <p className="text-ivory/40 text-xs font-semibold uppercase tracking-wider mb-2">Focus area</p>
         <div className="grid grid-cols-2 gap-2 mb-6">
           {FOCUS_AREAS.map((o) => (
-            <button key={o.v} onClick={() => setFocusArea(o.v)} className={opt(focusArea === o.v)}>
+            <button key={o.v} onClick={() => change({ focusArea: o.v })} className={opt(focusArea === o.v)}>
               <span className="text-sm font-semibold">{o.l}</span>
             </button>
           ))}
@@ -123,10 +143,12 @@ export default function PreferencesForm({ current }: { current: Current }) {
         </div>
 
         {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
-        {saved && <p className="text-emerald-400 text-sm mb-4 font-semibold">Saved — your plan&apos;s updated. Check today&apos;s workout to see it.</p>}
-        <button onClick={save} disabled={saving} className="w-full bg-gold text-obsidian px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl disabled:opacity-50 active:scale-95 transition-transform">
-          {saving ? 'Updating your plan…' : 'Save & update my plan'}
-        </button>
+        {saving && <p className="text-ivory/50 text-sm mb-4">Saving…</p>}
+        {saved && !saving && <p className="text-emerald-400 text-sm mb-4 font-semibold">Saved — your plan&apos;s updated.</p>}
+        {/* The old Save button also jumped to today's workout (?focusUpdated=1,
+            beta Priority 1, 2026-08-25). Auto-jumping would interrupt multi-picks,
+            so that same destination is now one tap away once she's done. */}
+        <a href="/plan/today?focusUpdated=1" className="block w-full text-center bg-gold text-obsidian px-6 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl active:scale-95 transition-transform">See today&apos;s workout</a>
       </div>
     </div>
   )

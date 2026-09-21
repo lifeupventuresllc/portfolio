@@ -36,3 +36,18 @@ export function deviceLabel(): string {
     || (typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)').matches)
   return `${os} · ${standalone ? 'installed app' : 'browser'}`
 }
+
+// Guess the category from the screen the person was on, so category can be
+// optional (only the thumb is required). Falls back to 'general'.
+export function guessCategory(path: string | null | undefined): FeedbackCategory {
+  const p = (path || '').toLowerCase()
+  if (/\/plan\/(workout|today)|\/workout/.test(p)) return 'workout'
+  if (/\/plan\/(nutrition|meals)|\/meals|\/nutrition/.test(p)) return 'meals'
+  if (p.includes('/plan/checkin')) return 'checkin'
+  if (p.includes('/plan/coach') || p.includes('chat')) return 'coach'
+  return 'general'
+}
+
+export function lastScreen(): string {
+  try { return sessionStorage.getItem('luf_last_screen') || '' } catch { return '' }
+}

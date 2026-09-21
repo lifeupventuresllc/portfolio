@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 
 // Always-on "Report an issue" button — persistent on every real screen, not
@@ -28,6 +28,16 @@ export default function FeedbackWidget() {
   const [sending, setSending] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
+
+  // Real gap found live, 2026-09-21: /plan/feedback can't tell which screen the
+  // person came from (its own path is /plan/feedback), so it made them pick a
+  // category. This widget is mounted on every screen, so it remembers the last
+  // non-feedback path for FeedbackForm to guess the category from.
+  useEffect(() => {
+    if (pathname && !pathname.startsWith('/plan/feedback')) {
+      try { sessionStorage.setItem('luf_last_screen', pathname) } catch { /* ignore */ }
+    }
+  }, [pathname])
 
   if (pathname?.startsWith('/admin')) return null
 
