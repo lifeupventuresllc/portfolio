@@ -134,16 +134,55 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
   // food itself is genuinely ~0 kcal/100g, e.g. black coffee/water).
   const zeroCalorieWarning = !!(picking && scaled && grams > 0 && scaled.calories === 0 && picking.calories > 0)
 
+  // Real gap found live, 2026-09-21 (beta feedback item 3, "everything ONE
+  // tap"): typing a meal took ~6 taps (Search, pick, amount/unit, confirm).
+  // Search now runs as she types (debounced), and a result tap logs it
+  // straight away at the same default the quantity screen opens with.
+  // reqIdRef makes sure a slow, older response can never overwrite a newer one.
+  const reqIdRef = useRef(0)
+  const lastQueryRef = useRef('')
   async function runSearch(query: string) {
     const text = query.trim()
     if (!text) return
+    lastQueryRef.current = text
+    const myReq = ++reqIdRef.current
     setPicking(null); setSearching(true); setSearched(true); setResults([])
     try {
       const r = await fetch('/api/plan/food-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: text }) })
       const d = await r.json()
+      if (myReq !== reqIdRef.current) return
       if (d.configured === false) { setNotConfigured(true); setResults([]) }
       else { setNotConfigured(false); setResults(d.foods || []) }
-    } finally { setSearching(false) }
+    } catch {
+      // network hiccup while auto-searching — leave the list empty, she can tap Go
+    } finally { if (myReq === reqIdRef.current) setSearching(false) }
+  }
+  useEffect(() => {
+    const text = q.trim()
+    if (text.length < 2 || text === lastQueryRef.current) return
+    const t = setTimeout(() => { runSearch(text) }, 350)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q])
+
+  // One-tap log of a USDA result: exact same defaults and math as the
+  // quantity screen (1 piece if we know its weight, else 100g). If that would
+  // be zero/NaN, fall back to the quantity screen instead of saving junk.
+  async function quickLogUsda(f: SearchFood) {
+    const p = pieceWeightFor(f.name)
+    const g = p ? p.grams : 100
+    const sc = g / 100
+    const m = {
+      calories: Math.round(f.calories * sc), protein_g: Math.round(f.protein_g * sc),
+      carbs_g: Math.round(f.carbs_g * sc), fats_g: Math.round(f.fats_g * sc),
+    }
+    if (!(g > 0) || ![m.calories, m.protein_g, m.carbs_g, m.fats_g].every(Number.isFinite) || m.calories <= 0) { setPicking(f); return }
+    const label = p ? `1 ${p.label}` : '100g'
+    await post({
+      name: f.brand ? `${f.name} (${f.brand})` : f.name, meal: searchMeal, servings: 1,
+      serving_label: label, calories: m.calories, protein_g: m.protein_g, carbs_g: m.carbs_g, fats_g: m.fats_g,
+      source: f.source,
+    })
   }
 
   async function aiEstimate() {
@@ -502,7 +541,7 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
                 <p className="text-ivory/35 text-[10px] px-0.5">Don&apos;t see your exact brand? Pick the generic one at the top — macros are close across brands unless you know yours specifically.</p>
               )}
               {results.map((f, i) => (
-                <button key={i} onClick={() => { if (f.source === 'usda') { setPicking(f) } else { logEstimatedFood(f) } }} disabled={saving} className="w-full text-left flex items-center gap-2 bg-charcoal border border-smoke rounded-lg px-3 py-2 hover:border-[#4CAF7D]/50 transition-colors disabled:opacity-50">
+                <button key={i} onClick={() => { if (f.source === 'usda') { quickLogUsda(f) } else { logEstimatedFood(f) } }} disabled={saving} className="w-full text-left flex items-center gap-2 bg-charcoal border border-smoke rounded-lg px-3 py-2 hover:border-[#4CAF7D]/50 transition-colors disabled:opacity-50">
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-xs font-medium truncate">{f.name}{f.brand ? <span className="text-ivory/40"> · {f.brand}</span> : null}</p>
                     {/* Was "12P · 1C · 10F" — bare letter shorthand requires
