@@ -520,9 +520,16 @@ export async function POST(request: NextRequest) {
   // addition, so it's trusted alone. Only fall back to the AI's (possibly
   // carried-forward) read when this message names nothing on its own.
   const currentMessageAreas = detectFocusAreas(message)
+  // Real bug found live, 2026-09-21, second layer (the same-day history filter
+  // above wasn't enough): a plain "im really tired today" still came back as
+  // "focus on legs" — the AI's carried-forward read was picking up "legs"
+  // from the coach's OWN earlier reply in today's history (or inventing it).
+  // A carried-forward area is only trusted if SHE typed it in a user message
+  // today; the coach's own words can never become her focus.
+  const areasSheTypedToday = detectFocusAreas((recentHistory || []).filter((h) => h.role === 'user').map((h) => String(h.content)).join(' '))
   const focusAreas = currentMessageAreas.length
     ? currentMessageAreas
-    : (aiResult.ok ? aiResult.focusAreas || [] : [])
+    : (aiResult.ok ? (aiResult.focusAreas || []).filter((a) => areasSheTypedToday.includes(a)) : [])
 
   // Nothing situational matched — check whether she's actually just telling us
   // what she ate ("I had a slice of pizza"). Real Claude detection (see
