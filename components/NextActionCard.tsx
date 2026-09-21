@@ -1,5 +1,6 @@
 'use client'
 
+import FirstWorkoutStartCard from '@/components/FirstWorkoutStartCard'
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -94,7 +95,7 @@ const ENCOURAGEMENTS = [
   "Progress doesn't have to be big.",
 ]
 
-export default function NextActionCard({ variant = 'full', hasPlan = true }: { variant?: 'full' | 'dock'; hasPlan?: boolean }) {
+export default function NextActionCard({ variant = 'full', hasPlan = true, firstRun = false }: { variant?: 'full' | 'dock'; hasPlan?: boolean; firstRun?: boolean }) {
   const router = useRouter()
   const [action, setAction] = useState<NextAction | null>(null)
   const [loading, setLoading] = useState(true)
@@ -429,6 +430,12 @@ export default function NextActionCard({ variant = 'full', hasPlan = true }: { v
           </button>
         )}
 
+        {/* Real gap found live, 2026-09-21 (new-visitor test, item 3b): a stranger
+            with no plan saw a generic water instruction here with no real
+            first step. `firstRun` (only ever passed when there is no plan)
+            swaps JUST this top instruction area for one big Start card; the
+            chat box below stays exactly as it is. */}
+        {firstRun ? <FirstWorkoutStartCard /> : (<>
         {/* "Your next step" eyebrow — button audit, 2026-09-03: the
             instruction below used the same italic serif style as the
             "Today's self-talk" quote card above it, so a brand-new user had
@@ -581,6 +588,8 @@ export default function NextActionCard({ variant = 'full', hasPlan = true }: { v
                 herself; nothing lost, just no more disguised entry point. */}
           </div>
         )}
+
+        </>)}
 
         {/* Real chat transcript, this session only (Asa's report, 2026-09-01:
             "it doesn't show the user... typing in like ChatGPT") — capped

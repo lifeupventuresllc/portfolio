@@ -311,6 +311,7 @@ export default async function PlanDashboard() {
                       wants maximum feed. */}
                   <CollapsibleHeaderCard
                     firstName={firstName}
+                    hasPlan={hasPlan}
                     affirmation={affirmation}
                     statsProvided={statsProvided}
                     startWeight={startWeight}
@@ -333,7 +334,7 @@ export default async function PlanDashboard() {
                 // — stacking both was the actual bug (Asa's catch, 2026-08-31:
                 // a real gap of empty video between the chat box and the nav).
                 <div className="px-4 pb-3.5" style={{ paddingRight: 58 }}>
-                  <NextActionCard variant="dock" hasPlan={hasPlan} />
+                  <NextActionCard variant="dock" hasPlan={hasPlan} firstRun={!hasPlan} />
                 </div>
               }
             />

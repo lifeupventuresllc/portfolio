@@ -12,9 +12,10 @@ import { GoalProgressCompact } from '@/components/GoalProgressBar'
 // can't hold this toggle state itself, so the whole card lives here as its
 // own small client component instead of inline JSX in the page.
 export default function CollapsibleHeaderCard({
-  firstName, affirmation, statsProvided, startWeight, currentWeight, goalWeight, goalDirection, loggedCaloriesToday, calBudget,
+  firstName, hasPlan = true, affirmation, statsProvided, startWeight, currentWeight, goalWeight, goalDirection, loggedCaloriesToday, calBudget,
 }: {
   firstName: string
+  hasPlan?: boolean
   affirmation: string | null
   statsProvided: boolean
   startWeight: number
@@ -25,6 +26,11 @@ export default function CollapsibleHeaderCard({
   calBudget: number | null
 }) {
   const [collapsed, setCollapsed] = useState(false)
+  // Real gap found live, 2026-09-21 (new-visitor test, item 3b): a stranger
+  // with no plan was greeted "Hey <email-ish placeholder>" and shown a gold
+  // box whose button opened a Google chooser before any question. Now: plain
+  // "Welcome", and no sign-in box — the Start card below is the one action.
+  const greeting = hasPlan ? `Hey ${firstName}` : 'Welcome'
   const [starting, setStarting] = useState(false)
 
   // Same client/env-sanitizing pattern as components/AuthForm.tsx's Google
@@ -60,7 +66,7 @@ export default function CollapsibleHeaderCard({
   if (collapsed) {
     return (
       <div className="mt-2 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2" style={{ background: 'rgba(6,35,26,0.35)', border: '1px solid rgba(15,122,83,0.4)', backdropFilter: 'blur(3px)' }}>
-        <h1 className="text-white" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontStyle: 'italic', fontWeight: 700, fontSize: 16, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>Hey {firstName}</h1>
+        <h1 className="text-white" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontStyle: 'italic', fontWeight: 700, fontSize: 16, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>{greeting}</h1>
         <div className="flex items-center gap-2">
           <StreakChip />
           <button
@@ -80,7 +86,7 @@ export default function CollapsibleHeaderCard({
   return (
     <div className="relative mt-2 rounded-xl px-2.5 py-2" style={{ background: 'rgba(6,35,26,0.35)', border: '1px solid rgba(15,122,83,0.4)', backdropFilter: 'blur(3px)', paddingBottom: 26 }}>
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-white" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontStyle: 'italic', fontWeight: 700, fontSize: 20, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>Hey {firstName}</h1>
+        <h1 className="text-white" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontStyle: 'italic', fontWeight: 700, fontSize: 20, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>{greeting}</h1>
         <StreakChip />
       </div>
       {affirmation && (
@@ -89,7 +95,7 @@ export default function CollapsibleHeaderCard({
           <p className="text-white/90 italic text-[11px] leading-snug mt-0.5" style={{ fontFamily: 'var(--font-poppins)' }}>&ldquo;{affirmation}&rdquo;</p>
         </div>
       )}
-      {statsProvided ? (
+      {!hasPlan ? null : statsProvided ? (
         <div className="mt-2">
           <GoalProgressCompact startWeight={startWeight} currentWeight={currentWeight} goalWeight={goalWeight} goal={goalDirection} calorieLoggedToday={loggedCaloriesToday} calorieBudgetToday={calBudget} embedded />
         </div>
