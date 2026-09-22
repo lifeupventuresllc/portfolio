@@ -61,6 +61,20 @@ export function GoalProgressCompact({
       <>
         <p className="text-white text-xs font-semibold">Holding steady at {Math.round(currentWeight)} lbs</p>
         <CalorieLine loggedToday={calorieLoggedToday} budgetToday={calorieBudgetToday} />
+        {/* Same real gap + fix as the lose/gain branch below (monkey test,
+            2026-09-21, beta item 3) — the maintain goal had no calorie link
+            at all here (CalorieLine is plain text), so this was actually
+            the worse case of the two. */}
+        {calorieBudgetToday != null && (
+          <Link
+            href="/plan/nutrition"
+            aria-label="Log food"
+            className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-3 text-[11px] font-bold"
+            style={{ minHeight: 40, background: 'rgba(229,169,60,0.16)', border: '1px solid rgba(229,169,60,0.55)', color: '#E5A93C' }}
+          >
+            <span aria-hidden>🍽️</span> Log food
+          </Link>
+        )}
       </>
     )
     if (embedded) return <div style={{ fontFamily: 'var(--font-poppins)' }}>{inner}</div>
@@ -115,6 +129,25 @@ export function GoalProgressCompact({
         </Link>
         {budgetLabel && <Link href="/plan/nutrition" aria-label="Log a meal" className="absolute right-0 top-0 text-[12px] font-bold text-[#E5A93C] whitespace-nowrap py-1.5 pl-3">{budgetLabel}</Link>}
       </div>
+      {/* Real gap found live, 2026-09-21 (monkey test, beta item 3): a
+          first-time user with no hints never found food logging — the only
+          door in was this small "$0/$2,090 cal" text above, which reads as
+          a stat, not a button, so it needs reading to notice. Real labeled
+          pill now, "food" in the plain-English text and a real ≥40px tap
+          target, sized to actually be tappable, not just technically a
+          link. Same /plan/nutrition destination as the number above, which
+          stays — some testers will still tap the number, this just adds
+          the obvious door next to it. */}
+      {budgetLabel && (
+        <Link
+          href="/plan/nutrition"
+          aria-label="Log food"
+          className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-3 text-[11px] font-bold"
+          style={{ minHeight: 40, background: 'rgba(229,169,60,0.16)', border: '1px solid rgba(229,169,60,0.55)', color: '#E5A93C' }}
+        >
+          <span aria-hidden>🍽️</span> Log food
+        </Link>
+      )}
     </>
   )
 

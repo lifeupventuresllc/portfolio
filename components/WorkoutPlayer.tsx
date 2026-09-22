@@ -442,9 +442,16 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
             LAST step (rare, but a session can end on a rest step) — same
             skip-loophole fix as the arrow above: the real countdown has to
             reach zero for a rest step to be able to end the workout. */}
+        {/* Real gap found live, 2026-09-21 (monkey test): a faint 15%-opacity
+            fill read as a disabled ghost button and got missed next to the
+            loud gradient Easy/Difficult pop-up. Solid fill + real border +
+            dark text when enabled so it reads as a genuine tappable button;
+            the old dim/ghost look is now reserved for the disabled state only
+            (effort question open, or last step) so it still looks untappable
+            then. */}
         {step.rest && (
           <button onClick={skipStep} disabled={showEffortTap || isLastStep}
-            className="w-full mt-5 py-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-bold text-sm uppercase tracking-wider active:scale-95 transition-transform disabled:opacity-40">
+            className="w-full mt-5 py-4 rounded-2xl bg-emerald-500 border-2 border-emerald-300 text-obsidian font-bold text-sm uppercase tracking-wider shadow-[0_8px_20px_-6px_rgba(16,185,129,0.5)] active:scale-95 transition-transform disabled:shadow-none disabled:bg-emerald-500/15 disabled:border-emerald-500/40 disabled:text-emerald-300 disabled:opacity-40">
             Skip rest
           </button>
         )}

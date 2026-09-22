@@ -70,13 +70,18 @@ export default function FeedbackWidget() {
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label="Report an issue"
-        className="fixed z-[45] bottom-24 right-4 w-12 h-12 rounded-full bg-charcoal border border-gold/40 text-gold shadow-lg shadow-black/40 flex items-center justify-center hover:border-gold hover:bg-gold/10 active:scale-95 transition-all"
+        aria-label="Send feedback / report an issue"
+        // Real gap found live, 2026-09-21 (monkey test): a no-hints first-time
+        // user didn't recognize the bare flag icon as anything tappable. Now a
+        // small pill with a visible "Feedback" label next to the icon, so a
+        // stranger knows what it is at a glance — position/behavior unchanged.
+        className="fixed z-[45] bottom-24 right-4 h-12 pl-3 pr-4 rounded-full bg-charcoal border border-gold/40 text-gold shadow-lg shadow-black/40 flex items-center gap-2 hover:border-gold hover:bg-gold/10 active:scale-95 transition-all"
         style={{ bottom: 'calc(6rem + env(safe-area-inset-bottom))' }}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 21V4a1 1 0 0 1 1-1h13.5a.5.5 0 0 1 .4.8L15 9l3.9 5.2a.5.5 0 0 1-.4.8H5a1 1 0 0 0-1 1Z" />
         </svg>
+        <span className="text-xs font-bold uppercase tracking-wider">Feedback</span>
       </button>
 
       {open && (
