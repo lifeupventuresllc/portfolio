@@ -141,8 +141,14 @@ const eventKindFor = (s: LifeSignal): FosEventKind =>
 export async function GET() {
   const { user, enrollment, svc } = await resolve()
   if (!user || !enrollment || !svc) return NextResponse.json({ messages: [] })
-  const { data } = await svc.from('fos_messages').select('role, content, created_at').eq('enrollment_id', enrollment.id).order('created_at', { ascending: true }).limit(60)
-  return NextResponse.json({ messages: data || [] })
+  // Real bug found live, 2026-09-22 (re-pace engine testing): this ordered
+  // ascending THEN limited to 60 — on any conversation with more than 60
+  // messages ever sent, that takes her OLDEST 60, not her most recent 60,
+  // so the chat transcript silently stops showing anything new the moment
+  // a real, actively-used conversation crosses that count. Fetch the most
+  // recent 60 (descending), then put them back in reading order for the UI.
+  const { data } = await svc.from('fos_messages').select('role, content, created_at').eq('enrollment_id', enrollment.id).order('created_at', { ascending: false }).limit(60)
+  return NextResponse.json({ messages: (data || []).reverse() })
 }
 
 export async function POST(request: NextRequest) {
