@@ -14,10 +14,10 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not signed in.' }, { status: 401 })
 
-  let body: { goal?: string }
+  let body: { goal?: string; skip?: boolean }
   try { body = await request.json() } catch { return NextResponse.json({ error: 'Bad request.' }, { status: 400 }) }
-  const goal = GOAL_MAP[body.goal || '']
-  if (!goal) return NextResponse.json({ error: 'Bad goal.' }, { status: 400 })
+  const goal = body.skip ? undefined : GOAL_MAP[body.goal || '']
+  if (!body.skip && !goal) return NextResponse.json({ error: 'Bad goal.' }, { status: 400 })
 
   const svc = createServiceClient()
   let { data: enrollment } = await svc
@@ -39,6 +39,22 @@ export async function POST(request: NextRequest) {
   // real intake (which would overwrite her real stats with the placeholders).
   if (!intake || !fd.quickstart_built) return NextResponse.json({ error: 'Not a quickstart plan.' }, { status: 409 })
   if (fd.quickstart_goal_answered) return NextResponse.json({ ok: true })
+
+  // Real gap found live, 2026-09-21 (item 3b live test): "Skip for now" only
+  // ever wrote a sessionStorage flag, scoped to the browser TAB, not the
+  // account — so a brand-new guest on the same device/tab never saw the
+  // strip at all (it inherited the previous guest's skip), while a real
+  // account that actually skipped saw it again every new session. A skip is
+  // a real, permanent choice for THIS account (just "no goal picked"), so it
+  // gets the exact same server marker a real pick gets — no plan rebuild,
+  // since no goal was chosen; her placeholder plan stays as-is.
+  if (body.skip) {
+    await svc.from('challenge_intake')
+      .update({ form_data: { ...fd, quickstart_goal_answered: true } })
+      .eq('id', intake.id)
+    return NextResponse.json({ ok: true })
+  }
+  if (!goal) return NextResponse.json({ error: 'Bad goal.' }, { status: 400 }) // unreachable (checked above) — narrows the type for TS below
 
   await buildInitialPlans({
     enrollmentId: enrollment.id as string,

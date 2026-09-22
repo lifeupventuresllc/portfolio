@@ -99,12 +99,19 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
   // matching how `steps` itself resets on a day switch.
   const [showEffortTap, setShowEffortTap] = useState(false)
   const handledRestIdx = useRef<Set<number>>(new Set())
-  // Real gap found live, 2026-09-21 (new-visitor test): the goal question is
-  // hidden once answered/skipped for this session (sessionStorage in try/catch
-  // — a failure just means it may show again next visit, never an error).
-  const [goalHidden, setGoalHidden] = useState(() => {
-    try { return sessionStorage.getItem('luf_qs_goal_skip') === '1' } catch { return false }
-  })
+  // Real bug found live, 2026-09-21 (item 3b live test): this used to seed
+  // its initial value from a sessionStorage flag, but that flag is scoped to
+  // the browser TAB, not the signed-in account — a brand-new guest on the
+  // same tab/device silently inherited a PREVIOUS guest's skip and never saw
+  // the strip at all, even though `askQuickstartGoal` (computed server-side
+  // per account in app/plan/workout/page.tsx) correctly said to show it for
+  // them. The real answered/skipped state now lives server-side per account
+  // (challenge_intake.form_data.quickstart_goal_answered — see
+  // QuickstartGoalAsk.tsx and app/api/plan/quickstart-goal/route.ts), which
+  // is exactly what `askQuickstartGoal` already reflects, so this only needs
+  // to track "hidden for the rest of THIS page session" after she actually
+  // answers/skips — never seeded from anything written by a different visit.
+  const [goalHidden, setGoalHidden] = useState(false)
   const [saveHidden, setSaveHidden] = useState(false)
 
   // Real bug found live: the countdown beep's AudioContext only ever got
@@ -132,10 +139,29 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
 
   const step = steps[i]
   const isTimed = step?.seconds != null
+  const isLastStep = i + 1 >= steps.length
 
   // Keep advance current without re-arming the interval every render.
   const advanceRef = useRef<() => void>(() => {})
   advanceRef.current = () => { if (i + 1 >= steps.length) finish(); else setI(i + 1) }
+
+  // Real bug found live, 2026-09-21 (item 3b live test): repeatedly tapping
+  // ONLY the small skip-forward arrow (never the real check-mark on a rep
+  // step, never waiting out a real timer) reached the end of the workout and
+  // still fired finish() via advanceRef above — a workout that was never
+  // actually done still logged a "finished" + streak. advanceRef.current()
+  // (and its finish() call) now only ever runs from a REAL completion: the
+  // check-mark tap on a rep step, or a timed step's own countdown reaching
+  // zero (the interval below). This skip function is for the two manual
+  // "skip ahead" controls (the arrow, and "Skip rest") — skipping to a LATER
+  // step mid-workout is still fine, it just can never be what closes out the
+  // LAST step; on the last step it does nothing, same as the disabled
+  // skip-back arrow at step 1.
+  function skipStep() {
+    if (isLastStep) return
+    hapticTap()
+    setI(i + 1)
+  }
 
   function selectDay(d: number) {
     setDayIdx(clamp(d)); setSteps(buildDay(clamp(d)))
@@ -396,8 +422,8 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
             className="luf-glow w-20 h-20 rounded-full bg-gold text-obsidian flex items-center justify-center active:scale-95 transition-transform">
             {isTimed ? (paused ? <PlayIcon /> : <PauseIcon />) : <CheckIcon />}
           </button>
-          <button onClick={() => advanceRef.current()} aria-label="Skip to next step"
-            className="w-14 h-14 rounded-full bg-charcoal border border-smoke text-ivory/60 flex items-center justify-center active:scale-95 transition-transform">
+          <button onClick={skipStep} disabled={isLastStep} aria-label="Skip to next step"
+            className="w-14 h-14 rounded-full bg-charcoal border border-smoke text-ivory/60 disabled:opacity-30 flex items-center justify-center active:scale-95 transition-transform">
             <SkipForwardIcon />
           </button>
         </div>
@@ -407,14 +433,17 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
         {askQuickstartGoal && !goalHidden && step.rest && !showEffortTap && handledRestIdx.current.has(i) && (
           <QuickstartGoalAsk
             onDone={() => setGoalHidden(true)}
-            onSkip={() => { try { sessionStorage.setItem('luf_qs_goal_skip', '1') } catch { /* ignore */ } setGoalHidden(true) }}
+            onSkip={() => setGoalHidden(true)}
           />
         )}
         {/* Rest runs itself (countdown above); this is the big, obvious way to
             cut it short. Held off while the effort question is open so that
-            question can't be skipped past by accident. */}
+            question can't be skipped past by accident. Also held off on the
+            LAST step (rare, but a session can end on a rest step) — same
+            skip-loophole fix as the arrow above: the real countdown has to
+            reach zero for a rest step to be able to end the workout. */}
         {step.rest && (
-          <button onClick={() => { hapticTap(); advanceRef.current() }} disabled={showEffortTap}
+          <button onClick={skipStep} disabled={showEffortTap || isLastStep}
             className="w-full mt-5 py-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-bold text-sm uppercase tracking-wider active:scale-95 transition-transform disabled:opacity-40">
             Skip rest
           </button>
