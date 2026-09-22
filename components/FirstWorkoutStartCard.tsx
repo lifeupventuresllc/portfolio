@@ -36,8 +36,25 @@ export default function FirstWorkoutStartCard() {
   return (
     <div className="mb-2.5 rounded-[22px] p-4" style={{ background: 'rgba(6,35,26,0.9)', border: '1.5px solid #E5A93C', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', fontFamily: 'var(--font-poppins)' }}>
       <p className="text-[10px] font-bold uppercase" style={{ color: '#E5A93C', letterSpacing: '0.18em' }}>Your first step</p>
+      {/* Real gap found live, 2026-09-21 (item 3b live test): this said a flat
+          "30 min" no matter what — the actual Quickstart build (this card
+          always POSTs { location: 'home' }, hardcoded beginner/week-1/goal
+          'lose' stats — see app/api/plan/quickstart-workout/route.ts) landed
+          on the real player screen reading "TODAY'S SESSION · ABOUT 7 MIN."
+          Traced the exact number instead of guessing: lib/workout-assembly.ts's
+          buildHomeDay gives a beginner/week-1 'overall' home day 5 main
+          exercises (30 sec each) + 1 cardio finisher (90 sec, since goal
+          'lose' triggers one) + a 20-sec rest after each of those 6 moves,
+          plus warm-up/cool-down (lib/workout-steps.ts's estimateWorkoutMinutes
+          falls back to its 40-sec default for both since neither's text
+          contains a parseable "N min"): (5*(30+20)) + (90+20) + 40 + 40 = 440
+          sec = 7.33 min → rounds to 7, matching the live number exactly. Since
+          every input on this exact path is hardcoded (never her real answers),
+          this is a real, reproducible number for THIS card, not a guess. Do
+          not change this text without re-tracing it if the hardcoded stats
+          above, buildHomeDay's counts, or estimateWorkoutMinutes change. */}
       <p className="text-white leading-snug mt-1.5 mb-3" style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, fontSize: 19 }}>
-        Your first workout is ready. 30 min, no equipment.
+        Your first workout is ready. About 7 min, no equipment.
       </p>
       <button
         type="button"

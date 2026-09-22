@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { buildInitialPlans } from '@/lib/plan-builder'
+import { getOpenAction, markActionSuperseded } from '@/lib/next-action'
 
 // The "Sculpt Sessions" fast lane — she picks home or gym, nothing else, and gets
 // a real beginner-friendly full-body workout immediately. No injury/focus question
@@ -62,6 +63,33 @@ export async function POST(request: NextRequest) {
       .update({ form_data: { ...((row.form_data as Record<string, unknown>) || {}), quickstart_built: true } })
       .eq('id', row.id)
   }
+
+  // Real gap found live, 2026-09-21 (item 3b live test): a guest who'd done
+  // this flow once lost their one-tap way back to the workout — Home's Next
+  // Step kept showing a generic "glass of water" instead of her real
+  // workout, even though hasPlan/intake were both genuinely set above.
+  // Root cause traced to a layer this file doesn't own: NextActionCard's
+  // useLiveRefresh(load) fires an unconditional GET /api/plan/next-action on
+  // mount even while it's showing FirstWorkoutStartCard instead (before she's
+  // ever tapped Start here) — with no intake/plan yet, that request has
+  // nothing real to work with and permanently PERSISTS a generic fallback
+  // (next_action_log, kind 'fallback') for today. lib/next-action/index.ts's
+  // resolveCurrentAction only re-validates a same-day open row's staleness
+  // for kind 'workout'/'meal' (an approved adjustment, a new food log row) —
+  // 'fallback' rows aren't covered, so that pre-Quickstart row survives
+  // frozen for the rest of the day even after a real plan now exists right
+  // here. (lib/next-action/state.ts and candidates.ts were checked and are
+  // already correct — a real intake row like the one just written above
+  // already makes workoutCandidate self-heal and outscore the fallback tier
+  // comfortably; the stale row above just never lets that call happen
+  // again today.) Closing out any such open row the instant a real plan
+  // exists — using the same markActionSuperseded the engine already applies
+  // to every other same-day staleness case — makes her very next Home visit
+  // build a fresh recommendation that actually sees this new plan. Only
+  // runs on this Quickstart path, so it can't affect anyone who never
+  // touched Quickstart or a fully real intake's own next-action rows.
+  const openAction = await getOpenAction(enrollment.id as string)
+  if (openAction) await markActionSuperseded(openAction.id, enrollment.id as string)
 
   return NextResponse.json({ ok: true })
 }
