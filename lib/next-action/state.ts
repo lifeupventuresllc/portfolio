@@ -12,6 +12,7 @@ import { weightClassFor, budgetTierFromWeekly, pickForNow, pickForRestaurant, pa
 import type { UserStateSnapshot, EnergyLevel, StateOverrides } from './types'
 import { parseStoredGoal } from '@/lib/goals'
 import { parseStoredTrainingStyles } from '@/lib/training-styles'
+import { maybeReplan } from '@/lib/fos/replan'
 
 // Real gap found+fixed (Asa's ask, 2026-09-07, "the two main brains" —
 // nutrition and workout — should connect): this used to be one flat,
@@ -295,6 +296,19 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const energyRaw = (profile?.energyPatterns as { today?: string } | null)?.today
   const baseEnergy: EnergyLevel = energyRaw === 'low' || energyRaw === 'high' || energyRaw === 'normal' ? energyRaw : 'unknown'
   const energy: EnergyLevel = overrides.energy ?? baseEnergy
+
+  // The re-pace engine (2026-09-22, Asa's direct ask) — checked on every
+  // real read of her state, the same "no memory needed, just re-checked
+  // live" spirit assessLifePattern above already uses. Deliberately fired
+  // AFTER everything above is already computed and NOT awaited: its own
+  // cooldown check keeps the common case (no real struggle, or already
+  // re-paced this week) to one cheap extra query, and a plan rebuild it
+  // does trigger should never make THIS request (already mid-render) wait
+  // on it — she sees the rebuilt plan and the real chat message about it
+  // on her next real look, same as the daily-nudge cron's own timing.
+  // Never awaited, never thrown from — a failure here must not break her
+  // actual next-action read.
+  if (userId) maybeReplan(enrollmentId, userId, todayISO).catch(() => {})
 
   return {
     enrollmentId,
