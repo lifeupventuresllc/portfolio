@@ -47,6 +47,17 @@ export async function POST(request: NextRequest) {
     cook_days_per_week: 2,
     injuries: [],
     postpartum: false,
+    // Real gap found live, 2026-09-21 (item 3b live test, verified against
+    // the DB directly): this call already supplies real weight/goal/target
+    // above, but never told buildInitialPlans that — required_tier_completed
+    // stayed false, which is the exact flag app/plan/page.tsx's
+    // `statsProvided` reads to decide whether Home shows her real progress
+    // card or the "Add your starting weight & goal → Get started" box.
+    // Result: a guest who'd already tapped Start (and whose Next Step
+    // already showed her real workout title) still saw the Google-sign-in
+    // nudge and no calorie readout on every later Home visit. This data IS
+    // the required tier — mark it complete.
+    requiredTierCompleted: true,
     training_style: 'none',
     focus_area: 'overall',
     autoFillMeals: true,
