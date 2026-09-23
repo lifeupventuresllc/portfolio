@@ -83,8 +83,15 @@ export async function middleware(request: NextRequest) {
   //    by reloading whichever `to` it was given; pointing it back at "/"
   //    means that one real reload also never leaves "/".
   if (pathname === '/') {
-    const target = user ? '/plan' : '/try?to=%2F'
-    return NextResponse.rewrite(new URL(target, request.url))
+    // Already has ANY session (anonymous or real): serve /plan's real
+    // content right here — the address bar never moves off '/'. A
+    // genuinely session-less first-ever visitor still needs /try's real
+    // bootstrap first (creating the session is an async step that has to
+    // happen somewhere); that one-time visit still ends up on /plan the
+    // same way it always has — every visit after that (the common case)
+    // stays on '/' from here on, since a session now exists.
+    if (user) return NextResponse.rewrite(new URL('/plan', request.url))
+    return NextResponse.rewrite(new URL('/try?to=/plan', request.url))
   }
 
   // Redirect unauthenticated users away from protected routes
