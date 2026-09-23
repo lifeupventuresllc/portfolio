@@ -55,7 +55,11 @@ export default function BottomTabBar() {
   // starting the moment she lands on her real dashboard, not before.
   if (pathname.startsWith('/plan/intake')) return null
 
-  const homeActive = pathname === '/plan'
+  // '/' is included because 2026-09-23's root-stays-the-address change
+  // (middleware.ts) serves this exact same page's content there via a
+  // rewrite — the browser's own visible pathname reads '/', not '/plan',
+  // even though it's the identical real page underneath.
+  const homeActive = pathname === '/plan' || pathname === '/'
   const forYouActive = pathname.startsWith('/plan/today')
   const communityActive = pathname.startsWith('/plan/community')
   const friendsActive = pathname.startsWith('/plan/friends')

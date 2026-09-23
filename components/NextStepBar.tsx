@@ -67,7 +67,10 @@ export default function NextStepBar() {
   useLiveRefresh(load)
 
   const dest = action ? (EXPANSION_ROUTE as Record<string, string | undefined>)[action.kind] : undefined
-  const hidden = pathname === '/plan' || HIDE_ON.some((p) => pathname.startsWith(p)) || !action || !dest || pathname.startsWith(dest)
+  // '/' included alongside '/plan' — 2026-09-23's root-stays-the-address
+  // change (middleware.ts) serves Home's real content there via a
+  // rewrite, so the visible browser pathname can legitimately be '/'.
+  const hidden = pathname === '/plan' || pathname === '/' || HIDE_ON.some((p) => pathname.startsWith(p)) || !action || !dest || pathname.startsWith(dest)
   if (hidden || !action || !dest) return null
 
   const start = () => {

@@ -66,6 +66,27 @@ export async function middleware(request: NextRequest) {
   } catch { /* treated as unauthenticated for this request only, see above */ }
   const pathname = request.nextUrl.pathname
 
+  // Real gap found live, 2026-09-23 (Asa's direct ask, TikTok as the
+  // reference): the root address used to be a bare redirect straight to
+  // /try, which itself bounces once more to whatever real page she wanted
+  // — two real, visible address-bar changes before she ever saw the app.
+  // TikTok never changes its address for this: you land on tiktok.com,
+  // full app, right there, logged in or not. A REWRITE (not a redirect)
+  // does the same thing here — Next.js serves different real content
+  // underneath, but the browser's own address bar never moves off "/".
+  //  - Already has any session (anonymous or real): serve /plan's real
+  //    content right there at "/" — same page, same logic, just a
+  //    different address showing it.
+  //  - No session at all yet: serve /try's real bootstrap (unchanged,
+  //    still the one real place a session gets created) — still under
+  //    "/", never a visible /try in the bar. /try's own client code ends
+  //    by reloading whichever `to` it was given; pointing it back at "/"
+  //    means that one real reload also never leaves "/".
+  if (pathname === '/') {
+    const target = user ? '/plan' : '/try?to=%2F'
+    return NextResponse.rewrite(new URL(target, request.url))
+  }
+
   // Redirect unauthenticated users away from protected routes
   const protectedRoutes = ['/content', '/admin', '/plan']
   if (protectedRoutes.some(route => pathname.startsWith(route)) && !user) {

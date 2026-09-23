@@ -11,13 +11,19 @@ import FeedbackNudge from './FeedbackNudge'
 // marketing logo can't hijack in-app navigation.
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const bare = pathname?.startsWith('/admin/founder') || pathname?.startsWith('/plan')
+  // '/' included alongside '/plan' — 2026-09-23's root-stays-the-address
+  // change (middleware.ts) serves the real app there via a rewrite, so a
+  // visitor's visible browser pathname can legitimately just be '/'; it
+  // must get the same bare, chrome-free app shell '/plan' already does,
+  // never the marketing nav/footer.
+  const isPlan = pathname === '/' || pathname?.startsWith('/plan')
+  const bare = pathname?.startsWith('/admin/founder') || isPlan
 
   if (bare) {
     return (
       <main className="flex-1">
         {children}
-        {pathname?.startsWith('/plan') && <FeedbackNudge />}
+        {isPlan && <FeedbackNudge />}
       </main>
     )
   }
