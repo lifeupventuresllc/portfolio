@@ -19,7 +19,14 @@ function TryInner() {
   const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
-    const to = searchParams.get('to') || '/plan'
+    // 'home' is middleware.ts's own sentinel (2026-09-23, root-stays-the-
+    // address) for "land back on '/', not a real page path" — a literal
+    // '/' round-tripped through this same query param hit a real encoding
+    // edge case live (confirmed: ended on /plan instead), so middleware
+    // sends this plain word instead and this is the one place that
+    // resolves it back to the real destination.
+    const rawTo = searchParams.get('to') || '/plan'
+    const to = rawTo === 'home' ? '/' : rawTo
     let cancelled = false
 
     async function run() {

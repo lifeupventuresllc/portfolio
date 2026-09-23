@@ -91,7 +91,12 @@ export async function middleware(request: NextRequest) {
     // same way it always has — every visit after that (the common case)
     // stays on '/' from here on, since a session now exists.
     if (user) return NextResponse.rewrite(new URL('/plan', request.url))
-    return NextResponse.rewrite(new URL('/try?to=/plan', request.url))
+    // 'home' (a plain word, not a raw '/') is a sentinel /try's own code
+    // below understands specially — round-tripping a literal '/' through
+    // a query param hit a real encoding edge case (confirmed live: it
+    // landed on /plan for real, not '/'), which a plain word sidesteps
+    // entirely.
+    return NextResponse.rewrite(new URL('/try?to=home', request.url))
   }
 
   // Redirect unauthenticated users away from protected routes
