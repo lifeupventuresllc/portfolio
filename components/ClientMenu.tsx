@@ -183,6 +183,16 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
         { href: '/plan/eating-out', label: 'Eating out? — what to order', icon: 'plate' },
         { href: '/plan/meals', label: 'My meals — what I’m cooking & how', icon: 'plate' },
         { href: '/plan/checkin', label: 'My progress & previous weeks', icon: 'trending' },
+        // Real gap found live, 2026-09-22 (final beta item-3 monkey test):
+        // no menu item said "goal" anywhere. The obvious-sounding guess,
+        // "Edit my intake answers" right below, actually restarts the
+        // WHOLE 7-step signup from her name — a real wrong-turn trap, not
+        // just an awkward label. The real one-tap shortcut already exists
+        // (/plan/preferences, the same autosaving page the Home gear icon
+        // opens — item 3's fix) but had no door into it from the menu.
+        // Placed above the full-restart option so the fast, correct path
+        // is what she meets first.
+        { href: '/plan/preferences', label: 'Change my goal', icon: 'target' },
         // Was "My profile & stats" — this opens the intake edit flow
         // (re-asking name, goals, etc.), not a profile/stats page, which
         // doesn't exist yet (button audit, 2026-09-03: this actively
