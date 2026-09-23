@@ -327,21 +327,26 @@ export default function ClientMenu({ firstName, liveUrl, callAccess, isAnonymous
                   from the shorter list now just falls harmlessly below it. */}
               {/* Real gap found live, 2026-09-23 (Asa's own manual test):
                   this always read "Sign Out," even for a brand-new
-                  anonymous guest who never created a real account — she
-                  had no way to tell "you're not really signed into
-                  anything" from "you have a real account." An anonymous
-                  session is a real Supabase session under the hood, so
-                  signOut() technically "works" either way, but there's
-                  nothing real for her to sign OUT of yet — hidden entirely
-                  until a real account exists. */}
-              {!isAnonymous && (
-                <div className="px-2 pt-3 mt-1 border-t border-smoke" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+                  anonymous guest who never created a real account — no way
+                  to tell "you're not really signed into anything real" from
+                  "you have a real account." Asa's own follow-up catch:
+                  hiding it outright is only half a fix — a guest could
+                  genuinely already have a real account (a new device, a
+                  cleared session) and would have no way back into it. Real
+                  "Sign In" for her instead, not nothing. */}
+              <div className="px-2 pt-3 mt-1 border-t border-smoke" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+                {isAnonymous ? (
+                  <a href="/login?redirect=/plan" className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-charcoal transition-colors w-full text-left text-ivory/60">
+                    <MenuIcon name="logout" />
+                    <span className="text-sm">Sign In</span>
+                  </a>
+                ) : (
                   <button onClick={handleSignOut} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-charcoal transition-colors w-full text-left text-ivory/60">
                     <MenuIcon name="logout" />
                     <span className="text-sm">Sign Out</span>
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </nav>
           </div>
         </div>,
