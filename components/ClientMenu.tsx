@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import PushToggle from '@/components/PushToggle'
 import CalendarToggle from '@/components/CalendarToggle'
+import SignInModal from '@/components/SignInModal'
 import { createClient, clearLocalSession } from '@/lib/supabase/client'
 
 // The ☰ menu on the client home dashboard. Trimmed hard 2026-08-27 (Asa's
@@ -66,6 +67,7 @@ type Item = { href: string; label: string; icon: IconName; external?: boolean }
 
 export default function ClientMenu({ firstName, liveUrl, callAccess, isAnonymous }: { firstName: string; liveUrl?: string; callAccess?: 'none' | 'monthly' | 'weekly'; isAnonymous?: boolean }) {
   const [open, setOpen] = useState(false)
+  const [showSignIn, setShowSignIn] = useState(false)
   const supabase = createClient()
 
   // Real bug found live (Asa's screenshot, 2026-09-04): `fixed inset-0`
@@ -336,10 +338,17 @@ export default function ClientMenu({ firstName, liveUrl, callAccess, isAnonymous
                   "Sign In" for her instead, not nothing. */}
               <div className="px-2 pt-3 mt-1 border-t border-smoke" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
                 {isAnonymous ? (
-                  <a href="/login?redirect=/plan" className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-charcoal transition-colors w-full text-left text-ivory/60">
+                  // A pop-up on the same screen, not a navigate-away page
+                  // (2026-09-23, Asa's TikTok comparison) — closes the
+                  // hamburger drawer first so the sign-in modal is the only
+                  // overlay on screen, not stacked behind/inside it.
+                  <button
+                    onClick={() => { setOpen(false); setShowSignIn(true) }}
+                    className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-charcoal transition-colors w-full text-left text-ivory/60"
+                  >
                     <MenuIcon name="logout" />
                     <span className="text-sm">Sign In</span>
-                  </a>
+                  </button>
                 ) : (
                   <button onClick={handleSignOut} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-charcoal transition-colors w-full text-left text-ivory/60">
                     <MenuIcon name="logout" />
@@ -352,6 +361,7 @@ export default function ClientMenu({ firstName, liveUrl, callAccess, isAnonymous
         </div>,
         document.body
       )}
+      {showSignIn && createPortal(<SignInModal onClose={() => setShowSignIn(false)} />, document.body)}
     </>
   )
 }

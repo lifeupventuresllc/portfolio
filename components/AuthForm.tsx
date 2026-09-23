@@ -8,9 +8,15 @@ import { mapAuthError } from '@/lib/auth-errors'
 
 type AuthFormProps = {
   mode: 'login' | 'signup' | 'reset' | 'claim'
+  // Same pattern GoalProgressBar's own `embedded` flag already uses: this
+  // form was built assuming it's the whole page (min-h-[100dvh], a fixed
+  // top offset). components/SignInModal.tsx (2026-09-23) nests it inside
+  // its own overlay box instead — the full-viewport sizing fights that,
+  // not the actual form/logic, which stays identical either way.
+  embedded?: boolean
 }
 
-export default function AuthForm({ mode }: AuthFormProps) {
+export default function AuthForm({ mode, embedded = false }: AuthFormProps) {
   const searchParams = useSearchParams()
   // A failed email-confirmation or reset link redirects here with a reason —
   // surface it instead of silently dropping the user on a blank form (was
@@ -160,7 +166,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   // app for the identical symptom (ClientMenu.tsx's drawer): 100dvh instead
   // of a plain viewport unit, which DOES track the real visible area.
   return (
-    <div className="min-h-[100dvh] flex justify-center pt-20 px-6">
+    <div className={embedded ? '' : 'min-h-[100dvh] flex justify-center pt-20 px-6'}>
       <div className="w-full max-w-md p-8 bg-charcoal rounded-2xl border border-smoke">
         <h1 className="text-2xl font-bold text-center text-white mb-6">{titles[mode]}</h1>
 
