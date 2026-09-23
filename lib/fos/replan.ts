@@ -69,6 +69,8 @@ export async function maybeReplan(enrollmentId: string, userId: string, todayISO
   const { data: enrollment } = await svc.from('challenge_enrollments').select('created_at, name').eq('id', enrollmentId).maybeSingle()
   const createdAt = enrollment?.created_at as string | undefined
   if (!createdAt) return { replanned: false, reason: null, detail: null }
+  // Date-only vs date-only — see early-struggle.ts's comment on the same
+  // bug (a same-day timestamp read as a future/negative age otherwise).
   const ageDays = daysBetween(createdAt.slice(0, 10), todayISO)
 
   let reason: ReplanReason | null = null

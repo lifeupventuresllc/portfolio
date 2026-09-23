@@ -311,6 +311,23 @@ const WC3: WeightClass = {
 
 export const ESCAPE_PLAN: WeightClass[] = [WC1, WC2, WC3]
 
+// The real, deduped set of chains this file already has honest calorie/
+// macro data for — the only names the location engine (lib/fos/
+// nearby-food.ts) is ever allowed to match a real nearby place against.
+// Never suggest a real restaurant we'd have to invent numbers for.
+let _knownRestaurants: Set<string> | null = null
+export function knownRestaurants(): Set<string> {
+  if (_knownRestaurants) return _knownRestaurants
+  const set = new Set<string>()
+  for (const wc of ESCAPE_PLAN) {
+    for (const day of wc.days) for (const meal of day.meals) set.add(meal.restaurant)
+    for (const meal of wc.extraOptions) set.add(meal.restaurant)
+  }
+  set.delete('Grab & go')
+  _knownRestaurants = set
+  return set
+}
+
 /** Pick the weight class for a bodyweight (lbs). */
 export function weightClassFor(lbs: number): WeightClass {
   return ESCAPE_PLAN.find(w => lbs >= w.minLbs && lbs <= w.maxLbs) || WC1

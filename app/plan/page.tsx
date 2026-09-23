@@ -9,6 +9,7 @@ import TimezoneSync from '@/components/TimezoneSync'
 import NextActionCard from '@/components/NextActionCard'
 import DashboardVideoFeed from '@/components/DashboardVideoFeed'
 import FeedEngagementRail from '@/components/FeedEngagementRail'
+import LocationOptIn from '@/components/LocationOptIn'
 import { getFeedVideos } from '@/lib/feed-videos'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
@@ -334,6 +335,12 @@ export default async function PlanDashboard() {
                 // — stacking both was the actual bug (Asa's catch, 2026-08-31:
                 // a real gap of empty video between the chat box and the nav).
                 <div className="px-4 pb-3.5" style={{ paddingRight: 58 }}>
+                  {/* Real-location eating-out engine (2026-09-23, Asa's ask)
+                      — only offered once she already has a real plan; a
+                      brand-new no-plan visitor has nothing for it to act on
+                      yet. See components/LocationOptIn.tsx for the actual
+                      one-tap-only permission ask. */}
+                  {hasPlan && <LocationOptIn />}
                   <NextActionCard variant="dock" hasPlan={hasPlan} firstRun={!hasPlan} />
                 </div>
               }

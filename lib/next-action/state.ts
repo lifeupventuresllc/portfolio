@@ -13,6 +13,8 @@ import type { UserStateSnapshot, EnergyLevel, StateOverrides } from './types'
 import { parseStoredGoal } from '@/lib/goals'
 import { parseStoredTrainingStyles } from '@/lib/training-styles'
 import { maybeReplan } from '@/lib/fos/replan'
+import { nearbyPicks } from '@/lib/fos/nearby-food'
+import { learnMealTimes, slotToNudgeNow } from '@/lib/fos/meal-timing'
 
 // Real gap found+fixed (Asa's ask, 2026-09-07, "the two main brains" —
 // nutrition and workout — should connect): this used to be one flat,
@@ -33,13 +35,16 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const svc = createServiceClient()
   const tz = getTimezone()
 
-  const [{ data: enrollment }, { data: intake }, { data: workoutPlan }, { data: nutritionPlan }, { data: todayProgress }, { data: foodToday }, { data: recentWorkoutActions }, profile, pattern, todayAdjustment] = await Promise.all([
+  const [{ data: enrollment }, { data: intake }, { data: workoutPlan }, { data: nutritionPlan }, { data: todayProgress }, { data: foodToday }, { data: recentWorkoutActions }, profile, pattern, todayAdjustment, learnedMealTimes] = await Promise.all([
     svc.from('challenge_enrollments').select('*').eq('id', enrollmentId).maybeSingle(),
     svc.from('challenge_intake').select('*').eq('enrollment_id', enrollmentId).maybeSingle(),
     svc.from('challenge_workout_plans').select('*').eq('enrollment_id', enrollmentId).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_nutrition_plans').select('calories, protein_g, meals, day_targets').eq('enrollment_id', enrollmentId).maybeSingle(),
     svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollmentId).eq('note', '__daily__').eq('logged_on', todayISO).maybeSingle(),
-    svc.from('challenge_food_log').select('calories, protein_g').eq('enrollment_id', enrollmentId).eq('logged_on', todayISO),
+    // `meal` added 2026-09-23 (re-used by the new location/timing eating-out
+    // sources below, to know which slots today are already logged) —
+    // already the exact same row set every caller here already fetched.
+    svc.from('challenge_food_log').select('calories, protein_g, meal').eq('enrollment_id', enrollmentId).eq('logged_on', todayISO),
     // Goal-alignment layer (prompt 6): was a workout action from THIS engine
     // shown and explicitly skipped today? That's a real signal to adjust
     // today's calorie assumption on — never guessed from the clock. Widened
@@ -57,6 +62,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     getProfile(enrollmentId),
     assessLifePattern(enrollmentId, todayISO),
     getApprovedTodayAdjustment(enrollmentId, todayISO),
+    learnMealTimes(enrollmentId, todayISO),
   ])
 
   // Simulate a not-yet-approved change INSTEAD of whatever's actually
@@ -230,7 +236,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals) ? (nutritionPlan.meals as WeekPlan) : null
   const mealIdx = localMondayIndex(tz)
   const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
-  const eatingOutToday = overrides.eatingOut ?? isEatingOutToday(todayMeals?.eatOut, effectiveTodayAdjustment)
+  const scheduledEatingOut = overrides.eatingOut ?? isEatingOutToday(todayMeals?.eatOut, effectiveTodayAdjustment)
   // Distinct from eatingOutToday itself — see types.ts. Only true when THIS
   // call actually passed an explicit override, never inferred from the
   // schedule fallback above.
@@ -262,25 +268,66 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   //    just not guaranteed to be her exact restaurant) when either she
   //    didn't name one, or that one isn't in the curated set for this slot.
   const remainingCalories = calorieBudget != null ? Math.max(0, calorieBudget - caloriesLoggedToday) : 500
+
+  // wc/nowSlot/restrictions used to only be computed once something had
+  // already turned eatingOutToday on — now computed unconditionally (cheap,
+  // pure) because the two new real sources below (location, learned meal
+  // time) need them BEFORE eatingOutToday itself can be decided.
+  const wc = weightClassFor(Number(intake?.weight_lbs) || 170)
+  const epochDays = Math.floor(new Date(`${todayISO}T00:00:00Z`).getTime() / 86400000)
+  const hour = localHourNumber(tz)
+  // What SHE said takes priority over the clock (2026-08-26 fix) — a 1pm
+  // "give me a snack idea" must size like a snack, never get treated as
+  // Lunch just because that's what the hour alone would infer.
+  const nowSlot: FastFoodMeal['slot'] = overrides.eatingOutMealSlot ?? (hour < 11 ? 'Breakfast' : hour < 15 ? 'Lunch' : hour < 20 ? 'Dinner' : 'Snack')
+  const budgetTier = budgetTierFromWeekly(Number(intake?.weekly_food_budget) || null)
+  const targetCal = calorieBudget != null ? remainingCalories : undefined
+  // Real dietary-restriction filter (2026-08-28, Asa's ask) — her own
+  // stored intake data, never a generic pass-through. See escape-plan.ts.
+  const restrictions = parseDietaryRestrictions(intake?.dislikes_allergies as string | null)
+
+  // Real, real-time location match (2026-09-23, Asa's direct ask) — only
+  // ever runs with her own opt-in ping on file (components/
+  // LocationOptIn.tsx) and only when that ping is recent enough to still
+  // mean "right now," never a stale position from hours ago. Skipped
+  // entirely (never even calls Google) once she's already logged this
+  // slot today — nothing to suggest for a meal that's already done.
+  const LOCATION_FRESH_MINUTES = 30
+  const lastLocationAt = enrollment?.last_location_at as string | null
+  const locationFresh = !!lastLocationAt && (Date.now() - new Date(lastLocationAt).getTime()) < LOCATION_FRESH_MINUTES * 60000
+  const SLOT_TO_MEAL: Record<FastFoodMeal['slot'], string> = { Breakfast: 'breakfast', Lunch: 'lunch', Dinner: 'dinner', Snack: 'snack' }
+  const loggedMealsToday = new Set((foodToday as unknown as { meal?: string }[] | null || []).map((r) => r.meal).filter(Boolean))
+  const nowSlotAlreadyLogged = loggedMealsToday.has(SLOT_TO_MEAL[nowSlot])
+  let nearbyMatches: Awaited<ReturnType<typeof nearbyPicks>> = []
+  if (locationFresh && !scheduledEatingOut && !eatingOutExplicit && !nowSlotAlreadyLogged) {
+    const lat = enrollment?.last_lat as number | null
+    const lng = enrollment?.last_lng as number | null
+    if (lat != null && lng != null) {
+      nearbyMatches = await nearbyPicks(lat, lng, wc, nowSlot, targetCal, restrictions).catch(() => [])
+    }
+  }
+  const locationMatch = nearbyMatches.length > 0
+
+  // Learned meal-time nudge (2026-09-23) — weakest of the real sources
+  // (a scheduled day or an explicit ask always wins), and only offered for
+  // a slot she genuinely hasn't logged yet today.
+  const timingSlot = (!scheduledEatingOut && !eatingOutExplicit && !locationMatch)
+    ? await slotToNudgeNow(enrollmentId, todayISO, hour, learnedMealTimes).catch(() => null)
+    : null
+
+  const eatingOutToday = scheduledEatingOut || locationMatch || !!timingSlot
   let eatingOutPick: FastFoodMeal | null = null
   let eatingOutSlot: FastFoodMeal['slot'] | null = null
   if (eatingOutToday) {
-    const wc = weightClassFor(Number(intake?.weight_lbs) || 170)
-    const epochDays = Math.floor(new Date(`${todayISO}T00:00:00Z`).getTime() / 86400000)
-    const hour = localHourNumber(tz)
-    // What SHE said takes priority over the clock (2026-08-26 fix) — a 1pm
-    // "give me a snack idea" must size like a snack, never get treated as
-    // Lunch just because that's what the hour alone would infer.
-    const nowSlot: FastFoodMeal['slot'] = overrides.eatingOutMealSlot ?? (hour < 11 ? 'Breakfast' : hour < 15 ? 'Lunch' : hour < 20 ? 'Dinner' : 'Snack')
-    eatingOutSlot = nowSlot
-    const budgetTier = budgetTierFromWeekly(Number(intake?.weekly_food_budget) || null)
-    const targetCal = calorieBudget != null ? remainingCalories : undefined
-    // Real dietary-restriction filter (2026-08-28, Asa's ask) — her own
-    // stored intake data, never a generic pass-through. See escape-plan.ts.
-    const restrictions = parseDietaryRestrictions(intake?.dislikes_allergies as string | null)
+    eatingOutSlot = timingSlot ?? nowSlot
 
     if (overrides.eatingOutRestaurant) {
       eatingOutPick = pickForRestaurant(wc, overrides.eatingOutRestaurant, nowSlot, targetCal, restrictions)[0] || null
+    }
+    if (!eatingOutPick && locationMatch) {
+      // A real nearby match is the most specific, most confident pick there
+      // is — she is, right now, actually near this exact place.
+      eatingOutPick = nearbyMatches[0]
     }
     if (!eatingOutPick) {
       const picks = pickForNow(wc, nowSlot, budgetTier, epochDays, targetCal, restrictions)

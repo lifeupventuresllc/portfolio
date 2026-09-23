@@ -35,10 +35,14 @@ export async function assessEarlyStruggle(enrollmentId: string, todayISO: string
   const createdAt = enrollment?.created_at as string | undefined
   if (!createdAt) return { struggling: false, reason: null }
 
-  const ageDays = (new Date(todayISO).getTime() - new Date(createdAt).getTime()) / 86400000
-  if (ageDays < 0 || ageDays > NEW_ACCOUNT_MAX_AGE_DAYS) return { struggling: false, reason: null }
-
+  // Compare date-only against date-only (never the raw timestamp) — an
+  // account enrolled earlier TODAY has a created_at later in the day than
+  // todayISO's implicit midnight, which read as a negative/future age and
+  // silently killed this check for same-day signups. Real bug caught live
+  // testing this exact engine, 2026-09-22.
   const enrolledOnISO = createdAt.slice(0, 10)
+  const ageDays = (new Date(todayISO).getTime() - new Date(enrolledOnISO).getTime()) / 86400000
+  if (ageDays < 0 || ageDays > NEW_ACCOUNT_MAX_AGE_DAYS) return { struggling: false, reason: null }
 
   // Signal 1: her very first real workout day was skipped outright — the
   // clearest possible "this didn't work for her" signal there is.
