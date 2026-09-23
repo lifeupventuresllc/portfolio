@@ -199,7 +199,7 @@ export default async function PlanDashboard() {
   const calBudget = baseCalTarget != null ? getEffectiveCalorieBudget(baseCalTarget, todayAdjustment) : null
   const loggedCaloriesToday = (foodLogRows || []).reduce((sum, r) => sum + (Number((r as { calories?: number }).calories) || 0), 0)
 
-  const menu = <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
+  const menu = <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} isAnonymous={!!user.is_anonymous} />
 
   // Real dashboard, feed-first (Asa's approved mockup, 2026-08-28/29): the
   // TikTok-style vertical reel is now the dominant middle section, full-bleed,

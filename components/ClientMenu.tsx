@@ -64,7 +64,7 @@ function MenuIcon({ name }: { name: IconName }) {
 
 type Item = { href: string; label: string; icon: IconName; external?: boolean }
 
-export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstName: string; liveUrl?: string; callAccess?: 'none' | 'monthly' | 'weekly' }) {
+export default function ClientMenu({ firstName, liveUrl, callAccess, isAnonymous }: { firstName: string; liveUrl?: string; callAccess?: 'none' | 'monthly' | 'weekly'; isAnonymous?: boolean }) {
   const [open, setOpen] = useState(false)
   const supabase = createClient()
 
@@ -325,12 +325,23 @@ export default function ClientMenu({ firstName, liveUrl, callAccess }: { firstNa
                   everything else, so it sits at natural distance from real
                   content instead of past a void. Any leftover blank space
                   from the shorter list now just falls harmlessly below it. */}
-              <div className="px-2 pt-3 mt-1 border-t border-smoke" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-                <button onClick={handleSignOut} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-charcoal transition-colors w-full text-left text-ivory/60">
-                  <MenuIcon name="logout" />
-                  <span className="text-sm">Sign Out</span>
-                </button>
-              </div>
+              {/* Real gap found live, 2026-09-23 (Asa's own manual test):
+                  this always read "Sign Out," even for a brand-new
+                  anonymous guest who never created a real account — she
+                  had no way to tell "you're not really signed into
+                  anything" from "you have a real account." An anonymous
+                  session is a real Supabase session under the hood, so
+                  signOut() technically "works" either way, but there's
+                  nothing real for her to sign OUT of yet — hidden entirely
+                  until a real account exists. */}
+              {!isAnonymous && (
+                <div className="px-2 pt-3 mt-1 border-t border-smoke" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+                  <button onClick={handleSignOut} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-charcoal transition-colors w-full text-left text-ivory/60">
+                    <MenuIcon name="logout" />
+                    <span className="text-sm">Sign Out</span>
+                  </button>
+                </div>
+              )}
             </nav>
           </div>
         </div>,
