@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { ensureAnonEnrollment } from '@/lib/auth-onboarding'
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -91,15 +92,34 @@ export async function middleware(request: NextRequest) {
     // same way it always has — every visit after that (the common case)
     // stays on '/' from here on, since a session now exists.
     if (user) return NextResponse.rewrite(new URL('/plan', request.url))
-    // A genuinely session-less first-ever visit still ends on /plan, the
-    // same as it always has — confirmed live, twice, that a rewrite's own
-    // query string never reaches /try's client code (useSearchParams()
-    // reads the real, visible browser URL, which is still bare '/' with
-    // no query string at all, not the internal rewrite target). Properly
-    // keeping even this one-time visit on '/' would mean creating her
-    // anonymous session inside middleware itself instead of /try's client
-    // code — a real, bigger change, deliberately not done in this pass.
-    return NextResponse.rewrite(new URL('/try?to=/plan', request.url))
+
+    // Real gap closed, 2026-09-24: a genuinely session-less first-ever
+    // visit used to still end on /plan — confirmed live, twice, that a
+    // rewrite's own query string never reaches /try's client code
+    // (useSearchParams() reads the real, visible browser URL, which is
+    // bare '/' with no query string at all, not the internal rewrite
+    // target). The actual fix: create her anonymous session HERE,
+    // server-side, instead of bouncing to /try's client-side code to do
+    // it — /try's whole reason to exist was doing this in the browser;
+    // skipping that entirely closes the gap instead of working around it.
+    // supabase.auth.signInAnonymously() reuses the SAME server client
+    // already wired to this request/response above, so its new session
+    // cookies land in `response` exactly the way a real cookie refresh
+    // already does elsewhere in this file.
+    try {
+      const { data: signIn, error: signInError } = await supabase.auth.signInAnonymously()
+      if (signInError || !signIn.user) throw signInError || new Error('no user')
+      await ensureAnonEnrollment(signIn.user)
+      const rewritten = NextResponse.rewrite(new URL('/plan', request.url))
+      response.cookies.getAll().forEach((c) => rewritten.cookies.set(c))
+      return rewritten
+    } catch {
+      // Never leave her stuck on a bare error — the exact same real,
+      // already-proven bootstrap /try has always done, just one real
+      // address-bar move instead of zero. Anonymous sign-in failing here
+      // is rare (a real Supabase/network hiccup), not the common path.
+      return NextResponse.rewrite(new URL('/try?to=/plan', request.url))
+    }
   }
 
   // Redirect unauthenticated users away from protected routes
