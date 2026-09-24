@@ -1,6 +1,30 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createServiceSupabaseClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
-import { ensureAnonEnrollment } from '@/lib/auth-onboarding'
+import type { User } from '@supabase/supabase-js'
+
+// Deliberately NOT importing lib/auth-onboarding.ts's real ensureAnonEnrollment
+// here, even though this is the exact same logic — that file imports
+// lib/email.ts at its top (for the real, unrelated welcome-email path), which
+// pulls in `resend` -> `@react-email/render` and broke the build the moment
+// middleware tried to bundle it (Vercel build, 2026-09-24: "Module not found:
+// @react-email/render", traced straight to this import). Middleware's Edge
+// bundle can't carry that dependency; this tiny, self-contained duplicate
+// avoids it entirely. Keep this in sync with lib/auth-onboarding.ts's real
+// ensureAnonEnrollment if that one ever changes.
+async function ensureAnonEnrollmentEdge(user: User) {
+  const service = createServiceSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!.replace(/\s/g, ''),
+    process.env.SUPABASE_SERVICE_ROLE_KEY!.replace(/[^A-Za-z0-9._-]/g, '')
+  )
+  const { data: enrollment } = await service.from('challenge_enrollments').select('id').eq('user_id', user.id).maybeSingle()
+  if (enrollment) return
+  await service.from('challenge_enrollments').insert({
+    user_id: user.id, email: null, name: null,
+    tier: 'inner_circle', status: 'active', amount: 0,
+    tier_started_at: new Date().toISOString(), started_at: new Date().toISOString(),
+  })
+}
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -109,7 +133,7 @@ export async function middleware(request: NextRequest) {
     try {
       const { data: signIn, error: signInError } = await supabase.auth.signInAnonymously()
       if (signInError || !signIn.user) throw signInError || new Error('no user')
-      await ensureAnonEnrollment(signIn.user)
+      await ensureAnonEnrollmentEdge(signIn.user)
       const rewritten = NextResponse.rewrite(new URL('/plan', request.url))
       response.cookies.getAll().forEach((c) => rewritten.cookies.set(c))
       return rewritten
