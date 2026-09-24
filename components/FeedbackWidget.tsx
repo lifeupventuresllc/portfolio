@@ -40,6 +40,12 @@ export default function FeedbackWidget() {
   }, [pathname])
 
   if (pathname?.startsWith('/admin')) return null
+  // CUT from Home (2026-09-24 audit, Asa's ask) — Home should read as "one
+  // button, her next action," nothing else competing for attention. Still
+  // available everywhere else, including My Day. '/' is included because
+  // the root-stays-the-address change (middleware.ts) serves Home's exact
+  // same content there — pathname reads '/', never '/plan', for that visit.
+  if (pathname === '/' || pathname === '/plan') return null
 
   function close() {
     setOpen(false)

@@ -134,7 +134,11 @@ export default function BottomTabBar() {
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={forYouActive ? '#E5A93C' : 'rgba(237,231,218,0.4)'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="8.3" r="3.4" /><path d="M5 20c0-3.9 3.1-6.5 7-6.5s7 2.6 7 6.5" />
           </svg>
-          <span className={`text-[10.5px] font-bold ${forYouActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>For You</span>
+          {/* Renamed 2026-09-24 (Asa's ask, "My Day" — "My Plan" rejected as
+              sounding like effort): same tab, same /plan/today destination,
+              same real content (food log, results, next workout) — this
+              already IS what "My Day" describes, just relabeled. */}
+          <span className={`text-[10.5px] font-bold ${forYouActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>My Day</span>
         </Link>
       </div>
     </nav>

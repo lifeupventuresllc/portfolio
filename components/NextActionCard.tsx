@@ -134,6 +134,13 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
   const [justBuilt, setJustBuilt] = useState<{ workout: boolean; nutrition: boolean } | null>(null)
   const [encouragement, setEncouragement] = useState<string | null>(null)
   const [celebration, setCelebration] = useState<string | null>(null)
+  // Chat merge (2026-09-24) — see the dock render below for the real
+  // reasoning. Default false: collapsed is the true default state, not
+  // just an animation start point. chatVisible (computed at render time,
+  // not stored) forces it open over real in-progress state regardless of
+  // this flag, so a stale `false` here can never hide something she's
+  // actually mid-conversation on.
+  const [chatOpen, setChatOpen] = useState(false)
   // Guards against re-showing the same reward's celebration every time this
   // same still-open row gets re-fetched (a fresh page load, "Keep it
   // simple" refetching after a failed request, etc.) — celebrate once per
@@ -427,6 +434,14 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
       : 'clamp(15px, 4.2vw, 18px)'
 
   if (variant === 'dock') {
+    // turns/quickReplies/pendingAdjustment/justApproved/justBuilt can only
+    // ever populate through a message she already sent from inside this
+    // same chat section (including voice, which is rendered inside it too)
+    // — so there's no real path where any of them go non-empty while
+    // chatOpen is still false. chatOpen alone is the true source of truth;
+    // aliased here so the render below reads as "is the chat visible," not
+    // "did she tap the toggle."
+    const chatVisible = chatOpen
     return (
       <div style={{ fontFamily: 'var(--font-poppins)' }}>
         {celebration && (
@@ -575,31 +590,39 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
 
         <ReminderPrompt trigger={askReminder} />
 
-        {action.kind !== 'complete' && (
-          <div className="flex items-center gap-1.5 mb-2">
-            <button onClick={dayChanged} disabled={busy} className="text-white/80 text-[10.5px] font-bold bg-white/10 border border-white/20 rounded-full px-3 py-1 disabled:opacity-60">
-              Keep it simple
-            </button>
-            {/* Real gap found live, 2026-09-21 (beta item 3): eating-out picks were
-                only reachable via For You -> scroll -> link. One labeled tap from
-                Home now. Plain link to the picks screen (a doing screen, not chat).
-                Hidden when the card is already the eating-out step itself. */}
-            {action.kind !== 'location' && (
-              <Link href="/plan/eating-out" className="text-white/80 text-[10.5px] font-bold bg-white/10 border border-white/20 rounded-full px-3 py-1">
-                Eating out?
-              </Link>
-            )}
-            {/* "Something else?" removed (Asa's spec, 2026-08-31): it looked
-                like a plain button but actually sent a canned phrase through
-                the same AI message pipeline the chat box below uses — a real
-                side door from "doing" into "deciding via chat," which is
-                exactly what the do-vs-decide split forbids. The always-
-                visible chat box already covers this if she wants to type it
-                herself; nothing lost, just no more disguised entry point. */}
-          </div>
-        )}
+        {/* "Keep it simple" and "Eating out?" chips CUT from Home (2026-09-24
+            audit, Asa's ask — "she sees her results, taps the one button
+            that gives her next action, and feels uplifted and encouraged,"
+            no other buttons competing on the card). "Keep it simple" (day-
+            changed) and eating-out picks both still reach her the normal
+            way — the next-action engine itself already surfaces an
+            eating-out instruction as the main card when it's real and true
+            (lib/next-action/candidates.ts's 'location' kind) — plus My Day
+            and the menu. Nothing lost, just not a standing button on Home
+            anymore. */}
 
         </>)}
+
+        {/* Chat merge (2026-09-24, Asa's ask, mockup-approved): the chat used
+            to sit open below the card by default — a second, always-visible
+            "decide something" surface competing with the one instruction
+            above it. Now it's tucked behind a quiet toggle, the same one
+            element either way. Auto-opens (chatVisible) when there's a real
+            in-progress exchange already (a reply she hasn't seen resolved,
+            a pending yes/no) so she's never stranded behind a closed toggle
+            mid-conversation — collapsed is only ever the true DEFAULT state,
+            never forced over real state. */}
+        {!chatVisible && (
+          <button
+            onClick={() => setChatOpen(true)}
+            className="w-full flex items-center justify-center gap-1.5 pt-2.5 mt-1 border-t border-white/[0.06] text-white/35 text-[10.5px] active:scale-[0.98] transition-transform"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" /></svg>
+            Something to ask instead?
+          </button>
+        )}
+
+        {chatVisible && (<>
 
         {/* Real chat transcript, this session only (Asa's report, 2026-09-01:
             "it doesn't show the user... typing in like ChatGPT") — capped
@@ -734,6 +757,16 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0A0A0F" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
           </button>
         </div>
+
+        {/* Collapses back to the default "do this" state — never clears the
+            conversation (turns/etc. all stay in memory), never navigates,
+            just hides it again. Reopening (the quiet toggle above) shows
+            the same transcript right where she left it. */}
+        <button onClick={() => setChatOpen(false)} className="w-full text-center pt-2 text-white/35 text-[10.5px] font-semibold">
+          ▲ Back to your next step
+        </button>
+
+        </>)}
       </div>
     )
   }
