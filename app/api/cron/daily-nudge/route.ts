@@ -43,26 +43,19 @@ export async function GET(request: NextRequest) {
     const localToday = localDateISO((s.timezone as string) || undefined)
     if (s.enrollment_id && shownByEnrollment.get(s.enrollment_id as string)?.has(localToday)) { skipped++; continue }
 
-    let payload = {
-      title: 'Your workout’s waiting 💪🏽',
-      body: "Even 20 minutes counts. Tap to start today's session — your plan's ready.",
-      url: '/plan',
-    }
-
-    // Loss aversion beats a generic invitation once there's something real to
-    // lose — but only when nothing's actually wrong (a dip below always wins;
-    // never guilt someone who's already struggling over a number). Same
-    // streakFrom + same '__daily__' dates already fetched above (shownByEnrollment)
-    // as the dashboard chip and every other streak surface — one true number.
+    // Streak-led by default now (2026-09-24, Asa's direct ask) — "Your
+    // workout's waiting" was the generic fallback for everyone; loss
+    // aversion (a real number she'd actually lose) reads as more personal
+    // and more hers than a flat invitation, even before any streak exists
+    // yet. Same streakFrom + same '__daily__' dates already fetched above
+    // (shownByEnrollment) as the dashboard chip and every other streak
+    // surface — one true number, never a second copy of this math.
+    let payload = { title: 'Your workout’s waiting 💪🏽', body: "Even 20 minutes counts. Tap to start today's session — your plan's ready.", url: '/plan' }
     if (s.enrollment_id) {
       const current = streakFrom(shownByEnrollment.get(s.enrollment_id as string) || new Set(), localToday)
-      if (current >= 2) {
-        payload = {
-          title: `Don't lose your ${current}-day streak`,
-          body: "One tap keeps it alive — today's session is ready.",
-          url: '/plan',
-        }
-      }
+      payload = current >= 2
+        ? { title: `Don't lose your ${current}-day streak`, body: "One tap keeps it alive — today's session is ready.", url: '/plan' }
+        : { title: 'Start a streak today', body: "One tap and day one is in the books. Today's session is ready.", url: '/plan' }
     }
 
     let assessment: Awaited<ReturnType<typeof assessLifePattern>> | null = null

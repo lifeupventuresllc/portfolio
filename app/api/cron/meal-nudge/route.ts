@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { sendPush, pushConfigured, type StoredSub } from '@/lib/push'
 import { localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
+import { getUserState } from '@/lib/next-action/state'
 
 // Midday reminder: nudge anyone who hasn't logged any food yet today. Layer 1
 // of the primary feature, nutrition side: the unified life-pattern engine
@@ -38,10 +39,31 @@ export async function GET(request: NextRequest) {
     const localToday = localDateISO((s.timezone as string) || undefined)
     if (s.enrollment_id && loggedByEnrollment.get(s.enrollment_id as string)?.has(localToday)) { skipped++; continue }
 
+    // A real, specific pick when one exists (2026-09-24, Asa's direct ask:
+    // auto-suggest food based on her real location or her real habit, not
+    // a generic prompt) — reuses getUserState, the exact SAME engine every
+    // other real "what should I eat" surface already reads (never a
+    // second, parallel food-pick system). state.eatingOutPick is already
+    // populated by a fresh location match (lib/fos/nearby-food.ts) or a
+    // learned-mealtime nudge (lib/fos/meal-timing.ts) the same way it
+    // would be if she opened the app herself right now; state.nextMealName
+    // is her real scheduled meal plan when neither of those fired. Only
+    // ever falls back to the generic line when nothing real is available —
+    // never a fabricated restaurant or dish.
     let payload = {
       title: 'Have you eaten yet today? 🍽️',
       body: "No stress if not — here's exactly what to eat, already decided. Tap and go.",
       url: '/plan/today',
+    }
+    if (s.enrollment_id) {
+      try {
+        const state = await getUserState(s.enrollment_id as string, localToday, {})
+        if (state.eatingOutPick) {
+          payload = { title: `${state.eatingOutPick.restaurant} fits your day 🍽️`, body: `${state.eatingOutPick.order} — already picked for you. Tap to see it.`, url: '/plan/eating-out' }
+        } else if (state.nextMealName) {
+          payload = { title: 'Your next meal is ready 🍽️', body: `${state.nextMealName} — no deciding needed, just tap and go.`, url: '/plan/today' }
+        }
+      } catch { /* getUserState failing here must never block the push — the generic line above still goes out */ }
     }
 
     let assessment: Awaited<ReturnType<typeof assessLifePattern>> | null = null
