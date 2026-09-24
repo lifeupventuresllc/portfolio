@@ -18,7 +18,14 @@ export type EnergyLevel = 'low' | 'normal' | 'high' | 'unknown'
 // stretch, etc.) ALWAYS had a candidate available, so the circle could
 // never go quiet even on a day she'd genuinely finished everything —
 // it kept nudging for one more small thing. See candidates.ts.
-export type ActionKind = 'workout' | 'meal' | 'fallback' | 'location' | 'reward_question' | 'complete'
+// 'coach' and 'partner' (2026-09-24, Asa's direct ask: "the button should do
+// it all") — the two accountability levers from the prompt spec that
+// previously only lived buried in the menu (Talk to your coach / Friends
+// tab). Both are real data reads, not new systems: coach reuses the SAME
+// isDip/dipRiskBand signal already computed below; partner reuses the SAME
+// getPartnerStatus() the Friends tab itself renders from (lib/partners.ts).
+// Neither fires as a guess — see candidates.ts for the exact real trigger.
+export type ActionKind = 'workout' | 'meal' | 'fallback' | 'location' | 'reward_question' | 'complete' | 'coach' | 'partner'
 
 export type UserStateSnapshot = {
   enrollmentId: string
@@ -105,6 +112,14 @@ export type UserStateSnapshot = {
   // invented meal. Null whenever no meal plan exists yet or today has no
   // meal at that slot (e.g. Sunday's recovery day).
   nextMealName: string | null
+
+  // ---- Accountability layer (2026-09-24, Asa's ask) ----
+  // A real, live "she'd be letting someone down" moment — null unless she
+  // actually has an active accountability partner (lib/partners.ts), she
+  // hasn't checked in today, AND her partner already has. Never fabricated:
+  // no partner, or a partner who also hasn't checked in yet, means null,
+  // same as every other candidate source in this file.
+  partnerNudge: { partnerName: string } | null
 }
 
 // Ephemeral, single-call overrides derived from an explicit signal (a

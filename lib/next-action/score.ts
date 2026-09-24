@@ -25,6 +25,14 @@ const KIND_BASE: Record<ActionCandidate['kind'], number> = {
   // candidate on a day she's genuinely done, so nothing else is in the
   // running for the scorer to weigh it against. Present for exhaustiveness.
   complete: 0,
+  // 'coach' and 'partner' (2026-09-24) — real, but secondary to the core
+  // workout/meal loop on an ordinary day. Below meal (50) and location (55)
+  // on purpose: a rough day should still usually offer the (softened) real
+  // workout before "go talk to someone about it." coach gets a targeted
+  // boost below on genuinely high dip risk specifically — see
+  // explicitContextAdjustment.
+  coach: 45,
+  partner: 40,
 }
 
 // A real, already-observed dip (lib/fos/pattern.ts) or a low energy signal
@@ -90,6 +98,14 @@ function timeFitAdjustment(candidate: ActionCandidate, state: UserStateSnapshot)
 function explicitContextAdjustment(candidate: ActionCandidate, state: UserStateSnapshot): number {
   if (candidate.kind === 'location' && state.eatingOutExplicit) return 25
   if (candidate.kind === 'workout' && state.workoutOverrideActive) return 25
+  // Real, high-confidence risk (not just a low-energy day — dipRiskBand
+  // 'high' specifically) is a stronger signal than an ordinary rough
+  // morning: 45 (base) + 20 (here) - 15 (energyAdjustment, since 'high'
+  // also counts as lowCapacity there) = 50, clearing a same-day softened
+  // workout's 60-15=45. A merely low-energy day (dipRiskBand not 'high')
+  // does NOT get this boost — the softened workout still wins there,
+  // unchanged from before this candidate existed.
+  if (candidate.kind === 'coach' && state.dipRiskBand === 'high') return 20
   return 0
 }
 

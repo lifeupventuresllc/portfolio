@@ -16,7 +16,11 @@ import { useLiveRefresh, broadcastRefresh } from '@/lib/useLiveRefresh'
 // label), just the one thing to do right now. Prompt 3's expansion routing
 // lives here too: tapping the instruction (not the buttons) opens the
 // supporting screen the engine already decided on — never a menu.
-type ActionKind = 'workout' | 'meal' | 'fallback' | 'location' | 'complete'
+// Kept as its own local list (not imported from lib/next-action/types.ts)
+// deliberately mirroring only the kinds the client ever needs to route —
+// 'reward_question' never reaches the client as a real kind (see that
+// file's comment). Must stay in sync when a new kind is added there.
+type ActionKind = 'workout' | 'meal' | 'fallback' | 'location' | 'complete' | 'coach' | 'partner'
 type NextAction = {
   logId: string; kind: ActionKind; actionKey: string; instruction: string; score: number
   restaurant?: string; mealSlot?: string
@@ -77,6 +81,12 @@ export const EXPANSION_ROUTE: Partial<Record<ActionKind, string>> = {
   // fallback/complete kinds already get.
   ...(SHOW_CALORIE_COUNTER ? { meal: '/plan/nutrition' } : {}),
   location: '/plan/eating-out',
+  // 2026-09-24, Asa's ask: coach check-ins and the accountability partner
+  // used to only be reachable via the ☰ menu — now the button itself can
+  // route straight there when the engine (real isDip / real partner
+  // check-in gap) decides that's genuinely the best next thing.
+  coach: '/plan/coach',
+  partner: '/plan/friends',
 }
 
 // "Keep it simple" (renamed from "My day changed," Asa's ask, 2026-08-27 —

@@ -97,7 +97,16 @@ function buildFallbackCandidates(state: UserStateSnapshot): ActionCandidate[] {
 export function buildCandidates(state: UserStateSnapshot, opts?: { forceFallback?: boolean }): ActionCandidate[] {
   if (opts?.forceFallback) return buildFallbackCandidates(state)
 
-  if (state.workoutDoneToday && nutritionDoneToday(state)) {
+  // Real change (2026-09-24, Asa's ask: "the button should do it all"): the
+  // old terminal state treated workout+nutrition done as nothing-left-to-
+  // ask, full stop. But a real accountability moment (isDip, or a partner
+  // who's waiting on her) is still a genuine next thing to do even on a day
+  // she's otherwise finished — so the terminal short-circuit now only wins
+  // when NEITHER of those is true. When one is, we fall through to normal
+  // candidate building below, where workout/meal simply won't re-add
+  // themselves (already gated on done-today) and coach/partner compete
+  // against the fallback pool instead.
+  if (state.workoutDoneToday && nutritionDoneToday(state) && !state.isDip && !state.partnerNudge) {
     const instruction = COMPLETE_MESSAGES[Math.floor(Math.random() * COMPLETE_MESSAGES.length)]
     return [{ kind: 'complete', actionKey: 'complete:done_for_today', instruction, estMinutes: 0 }]
   }
@@ -154,6 +163,34 @@ export function buildCandidates(state: UserStateSnapshot, opts?: { forceFallback
       actionKey: 'meal:log_next',
       instruction: `About ${remaining} calories left today — you're taking care of you.${mealLine}`,
       estMinutes: 3,
+    })
+  }
+
+  // Coach check-in (prompt 1's "coach-style check-ins" lever) — the exact
+  // same real isDip signal that already softens the workout above, offered
+  // here as its OWN candidate too, so a genuinely rough stretch can surface
+  // "talk to your coach" as the actual winning action, not just quieter
+  // workout copy. score.ts gives this a real boost specifically when
+  // dipRiskBand is 'high' (not just any low-energy day) — see its comment.
+  if (state.isDip) {
+    candidates.push({
+      kind: 'coach',
+      actionKey: 'coach:checkin',
+      instruction: "Today's been a lot, love — your coach is right here if you want to talk it through.",
+      estMinutes: 2,
+    })
+  }
+
+  // Accountability partner (prompt 1's "other people" lever) — only ever
+  // fires on the real, live "don't let them down" moment computed in
+  // state.ts (she hasn't checked in, her partner already has). Never a
+  // generic "message your partner" nudge with nothing behind it.
+  if (state.partnerNudge) {
+    candidates.push({
+      kind: 'partner',
+      actionKey: `partner:checkin`,
+      instruction: `${state.partnerNudge.partnerName} already checked in today, love — your turn, don't leave them hanging.`,
+      estMinutes: 1,
     })
   }
 

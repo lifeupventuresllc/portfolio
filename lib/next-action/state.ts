@@ -15,6 +15,7 @@ import { parseStoredTrainingStyles } from '@/lib/training-styles'
 import { maybeReplan } from '@/lib/fos/replan'
 import { nearbyPicks } from '@/lib/fos/nearby-food'
 import { learnMealTimes, slotToNudgeNow } from '@/lib/fos/meal-timing'
+import { getPartnerStatus } from '@/lib/partners'
 
 // Real gap found+fixed (Asa's ask, 2026-09-07, "the two main brains" —
 // nutrition and workout — should connect): this used to be one flat,
@@ -35,7 +36,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const svc = createServiceClient()
   const tz = getTimezone()
 
-  const [{ data: enrollment }, { data: intake }, { data: workoutPlan }, { data: nutritionPlan }, { data: todayProgress }, { data: foodToday }, { data: recentWorkoutActions }, profile, pattern, todayAdjustment, learnedMealTimes] = await Promise.all([
+  const [{ data: enrollment }, { data: intake }, { data: workoutPlan }, { data: nutritionPlan }, { data: todayProgress }, { data: foodToday }, { data: recentWorkoutActions }, profile, pattern, todayAdjustment, learnedMealTimes, partnerStatus] = await Promise.all([
     svc.from('challenge_enrollments').select('*').eq('id', enrollmentId).maybeSingle(),
     svc.from('challenge_intake').select('*').eq('enrollment_id', enrollmentId).maybeSingle(),
     svc.from('challenge_workout_plans').select('*').eq('enrollment_id', enrollmentId).eq('week_number', 1).maybeSingle(),
@@ -63,6 +64,9 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     assessLifePattern(enrollmentId, todayISO),
     getApprovedTodayAdjustment(enrollmentId, todayISO),
     learnMealTimes(enrollmentId, todayISO),
+    // Same real read the Friends tab itself uses (lib/partners.ts) — no
+    // active partnership just returns null, never a fabricated one.
+    getPartnerStatus(enrollmentId),
   ])
 
   // Simulate a not-yet-approved change INSTEAD of whatever's actually
@@ -357,6 +361,13 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   // actual next-action read.
   if (userId) maybeReplan(enrollmentId, userId, todayISO).catch(() => {})
 
+  // Real "don't let them down" moment only — she hasn't checked in today
+  // AND her partner genuinely already has. A partner who also hasn't
+  // checked in yet is not a nudge-worthy moment (nothing to be behind on).
+  const partnerNudge = (partnerStatus && !partnerStatus.me.checkedInToday && partnerStatus.partner.checkedInToday)
+    ? { partnerName: partnerStatus.partner.name }
+    : null
+
   return {
     enrollmentId,
     userId,
@@ -382,5 +393,6 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     proteinBudget,
     proteinLoggedToday,
     nextMealName,
+    partnerNudge,
   }
 }
