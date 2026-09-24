@@ -1,6 +1,9 @@
 // Gamified challenges — badges + milestones, all DERIVED from a member's real
 // activity (no new tables). Coach Asa's voice throughout: every badge is framed
-// as him noticing her effort. Feeds /plan/achievements + the dashboard strip.
+// as him noticing her effort. /plan/achievements (the only real page that
+// showed this to her) was cut 2026-09-24 — Asa's original call, and nothing
+// replaced it, so this data now only feeds lib/builder/ingest.ts's recap
+// timeline, not anything she can see directly herself.
 
 export type BadgeState = {
   streak: number // current consecutive-day streak

@@ -20,13 +20,6 @@ test.describe('Member journey (authenticated)', () => {
     await expect(page.locator('body')).toContainText(/Did you show up today\?|Your daily targets|not enrolled/i)
   })
 
-  test('badges / achievements page loads', async ({ page }) => {
-    await login(page)
-    await page.goto('/plan/achievements')
-    await expect(page.locator('body')).toContainText(/badge/i)
-    await expect(page.locator('body')).toContainText(/Day \d+ of \d+/)
-  })
-
   test('meals page shows grocery pricing (or intake gate)', async ({ page }) => {
     await login(page)
     await page.goto('/plan/meals')
