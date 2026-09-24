@@ -62,6 +62,12 @@ export interface PlanBuildInput {
   cook_days_per_week?: number
   injuries?: Injury[]
   postpartum?: boolean
+  // 2026-09-24, "what's your why" — real optional, multi-select, never
+  // guessed (see lib/payoff.ts). Undefined/omitted on a call that never
+  // touches this question (e.g. PreferencesForm's "Change my goal" save) —
+  // sticky-carried-forward below the same way optional_completed etc. are,
+  // so an unrelated intake edit can never silently wipe out her real answer.
+  payoffs?: string[]
   training_style?: TrainingStyle
   // training_styles (plural) is now the real source of truth passed to the
   // generator — see lib/training-styles.ts. training_style (singular) is
@@ -116,6 +122,8 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
   const optionalCompleted = !!inp.optional_completed || !!priorFormData.optional_completed
   const injuriesAddressed = !!inp.injuriesAddressed || !!priorFormData.injuries_addressed
   const requiredTierCompleted = !!inp.requiredTierCompleted || !!priorFormData.required_tier_completed
+  const priorPayoffs = Array.isArray(priorFormData.payoffs) ? (priorFormData.payoffs as string[]) : []
+  const payoffs = inp.payoffs?.length ? inp.payoffs : priorPayoffs
 
   const intakePayload = {
     enrollment_id: inp.enrollmentId,
@@ -152,6 +160,7 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
       optional_completed: optionalCompleted,
       injuries_addressed: injuriesAddressed,
       required_tier_completed: requiredTierCompleted,
+      payoffs,
     },
   }
 

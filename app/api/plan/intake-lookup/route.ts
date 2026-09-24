@@ -63,6 +63,9 @@ export async function GET() {
       cook_days_per_week: formData.cook_days_per_week ?? 2,
       postpartum: !!formData.postpartum,
       other_info: formData.other_info || '',
+      // 2026-09-24, Asa's "what's your why" payoff step — same real
+      // array-in-form_data pattern as goals/training_styles above.
+      payoffs: Array.isArray(formData.payoffs) ? formData.payoffs : [],
     },
   })
 }

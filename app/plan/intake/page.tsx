@@ -7,6 +7,7 @@ import CountUp from '@/components/CountUp'
 import FocusAreaPhoto from '@/components/FocusAreaPhoto'
 import { hapticTap } from '@/lib/haptics'
 import { createClient, clearLocalSession } from '@/lib/supabase/client'
+import { PAYOFF_OPTIONS } from '@/lib/payoff'
 
 type Targets = { calories: number; protein_g: number; carbs_g: number; fats_g: number; bmr: number; tdee: number }
 
@@ -54,7 +55,11 @@ const LHint = ({ children }: { children: React.ReactNode }) => <p className="tex
 // Everything else stays deferred (weekly_food_budget merged into the 'cook'
 // optional step; experience/training_style/days_per_week/postpartum/other_info
 // are genuinely secondary refinements).
-const REQUIRED_STEPS = ['name', 'goal', 'focus', 'body', 'location', 'injuries', 'food']
+// 'why' added 2026-09-24 (Asa's ask, mockup-approved) — right after 'goal':
+// what she picks there is WHAT she's doing, this is WHY. Optional (Continue
+// always enabled, no minimum pick) — it just personalizes messaging later,
+// never gates plan-building the way goal/focus/body genuinely need to.
+const REQUIRED_STEPS = ['name', 'goal', 'why', 'focus', 'body', 'location', 'injuries', 'food']
 const OPTIONAL_STEPS = [
   'target', 'experience', 'training_style', 'days', 'cook', 'postpartum', 'other',
 ]
@@ -121,7 +126,9 @@ function ConversationalIntakeInner() {
   // still needs one value — see lib/plan-builder.ts).
   const [goals, setGoals] = useState<string[]>([])
   const [trainingStyles, setTrainingStyles] = useState<string[]>([])
+  const [payoffs, setPayoffs] = useState<string[]>([])
   const toggleGoal = (v: string) => setGoals((a) => (a.includes(v) ? a.filter((x) => x !== v) : [...a, v]))
+  const togglePayoff = (v: string) => { hapticTap(); setPayoffs((a) => (a.includes(v) ? a.filter((x) => x !== v) : [...a, v])) }
   const primaryGoal = goals[0] || ''
   const [injuries, setInjuries] = useState<string[]>([])
   const [phase, setPhase] = useState<'quiz' | 'building' | 'done'>('quiz')
@@ -216,6 +223,7 @@ function ConversationalIntakeInner() {
       if (Array.isArray(i.injuries)) setInjuries(i.injuries)
       if (Array.isArray(i.goals) && i.goals.length) setGoals(i.goals)
       if (Array.isArray(i.training_styles) && i.training_styles.length) setTrainingStyles(i.training_styles)
+      if (Array.isArray(i.payoffs) && i.payoffs.length) setPayoffs(i.payoffs)
     }).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -270,6 +278,7 @@ function ConversationalIntakeInner() {
           food_preferences: f.food_preferences, dislikes_allergies: f.dislikes_allergies,
           injuries, injuries_limitations: '', postpartum: f.postpartum === 'yes',
           training_style: trainingStyles[0] || 'none', training_styles: trainingStyles, other_info: f.other_info,
+          payoffs,
           refining,
         }),
       })
@@ -487,6 +496,40 @@ function ConversationalIntakeInner() {
                 ))}
               </div>
               <button onClick={next} disabled={!goals.length} className={lPrimaryBtn} style={!goals.length ? { opacity: 0.4 } : undefined}>Continue →</button>
+            </>)}
+
+            {/* 'why' (2026-09-24, Asa's ask, mockup-approved) — real, optional,
+                multi-select. Continue has no disabled condition on purpose:
+                a real "skip it" stays available (same principle as the
+                injuries step), it just means she doesn't get the
+                personalized "why it matters to you" line later — nothing
+                else breaks (lib/next-action/payoff-messages.ts falls back
+                cleanly to streak/quick-win/progress copy when this is empty). */}
+            {s === 'why' && (<>
+              <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-2">Part of your plan</p>
+              <LQ>What&apos;s your why?</LQ>
+              <LHint>Choose what&apos;s true for you — this is what we&apos;ll remind you of, not just your numbers.</LHint>
+              <div className="space-y-3 mb-6">
+                {PAYOFF_OPTIONS.map((o) => {
+                  const active = payoffs.includes(o.v)
+                  return (
+                    <button key={o.v} onClick={() => togglePayoff(o.v)} className={`${lopt(active)} !flex items-center gap-3.5`}>
+                      <span className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${active ? 'bg-gold/15 text-gold' : 'bg-ink/5 text-ink/45'}`}>
+                        {o.v === 'energy' && <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" /></svg>}
+                        {o.v === 'kids' && <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20c0-3.6 2.9-6.2 6.5-6.2s6.5 2.6 6.5 6.2" /></svg>}
+                        {o.v === 'mood' && <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8.5 15c1 1 2.2 1.5 3.5 1.5s2.5-.5 3.5-1.5M9 10h.01M15 10h.01" /></svg>}
+                        {o.v === 'family' && <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11.5 12 4l8 7.5" /><path d="M6.5 10v9a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-9" /></svg>}
+                        {o.v === 'look' && <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8" /><circle cx="12" cy="12" r="4" /></svg>}
+                      </span>
+                      <span>
+                        <span className="block">{o.label}</span>
+                        <span className="block text-sm font-normal mt-0.5 text-ink/40">{o.desc}</span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <button onClick={next} className={lPrimaryBtn}>Continue →</button>
             </>)}
 
             {s === 'focus' && (<>

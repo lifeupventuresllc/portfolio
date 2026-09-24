@@ -1,4 +1,5 @@
 import type { ActionCandidate, UserStateSnapshot } from './types'
+import { shouldReferencePayoff, payoffWhyLine } from './payoff-messages'
 
 // The universal, wellness-scoped fallback set (prompt 2) — always available
 // regardless of what real workout/meal data exists, so there is always at
@@ -125,6 +126,14 @@ export function buildCandidates(state: UserStateSnapshot, opts?: { forceFallback
     // program — bounded, invisible-to-her-as-math, and reversible day to day.
     if ((state.goal === 'lose' || state.goal === 'recomp') && state.calorieBudget != null && state.caloriesLoggedToday > state.calorieBudget) {
       instruction += ' Keep it shorter today if you need to, love — a lighter version still fully counts.'
+    }
+    // Payoff personalization (2026-09-24, Asa's ask): "why it matters to
+    // HER" (prompt 1's output-format line 2), ~65% of the time, worded
+    // differently each call — see payoff-messages.ts. Silently absent
+    // whenever she has no stored payoff yet; never a placeholder line.
+    if (state.payoffs.length && shouldReferencePayoff()) {
+      const whyLine = payoffWhyLine(state.payoffs)
+      if (whyLine) instruction += ` ${whyLine}`
     }
     candidates.push({ kind: 'workout', actionKey: `workout:${state.workoutCandidate.title}`, instruction, estMinutes: 30 })
   }

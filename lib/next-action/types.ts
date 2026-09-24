@@ -120,6 +120,11 @@ export type UserStateSnapshot = {
   // no partner, or a partner who also hasn't checked in yet, means null,
   // same as every other candidate source in this file.
   partnerNudge: { partnerName: string } | null
+
+  // Her real, stored reason(s) — see lib/payoff.ts. Empty array (never
+  // guessed/defaulted) whenever she hasn't answered the intake "why" step
+  // yet — payoff-messages.ts falls back cleanly to non-payoff copy then.
+  payoffs: string[]
 }
 
 // Ephemeral, single-call overrides derived from an explicit signal (a

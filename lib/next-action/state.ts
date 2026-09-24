@@ -12,6 +12,7 @@ import { weightClassFor, budgetTierFromWeekly, pickForNow, pickForRestaurant, pa
 import type { UserStateSnapshot, EnergyLevel, StateOverrides } from './types'
 import { parseStoredGoal } from '@/lib/goals'
 import { parseStoredTrainingStyles } from '@/lib/training-styles'
+import { parseStoredPayoffs } from '@/lib/payoff'
 import { maybeReplan } from '@/lib/fos/replan'
 import { nearbyPicks } from '@/lib/fos/nearby-food'
 import { learnMealTimes, slotToNudgeNow } from '@/lib/fos/meal-timing'
@@ -80,6 +81,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
 
   const userId = (enrollment?.user_id as string | null) ?? null
   const injuries = (Array.isArray((intake?.form_data as { injuries?: Injury[] } | null)?.injuries) ? (intake!.form_data as { injuries: Injury[] }).injuries : []) as Injury[]
+  const payoffs = parseStoredPayoffs((intake?.form_data as { payoffs?: unknown } | null)?.payoffs)
   // Real bug found live, 2026-09-03: same narrow-cast bug as
   // app/plan/workout/page.tsx — the Next Action circle regenerates her real
   // workout too, so it needs her real goal, not a silently downgraded one.
@@ -394,5 +396,6 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     proteinLoggedToday,
     nextMealName,
     partnerNudge,
+    payoffs,
   }
 }

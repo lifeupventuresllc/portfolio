@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { effectiveGoal } from '@/lib/goals'
+import { PAYOFF_OPTIONS } from '@/lib/payoff'
 
 type Current = {
   name: string; age: number; sex: string; height_in: number; weight_lbs: number
@@ -10,6 +11,10 @@ type Current = {
   food_preferences: string; dislikes_allergies: string; injuries: string[]
   postpartum: boolean; other_info: string; cook_days_per_week: number
   focus_area: string; goals: string[]; training_styles: string[]
+  // 2026-09-24 — real "what's your why" answer, editable here so changing
+  // it never means restarting the full intake (the exact trap Asa caught
+  // once already for "change my goal" — see the memory on that fix).
+  payoffs: string[]
 }
 
 const GOALS = [
@@ -37,6 +42,7 @@ export default function PreferencesForm({ current }: { current: Current }) {
   const [goals, setGoals] = useState<string[]>(current.goals)
   const [focusArea, setFocusArea] = useState(current.focus_area)
   const [trainingStyles, setTrainingStyles] = useState<string[]>(current.training_styles)
+  const [payoffs, setPayoffs] = useState<string[]>(current.payoffs)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -47,7 +53,7 @@ export default function PreferencesForm({ current }: { current: Current }) {
   // of taps (multi-select goals/styles) is debounced ~400ms into ONE save of
   // the final selection, and a tap during an in-flight save queues one more
   // save instead of being lost. Same endpoint + payload as the old button.
-  const latest = useRef({ goals, focusArea, trainingStyles })
+  const latest = useRef({ goals, focusArea, trainingStyles, payoffs })
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inFlight = useRef(false)
   const queued = useRef(false)
@@ -58,6 +64,7 @@ export default function PreferencesForm({ current }: { current: Current }) {
     if (next.goals) setGoals(next.goals)
     if (next.focusArea !== undefined) setFocusArea(next.focusArea)
     if (next.trainingStyles) setTrainingStyles(next.trainingStyles)
+    if (next.payoffs) setPayoffs(next.payoffs)
     setSaved(false); setError('')
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(save, 400)
@@ -67,9 +74,10 @@ export default function PreferencesForm({ current }: { current: Current }) {
     const a = latest.current.trainingStyles
     change({ trainingStyles: v === 'none' ? ['none'] : (a.includes(v) ? a.filter((x) => x !== v) : [...a.filter((x) => x !== 'none'), v]) })
   }
+  const togglePayoff = (v: string) => { const a = latest.current.payoffs; change({ payoffs: a.includes(v) ? a.filter((x) => x !== v) : [...a, v] }) }
 
   async function save() {
-    const { goals, focusArea, trainingStyles } = latest.current
+    const { goals, focusArea, trainingStyles, payoffs } = latest.current
     if (!goals.length) { setError('Pick at least one goal.'); return }
     if (inFlight.current) { queued.current = true; return }
     inFlight.current = true
@@ -90,6 +98,7 @@ export default function PreferencesForm({ current }: { current: Current }) {
           refining: true,
           goals, goal: effectiveGoal(goals), focus_area: focusArea,
           training_styles: trainingStyles, training_style: trainingStyles[0] || 'none',
+          payoffs,
         }),
       })
       const data = await res.json()
@@ -138,6 +147,19 @@ export default function PreferencesForm({ current }: { current: Current }) {
             <button key={o.v} onClick={() => toggleStyle(o.v)} className={opt(trainingStyles.includes(o.v))}>
               <span className="block font-semibold">{o.l}</span>
               <span className="block text-xs opacity-60 mt-0.5">{o.d}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* 2026-09-24 — real edit path for "what's your why," so changing it
+            never means restarting the whole intake (the same trap already
+            found + fixed once for the goal question). */}
+        <p className="text-ivory/40 text-xs font-semibold uppercase tracking-wider mb-2">Your why — pick all that apply</p>
+        <div className="space-y-2 mb-8">
+          {PAYOFF_OPTIONS.map((o) => (
+            <button key={o.v} onClick={() => togglePayoff(o.v)} className={opt(payoffs.includes(o.v))}>
+              <span className="block font-semibold">{o.label}</span>
+              <span className="block text-xs opacity-60 mt-0.5">{o.desc}</span>
             </button>
           ))}
         </div>

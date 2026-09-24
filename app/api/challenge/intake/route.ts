@@ -87,6 +87,11 @@ export async function POST(request: NextRequest) {
       injuries_limitations: body.injuries_limitations,
       cook_days_per_week: Number(body.cook_days_per_week) || 2,
       injuries: (Array.isArray(body.injuries) ? body.injuries : []) as Injury[],
+      // Only passed through when this submission actually included the
+      // question (real array present) — omitted (undefined) otherwise, so
+      // buildInitialPlans' sticky carry-forward keeps whatever she already
+      // answered instead of treating "didn't ask this time" as "cleared."
+      payoffs: Array.isArray(body.payoffs) ? body.payoffs : undefined,
       postpartum: !!body.postpartum,
       training_style: primaryTrainingStyle,
       training_styles: trainingStyles,

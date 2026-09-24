@@ -4,6 +4,8 @@ import { sendPush, pushConfigured, type StoredSub } from '@/lib/push'
 import { localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { streakFrom } from '@/lib/streak'
+import { parseStoredPayoffs } from '@/lib/payoff'
+import { shouldReferencePayoff, payoffWhyLine } from '@/lib/next-action/payoff-messages'
 
 // Daily reminder: nudge anyone who opted into push and hasn't shown up today.
 // Layer 1 of the primary feature ("the app that already knows you"): this is
@@ -38,6 +40,17 @@ export async function GET(request: NextRequest) {
     shownByEnrollment.get(id)!.add(row.logged_on as string)
   }
 
+  // Payoff personalization (2026-09-24) — same real stored "why" the
+  // next-action engine reads (lib/payoff.ts), one batch fetch keyed by
+  // enrollment, not a per-subscriber query.
+  const { data: intakeRows } = enrollmentIds.length
+    ? await svc.from('challenge_intake').select('enrollment_id, form_data').in('enrollment_id', enrollmentIds)
+    : { data: [] }
+  const payoffsByEnrollment = new Map<string, string[]>()
+  for (const row of intakeRows || []) {
+    payoffsByEnrollment.set(row.enrollment_id as string, parseStoredPayoffs((row.form_data as { payoffs?: unknown } | null)?.payoffs))
+  }
+
   let sent = 0, removed = 0, skipped = 0, dipsCaught = 0
   for (const s of (subs || [])) {
     const localToday = localDateISO((s.timezone as string) || undefined)
@@ -53,9 +66,21 @@ export async function GET(request: NextRequest) {
     let payload = { title: 'Your workout’s waiting 💪🏽', body: "Even 20 minutes counts. Tap to start today's session — your plan's ready.", url: '/plan' }
     if (s.enrollment_id) {
       const current = streakFrom(shownByEnrollment.get(s.enrollment_id as string) || new Set(), localToday)
+      let body = current >= 2
+        ? "One tap keeps it alive — today's session is ready."
+        : "One tap and day one is in the books. Today's session is ready."
+      // Payoff personalization (2026-09-24) — ~65% of the time, real stored
+      // reason only, never a placeholder. The other ~35% (and anyone with
+      // no payoff on file) keeps the pure streak line above, unchanged —
+      // exactly prompt 2's "remaining messages use other motivators."
+      const payoffs = payoffsByEnrollment.get(s.enrollment_id as string) || []
+      if (payoffs.length && shouldReferencePayoff()) {
+        const whyLine = payoffWhyLine(payoffs)
+        if (whyLine) body += ` ${whyLine}`
+      }
       payload = current >= 2
-        ? { title: `Don't lose your ${current}-day streak`, body: "One tap keeps it alive — today's session is ready.", url: '/plan' }
-        : { title: 'Start a streak today', body: "One tap and day one is in the books. Today's session is ready.", url: '/plan' }
+        ? { title: `Don't lose your ${current}-day streak`, body, url: '/plan' }
+        : { title: 'Start a streak today', body, url: '/plan' }
     }
 
     let assessment: Awaited<ReturnType<typeof assessLifePattern>> | null = null
