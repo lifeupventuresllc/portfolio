@@ -4,6 +4,7 @@ import { sendPush, pushConfigured, type StoredSub } from '@/lib/push'
 import { localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { getUserState } from '@/lib/next-action/state'
+import { shouldReferencePayoff, payoffWhyLine } from '@/lib/next-action/payoff-messages'
 
 // Midday reminder: nudge anyone who hasn't logged any food yet today. Layer 1
 // of the primary feature, nutrition side: the unified life-pattern engine
@@ -62,6 +63,13 @@ export async function GET(request: NextRequest) {
           payload = { title: `${state.eatingOutPick.restaurant} fits your day 🍽️`, body: `${state.eatingOutPick.order} — already picked for you. Tap to see it.`, url: '/plan/eating-out' }
         } else if (state.nextMealName) {
           payload = { title: 'Your next meal is ready 🍽️', body: `${state.nextMealName} — no deciding needed, just tap and go.`, url: '/plan/today' }
+        }
+        // Payoff personalization (2026-09-24) — same real stored reason,
+        // same ~65% rate, same rule as every other surface: silent no-op
+        // whenever she has none on file.
+        if (state.payoffs.length && shouldReferencePayoff()) {
+          const whyLine = payoffWhyLine(state.payoffs)
+          if (whyLine) payload = { ...payload, body: `${payload.body} ${whyLine}` }
         }
       } catch { /* getUserState failing here must never block the push — the generic line above still goes out */ }
     }

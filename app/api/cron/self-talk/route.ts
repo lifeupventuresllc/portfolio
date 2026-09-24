@@ -3,6 +3,8 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { sendPush, pushConfigured, type StoredSub } from '@/lib/push'
 import { localDateISO, localDayNumber } from '@/lib/localdate'
 import { affirmationForDay } from '@/lib/affirmations'
+import { parseStoredPayoffs } from '@/lib/payoff'
+import { shouldReferencePayoff, payoffWhyLine } from '@/lib/next-action/payoff-messages'
 
 // Morning self-talk push (2026-09-24, Asa's direct ask): the exact same
 // "Today's self-talk" line Home already shows her (affirmationForDay,
@@ -26,6 +28,17 @@ export async function GET(request: NextRequest) {
     : { data: [] }
   const lastActiveById = new Map((enrollments || []).map((e) => [e.id as string, e.last_active_at as string | null]))
 
+  // Payoff personalization (2026-09-24) — same real stored "why" every
+  // other surface reads (lib/payoff.ts), one batch fetch keyed by
+  // enrollment, not a per-subscriber query.
+  const { data: intakeRows } = enrollmentIds.length
+    ? await svc.from('challenge_intake').select('enrollment_id, form_data').in('enrollment_id', enrollmentIds)
+    : { data: [] }
+  const payoffsByEnrollment = new Map<string, string[]>()
+  for (const row of intakeRows || []) {
+    payoffsByEnrollment.set(row.enrollment_id as string, parseStoredPayoffs((row.form_data as { payoffs?: unknown } | null)?.payoffs))
+  }
+
   let sent = 0, removed = 0, skipped = 0
   for (const s of (subs || [])) {
     const tz = (s.timezone as string) || undefined
@@ -33,7 +46,12 @@ export async function GET(request: NextRequest) {
     const lastActiveAt = s.enrollment_id ? lastActiveById.get(s.enrollment_id as string) : null
     if (lastActiveAt && localDateISO(tz, new Date(lastActiveAt)) === localToday) { skipped++; continue }
 
-    const line = affirmationForDay(localDayNumber(tz))
+    let line = affirmationForDay(localDayNumber(tz))
+    const payoffs = s.enrollment_id ? (payoffsByEnrollment.get(s.enrollment_id as string) || []) : []
+    if (payoffs.length && shouldReferencePayoff()) {
+      const whyLine = payoffWhyLine(payoffs)
+      if (whyLine) line += ` ${whyLine}`
+    }
     const payload = { title: 'Today’s self-talk 💛', body: line, url: '/plan' }
 
     const r = await sendPush(s as StoredSub, payload)

@@ -10,6 +10,8 @@ import NextActionCard from '@/components/NextActionCard'
 import DashboardVideoFeed from '@/components/DashboardVideoFeed'
 import FeedEngagementRail from '@/components/FeedEngagementRail'
 import LocationOptIn from '@/components/LocationOptIn'
+import PayoffHomeAsk from '@/components/PayoffHomeAsk'
+import { parseStoredPayoffs } from '@/lib/payoff'
 import { getFeedVideos } from '@/lib/feed-videos'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
@@ -165,6 +167,12 @@ export default async function PlanDashboard() {
   // trust these numbers once required_tier_completed is genuinely true (the
   // structured form's real weight/goal questions, or Coach Asa's chat build).
   const statsProvided = !!(intakeRow?.form_data as Record<string, unknown> | null)?.required_tier_completed
+  // Catch-up ask (2026-09-24) for anyone who finished real intake before the
+  // "what's your why" step existed — same real gap the "Change my goal"
+  // fix closed for the goal question. Never shown to a no-plan/quickstart
+  // guest (statsProvided false) — nothing personalized to attach it to yet.
+  const payoffFormData = (intakeRow?.form_data as Record<string, unknown> | null) || {}
+  const showPayoffAsk = statsProvided && !payoffFormData.payoff_asked && parseStoredPayoffs(payoffFormData.payoffs).length === 0
   // challenge_intake has no goal_weight_lbs column — it's always derived from
   // weight_lbs +/- target_lbs (a delta, defaults to 10), same as
   // app/api/challenge/intake/route.ts computes it at intake time.
@@ -341,6 +349,7 @@ export default async function PlanDashboard() {
                       yet. See components/LocationOptIn.tsx for the actual
                       one-tap-only permission ask. */}
                   {hasPlan && <LocationOptIn />}
+                  {showPayoffAsk && <PayoffHomeAsk />}
                   <NextActionCard variant="dock" hasPlan={hasPlan} firstRun={!hasPlan} />
                 </div>
               }
