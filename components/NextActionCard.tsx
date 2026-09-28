@@ -9,6 +9,7 @@ import ReminderPrompt from '@/components/ReminderPrompt'
 import DeepgramVoiceInput from '@/components/DeepgramVoiceInput'
 import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
 import { useLiveRefresh, broadcastRefresh } from '@/lib/useLiveRefresh'
+import { heroCopy } from '@/lib/next-action/plain-copy'
 
 // Prompt 1's "Next Action" — the single-instruction circle, now the
 // dashboard's primary surface (Asa's call, 2026-08-25: "this is the new
@@ -105,7 +106,11 @@ const ENCOURAGEMENTS = [
   "Progress doesn't have to be big.",
 ]
 
-export default function NextActionCard({ variant = 'full', hasPlan = true, firstRun = false }: { variant?: 'full' | 'dock'; hasPlan?: boolean; firstRun?: boolean }) {
+// variant 'hero' (2026-09-28, Asa's strip-down + swipe-up mockup): the one big
+// centered instruction + one gold button, for the first screen of Home when
+// she's signed in and has a plan (components/HomeSwipe.tsx). Same engine, same
+// fetch, same done/route logic as the dock — only the presentation differs.
+export default function NextActionCard({ variant = 'full', hasPlan = true, firstRun = false }: { variant?: 'full' | 'dock' | 'hero'; hasPlan?: boolean; firstRun?: boolean }) {
   const router = useRouter()
   const [action, setAction] = useState<NextAction | null>(null)
   const [loading, setLoading] = useState(true)
@@ -242,6 +247,10 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
       ])
       await load()
       setAskReminder(true)
+      // Home now has two live copies of this card (the big first screen and
+      // the feed's dock) — tell the other one so neither shows a step she
+      // already finished when she swipes between them.
+      broadcastRefresh()
     } finally {
       setDone(false)
       setBusy(false)
@@ -332,6 +341,7 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
       // no approval step — refetch the real current action so the circle
       // reflects it right away, same as every other live card on this app.
       await load()
+      broadcastRefresh() // the other copy of this card (first screen <-> feed dock)
     } catch {
       setTurns((t) => [...t, { role: 'operator', content: "I couldn't reach the plan just now — try that again in a sec." }])
     } finally {
@@ -407,12 +417,28 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
   const cardBg = 'radial-gradient(80% 60% at 50% 38%, rgba(229,169,60,0.14), transparent 60%), radial-gradient(140% 100% at 50% 115%, rgba(0,0,0,0.7), transparent 55%), linear-gradient(180deg, #06231a 0%, #021F16 45%, #010b07 100%)'
 
   if (loading) {
+    if (variant === 'hero') {
+      // Never a blank screen while the engine thinks (the old first-load gap
+      // read as "broken"): the same glowing orb, breathing, with a calm line.
+      return (
+        <div className="text-center px-6" style={{ fontFamily: 'var(--font-poppins)' }}>
+          <div className="mx-auto relative" style={{ width: 54, height: 54 }}>
+            <div className="absolute inset-0 rounded-full animate-ping" style={{ border: '2px solid #7fbf94', opacity: 0.5 }} />
+            <div className="absolute rounded-full" style={{ top: '50%', left: '50%', width: 14, height: 14, margin: '-7px 0 0 -7px', background: 'radial-gradient(circle at 35% 30%, #f2c879, #E5A93C 45%, #7fbf94 100%)', boxShadow: '0 0 14px 4px rgba(229,169,60,0.75)' }} />
+          </div>
+          <p className="text-white/55 text-xs mt-5">Getting your next step…</p>
+        </div>
+      )
+    }
     return variant === 'dock'
       ? <div className="rounded-2xl animate-pulse bg-black/25" style={{ height: 54 }} />
       : <div className="rounded-3xl animate-pulse" style={{ background: cardBg, border: '1.5px solid rgba(229,169,60,0.3)', minHeight: 360 }} />
   }
 
   if (!action) {
+    if (variant === 'hero') {
+      return <p className="text-white/60 text-sm text-center px-8" style={{ fontFamily: 'var(--font-poppins)' }}>Your next step will show up here in a moment. Swipe up to see your feed.</p>
+    }
     return variant === 'dock'
       ? <p className="text-white/60 text-xs" style={{ fontFamily: 'var(--font-poppins)' }}>Your next action will show up here once your plan is set up.</p>
       : (
@@ -432,6 +458,77 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
     : action.instruction.length > 70
       ? 'clamp(13px, 3.6vw, 15px)'
       : 'clamp(15px, 4.2vw, 18px)'
+
+  if (variant === 'hero') {
+    const { headline, warm } = heroCopy(action.kind, action.instruction)
+    const headlineSize = headline.length > 110
+      ? 'clamp(18px, 5vw, 22px)'
+      : headline.length > 70
+        ? 'clamp(22px, 6.4vw, 27px)'
+        : 'clamp(28px, 8.4vw, 36px)'
+    const heroLabel: Partial<Record<ActionKind, string>> = { workout: 'Start', location: 'Show me', coach: 'Talk to your coach', partner: 'Check in' }
+    const buttonLabel = isPassive ? (done ? 'Nice!' : 'Done') : heroLabel[action.kind]
+    const showButton = action.kind !== 'complete' && !!buttonLabel && isTappable
+    return (
+      <div className="text-center px-6" style={{ fontFamily: 'var(--font-poppins)' }}>
+        <style>{`
+          @keyframes luf-hero-ping { 0% { transform: scale(0.6); opacity: 0.9; } 60% { opacity: 0.35; } 100% { transform: scale(1.5); opacity: 0; } }
+          @keyframes luf-hero-glow { 0%, 100% { box-shadow: 0 0 10px 3px rgba(229,169,60,0.7), 0 0 5px 1px rgba(127,191,148,0.6); transform: scale(1); } 50% { box-shadow: 0 0 18px 6px rgba(229,169,60,0.95), 0 0 10px 3px rgba(127,191,148,0.85); transform: scale(1.07); } }
+          .luf-hero-ring { position: absolute; inset: 0; border-radius: 9999px; border: 2px solid; animation: luf-hero-ping 3.2s cubic-bezier(0,0,0.3,1) infinite; }
+          @media (prefers-reduced-motion: reduce) { .luf-hero-ring { animation: none; opacity: 0.4; } }
+        `}</style>
+
+        {celebration && (
+          <button
+            onClick={() => setCelebration(null)}
+            className="w-full text-left rounded-xl px-3 py-2 mb-6 flex items-start gap-2 active:scale-[0.99] transition-transform"
+            style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(229,169,60,0.5)' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#E5A93C" className="shrink-0 mt-0.5"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2Z" /></svg>
+            <span className="text-white text-xs font-semibold">{celebration}, love — you&apos;ve kept showing up, and you deserve it.</span>
+          </button>
+        )}
+
+        <div className="mx-auto relative" style={{ width: 54, height: 54 }} aria-hidden>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="luf-hero-ring" style={{ borderColor: i % 2 === 0 ? '#7fbf94' : '#E5A93C', animationDelay: `${i * 1.06}s` }} />
+          ))}
+          <div style={{ position: 'absolute', top: '50%', left: '50%', width: 14, height: 14, margin: '-7px 0 0 -7px', borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, #f2c879, #E5A93C 45%, #7fbf94 100%)', animation: 'luf-hero-glow 2.6s ease-in-out infinite' }} />
+        </div>
+
+        <p className="text-[10px] font-bold uppercase mt-6" style={{ color: '#E5A93C', letterSpacing: '0.22em' }}>Your next step</p>
+
+        <h1
+          className="text-white leading-[1.18] mt-3 text-balance"
+          style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, fontSize: headlineSize }}
+        >
+          {headline}
+        </h1>
+
+        {warm && (
+          <p className="text-white/60 text-[13px] leading-relaxed mt-3 mx-auto" style={{ maxWidth: 320, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{warm}</p>
+        )}
+
+        {showButton && (
+          <button
+            type="button"
+            onClick={handleTap}
+            disabled={busy}
+            className="w-full rounded-full font-bold active:scale-[0.98] transition-transform disabled:opacity-70 mt-8"
+            style={{ minHeight: 56, fontSize: 18, background: '#E5A93C', color: '#0A0A0F', boxShadow: '0 0 0 6px rgba(229,169,60,0.14), 0 0 34px rgba(229,169,60,0.35)' }}
+          >
+            {buttonLabel}
+          </button>
+        )}
+
+        {action.kind === 'complete' && (
+          <p className="text-white/50 text-xs mt-6">That&apos;s everything for today. Swipe up for your feed.</p>
+        )}
+
+        <ReminderPrompt trigger={askReminder} />
+      </div>
+    )
+  }
 
   if (variant === 'dock') {
     // turns/quickReplies/pendingAdjustment/justApproved/justBuilt can only

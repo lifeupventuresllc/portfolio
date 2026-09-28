@@ -10,6 +10,7 @@ import NextActionCard from '@/components/NextActionCard'
 import DashboardVideoFeed from '@/components/DashboardVideoFeed'
 import FeedEngagementRail from '@/components/FeedEngagementRail'
 import LocationOptIn from '@/components/LocationOptIn'
+import HomeSwipe from '@/components/HomeSwipe'
 import { getFeedVideos } from '@/lib/feed-videos'
 import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
@@ -19,6 +20,13 @@ import { getEffectiveCalorieBudget, resolveTodayCalorieTarget, scheduleDayType, 
 import type { WeekPlan } from '@/lib/meal-plan'
 
 export const dynamic = 'force-dynamic'
+
+// Everyone except a signed-in member with a plan keeps Home exactly as it was:
+// the feed fills the screen. (HomeSwipe, below, wraps the very same feed
+// layer for the members who get the Next Action first screen.)
+function PlainShell({ children }: { hero?: React.ReactNode; children: React.ReactNode }) {
+  return <div className="flex-1 min-h-0 relative">{children}</div>
+}
 
 export default async function PlanDashboard() {
   const supabase = createClient()
@@ -137,6 +145,13 @@ export default async function PlanDashboard() {
   const hasPlan = !!enrollment.intake_completed
 
   const todayIso = localDateISO()
+  // "Has she finished a first step yet?" — the location question is held back
+  // until she has (Asa's strip-down, 2026-09-28: nothing competes with the
+  // one Next Action before her first win). Started here so it runs alongside
+  // the big batch below instead of after it.
+  const finishedStepQuery = hasPlan
+    ? Promise.resolve(svc.from('next_action_log').select('id').eq('enrollment_id', enrollment.id).not('completed_at', 'is', null).limit(1))
+    : null
   const [{ data: intakeRow }, { data: latestCheckin }, { data: foodLogRows }, { data: nutritionPlan }, todayAdjustment, { data: todayProgress }, { data: recentWorkoutActions }] = hasPlan
     ? await Promise.all([
         svc.from('challenge_intake').select('weight_lbs, target_lbs, goal, days_per_week, form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
@@ -153,6 +168,8 @@ export default async function PlanDashboard() {
         svc.from('next_action_log').select('shown_at, skipped_at, superseded_at').eq('enrollment_id', enrollment.id).eq('kind', 'workout').gte('shown_at', new Date(Date.now() - 2 * 86400000).toISOString()).order('shown_at', { ascending: false }),
       ])
     : [{ data: null }, { data: null }, { data: null }, { data: null }, null, { data: null }, { data: null }] as const
+
+  const { data: finishedStepRows } = finishedStepQuery ? await finishedStepQuery : { data: null }
 
   const affirmation = affirmationForDay(localDayNumber())
 
@@ -199,7 +216,38 @@ export default async function PlanDashboard() {
   const calBudget = baseCalTarget != null ? getEffectiveCalorieBudget(baseCalTarget, todayAdjustment) : null
   const loggedCaloriesToday = (foodLogRows || []).reduce((sum, r) => sum + (Number((r as { calories?: number }).calories) || 0), 0)
 
+  // Either signal counts as "a first step is done": a resolved Next Action row,
+  // or today's workout already checked off.
+  const hasFinishedStep = !!finishedStepRows?.length || workoutDoneToday
+
+  // Signed-in member with a real plan: Home opens on the ONE Next Action
+  // (Asa's strip-down, 2026-09-28) and the live feed is a swipe up. A guest —
+  // even one who already started a workout — keeps Home exactly as before.
+  const heroFirst = hasPlan && !user.is_anonymous
+  const Shell = heroFirst ? HomeSwipe : PlainShell
+
   const menu = <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} isAnonymous={!!user.is_anonymous} />
+
+  const heroNode = (
+    <div
+      className="absolute inset-0 flex flex-col px-5"
+      style={{
+        background: 'radial-gradient(90% 55% at 50% 40%, rgba(229,169,60,0.10), transparent 60%), linear-gradient(180deg, #06231a 0%, #021F16 45%, #010b07 100%)',
+        paddingTop: 'max(14px, env(safe-area-inset-top))',
+        paddingBottom: 96,
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-[#E5A93C] text-[10px] font-bold uppercase" style={{ fontFamily: 'var(--font-poppins)', letterSpacing: '0.22em' }}>Life-Up Fitness</p>
+        {menu}
+      </div>
+      <div className="flex-1 min-h-0 flex items-center justify-center">
+        <div className="w-full max-w-md">
+          <NextActionCard variant="hero" hasPlan={hasPlan} />
+        </div>
+      </div>
+    </div>
+  )
 
   // Real dashboard, feed-first (Asa's approved mockup, 2026-08-28/29): the
   // TikTok-style vertical reel is now the dominant middle section, full-bleed,
@@ -272,7 +320,7 @@ export default async function PlanDashboard() {
             unlike TikTok's own feed (which touches every edge except the
             true top, which topSlot's transparent overlay already
             handles). */}
-        <div className="flex-1 min-h-0 relative">
+        <Shell hero={heroNode}>
           {/* absolute inset-0 (not w-full h-full) — DashboardVideoFeed's own
               root and every layer inside it are position:absolute (the reel,
               scrims, slots), so nothing in that subtree contributes normal-
@@ -340,13 +388,13 @@ export default async function PlanDashboard() {
                       brand-new no-plan visitor has nothing for it to act on
                       yet. See components/LocationOptIn.tsx for the actual
                       one-tap-only permission ask. */}
-                  {hasPlan && <LocationOptIn />}
+                  {hasPlan && hasFinishedStep && <LocationOptIn />}
                   <NextActionCard variant="dock" hasPlan={hasPlan} firstRun={!hasPlan} />
                 </div>
               }
             />
           </div>
-        </div>
+        </Shell>
       </div>
   )
 }
