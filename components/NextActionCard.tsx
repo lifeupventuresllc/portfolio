@@ -426,7 +426,7 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
             <div className="absolute inset-0 rounded-full animate-ping" style={{ border: '2px solid #7fbf94', opacity: 0.5 }} />
             <div className="absolute rounded-full" style={{ top: '50%', left: '50%', width: 14, height: 14, margin: '-7px 0 0 -7px', background: 'radial-gradient(circle at 35% 30%, #f2c879, #E5A93C 45%, #7fbf94 100%)', boxShadow: '0 0 14px 4px rgba(229,169,60,0.75)' }} />
           </div>
-          <p className="text-white/55 text-xs mt-5">Getting your next step…</p>
+          <p className="text-white/55 text-xs mt-5">Getting your win for today…</p>
         </div>
       )
     }
@@ -496,7 +496,7 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
           <div style={{ position: 'absolute', top: '50%', left: '50%', width: 14, height: 14, margin: '-7px 0 0 -7px', borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, #f2c879, #E5A93C 45%, #7fbf94 100%)', animation: 'luf-hero-glow 2.6s ease-in-out infinite' }} />
         </div>
 
-        <p className="text-[10px] font-bold uppercase mt-6" style={{ color: '#E5A93C', letterSpacing: '0.22em' }}>Your next step</p>
+        <p className="text-[10px] font-bold uppercase mt-6" style={{ color: '#E5A93C', letterSpacing: '0.22em' }}>Today&apos;s win</p>
 
         <h1
           className="text-white leading-[1.18] mt-3 text-balance"

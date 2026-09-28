@@ -130,8 +130,8 @@ export default function DashboardVideoFeed({
       </div>
 
       {/* Decorative scrims — video layer's own, not part of a caller slot. */}
-      <div className="absolute left-0 right-0 top-0 z-[1] pointer-events-none" style={{ height: '24%', background: 'linear-gradient(180deg, rgba(0,0,0,0.6), transparent)' }} />
-      <div className="absolute left-0 right-0 bottom-0 z-[1] pointer-events-none" style={{ height: '46%', background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.72) 50%, rgba(0,0,0,0.86))' }} />
+      <div className="absolute left-0 right-0 top-0 z-[1] pointer-events-none" style={{ height: '12%', background: 'linear-gradient(180deg, rgba(0,0,0,0.45), transparent)' }} />
+      <div className="absolute left-0 right-0 bottom-0 z-[1] pointer-events-none" style={{ height: '22%', background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.55))' }} />
 
       {/* The video itself bleeds all the way under the notch/status bar
           once installed (viewport-fit=cover in app/layout.tsx) — but this
@@ -145,7 +145,7 @@ export default function DashboardVideoFeed({
           component's own <video> elements it's controlling, not something
           the caller's railSlot content (likes/community, no audio concept)
           should need to know about. Sits just above that rail. */}
-      <div data-feed-overlay className="absolute right-3 z-[3] pointer-events-auto" style={{ bottom: 'calc(34% + 92px)' }}>
+      <div data-feed-overlay className="absolute right-3 z-[3] pointer-events-auto" style={{ bottom: 148 }}>
         <button
           onClick={() => setMuted((v) => !v)}
           aria-label={muted ? 'Unmute' : 'Mute'}
@@ -168,7 +168,7 @@ export default function DashboardVideoFeed({
           )}
         </button>
       </div>
-      {railSlot && <div data-feed-overlay className="absolute right-3 z-[3] pointer-events-auto" style={{ bottom: '34%' }}>{railSlot}</div>}
+      {railSlot && <div data-feed-overlay className="absolute right-3 z-[3] pointer-events-auto" style={{ bottom: 96 }}>{railSlot}</div>}
       {captionSlot && <div data-feed-overlay className="absolute left-0 right-0 bottom-0 z-[3] pointer-events-auto">{captionSlot}</div>}
 
       <style>{`.feed-no-scrollbar::-webkit-scrollbar { display: none; } .feed-no-scrollbar { scrollbar-width: none; }`}</style>

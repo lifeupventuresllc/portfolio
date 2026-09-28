@@ -1,32 +1,20 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import ClientMenu from '@/components/ClientMenu'
 import StreakChip from '@/components/StreakChip'
-import CollapsibleHeaderCard from '@/components/CollapsibleHeaderCard'
 import VerifyEmailBanner from '@/components/VerifyEmailBanner'
 import TimezoneSync from '@/components/TimezoneSync'
 import NextActionCard from '@/components/NextActionCard'
 import DashboardVideoFeed from '@/components/DashboardVideoFeed'
 import FeedEngagementRail from '@/components/FeedEngagementRail'
-import LocationOptIn from '@/components/LocationOptIn'
 import HomeSwipe from '@/components/HomeSwipe'
+import StartPlanBar from '@/components/StartPlanBar'
+import WelcomeVideo from '@/components/WelcomeVideo'
 import { getFeedVideos } from '@/lib/feed-videos'
-import { LIVE_CALL } from '@/lib/live-call'
 import { affirmationForDay } from '@/lib/affirmations'
-import { localDateISO, localDayNumber, localMondayIndex, getTimezone } from '@/lib/localdate'
-import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { getEffectiveCalorieBudget, resolveTodayCalorieTarget, scheduleDayType, workoutTodayStatus, type DayTargets } from '@/lib/fos/effective-plan'
-import type { WeekPlan } from '@/lib/meal-plan'
+import { localDayNumber } from '@/lib/localdate'
 
 export const dynamic = 'force-dynamic'
-
-// Everyone except a signed-in member with a plan keeps Home exactly as it was:
-// the feed fills the screen. (HomeSwipe, below, wraps the very same feed
-// layer for the members who get the Next Action first screen.)
-function PlainShell({ children }: { hero?: React.ReactNode; children: React.ReactNode }) {
-  return <div className="flex-1 min-h-0 relative">{children}</div>
-}
 
 export default async function PlanDashboard() {
   const supabase = createClient()
@@ -144,257 +132,66 @@ export default async function PlanDashboard() {
   // has content.
   const hasPlan = !!enrollment.intake_completed
 
-  const todayIso = localDateISO()
-  // "Has she finished a first step yet?" — the location question is held back
-  // until she has (Asa's strip-down, 2026-09-28: nothing competes with the
-  // one Next Action before her first win). Started here so it runs alongside
-  // the big batch below instead of after it.
-  const finishedStepQuery = hasPlan
-    ? Promise.resolve(svc.from('next_action_log').select('id').eq('enrollment_id', enrollment.id).not('completed_at', 'is', null).limit(1))
-    : null
-  const [{ data: intakeRow }, { data: latestCheckin }, { data: foodLogRows }, { data: nutritionPlan }, todayAdjustment, { data: todayProgress }, { data: recentWorkoutActions }] = hasPlan
-    ? await Promise.all([
-        svc.from('challenge_intake').select('weight_lbs, target_lbs, goal, days_per_week, form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
-        svc.from('challenge_checkins').select('weight_lbs, submitted_at').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('submitted_at', { ascending: false }).limit(1).maybeSingle(),
-        // The old 14-day nutrition-consistency stat this used to also cover
-        // was dropped from this page's compact merged line (2026-08-29 feed
-        // redesign) — just today's rows needed now.
-        svc.from('challenge_food_log').select('calories').eq('enrollment_id', enrollment.id).eq('logged_on', todayIso),
-        svc.from('challenge_nutrition_plans').select('meals, calories, day_targets').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
-        getApprovedTodayAdjustment(enrollment.id as string, todayIso),
-        // Same real workout-brain signal /plan/today reads, so this card's
-        // number never disagrees with the dashboard she lands on right after.
-        svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__').eq('logged_on', todayIso).maybeSingle(),
-        svc.from('next_action_log').select('shown_at, skipped_at, superseded_at').eq('enrollment_id', enrollment.id).eq('kind', 'workout').gte('shown_at', new Date(Date.now() - 2 * 86400000).toISOString()).order('shown_at', { ascending: false }),
-      ])
-    : [{ data: null }, { data: null }, { data: null }, { data: null }, null, { data: null }, { data: null }] as const
-
-  const { data: finishedStepRows } = finishedStepQuery ? await finishedStepQuery : { data: null }
-
+  // Home is TWO core screens (Asa's spec, 2026-09-28):
+  //  - has a plan -> Screen 1 "your win for today" (name, one self-talk line,
+  //    today's win, one Start), swipe up to Screen 2, the feed with a small
+  //    "Your win for today" bar at the bottom (components/HomeSwipe.tsx).
+  //  - no plan yet -> a one-time welcome video, then straight to the feed, whose
+  //    bottom bar says "Start your plan" (components/StartPlanBar.tsx).
+  // Calories, progress, lbs-to-go, the header card, chat, the menu and gear used
+  // to be layered on here; none of them are on either screen now. They live
+  // under the bottom tabs (My Day has the food log and the menu; the camera
+  // button snaps a meal photo), so nothing was removed from the app.
   const affirmation = affirmationForDay(localDayNumber())
+  const videos = getFeedVideos()
 
-  // Real gap found+fixed same session as the calorie-target one: Quickstart
-  // (app/api/plan/quickstart-workout) writes a real challenge_intake row with
-  // entirely hardcoded stats (165lb, goal 'lose', 10lb target — nothing she's
-  // ever told us), same as it used to for nutrition. This progress bar read
-  // those numbers directly and showed "165 lbs → 155 lbs goal" as if it were
-  // her real starting point. Gated the same way as the calorie fix — only
-  // trust these numbers once required_tier_completed is genuinely true (the
-  // structured form's real weight/goal questions, or Coach Asa's chat build).
-  const statsProvided = !!(intakeRow?.form_data as Record<string, unknown> | null)?.required_tier_completed
-  // challenge_intake has no goal_weight_lbs column — it's always derived from
-  // weight_lbs +/- target_lbs (a delta, defaults to 10), same as
-  // app/api/challenge/intake/route.ts computes it at intake time.
-  const startWeight = statsProvided ? Number(intakeRow?.weight_lbs) || 0 : 0
-  const targetDelta = Number(intakeRow?.target_lbs) || 10
-  // 'recomp' (both "Lose fat" and "Build & tone" selected — lib/goals.ts)
-  // deliberately reads as 'maintain' for THIS weight-progress display only —
-  // real recomposition often shows little scale movement (muscle gain
-  // offsets fat loss), so a flat goal-weight target is more honest here
-  // than implying a clean loss-style delta the scale may never show. The
-  // workout/nutrition engines still get her real 'recomp' goal everywhere
-  // else — this is cosmetic to this one progress bar, not a downgrade.
-  const goalWeight = statsProvided ? (intakeRow?.goal === 'gain' ? startWeight + targetDelta : intakeRow?.goal === 'recomp' ? startWeight : startWeight - targetDelta) : 0
-  const currentWeight = statsProvided ? (Number(latestCheckin?.weight_lbs) || startWeight) : 0
-  const goalDirection = (intakeRow?.goal === 'gain' ? 'gain' : intakeRow?.goal === 'maintain' || intakeRow?.goal === 'recomp' ? 'maintain' : 'lose') as 'lose' | 'gain' | 'maintain'
-
-  // Today's calories for the progress card — mirrors app/plan/today/page.tsx's
-  // calBudget/loggedCalories exactly (same todayMeals-aware target, same
-  // getEffectiveCalorieBudget adjustment layer) so the two pages never
-  // disagree on a day Coach Asa approved a calorie change.
-  const mealIdx = localMondayIndex()
-  const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
-    ? (nutritionPlan.meals as WeekPlan) : null
-  const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
-  const flatCalTarget = Number(nutritionPlan?.calories) || null
-  const dayTargets = (nutritionPlan?.day_targets as DayTargets) || null
-  const scheduledDayType = todayMeals?.dayType ?? scheduleDayType(dayTargets, mealIdx)
-  const workoutDoneToday = !!(todayProgress?.measurements as { workout?: boolean } | null)?.workout
-  const todaysWorkoutAction = (recentWorkoutActions || []).find((r) => localDateISO(getTimezone(), new Date(r.shown_at as string)) === todayIso)
-  const workoutSkippedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)
-  const baseCalTarget = resolveTodayCalorieTarget(todayMeals?.target, scheduledDayType, dayTargets, flatCalTarget, workoutTodayStatus(workoutDoneToday, workoutSkippedToday))
-  const calBudget = baseCalTarget != null ? getEffectiveCalorieBudget(baseCalTarget, todayAdjustment) : null
-  const loggedCaloriesToday = (foodLogRows || []).reduce((sum, r) => sum + (Number((r as { calories?: number }).calories) || 0), 0)
-
-  // Either signal counts as "a first step is done": a resolved Next Action row,
-  // or today's workout already checked off.
-  const hasFinishedStep = !!finishedStepRows?.length || workoutDoneToday
-
-  // Signed-in member with a real plan: Home opens on the ONE Next Action
-  // (Asa's strip-down, 2026-09-28) and the live feed is a swipe up. A guest —
-  // even one who already started a workout — keeps Home exactly as before.
-  const heroFirst = hasPlan && !user.is_anonymous
-  const Shell = heroFirst ? HomeSwipe : PlainShell
-
-  const menu = <ClientMenu key="menu" firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} isAnonymous={!!user.is_anonymous} />
+  // Layout notes kept from the earlier feed-first dashboard: h-[100dvh] with
+  // -mb-16 cancels app/plan/layout.tsx's pb-16 (otherwise the page scrolls and
+  // a swipe reveals a gap), and paddingBottom reserves the fixed BottomTabBar's
+  // real 63px height. position:fixed can't be used here — an ancestor
+  // (.luf-page) has a transform, which makes it the containing block.
+  const feedLayer = (
+    <div className="absolute inset-0 overflow-hidden">
+      <DashboardVideoFeed
+        videos={videos}
+        railSlot={<FeedEngagementRail />}
+        captionSlot={hasPlan ? undefined : <StartPlanBar />}
+      />
+    </div>
+  )
 
   const heroNode = (
     <div
-      className="absolute inset-0 flex flex-col px-5"
+      className="absolute inset-0 flex flex-col items-center justify-center px-6"
       style={{
         background: 'radial-gradient(90% 55% at 50% 40%, rgba(229,169,60,0.10), transparent 60%), linear-gradient(180deg, #06231a 0%, #021F16 45%, #010b07 100%)',
-        paddingTop: 'max(14px, env(safe-area-inset-top))',
-        paddingBottom: 96,
+        paddingBottom: 90,
       }}
     >
-      <div className="flex items-center justify-between">
-        <p className="text-[#E5A93C] text-[10px] font-bold uppercase" style={{ fontFamily: 'var(--font-poppins)', letterSpacing: '0.22em' }}>Life-Up Fitness</p>
-        {menu}
-      </div>
-      <div className="flex-1 min-h-0 flex items-center justify-center">
-        <div className="w-full max-w-md">
-          <NextActionCard variant="hero" hasPlan={hasPlan} />
+      <div className="w-full max-w-md">
+        <div className="text-center mb-7">
+          <p className="text-white leading-tight" style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, fontSize: 26 }}>Hey {firstName}</p>
+          {affirmation && (
+            <p className="text-white/60 italic leading-snug mt-2 text-balance" style={{ fontFamily: 'var(--font-poppins)', fontSize: 12.5 }}>&ldquo;{affirmation}&rdquo;</p>
+          )}
         </div>
+        <NextActionCard variant="hero" hasPlan />
       </div>
     </div>
   )
 
-  // Real dashboard, feed-first (Asa's approved mockup, 2026-08-28/29): the
-  // TikTok-style vertical reel is now the dominant middle section, full-bleed,
-  // with the greeting/streak/self-talk, the like/community rail, and the
-  // Next Action + progress content all layered on top of it as one caption
-  // dock — not a separate stack of cards below a static hero, per
-  // "keep the main thing the main thing." No hero card here (that's shell(),
-  // still used below for the not-enrolled / no-plan states, which have no
-  // feed to layer onto).
-  // h-[100dvh] overflow-hidden, with -mb-16 to cancel the outer wrapper's
-  // pb-16 — the real root cause of the swipe-reveals-a-gap bug Asa caught
-  // on his own phone, 2026-08-29: app/plan/layout.tsx wraps every /plan
-  // page in its own "pb-16" clearance div for simpler pages that don't
-  // need pixel-perfect tab-bar accounting. Stacked with this page's own
-  // precise paddingBottom below, the combined content came out taller
-  // than the real viewport, which is exactly what makes a page scrollable
-  // — so a swipe on the video scrolled the whole document, not just the
-  // reel, revealing the reserved tab-bar space as a gap that opened and
-  // closed as she swiped.
-  // Tried position:fixed inset-0 first (taking this out of flow entirely,
-  // same as BottomTabBar) but that broke completely: an ancestor
-  // (".luf-page", page-transition infrastructure elsewhere in the app —
-  // not this file) has an active CSS transform, which per spec makes IT
-  // the containing block for any position:fixed descendant instead of the
-  // real viewport — and since that ancestor's own height collapses to
-  // near-0 (its only content became a no-longer-in-flow fixed child), the
-  // "fixed" box collapsed right along with it. -mb-16 (Tailwind's pb-16 in
-  // reverse, -4rem) cancels the outer wrapper's padding while staying in
-  // normal flow, which isn't affected by that ancestor's transform at all.
-  // 63px — Asa's catch, 2026-09-02: the bottom nav's + button went back to
-  // a plain inline tab (was briefly a floating FAB, which needed 104px here
-  // to clear; that's reverted). 63px is the nav's real rendered height,
-  // read directly from a live DOM measurement (getBoundingClientRect) after
-  // two rounds of hand-computed guesses here both came up wrong — not
-  // derived from the padding/row/border arithmetic, the actual number.
   return (
     <div className="h-[100dvh] -mb-16 flex flex-col overflow-hidden" style={{ background: '#021F16', paddingBottom: 'calc(63px + env(safe-area-inset-bottom))' }}>
-        <TimezoneSync />
-        {/* Real course-correction (Asa's call, 2026-09-07): the anonymous
-            "save your progress" banner was a second, redundant place to
-            trigger Google sign-in — Get Started below is now the one and
-            only entry point into a real account, so there's no separate
-            anonymous state left to prompt her to go back and save. */}
-        {!user.is_anonymous && !user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />}
-
-        {/* No separate header bar above the video (Asa's catch on his real
-            phone, 2026-08-29: the wordmark/gear/menu were sitting in their
-            own solid quadrant above the feed, eating into it — never the
-            approved design). The video now starts at the screen's real top
-            edge; wordmark/icons/greeting/self-talk are all overlays
-            floating directly on it via topSlot below, matching TikTok's
-            own transparent top nav — approved on Asa's phone in Safari,
-            2026-08-29. */}
-        {/* No inline height here — flex-1 (flex-grow, flex-basis:0%) fills
-            whatever's left of the root's h-[100dvh] above, which already
-            has paddingBottom reserving the fixed BottomTabBar's real
-            height. BottomTabBar isn't a normal-flow sibling (it's
-            position:fixed, rendered from app/plan/layout.tsx), so nothing
-            here would otherwise know to leave room for it — an inline
-            calc(100dvh - ...) here computed wrong in testing (100dvh
-            resolved larger than the real viewport in this environment,
-            so the subtraction landed back at the full height, burying the
-            caption content — next action, chat, progress — behind the
-            tab bar). Reserving the space one level up in real padding
-            sidesteps that entirely. */}
-        {/* No side/bottom padding, no rounded corners, no border — Asa's
-            catch on his own phone, 2026-08-29: those made the video read
-            as a floating card with a visible gap above the tab bar
-            instead of one continuous surface running right up to it,
-            unlike TikTok's own feed (which touches every edge except the
-            true top, which topSlot's transparent overlay already
-            handles). */}
-        <Shell hero={heroNode}>
-          {/* absolute inset-0 (not w-full h-full) — DashboardVideoFeed's own
-              root and every layer inside it are position:absolute (the reel,
-              scrims, slots), so nothing in that subtree contributes normal-
-              flow content height. A percentage (h-full) chain feeding an
-              all-absolute subtree has nothing definite to resolve against
-              and collapses/overflows unpredictably across reloads (caught
-              live, 2026-08-29: rendered 0px on one load, 1788px on the
-              next). Anchoring by inset against this relative parent's real
-              flex-grown height is deterministic instead. */}
-          <div className="absolute inset-0 overflow-hidden">
-            <DashboardVideoFeed
-              videos={getFeedVideos()}
-              topSlot={
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-[#E5A93C] text-[10px] font-bold uppercase" style={{ fontFamily: 'var(--font-poppins)', letterSpacing: '0.22em', textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>Life-Up Fitness</p>
-                    <div className="flex items-center gap-2.5">
-                      <Link href="/plan/preferences" aria-label="Update your goals and workout style" title="Update your goals and workout style" className="h-[30px] w-[30px] rounded-[10px] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.18)', backdropFilter: 'blur(2px)' }}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EDE7DA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="3" />
-                          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
-                        </svg>
-                      </Link>
-                      {menu}
-                    </div>
-                  </div>
-                  {/* Merged greeting + self-talk + progress into ONE card (Asa's ask,
-                      2026-08-31 — "what's one thing that can be folded to make the feed
-                      longer/more seamless"): one card's border/glow instead of two stacked
-                      ones. Emerald glass, more translucent than the first pass per Asa's
-                      side-by-side pick ("Option B"). Progress bar moved up here from the
-                      caption zone below — see GoalProgressCompact's `embedded` prop, which
-                      skips its own card chrome now that this card already provides it.
-                      Collapsible (2026-08-31, Asa's ask): a real client component (page.tsx
-                      itself is a server component, can't hold the toggle state) — collapses
-                      to a thin name+streak strip on tap, expands back on tap, for whoever
-                      wants maximum feed. */}
-                  <CollapsibleHeaderCard
-                    firstName={firstName}
-                    hasPlan={hasPlan}
-                    affirmation={affirmation}
-                    statsProvided={statsProvided}
-                    startWeight={startWeight}
-                    currentWeight={currentWeight}
-                    goalWeight={goalWeight}
-                    goalDirection={goalDirection}
-                    loggedCaloriesToday={loggedCaloriesToday}
-                    calBudget={calBudget}
-                  />
-                </div>
-              }
-              railSlot={<FeedEngagementRail />}
-              captionSlot={
-                // Plain pb-3.5 (14px), same as before — clearing the nav
-                // itself is already handled once, correctly, by the root
-                // container's own paddingBottom above (which shrinks the
-                // video area's real rendered height to stop right at the
-                // nav's top edge). This is just breathing room between the
-                // chat box and that edge, not a second nav-height reservation
-                // — stacking both was the actual bug (Asa's catch, 2026-08-31:
-                // a real gap of empty video between the chat box and the nav).
-                <div className="px-4 pb-3.5" style={{ paddingRight: 58 }}>
-                  {/* Real-location eating-out engine (2026-09-23, Asa's ask)
-                      — only offered once she already has a real plan; a
-                      brand-new no-plan visitor has nothing for it to act on
-                      yet. See components/LocationOptIn.tsx for the actual
-                      one-tap-only permission ask. */}
-                  {hasPlan && hasFinishedStep && <LocationOptIn />}
-                  <NextActionCard variant="dock" hasPlan={hasPlan} firstRun={!hasPlan} />
-                </div>
-              }
-            />
-          </div>
-        </Shell>
-      </div>
+      <TimezoneSync />
+      {!user.is_anonymous && !user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />}
+      {hasPlan ? (
+        <HomeSwipe hero={heroNode}>{feedLayer}</HomeSwipe>
+      ) : (
+        <div className="flex-1 min-h-0 relative">
+          {feedLayer}
+          {videos[0] && <WelcomeVideo src={videos[0].url} />}
+        </div>
+      )}
+    </div>
   )
 }

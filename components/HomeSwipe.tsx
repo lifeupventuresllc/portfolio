@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import WinBar from '@/components/WinBar'
 
 // Two-screen Home for someone who is signed in AND already has a plan (Asa's
 // approved mockup, 2026-09-28: next-action-swipe-up-mockup.html). Screen 1 is
 // the single Next Action; one swipe up (or a tap on the cue) slides the live
-// feed — Home exactly as it was — up over it. Swipe down at the top of the
-// feed, or tap the small "Next step" pill, comes back.
+// feed up over it. Swipe down at the top of the feed, or tap the small
+// "Your win for today" bar at the bottom of the feed, comes back.
 //
 // Two panes stacked in one 200%-tall column, moved with a percentage
 // translate — no height measuring for layout, only for the snap threshold.
@@ -159,15 +160,11 @@ export default function HomeSwipe({ hero, children }: { hero: ReactNode; childre
           onTouchEnd={onFeedTouchEnd}
         >
           {children}
-          <button
-            type="button"
-            onClick={() => go(0)}
-            aria-label="Back to your next step"
-            className="absolute left-1/2 -translate-x-1/2 z-[5] rounded-full px-3 h-[20px] text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-transform"
-            style={{ top: 'max(10px, env(safe-area-inset-top))', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(229,169,60,0.5)', color: '#E5A93C', fontFamily: 'var(--font-poppins)', backdropFilter: 'blur(2px)' }}
-          >
-            <span aria-hidden>▼</span> Next step
-          </button>
+          {/* Small "Your win for today" bar (Asa's two-core-screens spec,
+              2026-09-28) — tap = back to Screen 1. Replaces the old top pill. */}
+          <div className="absolute left-3 right-3 bottom-3 z-[5]">
+            <WinBar onClick={() => go(0)} />
+          </div>
         </div>
       </div>
     </div>
