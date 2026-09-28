@@ -12,7 +12,8 @@ import StartPlanBar from '@/components/StartPlanBar'
 import WelcomeVideo from '@/components/WelcomeVideo'
 import { getFeedVideos } from '@/lib/feed-videos'
 import { affirmationForDay } from '@/lib/affirmations'
-import { localDayNumber } from '@/lib/localdate'
+import { localDayNumber, localDateISO } from '@/lib/localdate'
+import { streakFrom } from '@/lib/streak'
 
 export const dynamic = 'force-dynamic'
 
@@ -145,6 +146,17 @@ export default async function PlanDashboard() {
   const affirmation = affirmationForDay(localDayNumber())
   const videos = getFeedVideos()
 
+  // Real streak for the win-screen greeting card (Asa's ask, 2026-09-28: "4-day
+  // streak" on the win screen, not a generic cheer). Same streakFrom(), same
+  // '__daily__' rows /api/plan/daily's own chip reads — computed here directly
+  // (not a second client fetch) since this page already has `svc`+`enrollment`
+  // in scope and streakFrom is a cheap pure function.
+  let streak = 0
+  if (hasPlan) {
+    const { data: dailyRows } = await svc.from('challenge_progress').select('logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__')
+    streak = streakFrom(new Set((dailyRows || []).map((r) => r.logged_on as string)), localDateISO())
+  }
+
   // Layout notes kept from the earlier feed-first dashboard: h-[100dvh] with
   // -mb-16 cancels app/plan/layout.tsx's pb-16 (otherwise the page scrolls and
   // a swipe reveals a gap), and paddingBottom reserves the fixed BottomTabBar's
@@ -169,12 +181,29 @@ export default async function PlanDashboard() {
       }}
     >
       <div className="w-full max-w-md">
-        <div className="text-center mb-7">
-          <p className="text-white leading-tight" style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, fontSize: 26 }}>Hey {firstName}</p>
-          {affirmation && (
-            <p className="text-white/60 italic leading-snug mt-2 text-balance" style={{ fontFamily: 'var(--font-poppins)', fontSize: 12.5 }}>&ldquo;{affirmation}&rdquo;</p>
+        {/* Greeting card (Asa's approved mockup round, 2026-09-28: "version B" —
+            the streak as a small gold sticker tucked in the corner, not a
+            separate line competing with the win below). Same card
+            gradient/border this page's own shell() above already uses for its
+            other screens — not a new color introduced just for this one. */}
+        <div
+          className="relative rounded-2xl px-4 py-3 mb-4 text-left"
+          style={{ background: 'linear-gradient(135deg, #0d3a2a, #044A34 60%, #08281d)', border: '1.5px solid #E5A93C' }}
+        >
+          {streak >= 1 && (
+            <span
+              className="absolute -top-2.5 -right-2 flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-bold"
+              style={{ background: '#E5A93C', color: '#0A0A0F', fontFamily: 'var(--font-poppins)', boxShadow: '0 4px 10px rgba(0,0,0,0.35)' }}
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="#0A0A0F"><path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c1 1 2 2 2 4a5 5 0 0 1-10 0c0-5 5-6 5-13Z" /></svg>
+              {streak} day{streak === 1 ? '' : 's'}
+            </span>
           )}
+          <p className="text-white font-bold" style={{ fontFamily: 'var(--font-poppins)', fontSize: 18 }}>Hey {firstName}</p>
         </div>
+        {affirmation && (
+          <p className="text-center italic leading-snug mb-4 text-balance" style={{ fontFamily: 'var(--font-poppins)', fontSize: 11.5, color: 'rgba(229,169,60,0.85)' }}>&ldquo;{affirmation}&rdquo;</p>
+        )}
         <NextActionCard variant="hero" hasPlan />
       </div>
     </div>

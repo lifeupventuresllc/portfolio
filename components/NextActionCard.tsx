@@ -139,6 +139,12 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
   const [justBuilt, setJustBuilt] = useState<{ workout: boolean; nutrition: boolean } | null>(null)
   const [encouragement, setEncouragement] = useState<string | null>(null)
   const [celebration, setCelebration] = useState<string | null>(null)
+  // Hero variant's tap-to-start circle (2026-09-28, Asa's approved mockup
+  // round): a real progress ring fills for a beat before the actual action
+  // fires (expand()'s route push, or markDone()'s own real fetch) — same
+  // "give the tap a real moment to register" reasoning markDone's minDelay
+  // already uses elsewhere in this file, not a fake loading bar.
+  const [heroStarting, setHeroStarting] = useState(false)
   // Chat merge (2026-09-24) — see the dock render below for the real
   // reasoning. Default false: collapsed is the true default state, not
   // just an animation start point. chatVisible (computed at render time,
@@ -411,6 +417,18 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
     expand()
   }
 
+  const HERO_DURATION = 950
+  const heroTap = () => {
+    if (heroStarting || busy || !isTappable) return
+    hapticTap()
+    setHeroStarting(true)
+    setTimeout(handleTap, HERO_DURATION)
+    // Resets on its own so a passive win (markDone reloads a new action in
+    // place, no navigation) shows the circle ready again; a navigating tap
+    // unmounts this page before this ever fires, so it's a harmless no-op there.
+    setTimeout(() => setHeroStarting(false), HERO_DURATION + 1300)
+  }
+
   // Cinematic emerald/gold treatment — Asa's final pick, 2026-08-26, after a
   // live mockup review (published Artifact, several rounds: color family →
   // texture → font pairing → cinematic vignette → outer ring placement).
@@ -460,28 +478,39 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
       : 'clamp(15px, 4.2vw, 18px)'
 
   if (variant === 'hero') {
-    const { headline, warm } = heroCopy(action.kind, action.instruction)
-    const headlineSize = headline.length > 110
-      ? 'clamp(18px, 5vw, 22px)'
-      : headline.length > 70
-        ? 'clamp(22px, 6.4vw, 27px)'
-        : 'clamp(28px, 8.4vw, 36px)'
-    const heroLabel: Partial<Record<ActionKind, string>> = { workout: 'Start', location: 'Show me', coach: 'Talk to your coach', partner: 'Check in' }
-    const buttonLabel = isPassive ? (done ? 'Nice!' : 'Done') : heroLabel[action.kind]
-    const showButton = action.kind !== 'complete' && !!buttonLabel && isTappable
+    // Circle-is-the-tap design (2026-09-28, Asa's approved mockup round —
+    // replaced the earlier pulsing-orb-above-a-pill-button layout after 5+
+    // rounds of feedback: the pill read "like a video game," the ring/orb
+    // was decorative and non-essential, and the whole circle should BE the
+    // button, not sit next to one). No idle motion — Asa's explicit ask
+    // after seeing the flashier ember/heartbeat rounds ("smooth, subtle,
+    // functional" per the usability research he shared) — it only moves
+    // when she actually taps it.
+    const { headline } = heroCopy(action.kind, action.instruction)
+    const headlineSize = headline.length > 90
+      ? 'clamp(17px, 4.6vw, 20px)'
+      : headline.length > 60
+        ? 'clamp(19px, 5.4vw, 23px)'
+        : 'clamp(21px, 6.2vw, 26px)'
+    // Status line = what tapping the circle DOES, shown before she taps it;
+    // goLabel = what it says the moment the ring finishes. Separate from
+    // EXPANSION_ROUTE's labels used elsewhere (dock/full "Start" pill) —
+    // this is a sentence read inside a circle, not a short button word.
+    const heroStatus: Partial<Record<ActionKind, string>> = { workout: 'Tap to start', location: 'Tap to see your picks', coach: 'Tap to talk it through', partner: 'Tap to check in' }
+    const statusLabel = isPassive ? 'Tap when done' : heroStatus[action.kind]
+    const goLabel = isPassive ? 'Nice!' : "Let's go"
+    const showCircleAction = action.kind !== 'complete' && isTappable && !!statusLabel
+    // r=115 on a 238-unit viewBox (matches the approved mockup exactly) —
+    // circumference below is 2*pi*r, kept as a literal so the SVG's own
+    // dasharray/dashoffset numbers are easy to eyeball against it.
+    const RING_R = 115
+    const RING_CIRCUMFERENCE = 722
     return (
-      <div className="text-center px-6" style={{ fontFamily: 'var(--font-poppins)' }}>
-        <style>{`
-          @keyframes luf-hero-ping { 0% { transform: scale(0.6); opacity: 0.9; } 60% { opacity: 0.35; } 100% { transform: scale(1.5); opacity: 0; } }
-          @keyframes luf-hero-glow { 0%, 100% { box-shadow: 0 0 10px 3px rgba(229,169,60,0.7), 0 0 5px 1px rgba(127,191,148,0.6); transform: scale(1); } 50% { box-shadow: 0 0 18px 6px rgba(229,169,60,0.95), 0 0 10px 3px rgba(127,191,148,0.85); transform: scale(1.07); } }
-          .luf-hero-ring { position: absolute; inset: 0; border-radius: 9999px; border: 2px solid; animation: luf-hero-ping 3.2s cubic-bezier(0,0,0.3,1) infinite; }
-          @media (prefers-reduced-motion: reduce) { .luf-hero-ring { animation: none; opacity: 0.4; } }
-        `}</style>
-
+      <div className="text-center" style={{ fontFamily: 'var(--font-poppins)' }}>
         {celebration && (
           <button
             onClick={() => setCelebration(null)}
-            className="w-full text-left rounded-xl px-3 py-2 mb-6 flex items-start gap-2 active:scale-[0.99] transition-transform"
+            className="w-full text-left rounded-xl px-3 py-2 mb-5 flex items-start gap-2 active:scale-[0.99] transition-transform"
             style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(229,169,60,0.5)' }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="#E5A93C" className="shrink-0 mt-0.5"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2Z" /></svg>
@@ -489,37 +518,48 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
           </button>
         )}
 
-        <div className="mx-auto relative" style={{ width: 54, height: 54 }} aria-hidden>
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="luf-hero-ring" style={{ borderColor: i % 2 === 0 ? '#7fbf94' : '#E5A93C', animationDelay: `${i * 1.06}s` }} />
-          ))}
-          <div style={{ position: 'absolute', top: '50%', left: '50%', width: 14, height: 14, margin: '-7px 0 0 -7px', borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, #f2c879, #E5A93C 45%, #7fbf94 100%)', animation: 'luf-hero-glow 2.6s ease-in-out infinite' }} />
-        </div>
-
-        <p className="text-[10px] font-bold uppercase mt-6" style={{ color: '#E5A93C', letterSpacing: '0.22em' }}>Today&apos;s win</p>
-
-        <h1
-          className="text-white leading-[1.18] mt-3 text-balance"
-          style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, fontSize: headlineSize }}
+        <div
+          role={showCircleAction ? 'button' : undefined}
+          tabIndex={showCircleAction ? 0 : undefined}
+          onClick={showCircleAction ? heroTap : undefined}
+          onKeyDown={showCircleAction ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); heroTap() } } : undefined}
+          aria-label={showCircleAction ? statusLabel : undefined}
+          className="relative mx-auto rounded-full"
+          style={{
+            width: 'clamp(196px, 62vw, 238px)', height: 'clamp(196px, 62vw, 238px)',
+            cursor: showCircleAction ? 'pointer' : 'default',
+            background: 'radial-gradient(65% 65% at 50% 34%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(160deg, #0d3a2a 0%, #06231a 55%, #021F16 100%)',
+            boxShadow: '0 16px 34px -14px rgba(0,0,0,0.6), inset 0 0 0 1.5px rgba(229,169,60,0.5)',
+          }}
         >
-          {headline}
-        </h1>
+          <svg className="absolute inset-[-4px]" viewBox="0 0 238 238" style={{ transform: 'rotate(-90deg)' }} aria-hidden>
+            <circle
+              cx="119" cy="119" r={RING_R} fill="none" stroke="#E5A93C" strokeWidth="3" strokeLinecap="round"
+              strokeDasharray={RING_CIRCUMFERENCE}
+              strokeDashoffset={heroStarting ? 0 : RING_CIRCUMFERENCE}
+              style={{ transition: heroStarting ? `stroke-dashoffset ${HERO_DURATION}ms cubic-bezier(0.3,0.6,0.3,1)` : 'none' }}
+            />
+          </svg>
 
-        {warm && (
-          <p className="text-white/60 text-[13px] leading-relaxed mt-3 mx-auto" style={{ maxWidth: 320, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{warm}</p>
-        )}
-
-        {showButton && (
-          <button
-            type="button"
-            onClick={handleTap}
-            disabled={busy}
-            className="w-full rounded-full font-bold active:scale-[0.98] transition-transform disabled:opacity-70 mt-8"
-            style={{ minHeight: 56, fontSize: 18, background: '#E5A93C', color: '#0A0A0F', boxShadow: '0 0 0 6px rgba(229,169,60,0.14), 0 0 34px rgba(229,169,60,0.35)' }}
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center px-6"
+            style={{ opacity: heroStarting ? 0 : 1, transform: heroStarting ? 'scale(0.94)' : 'scale(1)', transition: 'opacity 0.3s ease, transform 0.3s ease' }}
           >
-            {buttonLabel}
-          </button>
-        )}
+            <p className="text-[10.5px] font-bold uppercase" style={{ color: '#E5A93C', letterSpacing: '0.16em' }}>Today&apos;s win</p>
+            <h1 className="text-white leading-[1.12] mt-2 font-bold text-balance" style={{ fontSize: headlineSize }}>{headline}</h1>
+            {statusLabel && <p className="text-white/65 text-[11px] font-semibold mt-2.5">{statusLabel}</p>}
+          </div>
+
+          {showCircleAction && (
+            <div
+              className="absolute inset-0 flex items-center justify-center gap-1.5 font-bold text-white"
+              style={{ fontSize: 17, opacity: heroStarting ? 1 : 0, transform: heroStarting ? 'scale(1)' : 'scale(0.92)', transition: 'opacity 0.3s ease 0.15s, transform 0.3s ease 0.15s' }}
+            >
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+              {goLabel}
+            </div>
+          )}
+        </div>
 
         {action.kind === 'complete' && (
           <p className="text-white/50 text-xs mt-6">That&apos;s everything for today. Swipe up for your feed.</p>
