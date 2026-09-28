@@ -20,12 +20,19 @@ export function plainWorkoutLine(rawTitle: string): string {
   const t = cleaned.toLowerCase()
   const isLeg = LEG.test(t)
   const isUpper = UPPER.test(t)
+  const hasCore = /\b(core|abs)\b/.test(t)
+
+  // A single named area ("Arms Focus", "Core Focus") says exactly that, not a
+  // broader bucket than what she asked for.
+  const single = t.replace(/\s*focus$/, '').trim()
+  const SINGLE: Record<string, string> = { arms: 'arms', chest: 'chest', back: 'back', shoulders: 'shoulders', core: 'core', legs: 'leg' }
+  if (SINGLE[single]) return `${withArticle(SINGLE[single])} workout today.`
+
   let label: string | null = null
   if (/\bfull[\s-]?body\b/.test(t)) label = 'full-body'
   else if (/\bcardio\b/.test(t)) label = 'cardio'
-  else if (isLeg && !isUpper) label = 'leg'
-  else if (isUpper && !isLeg) label = 'upper-body'
-  else if (/\b(core|abs)\b/.test(t) && !isLeg && !isUpper) label = 'core'
+  else if (isLeg && !isUpper) label = hasCore ? 'leg and core' : 'leg'
+  else if (isUpper && !isLeg) label = hasCore ? 'upper-body and core' : 'upper-body'
   if (label) return `${withArticle(label)} workout today.`
   return cleaned ? `${cleaned} today.` : 'Your workout today.'
 }
