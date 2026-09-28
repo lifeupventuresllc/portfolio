@@ -81,13 +81,14 @@ export function GoalProgressCompact({
   const moved = Math.max(0, Math.round(Math.abs(progressed)))
   const remaining = Math.max(0, Math.round(span - progressed))
   const verb = goal === 'lose' ? 'down' : 'up'
-  // $ before both numbers, Asa's ask 2026-08-30 — a deliberate stylistic
-  // choice for this readout, not a currency claim. Was gated behind
-  // SHOW_CALORIE_COUNTER during the tester-hiding pass; Asa asked for it
-  // back 2026-08-31 while /plan/nutrition itself stays hidden (see that
+  // No "$" — it used to sit before both numbers (Asa's stylistic pick,
+  // 2026-08-30) but on 2026-09-28 Asa called it a bug ("$0/$2,090 cal shows a
+  // dollar sign"): it reads as money, not calories. Plain numbers now. Was
+  // gated behind SHOW_CALORIE_COUNTER during the tester-hiding pass; Asa asked
+  // for it back 2026-08-31 while /plan/nutrition itself stays hidden (see that
   // flag's remaining use in NextActionCard.tsx and app/plan/nutrition).
   const budgetLabel = calorieBudgetToday != null
-    ? `$${Math.round(calorieLoggedToday).toLocaleString()}/$${Math.round(calorieBudgetToday).toLocaleString()} cal`
+    ? `${Math.round(calorieLoggedToday).toLocaleString()}/${Math.round(calorieBudgetToday).toLocaleString()} cal`
     : null
 
   const inner = (
