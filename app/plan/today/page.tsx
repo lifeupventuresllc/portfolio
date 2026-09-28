@@ -59,7 +59,7 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
         <div className="max-w-2xl mx-auto w-full">
           <div className="flex items-center justify-between gap-3 mb-6">
             <Link href="/plan" className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all" style={{ background: '#12241a', border: '1px solid #24402f', color: '#c9a84c' }}>← Home</Link>
-            <ClientMenu firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
+            <ClientMenu firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} isAnonymous={!!user.is_anonymous} />
           </div>
           <div className="rounded-3xl p-6 text-center" style={{ background: 'radial-gradient(80% 55% at 50% 28%, rgba(76,175,125,0.30), transparent 62%), radial-gradient(140% 100% at 50% 115%, rgba(0,0,0,0.82), transparent 55%), linear-gradient(180deg, #073322 0%, #021F16 45%, #010b07 100%)', border: '1px solid rgba(76,175,125,0.22)', boxShadow: '0 20px 40px -20px rgba(76,175,125,0.35)' }}>
             <p className="text-white font-semibold text-lg mb-2">Your progress will show up here</p>
@@ -278,7 +278,7 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
       <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between gap-3 mb-4" style={{ flex: '0 0 auto' }}>
           <Link href="/plan" className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all" style={{ background: '#12241a', border: '1px solid #24402f', color: '#c9a84c' }}>← Home</Link>
-          <ClientMenu firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} />
+          <ClientMenu firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} isAnonymous={!!user.is_anonymous} />
         </div>
 
         {patternMessage && <LifePatternCard title={patternMessage.title} body={patternMessage.body} showWorkoutAction={showWorkoutAction} moves={dipMoves} />}
