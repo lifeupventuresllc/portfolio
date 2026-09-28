@@ -488,10 +488,10 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
     // when she actually taps it.
     const { headline } = heroCopy(action.kind, action.instruction)
     const headlineSize = headline.length > 90
-      ? 'clamp(17px, 4.6vw, 20px)'
+      ? 'clamp(19px, 5.2vw, 23px)'
       : headline.length > 60
-        ? 'clamp(19px, 5.4vw, 23px)'
-        : 'clamp(21px, 6.2vw, 26px)'
+        ? 'clamp(21px, 6vw, 26px)'
+        : 'clamp(24px, 7vw, 30px)'
     // Status line = what tapping the circle DOES, shown before she taps it;
     // goLabel = what it says the moment the ring finishes. Separate from
     // EXPANSION_ROUTE's labels used elsewhere (dock/full "Start" pill) —
@@ -526,7 +526,9 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
           aria-label={showCircleAction ? statusLabel : undefined}
           className="relative mx-auto rounded-full"
           style={{
-            width: 'clamp(196px, 62vw, 238px)', height: 'clamp(196px, 62vw, 238px)',
+            // Made bigger, Asa's ask 2026-09-28 (live screenshot review) —
+            // matches the old pre-strip-down circle's own max size (300px).
+            width: 'clamp(240px, 78vw, 300px)', height: 'clamp(240px, 78vw, 300px)',
             cursor: showCircleAction ? 'pointer' : 'default',
             background: 'radial-gradient(65% 65% at 50% 34%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(160deg, #0d3a2a 0%, #06231a 55%, #021F16 100%)',
             boxShadow: '0 16px 34px -14px rgba(0,0,0,0.6), inset 0 0 0 1.5px rgba(229,169,60,0.5)',
