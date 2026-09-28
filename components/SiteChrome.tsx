@@ -23,7 +23,9 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
     return (
       <main className="flex-1">
         {children}
-        {isPlan && <FeedbackNudge />}
+        {/* Not on Home (Asa's two-core-screens spec, 2026-09-28: no feedback
+            pop-up over the win screen or the feed) — still on every other /plan page. */}
+        {isPlan && pathname !== '/' && pathname !== '/plan' && <FeedbackNudge />}
       </main>
     )
   }

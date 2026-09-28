@@ -129,7 +129,7 @@ export default function HomeSwipe({ hero, children }: { hero: ReactNode; childre
         {/* Screen 1 */}
         <div
           ref={heroRef}
-          className="absolute left-0 right-0 top-0"
+          className="absolute left-0 right-0 top-0 select-none"
           style={{ height: '50%', touchAction: 'none' }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -145,7 +145,11 @@ export default function HomeSwipe({ hero, children }: { hero: ReactNode; childre
             style={{ fontFamily: 'var(--font-poppins)' }}
             aria-label="Swipe up for your feed"
           >
-            <span aria-hidden className="block w-3.5 h-3.5 -mb-1 rotate-45 border-l-[2.5px] border-t-[2.5px] border-[#E5A93C] opacity-90 animate-bounce" />
+            {/* bounce on the wrapper, rotate on the inner: animate-bounce's own
+                transform would otherwise wipe out the rotation (chevron read as an "L") */}
+            <span aria-hidden className="block animate-bounce mb-0.5">
+              <span className="block w-3.5 h-3.5 rotate-45 border-l-[2.5px] border-t-[2.5px] border-[#E5A93C] opacity-90" />
+            </span>
             <span className="text-white/75 text-[11px] font-semibold tracking-wide">Swipe up for your feed</span>
             <span aria-hidden className="block w-11 h-1 rounded bg-white/35 mt-1.5" />
           </button>
