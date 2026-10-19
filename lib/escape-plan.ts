@@ -444,7 +444,7 @@ function stripNegations(text: string): string {
   return text.replace(/\bno\s+\w+/gi, '')
 }
 
-function violatesRestrictions(order: string, restrictions: Set<DietaryRestriction>): boolean {
+export function violatesRestrictions(order: string, restrictions: Set<DietaryRestriction>): boolean {
   if (restrictions.size === 0) return false
   const lower = stripNegations(order.toLowerCase())
   return Array.from(restrictions).some((r) => (r === 'pork' ? containsPork(lower) : DISQUALIFYING_PATTERN[r].test(lower)))

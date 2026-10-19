@@ -66,6 +66,8 @@ export async function GET() {
       // 2026-09-24, Asa's "what's your why" payoff step — same real
       // array-in-form_data pattern as goals/training_styles above.
       payoffs: Array.isArray(formData.payoffs) ? formData.payoffs : [],
+      eat_style: formData.eat_style || '',
+      meal_budget: formData.meal_budget ?? null,
     },
   })
 }

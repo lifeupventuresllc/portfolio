@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useMealPhotoUpload } from '@/lib/useMealPhotoUpload'
 import { SHOW_COMMUNITY_TAB } from '@/lib/feature-flags'
 
 // The 3 things she reaches for most, one tap away, always in the same place —
@@ -34,6 +33,16 @@ function HomeIcon({ active, size = 20 }: { active: boolean; size?: number }) {
   )
 }
 
+// Fork + knife — the Nutrition tab (2026-10-19).
+function NutritionIcon({ active, size = 20 }: { active: boolean; size?: number }) {
+  const color = active ? '#E5A93C' : 'rgba(237,231,218,0.4)'
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 3v7a2 2 0 0 0 4 0V3" /><path d="M9 12v9" /><path d="M17 3c-2 2.2-2 6.3 0 8.5V21" />
+    </svg>
+  )
+}
+
 function FriendsIcon({ active, size = 20 }: { active: boolean; size?: number }) {
   const color = active ? '#E5A93C' : 'rgba(237,231,218,0.4)'
   return (
@@ -48,7 +57,6 @@ function FriendsIcon({ active, size = 20 }: { active: boolean; size?: number }) 
 
 export default function BottomTabBar() {
   const pathname = usePathname() || ''
-  const { inputRef, uploading, onFile, trigger } = useMealPhotoUpload()
 
   // Hidden during intake — she hasn't reached her actual dashboard yet, so
   // For You/Community don't have anywhere real to point her to. Shows up
@@ -63,6 +71,7 @@ export default function BottomTabBar() {
   const forYouActive = pathname.startsWith('/plan/today')
   const communityActive = pathname.startsWith('/plan/community')
   const friendsActive = pathname.startsWith('/plan/friends')
+  const nutritionActive = pathname.startsWith('/plan/nutrition')
 
   // Asa's approved mockup, 2026-09-02: back to a plain inline + button as
   // one of N equal columns (grid-template-columns, not flex — a flex
@@ -79,7 +88,6 @@ export default function BottomTabBar() {
 
   return (
     <nav data-bottom-tabbar className="fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)]">
-      <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={onFile} className="hidden" />
 
       <div
         className="max-w-2xl mx-auto grid items-center px-3 pt-[10px] pb-[14px]"
@@ -99,23 +107,14 @@ export default function BottomTabBar() {
           <span className={`text-[10.5px] font-bold ${friendsActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Friends</span>
         </Link>
 
-        <div className="flex justify-center">
-          <button
-            onClick={trigger}
-            disabled={uploading}
-            aria-label="Snap a photo of your meal"
-            className="rounded-lg flex items-center justify-center disabled:opacity-50 active:scale-95 transition-transform shrink-0"
-            style={{ width: 42, height: 26, background: 'linear-gradient(135deg, #E5A93C, #EA5C87)' }}
-          >
-            {/* Was a bare "+" — didn't hint this specifically snaps a meal
-                photo (button audit, 2026-09-03: as easily read as "add a
-                friend" or "start a workout"). Camera glyph now matches what
-                it actually does. */}
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0A0F" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="7" width="18" height="13" rx="2" /><path d="M8 7 9.5 4h5L16 7" /><circle cx="12" cy="13.5" r="3.4" />
-            </svg>
-          </button>
-        </div>
+        {/* Middle slot (2026-10-19, Asa's Nutrition tab): was the camera
+            "+" meal-photo button — that capture now lives inside the
+            Nutrition tab ("Ate something else?"), alongside everything else
+            food, so the bar keeps its 5 spots. */}
+        <Link href="/plan/nutrition" className="flex flex-col items-center gap-[3px]">
+          <NutritionIcon active={nutritionActive} size={19} />
+          <span className={`text-[10.5px] font-bold ${nutritionActive ? 'text-[#E5A93C]' : 'text-[#EDE7DA]/40'}`}>Nutrition</span>
+        </Link>
 
         {SHOW_COMMUNITY_TAB && (
           <Link href="/plan/community" className="flex flex-col items-center gap-[3px]">

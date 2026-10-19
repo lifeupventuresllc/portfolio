@@ -59,7 +59,10 @@ const LHint = ({ children }: { children: React.ReactNode }) => <p className="tex
 // what she picks there is WHAT she's doing, this is WHY. Optional (Continue
 // always enabled, no minimum pick) — it just personalizes messaging later,
 // never gates plan-building the way goal/focus/body genuinely need to.
-const REQUIRED_STEPS = ['name', 'goal', 'why', 'focus', 'body', 'location', 'injuries', 'food']
+// 'eating' added 2026-10-19 (Asa's Nutrition tab, mockup v3): how she eats
+// (cook vs eat out) + her money for one meal, asked once here so the
+// Nutrition tab already knows and never makes her decide.
+const REQUIRED_STEPS = ['name', 'goal', 'why', 'focus', 'body', 'location', 'injuries', 'food', 'eating']
 const OPTIONAL_STEPS = [
   'target', 'experience', 'training_style', 'days', 'cook', 'postpartum', 'other',
 ]
@@ -117,7 +120,7 @@ function ConversationalIntakeInner() {
     name: '', focus_area: '', age: '', sex: 'female', heightFt: '5', heightIn: '4', weight_lbs: '',
     target_lbs: '', activity_level: '', experience_level: '', training_location: '',
     days_per_week: '', cook_days_per_week: '', weekly_food_budget: '', food_preferences: '', dislikes_allergies: '',
-    postpartum: '', other_info: '',
+    postpartum: '', other_info: '', eat_style: '', meal_budget: '',
   })
   // Real multi-select support (Priority 1, 2026-08-25 beta feedback) — she can
   // genuinely want more than one goal at once ("lose fat AND tone/build"), and
@@ -219,6 +222,8 @@ function ConversationalIntakeInner() {
         focus_area: i.focus_area || s.focus_area,
         postpartum: i.postpartum ? 'yes' : s.postpartum,
         other_info: i.other_info || s.other_info,
+        eat_style: i.eat_style || s.eat_style,
+        meal_budget: i.meal_budget != null ? String(i.meal_budget) : s.meal_budget,
       }))
       if (Array.isArray(i.injuries)) setInjuries(i.injuries)
       if (Array.isArray(i.goals) && i.goals.length) setGoals(i.goals)
@@ -279,6 +284,8 @@ function ConversationalIntakeInner() {
           injuries, injuries_limitations: '', postpartum: f.postpartum === 'yes',
           training_style: trainingStyles[0] || 'none', training_styles: trainingStyles, other_info: f.other_info,
           payoffs,
+          eat_style: f.eat_style || undefined,
+          meal_budget: Number(f.meal_budget) || (f.eat_style ? (f.eat_style === 'cook' ? 6 : 12) : undefined),
           refining,
         }),
       })
@@ -634,19 +641,40 @@ function ConversationalIntakeInner() {
             </>)}
 
             {s === 'food' && (<>
-              <LQ>Last thing — let&apos;s make the food *yours*.</LQ>
+              <LQ>Now let&apos;s make the food *yours*.</LQ>
               <LHint>This is how I build meals you actually crave, not ones you&apos;ll dread.</LHint>
               <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Foods you love</label>
               <input ref={primaryInputRef} value={f.food_preferences} onChange={(e) => set('food_preferences', e.target.value)} placeholder="e.g. chicken, rice bowls, tacos" className={`${linput} mb-3`} autoCorrect="off" spellCheck={false} />
               <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Dislikes / allergies</label>
               <input value={f.dislikes_allergies} onChange={(e) => set('dislikes_allergies', e.target.value)} placeholder="e.g. no mushrooms, dairy-free" className={`${linput} mb-6`} autoCorrect="off" spellCheck={false} />
+              <button onClick={next} className={lPrimaryBtn}>Continue →</button>
+            </>)}
+
+            {s === 'eating' && (() => {
+              const budget = Number(f.meal_budget) || (f.eat_style === 'cook' ? 6 : 12)
+              return (<>
+              <LQ>How do you usually eat?</LQ>
+              <LHint>Your Nutrition tab will pick meals that fit how you live and what you want to spend.</LHint>
+              <div className="space-y-3 mb-8">
+                {[{ v: 'cook', l: 'I mostly cook' }, { v: 'out', l: 'I mostly eat out' }].map((o) => (
+                  <button key={o.v} onClick={() => { hapticTap(); setF((st) => ({ ...st, eat_style: o.v, meal_budget: st.eat_style === o.v ? st.meal_budget : '' })) }} className={lopt(f.eat_style === o.v)}>{o.l}</button>
+                ))}
+              </div>
+              {f.eat_style && (<>
+                <label htmlFor="meal-budget" className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Most you&apos;d spend on one meal</label>
+                <p className="text-gold text-4xl font-bold text-center my-2 tabular-nums">${budget}{budget >= 30 ? '+' : ''}</p>
+                <input id="meal-budget" type="range" min={f.eat_style === 'cook' ? 2 : 5} max={30} step={1} value={budget}
+                  onChange={(e) => set('meal_budget', e.target.value)} className="w-full accent-[#c9a84c] mb-1" />
+                <div className="flex justify-between text-ink/35 text-xs mb-8"><span>${f.eat_style === 'cook' ? 2 : 5}</span><span>$30+</span></div>
+              </>)}
               {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
               {editMode ? (
                 <button onClick={() => { setTier('optional'); setStep(0) }} className={lPrimaryBtn}>Continue →</button>
               ) : (
-                <button onClick={() => build(false)} className={lPrimaryBtn}>✨ Build my plan</button>
+                <button onClick={() => build(false)} disabled={!f.eat_style} className={lPrimaryBtn}>✨ Build my plan</button>
               )}
-            </>)}
+            </>)
+            })()}
           </Screen>
         </div>
       </div>

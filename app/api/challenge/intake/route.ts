@@ -92,6 +92,8 @@ export async function POST(request: NextRequest) {
       // buildInitialPlans' sticky carry-forward keeps whatever she already
       // answered instead of treating "didn't ask this time" as "cleared."
       payoffs: Array.isArray(body.payoffs) ? body.payoffs : undefined,
+      eat_style: body.eat_style === 'cook' || body.eat_style === 'out' ? body.eat_style : undefined,
+      meal_budget: Number(body.meal_budget) > 0 ? Math.round(Number(body.meal_budget)) : undefined,
       postpartum: !!body.postpartum,
       training_style: primaryTrainingStyle,
       training_styles: trainingStyles,

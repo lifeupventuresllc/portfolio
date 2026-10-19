@@ -68,6 +68,10 @@ export interface PlanBuildInput {
   // sticky-carried-forward below the same way optional_completed etc. are,
   // so an unrelated intake edit can never silently wipe out her real answer.
   payoffs?: string[]
+  // 2026-10-19, Nutrition tab — how she eats + her money for one meal, asked
+  // once in the required intake. Same sticky carry-forward as payoffs.
+  eat_style?: 'cook' | 'out'
+  meal_budget?: number
   training_style?: TrainingStyle
   // training_styles (plural) is now the real source of truth passed to the
   // generator — see lib/training-styles.ts. training_style (singular) is
@@ -124,6 +128,11 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
   const requiredTierCompleted = !!inp.requiredTierCompleted || !!priorFormData.required_tier_completed
   const priorPayoffs = Array.isArray(priorFormData.payoffs) ? (priorFormData.payoffs as string[]) : []
   const payoffs = inp.payoffs?.length ? inp.payoffs : priorPayoffs
+  // Nutrition tab answers + its learning memory are written by
+  // /api/plan/meal-pick between intake submits — never wipe them here.
+  const eatStyle = inp.eat_style || (priorFormData.eat_style as 'cook' | 'out' | undefined)
+  const mealBudget = inp.meal_budget || (priorFormData.meal_budget as number | undefined)
+  const mealMemory = priorFormData.meal_memory
 
   const intakePayload = {
     enrollment_id: inp.enrollmentId,
@@ -161,6 +170,9 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
       injuries_addressed: injuriesAddressed,
       required_tier_completed: requiredTierCompleted,
       payoffs,
+      ...(eatStyle ? { eat_style: eatStyle } : {}),
+      ...(mealBudget ? { meal_budget: mealBudget } : {}),
+      ...(mealMemory ? { meal_memory: mealMemory } : {}),
     },
   }
 
