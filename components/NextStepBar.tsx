@@ -19,7 +19,9 @@ import { useLiveRefresh } from '@/lib/useLiveRefresh'
 //    to open, and marking those done stays on the Home card only.
 type Bar = { kind: string; instruction: string; restaurant?: string; mealSlot?: string }
 
-const HIDE_ON = ['/plan/intake', '/plan/next', '/plan/coach']
+// '/plan/nutrition' (2026-10-19): the Nutrition tab's two meal cards are
+// the only thing on that screen — nothing floats over them.
+const HIDE_ON = ['/plan/intake', '/plan/next', '/plan/coach', '/plan/nutrition']
 
 export default function NextStepBar() {
   const pathname = usePathname() || ''
