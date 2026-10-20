@@ -4,6 +4,7 @@ import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { getEffectiveCalorieBudget, isEatingOutToday, resolveTodayCalorieTarget, resolvedDayType, scheduleDayType, workoutTodayStatus, type DayTargets } from '@/lib/fos/effective-plan'
 import type { WeekPlan } from '@/lib/meal-plan'
+import { mealTimesFrom } from '@/lib/meal-pick'
 
 // Everything the Nutrition tab (the two picks) and its food-log page
 // (/plan/nutrition/log) both need for today — one loader so the two
@@ -20,7 +21,8 @@ export async function loadNutritionDay(user: { id: string; email?: string | null
   const tz = getTimezone()
   const todayIso = localDateISO(tz)
   const mealIdx = localMondayIndex(tz)
-  const [{ data: nutritionPlan }, { data: intake }, { data: foodRows }, todayAdjustment, { data: todayProgress }, { data: recentWorkoutActions }] = await Promise.all([
+  const since = localDateISO(tz, new Date(Date.now() - 28 * 86400000))
+  const [{ data: nutritionPlan }, { data: intake }, { data: foodRows }, todayAdjustment, { data: todayProgress }, { data: recentWorkoutActions }, { data: pastMeals }] = await Promise.all([
     svc.from('challenge_nutrition_plans').select('meals, calories, day_targets').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_intake').select('weight_lbs, weekly_food_budget, food_preferences, dislikes_allergies, form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
     svc.from('challenge_food_log').select('calories, meal, created_at').eq('enrollment_id', enrollment.id).eq('logged_on', todayIso),
@@ -29,7 +31,11 @@ export async function loadNutritionDay(user: { id: string; email?: string | null
     // disagrees with the dashboard's.
     svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__').eq('logged_on', todayIso).maybeSingle(),
     svc.from('next_action_log').select('shown_at, skipped_at, superseded_at').eq('enrollment_id', enrollment.id).eq('kind', 'workout').gte('shown_at', new Date(Date.now() - 2 * 86400000).toISOString()).order('shown_at', { ascending: false }),
+    // Her last 4 weeks of meals (not today) — when she REALLY eats breakfast,
+    // lunch and dinner, which outranks the clock on the Nutrition tab.
+    svc.from('challenge_food_log').select('meal, created_at, logged_on').eq('enrollment_id', enrollment.id).gte('logged_on', since).lt('logged_on', todayIso).limit(600),
   ])
+  const mealTimes = mealTimesFrom((pastMeals || []).map((r) => ({ meal: (r.meal as string) || '', minute: localMinute(tz, new Date(r.created_at as string)), day: r.logged_on as string })))
 
   const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
     ? (nutritionPlan.meals as WeekPlan) : null
@@ -45,8 +51,14 @@ export async function loadNutritionDay(user: { id: string; email?: string | null
   const calBudget = baseCalTarget != null ? getEffectiveCalorieBudget(baseCalTarget, todayAdjustment) : null
 
   return {
-    enrollment, intake, foodRows: foodRows || [], weekPlan, todayMeals, planned, mealIdx, todayIso, tz, calBudget,
+    enrollment, intake, foodRows: foodRows || [], mealTimes, weekPlan, todayMeals, planned, mealIdx, todayIso, tz, calBudget,
     todaysDayType: resolvedDayType(scheduledDayType, workoutStatus),
     eatingOutToday: isEatingOutToday(todayMeals?.eatOut, todayAdjustment),
   }
+}
+
+/** Local minute of the day (0–1439) a moment falls on, in her timezone. */
+export function localMinute(tz: string, at: Date): number {
+  const [h, m] = at.toLocaleTimeString('en-US', { timeZone: tz, hour12: false, hour: '2-digit', minute: '2-digit' }).split(':').map(Number)
+  return (h % 24) * 60 + m
 }

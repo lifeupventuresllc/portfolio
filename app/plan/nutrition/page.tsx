@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import NutritionPicks, { EatStyleAsk, type PickCard } from '@/components/NutritionPicks'
-import { loadNutritionDay } from '@/lib/nutrition-day'
+import { loadNutritionDay, localMinute } from '@/lib/nutrition-day'
 import { pickMeals, planDay, clockLabel, defaultMealBudget, orderDestination, mealPhoto, shortName, type EatStyle, type MealMemory, type MealSlot, type OrderApp } from '@/lib/meal-pick'
 import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
 
@@ -18,13 +18,8 @@ export const dynamic = 'force-dynamic'
 // v4.1 (same day): the clock + her food log decide which meal is up
 // (lib/meal-pick planDay) — breakfast logged → lunch is waiting, then the
 // afternoon snack, dinner, the evening snack — and the screen moves on by
-// itself when that meal's time passes.
-
-// Local minute of the day a food-log row was written.
-function localMinute(tz: string, at: Date): number {
-  const [h, m] = at.toLocaleTimeString('en-US', { timeZone: tz, hour12: false, hour: '2-digit', minute: '2-digit' }).split(':').map(Number)
-  return (h % 24) * 60 + m
-}
+// itself when that meal's time passes. Her own usual meal times (learned
+// from her log, lib/meal-pick mealTimesFrom) outrank the default clock.
 
 export default async function NutritionPage() {
   if (!SHOW_CALORIE_COUNTER) redirect('/plan')
@@ -36,12 +31,12 @@ export default async function NutritionPage() {
   // Her calorie target comes from the plan she already has — never asked
   // again here. No plan yet → send her through the existing plan creation.
   if (!data || !data.calBudget || !data.intake) return <NoPlanYet />
-  const { intake, foodRows, calBudget, weekPlan, mealIdx, todayIso, tz } = data
+  const { intake, foodRows, calBudget, weekPlan, mealIdx, todayIso, tz, mealTimes } = data
 
   const loggedToday = foodRows.reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
   const remainingCal = Math.max(0, Math.round(calBudget - loggedToday))
   const nowMin = localMinute(tz, new Date())
-  const day = planDay(nowMin, foodRows.map((r) => ({ meal: (r.meal as string) || '', minute: localMinute(tz, new Date(r.created_at as string)) })), remainingCal)
+  const day = planDay(nowMin, foodRows.map((r) => ({ meal: (r.meal as string) || '', minute: localMinute(tz, new Date(r.created_at as string)) })), remainingCal, mealTimes)
   // Every meal done today → the lightest snacks, only if she's still hungry.
   const slot: MealSlot = day.current?.slot ?? 'Snack'
 

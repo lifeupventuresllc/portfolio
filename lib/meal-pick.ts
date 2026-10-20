@@ -95,26 +95,61 @@ export function slotCalorieBudget(remainingCal: number, slot: MealSlot): number 
 export type StopId = 'breakfast' | 'lunch' | 'snack_pm' | 'dinner' | 'snack_eve'
 export interface DayStop { id: StopId; slot: MealSlot; label: string; start: number; end: number; share: number }
 const H = (h: number, m = 0) => h * 60 + m
-// start/end = local minutes of the day. A main meal stays up until the next
-// main meal's time (a late lunch at 3pm is still lunch); a snack only shows
-// once the meal before it is done.
-export const DAY_STOPS: DayStop[] = [
-  { id: 'breakfast', slot: 'Breakfast', label: 'breakfast', start: H(4), end: H(10, 30), share: 0.25 },
-  { id: 'lunch', slot: 'Lunch', label: 'lunch', start: H(10, 30), end: H(17), share: 0.33 },
-  { id: 'snack_pm', slot: 'Snack', label: 'afternoon snack', start: H(14, 30), end: H(17), share: 0.07 },
-  { id: 'dinner', slot: 'Dinner', label: 'dinner', start: H(17), end: H(24), share: 0.30 },
-  { id: 'snack_eve', slot: 'Snack', label: 'evening snack', start: H(19, 30), end: H(24), share: 0.05 },
-]
+
+// HER meal times beat the clock (Asa, 2026-10-20: "what ranks over that is
+// actually user data — late lunches because of work, early dinners"). Each
+// main meal has an anchor: the time she usually eats it, learned from her
+// own food log (mealTimesFrom below), or a normal default until she's
+// logged enough. The windows hang off those anchors.
+export interface MealTimes { breakfast: number; lunch: number; dinner: number; learned: StopId[] }
+export const DEFAULT_MEAL_TIMES: MealTimes = { breakfast: H(7, 30), lunch: H(12, 30), dinner: H(18, 30), learned: [] }
+
+// A meal's window opens 2h before her usual time (dinner: 1.5h) and stays
+// open until the next meal's window opens — a late lunch is still lunch. The
+// afternoon snack sits 2h after lunch, the evening snack 1h after dinner;
+// a snack only shows once the meal before it is done.
+export function dayStops(t: MealTimes = DEFAULT_MEAL_TIMES): DayStop[] {
+  const lunchOpen = t.lunch - 120
+  const dinnerOpen = t.dinner - 90
+  return [
+    { id: 'breakfast', slot: 'Breakfast', label: 'breakfast', start: Math.min(H(4), t.breakfast - 120), end: lunchOpen, share: 0.25 },
+    { id: 'lunch', slot: 'Lunch', label: 'lunch', start: lunchOpen, end: dinnerOpen, share: 0.33 },
+    { id: 'snack_pm', slot: 'Snack', label: 'afternoon snack', start: Math.min(t.lunch + 120, dinnerOpen), end: dinnerOpen, share: 0.07 },
+    { id: 'dinner', slot: 'Dinner', label: 'dinner', start: dinnerOpen, end: H(24), share: 0.30 },
+    { id: 'snack_eve', slot: 'Snack', label: 'evening snack', start: Math.min(t.dinner + 60, H(23)), end: H(24), share: 0.05 },
+  ]
+}
+export const DAY_STOPS = dayStops()
+
+/** Her usual time for each meal — the middle of the times she's logged it
+ * over the past few weeks (needs 3+ days so one odd day doesn't move it).
+ * Kept in order with room between meals, so the windows always make sense. */
+export function mealTimesFrom(history: { meal: string; minute: number; day: string }[]): MealTimes {
+  const out: MealTimes = { ...DEFAULT_MEAL_TIMES, learned: [] }
+  for (const meal of ['breakfast', 'lunch', 'dinner'] as const) {
+    // first log of that meal each day = when she sat down to eat it
+    const perDay = new Map<string, number>()
+    for (const h of history) if (h.meal === meal && h.minute >= H(3)) perDay.set(h.day, Math.min(perDay.get(h.day) ?? Infinity, h.minute))
+    const times = Array.from(perDay.values()).sort((x, y) => x - y)
+    if (times.length >= 3) { out[meal] = times[Math.floor(times.length / 2)]; out.learned.push(meal) }
+  }
+  // Keep breakfast < lunch < dinner with at least 2.5h between them.
+  out.breakfast = clamp(out.breakfast, H(4), H(14))
+  out.lunch = clamp(Math.max(out.lunch, out.breakfast + 150), H(9), H(19))
+  out.dinner = clamp(Math.max(out.dinner, out.lunch + 150), H(14), H(23))
+  return out
+}
 
 export interface LoggedMeal { meal: string; minute: number }   // food-log meal + local minute it was logged
 
-function stopDone(s: DayStop, logs: LoggedMeal[]): boolean {
+function stopDone(s: DayStop, logs: LoggedMeal[], stops: DayStop[]): boolean {
   if (s.slot !== 'Snack') return logs.some((l) => l.meal === s.id)
-  // One "snack" tag in the log: from lunchtime to dinner time → the afternoon
-  // snack (she may pick it right after lunch), after that → the evening one.
-  // An early-morning snack counts as neither, and no snack ever skips a meal
-  // (planDay only moves forward on real meals).
-  return logs.some((l) => l.meal === 'snack' && (s.id === 'snack_pm' ? l.minute >= H(10, 30) && l.minute < H(17) : l.minute >= H(17)))
+  // One "snack" tag in the log: from her lunchtime to her dinner time → the
+  // afternoon snack (she may pick it right after lunch), after that → the
+  // evening one. An early-morning snack counts as neither, and no snack ever
+  // skips a meal (planDay only moves forward on real meals).
+  const lunchOpen = stops[1].start, dinnerOpen = stops[3].start
+  return logs.some((l) => l.meal === 'snack' && (s.id === 'snack_pm' ? l.minute >= lunchOpen && l.minute < dinnerOpen : l.minute >= dinnerOpen))
 }
 
 export interface DayPlan {
@@ -124,13 +159,14 @@ export interface DayPlan {
   refreshInMin: number         // when the screen should move on by itself
 }
 
-export function planDay(nowMin: number, logs: LoggedMeal[], remainingCal: number): DayPlan {
-  const doneIdx = DAY_STOPS.map((s) => stopDone(s, logs))
+export function planDay(nowMin: number, logs: LoggedMeal[], remainingCal: number, times: MealTimes = DEFAULT_MEAL_TIMES): DayPlan {
+  const stops = dayStops(times)
+  const doneIdx = stops.map((s) => stopDone(s, logs, stops))
   // Only a real meal moves the day forward — a snack never skips lunch.
-  const lastDone = DAY_STOPS.reduce((last, s, i) => (doneIdx[i] && s.slot !== 'Snack' ? i : last), -1)
+  const lastDone = stops.reduce((last, s, i) => (doneIdx[i] && s.slot !== 'Snack' ? i : last), -1)
   // Still ahead: not eaten, its time not passed, and not before a meal she's
   // already had (dinner logged at 4:30 → the afternoon snack is gone).
-  const ahead = DAY_STOPS.filter((s, i) => !doneIdx[i] && s.end > nowMin && i > lastDone)
+  const ahead = stops.filter((s, i) => !doneIdx[i] && s.end > nowMin && i > lastDone)
   const current = ahead[0] || null
   const shares = ahead.reduce((t, s) => t + s.share, 0)
   // A snack stays a snack even when she has plenty left.
