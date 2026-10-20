@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { MealOption, EatStyle, OrderDestination } from '@/lib/meal-pick'
@@ -27,9 +27,11 @@ type Props = {
   slot: string                // 'Lunch'
   heading: string             // 'Pick your lunch.'
   remainingCal: number
+  nextUp: string | null       // 'Next up: your dinner, around 5pm.'
+  refreshInMin: number        // when this meal's time is up
 }
 
-export default function NutritionPicks({ cards, slot, heading, remainingCal }: Props) {
+export default function NutritionPicks({ cards, slot, heading, remainingCal, nextUp, refreshInMin }: Props) {
   const router = useRouter()
   // Indexes into `cards` for the two on screen, plus where the next swap
   // starts looking. Starts on the engine's own top pair.
@@ -44,6 +46,18 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal }: P
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<{ card: PickCard; left: number; entryId: string | null } | null>(null)
   const meal = slot.toLowerCase()
+
+  // Never stagnant: when this meal's time passes, or she comes back to the
+  // app (from DoorDash, from another tab), fetch what's up now. Not while
+  // the done screen is showing — that's her confirmation.
+  const doneRef = useRef(false)
+  doneRef.current = !!done
+  useEffect(() => {
+    const t = setTimeout(() => { if (!doneRef.current) router.refresh() }, refreshInMin * 60000 + 5000)
+    const onVis = () => { if (document.visibilityState === 'visible' && !doneRef.current) router.refresh() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { clearTimeout(t); document.removeEventListener('visibilitychange', onVis) }
+  }, [refreshInMin, router])
 
   const post = (body: object) => fetch('/api/plan/meal-pick', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -147,6 +161,7 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal }: P
           <p className="text-sm" style={{ color: C.muted }}>{card.dest.label}.</p>
         )}
 
+        {nextUp && <p className="text-[13px] mt-2" style={{ color: C.green }}>{nextUp}</p>}
         <button onClick={() => { setDone(null); router.refresh() }} className="text-sm py-2 mt-1" style={{ color: C.muted }}>Back</button>
         <button onClick={undo} className="text-xs underline underline-offset-2" style={{ color: C.faint }}>Tapped by mistake? Undo</button>
       </div>

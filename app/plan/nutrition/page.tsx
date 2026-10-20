@@ -2,9 +2,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import NutritionPicks, { EatStyleAsk, type PickCard } from '@/components/NutritionPicks'
-import { localHourNumber } from '@/lib/localdate'
 import { loadNutritionDay } from '@/lib/nutrition-day'
-import { pickMeals, slotForHour, defaultMealBudget, orderDestination, mealPhoto, shortName, type EatStyle, type MealMemory, type MealSlot, type OrderApp } from '@/lib/meal-pick'
+import { pickMeals, planDay, clockLabel, defaultMealBudget, orderDestination, mealPhoto, shortName, type EatStyle, type MealMemory, type MealSlot, type OrderApp } from '@/lib/meal-pick'
 import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
 
 export const dynamic = 'force-dynamic'
@@ -16,7 +15,16 @@ export const dynamic = 'force-dynamic'
 // the same kind). Nothing else on the screen. Her food log, the camera, and
 // the cook/eat-out + money settings live on /plan/nutrition/log (My Day's
 // "+ Log food").
-const NEXT_SLOT: Record<MealSlot, MealSlot | null> = { Breakfast: 'Lunch', Lunch: 'Dinner', Dinner: 'Snack', Snack: null }
+// v4.1 (same day): the clock + her food log decide which meal is up
+// (lib/meal-pick planDay) — breakfast logged → lunch is waiting, then the
+// afternoon snack, dinner, the evening snack — and the screen moves on by
+// itself when that meal's time passes.
+
+// Local minute of the day a food-log row was written.
+function localMinute(tz: string, at: Date): number {
+  const [h, m] = at.toLocaleTimeString('en-US', { timeZone: tz, hour12: false, hour: '2-digit', minute: '2-digit' }).split(':').map(Number)
+  return (h % 24) * 60 + m
+}
 
 export default async function NutritionPage() {
   if (!SHOW_CALORIE_COUNTER) redirect('/plan')
@@ -24,20 +32,18 @@ export default async function NutritionPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login?redirect=/plan/nutrition')
 
-  const day = await loadNutritionDay(user)
+  const data = await loadNutritionDay(user)
   // Her calorie target comes from the plan she already has — never asked
   // again here. No plan yet → send her through the existing plan creation.
-  if (!day || !day.calBudget || !day.intake) return <NoPlanYet />
-  const { intake, foodRows, calBudget, weekPlan, mealIdx, todayIso, tz } = day
+  if (!data || !data.calBudget || !data.intake) return <NoPlanYet />
+  const { intake, foodRows, calBudget, weekPlan, mealIdx, todayIso, tz } = data
 
   const loggedToday = foodRows.reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
   const remainingCal = Math.max(0, Math.round(calBudget - loggedToday))
-  const loggedMeals = new Set(foodRows.map((r) => (r.meal as string) || ''))
-
-  // Which meal is this? The clock's meal — unless she's already logged it,
-  // then the next one, so she's never handed lunch twice.
-  let slot: MealSlot = slotForHour(localHourNumber(tz))
-  while (loggedMeals.has(slot.toLowerCase()) && NEXT_SLOT[slot]) slot = NEXT_SLOT[slot]!
+  const nowMin = localMinute(tz, new Date())
+  const day = planDay(nowMin, foodRows.map((r) => ({ meal: (r.meal as string) || '', minute: localMinute(tz, new Date(r.created_at as string)) })), remainingCal)
+  // Every meal done today → the lightest snacks, only if she's still hungry.
+  const slot: MealSlot = day.current?.slot ?? 'Snack'
 
   const formData = (intake.form_data || {}) as Record<string, unknown>
   const eatStyle = (formData.eat_style === 'cook' || formData.eat_style === 'out') ? formData.eat_style as EatStyle : null
@@ -52,18 +58,21 @@ export default async function NutritionPage() {
     weekPlan, todayIdx: mealIdx,
     memory: (formData.meal_memory || {}) as MealMemory,
     todayIso,
+    slotCalBudget: day.calBudget,
   }) : null
   const cards: PickCard[] = (result?.options || []).slice(0, 12).map((o) => ({
     ...o, dest: orderDestination(o, orderApp), photo: mealPhoto(o), short: shortName(o),
   }))
 
-  const heading = loggedMeals.has(slot.toLowerCase()) ? 'Still hungry? Pick a light one.' : `Pick your ${slot.toLowerCase()}.`
+  const heading = day.current ? `Pick your ${day.current.label}.` : 'Still hungry? Pick a light one.'
+  // What's waiting after this one — said once she's picked.
+  const next = day.next ? `Next up: your ${day.next.label}${day.next.start > nowMin + 30 ? `, around ${clockLabel(day.next.start)}` : ''}.` : null
 
   return (
     <div className="px-4 pt-6 flex flex-col" style={{ background: '#021F16', height: 'calc(100dvh - 64px)' }}>
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col min-h-0">
         {eatStyle && result ? (
-          <NutritionPicks cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} />
+          <NutritionPicks key={`${day.current?.id ?? 'done'}:${cards.map((c) => c.key).join('|')}`} cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} nextUp={next} refreshInMin={day.refreshInMin} />
         ) : (
           <EatStyleAsk />
         )}

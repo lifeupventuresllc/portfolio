@@ -23,7 +23,7 @@ export async function loadNutritionDay(user: { id: string; email?: string | null
   const [{ data: nutritionPlan }, { data: intake }, { data: foodRows }, todayAdjustment, { data: todayProgress }, { data: recentWorkoutActions }] = await Promise.all([
     svc.from('challenge_nutrition_plans').select('meals, calories, day_targets').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_intake').select('weight_lbs, weekly_food_budget, food_preferences, dislikes_allergies, form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
-    svc.from('challenge_food_log').select('calories, meal').eq('enrollment_id', enrollment.id).eq('logged_on', todayIso),
+    svc.from('challenge_food_log').select('calories, meal, created_at').eq('enrollment_id', enrollment.id).eq('logged_on', todayIso),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
     // Same real workout-brain signal /plan/today reads, so this number never
     // disagrees with the dashboard's.

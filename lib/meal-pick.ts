@@ -59,6 +59,7 @@ export interface PickContext {
   todayIdx?: number           // Mon=0 … Sat=5 (weekPlan day)
   memory?: MealMemory
   todayIso: string
+  slotCalBudget?: number      // from planDay(): this meal's share of what's left today
 }
 
 export interface PickResult {
@@ -83,6 +84,65 @@ export function slotCalorieBudget(remainingCal: number, slot: MealSlot): number 
   const left = SLOT_ORDER.slice(SLOT_ORDER.indexOf(slot))
   const share = SLOT_SHARE[slot] / left.reduce((s, x) => s + SLOT_SHARE[x], 0)
   return Math.round(remainingCal * share)
+}
+
+// ---- the day's rhythm (v4.1, 2026-10-20) --------------------------------
+// Asa: the tab already knows the time and what she's eaten — breakfast
+// logged → lunch is waiting; lunch logged → the afternoon snack; then dinner,
+// then an evening snack. Calories reflow over the meals she still has left,
+// so every pick re-sizes the moment she logs anything. Never stagnant.
+
+export type StopId = 'breakfast' | 'lunch' | 'snack_pm' | 'dinner' | 'snack_eve'
+export interface DayStop { id: StopId; slot: MealSlot; label: string; start: number; end: number; share: number }
+const H = (h: number, m = 0) => h * 60 + m
+// start/end = local minutes of the day. A main meal stays up until the next
+// main meal's time (a late lunch at 3pm is still lunch); a snack only shows
+// once the meal before it is done.
+export const DAY_STOPS: DayStop[] = [
+  { id: 'breakfast', slot: 'Breakfast', label: 'breakfast', start: H(4), end: H(10, 30), share: 0.25 },
+  { id: 'lunch', slot: 'Lunch', label: 'lunch', start: H(10, 30), end: H(17), share: 0.33 },
+  { id: 'snack_pm', slot: 'Snack', label: 'afternoon snack', start: H(14, 30), end: H(17), share: 0.07 },
+  { id: 'dinner', slot: 'Dinner', label: 'dinner', start: H(17), end: H(24), share: 0.30 },
+  { id: 'snack_eve', slot: 'Snack', label: 'evening snack', start: H(19, 30), end: H(24), share: 0.05 },
+]
+
+export interface LoggedMeal { meal: string; minute: number }   // food-log meal + local minute it was logged
+
+function stopDone(s: DayStop, logs: LoggedMeal[]): boolean {
+  if (s.slot !== 'Snack') return logs.some((l) => l.meal === s.id)
+  // One "snack" tag in the log: from lunchtime to dinner time → the afternoon
+  // snack (she may pick it right after lunch), after that → the evening one.
+  // An early-morning snack counts as neither, and no snack ever skips a meal
+  // (planDay only moves forward on real meals).
+  return logs.some((l) => l.meal === 'snack' && (s.id === 'snack_pm' ? l.minute >= H(10, 30) && l.minute < H(17) : l.minute >= H(17)))
+}
+
+export interface DayPlan {
+  current: DayStop | null      // null = every meal today is done
+  next: DayStop | null         // what's waiting after this one
+  calBudget: number            // calories THIS meal can use
+  refreshInMin: number         // when the screen should move on by itself
+}
+
+export function planDay(nowMin: number, logs: LoggedMeal[], remainingCal: number): DayPlan {
+  const doneIdx = DAY_STOPS.map((s) => stopDone(s, logs))
+  // Only a real meal moves the day forward — a snack never skips lunch.
+  const lastDone = DAY_STOPS.reduce((last, s, i) => (doneIdx[i] && s.slot !== 'Snack' ? i : last), -1)
+  // Still ahead: not eaten, its time not passed, and not before a meal she's
+  // already had (dinner logged at 4:30 → the afternoon snack is gone).
+  const ahead = DAY_STOPS.filter((s, i) => !doneIdx[i] && s.end > nowMin && i > lastDone)
+  const current = ahead[0] || null
+  const shares = ahead.reduce((t, s) => t + s.share, 0)
+  // A snack stays a snack even when she has plenty left.
+  const raw = current ? Math.round(remainingCal * (current.share / shares)) : remainingCal
+  const calBudget = current?.slot === 'Snack' || !current ? Math.min(raw, 350) : raw
+  const refreshInMin = Math.max(1, (current ? current.end : H(24)) - nowMin)
+  return { current, next: ahead[1] || null, calBudget, refreshInMin }
+}
+
+export function clockLabel(min: number): string {
+  const h = Math.floor(min / 60) % 24, m = min % 60
+  return `${h % 12 || 12}${m ? `:${String(m).padStart(2, '0')}` : ''}${h < 12 ? 'am' : 'pm'}`
 }
 
 // ---- money --------------------------------------------------------------
@@ -218,7 +278,7 @@ export function pickMeals(ctx: PickContext): PickResult {
   const loveWords = loveWordsFrom(ctx.foodPreferences)
   const memory = ctx.memory || {}
   const remaining = Math.max(0, ctx.remainingCal)
-  const slotBudget = slotCalorieBudget(remaining, ctx.slot)
+  const slotBudget = ctx.slotCalBudget ?? slotCalorieBudget(remaining, ctx.slot)
   const light = remaining > 0 && remaining < 350
 
   // Hard rules first: her "never" foods and a known calorie number. Never relaxed.
@@ -267,6 +327,10 @@ export function pickMeals(ctx: PickContext): PickResult {
     // skipped earlier today: don't hand it straight back at the next meal
     if (mem.skip === ctx.todayIso) score -= 30
     if (light) score += Math.max(0, 15 - o.cal / 40)
+    // Fresh every meal, every day: a small shuffle seeded by today + this
+    // meal, so the same top pair doesn't greet her day after day (and stays
+    // put while she's looking at it).
+    score += (hash(`${ctx.todayIso}:${ctx.slot}:${o.key}`) % 13) - 6
     return { o: { ...o, why: whyFor(o, ctx, mem, loved) }, score }
   }).sort((a, b) => b.score - a.score)
 
@@ -383,6 +447,7 @@ export function shortName(o: MealOption): string {
 
 // ---- helpers ----------------------------------------------------------------
 
+function hash(s: string): number { return s.split('').reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) }
 function clamp(n: number, lo: number, hi: number) { return Math.min(hi, Math.max(lo, n)) }
 function daysBetween(a: string, b: string): number {
   return Math.abs(Math.round((new Date(`${b}T00:00:00Z`).getTime() - new Date(`${a}T00:00:00Z`).getTime()) / 86400000))
