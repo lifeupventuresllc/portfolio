@@ -133,6 +133,7 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
   const eatStyle = inp.eat_style || (priorFormData.eat_style as 'cook' | 'out' | undefined)
   const mealBudget = inp.meal_budget || (priorFormData.meal_budget as number | undefined)
   const mealMemory = priorFormData.meal_memory
+  const orderApp = priorFormData.order_app
 
   const intakePayload = {
     enrollment_id: inp.enrollmentId,
@@ -173,6 +174,7 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
       ...(eatStyle ? { eat_style: eatStyle } : {}),
       ...(mealBudget ? { meal_budget: mealBudget } : {}),
       ...(mealMemory ? { meal_memory: mealMemory } : {}),
+      ...(orderApp ? { order_app: orderApp } : {}),
     },
   }
 

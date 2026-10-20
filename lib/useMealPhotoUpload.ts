@@ -30,7 +30,7 @@ export function useMealPhotoUpload() {
       fd.append('photo', file)
       const res = await fetch('/api/plan/food-photo', { method: 'POST', body: fd })
       const d = await res.json()
-      if (d.success) router.push('/plan/nutrition')
+      if (d.success) { router.push('/plan/nutrition/log'); router.refresh() }
       else setError(d.error || 'Upload failed.')
     } catch { setError('Upload failed. Try again.') }
     setUploading(false)

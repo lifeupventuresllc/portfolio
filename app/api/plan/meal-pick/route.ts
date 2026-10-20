@@ -8,12 +8,14 @@ import { localDateISO } from '@/lib/localdate'
 //   eat_style    'cook' | 'out'   — set at intake, changed from the tab's sentence
 //   meal_budget  $ for one meal   — same
 //   meal_memory  per-meal picked/skipped counts (the learning loop)
+//   order_app    'doordash' | 'ubereats' — which delivery app a pick opens
 // Calorie logging itself goes through the existing /api/plan/food-log.
 type Body = {
-  action?: 'picked' | 'skipped' | 'style' | 'budget' | 'report'
+  action?: 'picked' | 'skipped' | 'style' | 'budget' | 'report' | 'order_app'
   key?: string; keys?: string[]
   eatStyle?: string; mealBudget?: number
   message?: string
+  orderApp?: string
 }
 
 export async function POST(request: NextRequest) {
@@ -56,6 +58,9 @@ export async function POST(request: NextRequest) {
     const n = Math.round(Number(body.mealBudget))
     if (!Number.isFinite(n) || n < 2 || n > 100) return NextResponse.json({ error: 'Bad amount.' }, { status: 400 })
     formData.meal_budget = n
+  } else if (body.action === 'order_app') {
+    if (body.orderApp !== 'doordash' && body.orderApp !== 'ubereats') return NextResponse.json({ error: 'Bad app.' }, { status: 400 })
+    formData.order_app = body.orderApp
   } else if (body.action === 'picked' || body.action === 'skipped') {
     let memory = (formData.meal_memory || {}) as MealMemory
     const keys = body.action === 'picked' ? [body.key] : (body.keys || [])

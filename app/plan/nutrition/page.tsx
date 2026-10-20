@@ -1,24 +1,21 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
-import FoodLog, { type PlannedItem } from '@/components/FoodLog'
-import MealPhotoButton from '@/components/MealPhotoButton'
+import { createClient } from '@/lib/supabase/server'
 import NutritionPicks, { EatStyleAsk, type PickCard } from '@/components/NutritionPicks'
-import { getTimezone, localMondayIndex, localDateISO, localHourNumber } from '@/lib/localdate'
-import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { getEffectiveCalorieBudget, isEatingOutToday, resolveTodayCalorieTarget, resolvedDayType, scheduleDayType, workoutTodayStatus, type DayTargets } from '@/lib/fos/effective-plan'
-import type { WeekPlan } from '@/lib/meal-plan'
-import { pickMeals, slotForHour, defaultMealBudget, orderDestination, type EatStyle, type MealMemory, type MealSlot } from '@/lib/meal-pick'
+import { localHourNumber } from '@/lib/localdate'
+import { loadNutritionDay } from '@/lib/nutrition-day'
+import { pickMeals, slotForHour, defaultMealBudget, orderDestination, mealPhoto, shortName, type EatStyle, type MealMemory, type MealSlot, type OrderApp } from '@/lib/meal-pick'
 import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
 
 export const dynamic = 'force-dynamic'
 
-// The Nutrition tab (2026-10-19, Asa's builder prompt + mockup v3):
-// everything food lives here, and its whole job is taking the decision off
-// her plate. Top: two meals for THIS meal that fit her calories left, her
-// money for one meal, and how she eats (cook vs eat out — two of the same
-// kind, never one of each). Below, out of the way: snap a photo or see
-// today's full food log (the FoodLog this page always was).
+// The Nutrition tab, v4 (2026-10-20, Asa: "she just taps an option within 5
+// seconds, no thinking, everything else can go"). Two big photos for THIS
+// meal — already fit to her calories left (hard rule, never over), her money
+// for one meal, her "never" foods, and how she eats (cook vs eat out, two of
+// the same kind). Nothing else on the screen. Her food log, the camera, and
+// the cook/eat-out + money settings live on /plan/nutrition/log (My Day's
+// "+ Log food").
 const NEXT_SLOT: Record<MealSlot, MealSlot | null> = { Breakfast: 'Lunch', Lunch: 'Dinner', Dinner: 'Snack', Snack: null }
 
 export default async function NutritionPage() {
@@ -27,50 +24,15 @@ export default async function NutritionPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login?redirect=/plan/nutrition')
 
-  const svc = createServiceClient()
-  let { data: enrollment } = await svc.from('challenge_enrollments').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).maybeSingle()
-  if (!enrollment && user.email) {
-    const { data: byEmail } = await svc.from('challenge_enrollments').select('*').eq('email', user.email).order('created_at', { ascending: false }).maybeSingle()
-    enrollment = byEmail || null
-  }
-  if (!enrollment) return <NoPlanYet />
-
-  const tz = getTimezone()
-  const todayIso = localDateISO(tz)
-  const mealIdx = localMondayIndex(tz)
-  const [{ data: nutritionPlan }, { data: intake }, { data: foodRows }, todayAdjustment, { data: todayProgress }, { data: recentWorkoutActions }] = await Promise.all([
-    svc.from('challenge_nutrition_plans').select('meals, calories, day_targets').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
-    svc.from('challenge_intake').select('weight_lbs, weekly_food_budget, food_preferences, dislikes_allergies, form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
-    svc.from('challenge_food_log').select('calories, meal').eq('enrollment_id', enrollment.id).eq('logged_on', todayIso),
-    getApprovedTodayAdjustment(enrollment.id as string, todayIso),
-    // Same real workout-brain signal /plan/today reads, so this page's
-    // number never disagrees with the dashboard's.
-    svc.from('challenge_progress').select('measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__').eq('logged_on', todayIso).maybeSingle(),
-    svc.from('next_action_log').select('shown_at, skipped_at, superseded_at').eq('enrollment_id', enrollment.id).eq('kind', 'workout').gte('shown_at', new Date(Date.now() - 2 * 86400000).toISOString()).order('shown_at', { ascending: false }),
-  ])
-
-  const weekPlan = (nutritionPlan?.meals && typeof nutritionPlan.meals === 'object' && 'days' in nutritionPlan.meals)
-    ? (nutritionPlan.meals as WeekPlan) : null
-  const todayMeals = weekPlan && mealIdx <= 5 ? weekPlan.days[mealIdx] : null
-  const planned: PlannedItem[] = (todayMeals?.meals || []).map((m) => ({ slot: m.slot, name: m.name, cal: m.cal, protein: m.protein, carbs: m.carbs, fat: m.fat }))
-  const workoutDoneToday = !!(todayProgress?.measurements as { workout?: boolean } | null)?.workout
-  const todaysWorkoutAction = (recentWorkoutActions || []).find((r) => localDateISO(tz, new Date(r.shown_at as string)) === todayIso)
-  const workoutSkippedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)
-  const workoutStatus = workoutTodayStatus(workoutDoneToday, workoutSkippedToday)
-  const dayTargets = (nutritionPlan?.day_targets as DayTargets) || null
-  const scheduledDayType = todayMeals?.dayType ?? scheduleDayType(dayTargets, mealIdx)
-  const baseCalTarget = resolveTodayCalorieTarget(todayMeals?.target, scheduledDayType, dayTargets, Number(nutritionPlan?.calories) || null, workoutStatus)
-  const calBudget = baseCalTarget != null ? getEffectiveCalorieBudget(baseCalTarget, todayAdjustment) : null
-  const todaysDayType = resolvedDayType(scheduledDayType, workoutStatus)
-  const eatingOutToday = isEatingOutToday(todayMeals?.eatOut, todayAdjustment)
-
+  const day = await loadNutritionDay(user)
   // Her calorie target comes from the plan she already has — never asked
   // again here. No plan yet → send her through the existing plan creation.
-  if (!calBudget || !intake) return <NoPlanYet />
+  if (!day || !day.calBudget || !day.intake) return <NoPlanYet />
+  const { intake, foodRows, calBudget, weekPlan, mealIdx, todayIso, tz } = day
 
-  const loggedToday = (foodRows || []).reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
+  const loggedToday = foodRows.reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
   const remainingCal = Math.max(0, Math.round(calBudget - loggedToday))
-  const loggedMeals = new Set((foodRows || []).map((r) => (r.meal as string) || ''))
+  const loggedMeals = new Set(foodRows.map((r) => (r.meal as string) || ''))
 
   // Which meal is this? The clock's meal — unless she's already logged it,
   // then the next one, so she's never handed lunch twice.
@@ -80,6 +42,7 @@ export default async function NutritionPage() {
   const formData = (intake.form_data || {}) as Record<string, unknown>
   const eatStyle = (formData.eat_style === 'cook' || formData.eat_style === 'out') ? formData.eat_style as EatStyle : null
   const mealBudget = eatStyle ? (Number(formData.meal_budget) || defaultMealBudget(eatStyle, Number(intake.weekly_food_budget) || null)) : 0
+  const orderApp: OrderApp = formData.order_app === 'ubereats' ? 'ubereats' : 'doordash'
 
   const result = eatStyle ? pickMeals({
     eatStyle, mealBudget, remainingCal, slot,
@@ -90,42 +53,20 @@ export default async function NutritionPage() {
     memory: (formData.meal_memory || {}) as MealMemory,
     todayIso,
   }) : null
-  const cards: PickCard[] = (result?.options || []).slice(0, 10).map((o) => ({ ...o, dest: orderDestination(o) }))
+  const cards: PickCard[] = (result?.options || []).slice(0, 12).map((o) => ({
+    ...o, dest: orderDestination(o, orderApp), photo: mealPhoto(o), short: shortName(o),
+  }))
 
-  const greeting = loggedMeals.has(slot.toLowerCase()) ? 'Still hungry? Here’s a light one.' : `${slot} is sorted.`
+  const heading = loggedMeals.has(slot.toLowerCase()) ? 'Still hungry? Pick a light one.' : `Pick your ${slot.toLowerCase()}.`
 
   return (
-    <div className="min-h-[100dvh] px-4 pt-6 pb-28" style={{ background: '#021F16' }}>
-      <div className="max-w-md mx-auto">
+    <div className="px-4 pt-6 flex flex-col" style={{ background: '#021F16', height: 'calc(100dvh - 64px)' }}>
+      <div className="max-w-md mx-auto w-full flex-1 flex flex-col min-h-0">
         {eatStyle && result ? (
-          <NutritionPicks
-            cards={cards} slot={slot} remainingCal={remainingCal} dayTarget={Math.round(calBudget)} greeting={greeting}
-            eatStyle={eatStyle} mealBudget={mealBudget} note={result.note}
-          />
+          <NutritionPicks cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} />
         ) : (
-          <EatStyleAsk remainingCal={remainingCal} dayTarget={Math.round(calBudget)} />
+          <EatStyleAsk />
         )}
-
-        {/* Everything else food, out of the way of the two cards. */}
-        <div className="mt-12 pt-6 flex flex-col gap-3" style={{ borderTop: '1px solid #0d3a2a' }}>
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: 'rgba(237,231,218,0.35)' }}>Ate something else?</p>
-          <MealPhotoButton />
-          <details className="group">
-            <summary className="cursor-pointer list-none text-sm py-2 text-center underline underline-offset-[3px]" style={{ color: 'rgba(237,231,218,0.55)' }}>
-              See today&apos;s food
-            </summary>
-            <div className="mt-3">
-              <FoodLog
-                planned={planned} budget={calBudget} dayType={todaysDayType}
-                mealStatus={
-                  eatingOutToday ? { kind: 'eatingOut' }
-                    : todayMeals ? { kind: 'planned', totalProtein: todayMeals.totalProtein }
-                    : { kind: 'empty', isSunday: mealIdx > 5 }
-                }
-              />
-            </div>
-          </details>
-        </div>
       </div>
     </div>
   )

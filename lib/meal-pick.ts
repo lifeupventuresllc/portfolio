@@ -304,27 +304,81 @@ function whyFor(o: MealOption, ctx: PickContext, mem: { o?: number }, loved?: st
 //   'delivery'   — a delivery-app search for that chain (lands on a results
 //                  page, can't skip straight to the item) — FLAGGED for review
 //   'recipe'     — cooking pick; no ordering, she just makes it
-export interface OrderDestination { url: string | null; label: string; kind: 'restaurant' | 'delivery' | 'recipe'; skipsLanding: boolean }
+export interface OrderDestination { url: string | null; label: string; kind: 'delivery' | 'recipe'; app: OrderApp | null }
+export type OrderApp = 'doordash' | 'ubereats'
+export const ORDER_APP_NAME: Record<OrderApp, string> = { doordash: 'DoorDash', ubereats: 'Uber Eats' }
 
-// Only links checked to load (2026-10-19). Chains not listed fall back to a
-// delivery-app search below.
-const CHAIN_ORDER_URL: Record<string, string> = {
-  'Chipotle': 'https://www.chipotle.com/order',
-  'Chick-fil-A': 'https://order.chick-fil-a.com/menu',
-  'Taco Bell': 'https://www.tacobell.com/food',
-  'Sweetgreen': 'https://order.sweetgreen.com',
-  "Domino's": 'https://www.dominos.com/en/restaurants',
-  'Wingstop': 'https://www.wingstop.com/menu',
-  "Jersey Mike's": 'https://www.jerseymikes.com/menu',
+// v4 (2026-10-20, Asa: "reduce the click… a link to DoorDash or Uber Eats"):
+// every eat-out pick goes straight to her delivery app's search for that
+// restaurant — no chain website in between. Neither app offers a public way
+// to fill her cart, so she adds the item there. In-app ordering (tap → confirm
+// → ordered, never leaving) needs an ordering API (MealMe) — not wired yet.
+export function orderDestination(o: MealOption, app: OrderApp = 'doordash'): OrderDestination {
+  if (o.kind === 'cook') return { url: null, label: 'What you need', kind: 'recipe', app: null }
+  if (o.place === 'Grab & go') return { url: null, label: 'Grab it at any store', kind: 'recipe', app: null }
+  const url = app === 'ubereats'
+    ? `https://www.ubereats.com/search?q=${encodeURIComponent(o.place)}`
+    : doordashSearchUrl(o.place)
+  return { url, label: `Order on ${ORDER_APP_NAME[app]}`, kind: 'delivery', app }
 }
 
-export function orderDestination(o: MealOption): OrderDestination {
-  if (o.kind === 'cook') return { url: null, label: 'See how to make it', kind: 'recipe', skipsLanding: true }
-  if (o.place === 'Grab & go') return { url: null, label: 'Grab it at any store', kind: 'recipe', skipsLanding: true }
-  const direct = CHAIN_ORDER_URL[o.place]
-  if (direct) return { url: direct, label: `Open ${o.place} to order`, kind: 'restaurant', skipsLanding: false }
-  // REVIEW: delivery search lands on a results page first — can't skip the landing page.
-  return { url: doordashSearchUrl(o.place), label: `Order ${o.place}`, kind: 'delivery', skipsLanding: false }
+// ---- card face: a photo + a short name ------------------------------------
+
+// Her own cookbook photos first (public/images/meals), then a photo of that
+// KIND of food (public/images/meals/food, credits in lib/meal-photo-credits).
+const RECIPE_PHOTOS = new Set(['buffalo-chicken-bowls', 'crispy-honey-garlic-chicken', 'garlic-butter-chicken-meatballs', 'marry-me-chicken-pasta', 'protein-overnight-oats', 'turkey-sausage-sweet-potato-hash'])
+const FOOD_PHOTO: [RegExp, string][] = [
+  [/cheesecake/i, 'cheesecake'], [/cookie|brookie|skillet cookie/i, 'cookie'], [/tiramisu|shortcake|pumpkin pie|dough/i, 'cheesecake'],
+  [/shake|core power|premier/i, 'shake'], [/protein bar|quest|bar\b/i, 'protein-bar'], [/parfait|yogurt|yoplait|clusters/i, 'parfait'],
+  [/oats|oatmeal/i, 'oats'], [/banana|rice cakes|nut butter|\bpb\b/i, 'banana-pb'], [/protein box/i, 'banana-pb'],
+  [/breakfast burrito|crunchwrap/i, 'breakfast-burrito'], [/mcmuffin|egg white grill|egg.*sandwich|bagel|breakfast sandwich/i, 'breakfast-sandwich'],
+  [/burger|whopper|big mac|shackburger|smokeshack/i, 'burger'],
+  [/egg.*wrap|wrap/i, 'wrap'], [/wings?\b/i, 'wings'], [/tenders|nugget|strips/i, 'tenders'],
+  [/soup/i, 'soup-sandwich'], [/\bsub\b|6"|footlong|turkey sandwich/i, 'sub'],
+  [/chicken sandwich|mcchicken/i, 'chicken-sandwich'],
+  [/teriyaki/i, 'teriyaki'], [/fried rice/i, 'fried-rice'], [/stir fry/i, 'stir-fry'], [/noodle|gochujang/i, 'noodles'],
+  [/mac (&|and) cheese/i, 'mac'], [/pizza/i, 'pizza'], [/pasta|orzo|bisque/i, 'pasta'],
+  [/taco/i, 'taco-bowl'], [/burrito/i, 'burrito'], [/greens|salad bowl|sweetgreen|cabbage/i, 'salad'],
+  [/bowl|rice/i, 'bowl'], [/grilled chicken|chicken breast|meatball|chicken/i, 'grilled-chicken'], [/salad/i, 'salad'],
+]
+
+const PHOTO_ALT = new Set(['breakfast-sandwich', 'burger', 'chicken-sandwich', 'wrap', 'wings', 'sub', 'breakfast-burrito', 'bowl'])
+
+function slug(s: string): string { return s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }
+
+export function mealPhoto(o: MealOption): string {
+  if (o.kind === 'cook') {
+    const sl = slug(o.name)
+    const own = Array.from(RECIPE_PHOTOS).find((p) => sl === p || sl.startsWith(p) || p.startsWith(sl))
+    if (own) return `/images/meals/${own}.jpg`
+  }
+  // The main item decides the photo ("Egg White Grill + parfait" is a
+  // sandwich, not a parfait); the full order is the fallback.
+  const head = o.name.replace(/^([^,+]+?) \+ ([^,+]*bowl)/i, '$1 & $2').split(/\s\+\s/)[0]
+  const extra = o.place === 'Sweetgreen' ? ' sweetgreen' : ''
+  const hit = FOOD_PHOTO.find(([re]) => re.test(head + extra)) || FOOD_PHOTO.find(([re]) => re.test(o.name + extra))
+  const base = hit ? hit[1] : 'bowl'
+  // A second photo for the foods that come up most, so two sandwiches
+  // side by side still look like two different meals. Same meal → same photo.
+  const alt = PHOTO_ALT.has(base) && o.key.split("").reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) % 2 === 1
+  return `/images/meals/food/${base}${alt ? '-2' : ''}.jpg`
+}
+
+/** The few words on the photo — the full order still shows after she taps. */
+export function shortName(o: MealOption): string {
+  if (o.kind === 'cook') return o.name.replace(/\s*\((Regular|Large)\)/i, '')
+  let n = o.name.replace(/\([^)]*\)/g, '').replace(/\s{2,}/g, ' ').trim()
+  const bowl = n.match(/^bowl:\s*([^,]+)/i)
+  if (bowl) return `${bowl[1].trim()} bowl`.replace(/^(\w)(.*)$/, (_m, a, b) => a + b.toLowerCase())
+  if (/^(chicken )?power bowl/i.test(n)) return 'Chicken power bowl'
+  n = n.replace(/^([^,+]+?) \+ ([^,+]*bowl)/i, '$1 & $2')   // "Double chicken + steak bowl"
+  n = n.split(/\s\+\s/)[0]
+  // Drop the how-to-order bits after a comma ("no mayo", "light rice"), keep
+  // real parts of the name ("Avocado, Egg White & Spinach Sandwich").
+  const parts = n.split(/,\s*/)
+  const MOD = /^(no|light|extra|double|add|half|keep|full|½|with|lettuce|fries|sweet|black|pinto|salsa|cheese|free)\b/i
+  n = parts.reduce((acc, part, i) => (i === 0 || (acc.ok && !MOD.test(part)) ? { t: i ? `${acc.t}, ${part}` : part, ok: true } : { t: acc.t, ok: false }), { t: '', ok: true }).t
+  return n.replace(/\s+(no|light|with)\s.*$/i, '').trim() || o.name
 }
 
 // ---- helpers ----------------------------------------------------------------

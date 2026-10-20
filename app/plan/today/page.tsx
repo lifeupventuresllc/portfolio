@@ -405,7 +405,7 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
                     <div className="h-1.5 rounded-full overflow-hidden mb-3" style={{ background: 'rgba(255,255,255,0.07)' }}>
                       <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, (calRemaining / calBudget) * 100))}%`, background: 'linear-gradient(90deg, #2f8a5c, #4CAF7D, #7fe6b3)' }} />
                     </div>
-                    <Link href="/plan/nutrition" className="block text-center py-2.5 rounded-lg text-[11.5px] font-black uppercase tracking-wider" style={{ background: 'rgba(76,175,125,0.14)', border: '1px solid rgba(127,230,179,0.5)', color: '#c8f9dd' }}>+ Log food</Link>
+                    <Link href="/plan/nutrition/log" className="block text-center py-2.5 rounded-lg text-[11.5px] font-black uppercase tracking-wider" style={{ background: 'rgba(76,175,125,0.14)', border: '1px solid rgba(127,230,179,0.5)', color: '#c8f9dd' }}>+ Log food</Link>
                   </div>
                 ) : (
                   <Link href="/plan/nutrition" className="block rounded-2xl px-5 py-4" style={cardStyle}>

@@ -118,7 +118,7 @@ export function GoalProgressCompact({
         </span>
       </div>
         </Link>
-        {budgetLabel && <Link href="/plan/nutrition" aria-label="Log a meal" className="absolute right-0 top-0 text-[12px] font-bold text-[#E5A93C] whitespace-nowrap py-1.5 pl-3">{budgetLabel}</Link>}
+        {budgetLabel && <Link href="/plan/nutrition/log" aria-label="Log a meal" className="absolute right-0 top-0 text-[12px] font-bold text-[#E5A93C] whitespace-nowrap py-1.5 pl-3">{budgetLabel}</Link>}
       </div>
       {/* Log food pill CUT from Home (2026-09-24 audit, Asa's ask) — food
           logging now lives on My Day (/plan/today already has its own
