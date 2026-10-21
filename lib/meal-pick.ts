@@ -1,5 +1,6 @@
 import { ESCAPE_PLAN, weightClassFor, violatesRestrictions, parseDietaryRestrictions, doordashSearchUrl, type FastFoodMeal, type DietaryRestriction } from '@/lib/escape-plan'
 import { RECIPES, type Recipe } from '@/lib/recipes'
+import { CHAIN_MENU } from '@/lib/chain-menu'
 import { estimateWeeklyCost, portionIngredients } from '@/lib/ingredients'
 import type { WeekPlan } from '@/lib/meal-plan'
 
@@ -17,8 +18,8 @@ import type { WeekPlan } from '@/lib/meal-plan'
 // Then it learns from what she taps and skips (MealMemory below).
 //
 // Trust rules: every calorie number here is real curated data — chain
-// meals from lib/escape-plan.ts (built from each chain's own published
-// nutrition), cooking meals from The Menu cookbook (lib/recipes.ts). No
+// meals from lib/chain-menu.ts (read off each chain's own website),
+// cooking meals from The Menu cookbook (lib/recipes.ts). No
 // meal without a known calorie number is ever recommended. Prices are
 // always "about" — there is no live price feed, so they're shown and
 // labeled as estimates, never as exact.
@@ -225,7 +226,12 @@ function eatOutCandidates(ctx: PickContext): MealOption[] {
   const want = slotsFor(ctx.slot)
   const seen = new Set<string>()
   const out: MealOption[] = []
-  for (const m of [...wc.days.flatMap((d) => d.meals), ...wc.extraOptions]) {
+  // Verified-only (2026-10-21, Asa chose accuracy over variety): restaurant
+  // meals come ONLY from lib/chain-menu (read off each chain's own site). The
+  // older escape-plan combos had estimated numbers and some discontinued
+  // items, so only their packaged grab & go picks (bars, shakes) stay.
+  const grabAndGo = [...wc.days.flatMap((d) => d.meals), ...wc.extraOptions].filter((m) => m.restaurant === 'Grab & go')
+  for (const m of [...CHAIN_MENU, ...grabAndGo]) {
     if (!want.includes(m.slot)) continue
     const key = `out:${slugify(m.restaurant)}:${slugify(m.order)}`
     if (seen.has(key)) continue
@@ -363,6 +369,8 @@ export function pickMeals(ctx: PickContext): PickResult {
     // skipped earlier today: don't hand it straight back at the next meal
     if (mem.skip === ctx.todayIso) score -= 30
     if (light) score += Math.max(0, 15 - o.cal / 40)
+    // protein keeps her full and on plan: grams per 100 calories, up to +10
+    if (o.cal > 0) score += Math.min(10, (o.protein / o.cal) * 100 * 1.2)
     // Fresh every meal, every day: a small shuffle seeded by today + this
     // meal, so the same top pair doesn't greet her day after day (and stays
     // put while she's looking at it).
@@ -472,7 +480,11 @@ export function shortName(o: MealOption): string {
   if (bowl) return `${bowl[1].trim()} bowl`.replace(/^(\w)(.*)$/, (_m, a, b) => a + b.toLowerCase())
   if (/^(chicken )?power bowl/i.test(n)) return 'Chicken power bowl'
   n = n.replace(/^([^,+]+?) \+ ([^,+]*bowl)/i, '$1 & $2')   // "Double chicken + steak bowl"
-  n = n.split(/\s\+\s/)[0]
+  // A two-part verified combo keeps both parts ("Egg White Grill + Fruit
+  // Cup") — the calories on the card are for both, so the name must be too.
+  const combo = n.split(/\s\+\s/)
+  if (combo.length === 2 && !/,/.test(n) && n.length <= 44) return n
+  n = combo[0]
   // Drop the how-to-order bits after a comma ("no mayo", "light rice"), keep
   // real parts of the name ("Avocado, Egg White & Spinach Sandwich").
   const parts = n.split(/,\s*/)
