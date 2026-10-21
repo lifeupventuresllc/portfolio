@@ -254,5 +254,12 @@ export const MEAL_PHOTO_CREDITS: { file: string; title: string; author: string; 
     "author": "TwainNeverSaidThat",
     "license": "CC BY-SA 4.0",
     "source": "https://commons.wikimedia.org/wiki/File:Pollo_teriyaki_de_Sarku_Japan_(Colombia).jpg"
+  },
+  {
+    "file": "egg-bites.jpg",
+    "title": "Egg & Sausage Cups.jpg",
+    "author": "Kelly Sue",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Egg_%26_Sausage_Cups.jpg"
   }
 ]

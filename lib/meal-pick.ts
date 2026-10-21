@@ -437,13 +437,13 @@ export function orderDestination(o: MealOption, app: OrderApp = 'doordash'): Ord
 const RECIPE_PHOTOS = new Set(['buffalo-chicken-bowls', 'crispy-honey-garlic-chicken', 'garlic-butter-chicken-meatballs', 'marry-me-chicken-pasta', 'protein-overnight-oats', 'turkey-sausage-sweet-potato-hash'])
 const FOOD_PHOTO: [RegExp, string][] = [
   [/cheesecake/i, 'cheesecake'], [/cookie|brookie|skillet cookie/i, 'cookie'], [/tiramisu|shortcake|pumpkin pie|dough/i, 'cheesecake'],
-  [/shake|core power|premier/i, 'shake'], [/protein bar|quest|bar\b/i, 'protein-bar'], [/parfait|yogurt|yoplait|clusters/i, 'parfait'],
+  [/egg bites/i, 'egg-bites'], [/shake|core power|premier/i, 'shake'], [/protein bar|quest|bar\b/i, 'protein-bar'], [/parfait|yogurt|yoplait|clusters/i, 'parfait'],
   [/oats|oatmeal/i, 'oats'], [/banana|rice cakes|nut butter|\bpb\b/i, 'banana-pb'], [/protein box/i, 'banana-pb'],
   [/breakfast burrito|crunchwrap/i, 'breakfast-burrito'], [/mcmuffin|egg white grill|egg.*sandwich|bagel|breakfast sandwich/i, 'breakfast-sandwich'],
-  [/burger|whopper|big mac|shackburger|smokeshack/i, 'burger'],
-  [/egg.*wrap|wrap/i, 'wrap'], [/wings?\b/i, 'wings'], [/tenders|nugget|strips/i, 'tenders'],
-  [/soup/i, 'soup-sandwich'], [/\bsub\b|6"|footlong|turkey sandwich/i, 'sub'],
-  [/chicken sandwich|mcchicken/i, 'chicken-sandwich'],
+  [/burger|whopper|big mac|shackburger|smokeshack|quarter pounder|mcdouble/i, 'burger'],
+  [/egg.*wrap|wrap|pocket/i, 'wrap'], [/wings?\b/i, 'wings'], [/tenders|nugget|strips/i, 'tenders'],
+  [/soup/i, 'soup-sandwich'], [/\bsub\b|6"|footlong|turkey sandwich|baguette/i, 'sub'],
+  [/chicken sandwich|mcchicken|^mccrispy$/i, 'chicken-sandwich'], [/gordita|chalupa/i, 'taco-bowl'],
   [/teriyaki/i, 'teriyaki'], [/fried rice/i, 'fried-rice'], [/stir fry/i, 'stir-fry'], [/noodle|gochujang/i, 'noodles'],
   [/mac (&|and) cheese/i, 'mac'], [/pizza/i, 'pizza'], [/pasta|orzo|bisque/i, 'pasta'],
   [/taco/i, 'taco-bowl'], [/burrito/i, 'burrito'], [/greens|salad bowl|sweetgreen|cabbage/i, 'salad'],
@@ -475,6 +475,9 @@ export function mealPhoto(o: MealOption): string {
 /** The few words on the photo — the full order still shows after she taps. */
 export function shortName(o: MealOption): string {
   if (o.kind === 'cook') return o.name.replace(/\s*\((Regular|Large)\)/i, '')
+  // "Chicken Bowl (no rice): black beans, …" → "Chicken Bowl, no rice"
+  const head = o.name.match(/^([^:(]+?)\s*(?:\(([^)]*)\))?:/)
+  if (head && !/^bowl$/i.test(head[1].trim())) return head[2] ? `${head[1].trim()}, ${head[2]}` : head[1].trim()
   let n = o.name.replace(/\([^)]*\)/g, '').replace(/\s{2,}/g, ' ').trim()
   const bowl = n.match(/^bowl:\s*([^,]+)/i)
   if (bowl) return `${bowl[1].trim()} bowl`.replace(/^(\w)(.*)$/, (_m, a, b) => a + b.toLowerCase())
@@ -484,13 +487,16 @@ export function shortName(o: MealOption): string {
   // Cup") — the calories on the card are for both, so the name must be too.
   const combo = n.split(/\s\+\s/)
   if (combo.length === 2 && !/,/.test(n) && n.length <= 44) return n
+  // Longer two-part combo: keep a short tail ("+ Egg Bites") so it never
+  // reads like the single item at a different calorie number.
+  const tail = combo.length === 2 ? ` + ${combo[1].length > 20 ? combo[1].split(' ').slice(-2).join(' ') : combo[1]}` : ''
   n = combo[0]
   // Drop the how-to-order bits after a comma ("no mayo", "light rice"), keep
   // real parts of the name ("Avocado, Egg White & Spinach Sandwich").
   const parts = n.split(/,\s*/)
   const MOD = /^(no|light|extra|double|add|half|keep|full|½|with|lettuce|fries|sweet|black|pinto|salsa|cheese|free)\b/i
   n = parts.reduce((acc, part, i) => (i === 0 || (acc.ok && !MOD.test(part)) ? { t: i ? `${acc.t}, ${part}` : part, ok: true } : { t: acc.t, ok: false }), { t: '', ok: true }).t
-  return n.replace(/\s+(no|light|with)\s.*$/i, '').trim() || o.name
+  return (n.replace(/\s+(no|light|with)\s(?!cheese\b).*$/i, '').trim() || o.name) + tail
 }
 
 // ---- helpers ----------------------------------------------------------------

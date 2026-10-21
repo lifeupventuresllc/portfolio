@@ -8,6 +8,9 @@ import type { FastFoodMeal } from '@/lib/escape-plan'
 //   Chick-fil-A — chick-fil-a.com/menu/<item> (nutrition panel per item)
 //   Taco Bell   — tacobell.com/food/<item>, whose nutrition label it links
 //                 (Taco Bell's own Nutritionix-hosted label)
+//   Chipotle    — chipotle.com/nutrition-calculator (per-ingredient numbers)
+//   McDonald's  — mcdonalds.com product pages (their nutrition feed)
+//   Starbucks   — starbucks.com/menu (their menu nutrition feed)
 // Combos ("+ Fruit Cup") are the sum of the official items, nothing added.
 // Exact menu names, so she can order it word for word. Weight-class free:
 // lib/meal-pick only ever shows a meal that fits HER calories left.
@@ -26,6 +29,9 @@ const LD: Slot[] = ['Lunch', 'Dinner']
 const SG = 'https://www.sweetgreen.com/menu'
 const CFA = (slug: string) => `https://www.chick-fil-a.com/menu/${slug}`
 const TB = (path: string) => `https://www.tacobell.com/food/${path}`
+const CMG = 'https://www.chipotle.com/nutrition-calculator/burrito-bowl'
+const MCD = (slug: string) => `https://www.mcdonalds.com/us/en-us/product/${slug}.html`
+const SBUX = 'https://www.starbucks.com/menu'
 
 export const CHAIN_MENU: ChainItem[] = [
   // ---- Sweetgreen (bowls and plates, as listed) ----
@@ -69,6 +75,41 @@ export const CHAIN_MENU: ChainItem[] = [
   ...item(LD, 'Taco Bell', 'Mexican Pizza', 527, 19, 51, 27, TB('specialties/mexican-pizza')),
   ...item(LD, 'Taco Bell', 'Cheesy Gordita Crunch', 484, 20, 44, 26, TB('specialties/cheesy-gordita-crunch')),
   ...item(LD, 'Taco Bell', 'Bean Burrito', 360, 13, 54, 10, TB('burritos/bean-burrito')),
+
+  // ---- Chipotle (each bowl = the sum of Chipotle's official per-ingredient
+  // numbers, standard servings: chicken 180/32p, steak 150/21p, barbacoa
+  // 170/24p, white or brown rice 210, black or pinto beans 130, fajita veggies
+  // 20, mild salsa 25, green salsa 15, cheese 110, romaine 5) ----
+  ...item(LD, 'Chipotle', 'Chicken Bowl: white rice, black beans, fajita veggies, fresh tomato salsa, cheese', 675, 51, 72, 21, CMG),
+  ...item(LD, 'Chipotle', 'Chicken Bowl (no rice): black beans, fajita veggies, fresh tomato salsa, cheese, romaine', 470, 47, 33, 17, CMG),
+  ...item(LD, 'Chipotle', 'Chicken Bowl (brown rice, no cheese): black beans, fajita veggies, fresh tomato salsa', 565, 45, 67, 15, CMG),
+  ...item(LD, 'Chipotle', 'Double Chicken Bowl (no rice): black beans, fajita veggies, fresh tomato salsa, romaine', 540, 73, 32, 16, CMG),
+  ...item(LD, 'Chipotle', 'Steak Bowl: white rice, pinto beans, fajita veggies, fresh tomato salsa, cheese', 645, 40, 72, 20, CMG),
+  ...item(LD, 'Chipotle', 'Barbacoa Bowl: brown rice, black beans, tomatillo-green chili salsa, romaine', 530, 36, 65, 15, CMG),
+
+  // ---- McDonald's ----
+  ...item(['Breakfast'], "McDonald's", 'Egg McMuffin', 310, 17, 30, 13, MCD('egg-mcmuffin')),
+  ...item(['Breakfast'], "McDonald's", 'Egg McMuffin + Apple Slices', 325, 17, 34, 13, MCD('egg-mcmuffin')),
+  ...item(['Breakfast'], "McDonald's", 'Sausage Burrito', 310, 13, 25, 17, MCD('sausage-burrito')),
+  ...item(['Breakfast'], "McDonald's", 'Fruit & Maple Oatmeal', 320, 6, 64, 5, MCD('fruit-maple-oatmeal')),
+  ...item(LD, "McDonald's", 'McCrispy Strips (3 piece)', 400, 31, 24, 20, MCD('mccrispy-strips-3-piece')),
+  ...item(LD, "McDonald's", 'Quarter Pounder with Cheese', 520, 30, 42, 26, MCD('quarter-pounder-with-cheese')),
+  ...item(LD, "McDonald's", 'McDouble + Apple Slices', 405, 22, 36, 20, MCD('mcdouble')),
+  ...item(LD, "McDonald's", 'Chicken McNuggets (6 piece) + Apple Slices', 265, 14, 19, 15, MCD('chicken-mcnuggets-6-piece')),
+  ...item(LD, "McDonald's", 'McCrispy', 470, 26, 46, 20, MCD('mccrispy-chicken-sandwich')),
+  ...item(['Lunch', 'Snack'], "McDonald's", 'Hamburger', 250, 12, 30, 9, MCD('hamburger')),
+
+  // ---- Starbucks ----
+  ...item(['Breakfast'], 'Starbucks', 'Turkey Bacon, Cheddar & Egg White Sandwich', 260, 17, 30, 9, SBUX),
+  ...item(['Breakfast'], 'Starbucks', 'Spinach, Feta & Egg White Wrap', 290, 20, 34, 8, SBUX),
+  ...item(['Breakfast'], 'Starbucks', 'Spinach, Feta & Egg White Wrap + Egg White & Roasted Red Pepper Egg Bites', 460, 32, 45, 16, SBUX),
+  ...item(['Breakfast'], 'Starbucks', 'Egg, Pesto & Mozzarella Sandwich', 390, 21, 36, 16, SBUX),
+  ...item(['Breakfast'], 'Starbucks', 'Bacon, Gouda & Egg Sandwich', 360, 18, 35, 18, SBUX),
+  ...item(['Breakfast', 'Snack'], 'Starbucks', 'Bacon & Gruyère Egg Bites', 300, 19, 9, 20, SBUX),
+  ...item(['Breakfast', 'Snack'], 'Starbucks', 'Egg White & Roasted Red Pepper Egg Bites', 170, 12, 11, 8, SBUX),
+  ...item(['Breakfast', 'Lunch', 'Snack'], 'Starbucks', 'Chicken Bacon Protein Pocket', 310, 20, 29, 13, SBUX),
+  ...item(['Lunch'], 'Starbucks', 'Ham & Swiss on Baguette', 510, 25, 43, 25, SBUX),
+  ...item(['Lunch'], 'Starbucks', 'Apples & Cheese Trio Protein Box', 470, 22, 36, 27, SBUX),
 ]
 
 /** Chains in the verified list — same honest-data rule as lib/escape-plan's
