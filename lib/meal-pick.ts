@@ -199,7 +199,7 @@ const CHAIN_PRICE: Record<string, number> = {
   'Chipotle': 12, 'Panda Express': 11, 'Starbucks': 8, 'Panera': 12, "Dunkin'": 7, "Culver's": 10,
   "Domino's": 12, 'Five Guys': 14, "Jimmy John's": 10, 'KFC': 10, 'Popeyes': 10, 'Qdoba': 12,
   'Shake Shack': 13, 'Sonic': 9, 'Sweetgreen': 15, 'Wingstop': 13, "Arby's": 10, "Jersey Mike's": 13,
-  "Raising Cane's": 11, 'Firehouse Subs': 12, 'Grab & go': 3,
+  "Raising Cane's": 11, 'Firehouse Subs': 12, 'Cava': 14, 'Grab & go': 3,
 }
 
 export function chainPrice(m: FastFoodMeal): number {
@@ -239,7 +239,7 @@ function eatOutCandidates(ctx: PickContext): MealOption[] {
     out.push({
       key, kind: 'out', slot: ctx.slot, name: m.order, place: m.restaurant,
       cal: m.cal, protein: m.protein, carbs: m.carbs, fat: m.fat, calSource: 'published',
-      price: chainPrice(m), why: '',
+      price: ('price' in m && typeof m.price === 'number') ? Math.round(m.price) : chainPrice(m), why: '',
     })
   }
   return out
@@ -439,10 +439,10 @@ const FOOD_PHOTO: [RegExp, string][] = [
   [/cheesecake/i, 'cheesecake'], [/cookie|brookie|skillet cookie/i, 'cookie'], [/tiramisu|shortcake|pumpkin pie|dough/i, 'cheesecake'],
   [/egg bites/i, 'egg-bites'], [/shake|core power|premier/i, 'shake'], [/protein bar|quest|bar\b/i, 'protein-bar'], [/parfait|yogurt|yoplait|clusters/i, 'parfait'],
   [/oats|oatmeal/i, 'oats'], [/banana|rice cakes|nut butter|\bpb\b/i, 'banana-pb'], [/protein box/i, 'banana-pb'],
-  [/breakfast burrito|crunchwrap/i, 'breakfast-burrito'], [/mcmuffin|egg white grill|egg.*sandwich|bagel|breakfast sandwich/i, 'breakfast-sandwich'],
+  [/breakfast burrito|crunchwrap/i, 'breakfast-burrito'], [/mcmuffin|egg white grill|egg.*sandwich|bagel|breakfast sandwich|steak & wake/i, 'breakfast-sandwich'],
   [/burger|whopper|big mac|shackburger|smokeshack|quarter pounder|mcdouble/i, 'burger'],
-  [/egg.*wrap|wrap|pocket/i, 'wrap'], [/wings?\b/i, 'wings'], [/tenders|nugget|strips/i, 'tenders'],
-  [/soup/i, 'soup-sandwich'], [/\bsub\b|6"|footlong|turkey sandwich|baguette/i, 'sub'],
+  [/egg.*wrap|wrap|pocket|pita/i, 'wrap'], [/wings?\b/i, 'wings'], [/tenders|nugget|strips|chicken fingers/i, 'tenders'],
+  [/soup/i, 'soup-sandwich'], [/\bsalad\b/i, 'salad'], [/bravo|dipper|\bblt\b|fiesta chicken|smokehouse/i, 'sub'], [/\bsub\b|6"|footlong|turkey sandwich|baguette/i, 'sub'],
   [/chicken sandwich|mcchicken|^mccrispy$/i, 'chicken-sandwich'], [/gordita|chalupa/i, 'taco-bowl'],
   [/teriyaki/i, 'teriyaki'], [/fried rice/i, 'fried-rice'], [/stir fry/i, 'stir-fry'], [/noodle|gochujang/i, 'noodles'],
   [/mac (&|and) cheese/i, 'mac'], [/pizza/i, 'pizza'], [/pasta|orzo|bisque/i, 'pasta'],
@@ -463,6 +463,7 @@ export function mealPhoto(o: MealOption): string {
   // The main item decides the photo ("Egg White Grill + parfait" is a
   // sandwich, not a parfait); the full order is the fallback.
   const head = o.name.replace(/^([^,+]+?) \+ ([^,+]*bowl)/i, '$1 & $2').split(/\s\+\s/)[0]
+  if (o.place === 'Panda Express') return `/images/meals/food/${/teriyaki/i.test(o.name) ? 'teriyaki' : 'stir-fry'}.jpg`
   const extra = o.place === 'Sweetgreen' ? ' sweetgreen' : ''
   const hit = FOOD_PHOTO.find(([re]) => re.test(head + extra)) || FOOD_PHOTO.find(([re]) => re.test(o.name + extra))
   const base = hit ? hit[1] : 'bowl'
@@ -496,7 +497,7 @@ export function shortName(o: MealOption): string {
   const parts = n.split(/,\s*/)
   const MOD = /^(no|light|extra|double|add|half|keep|full|½|with|lettuce|fries|sweet|black|pinto|salsa|cheese|free)\b/i
   n = parts.reduce((acc, part, i) => (i === 0 || (acc.ok && !MOD.test(part)) ? { t: i ? `${acc.t}, ${part}` : part, ok: true } : { t: acc.t, ok: false }), { t: '', ok: true }).t
-  return (n.replace(/\s+(no|light|with)\s(?!cheese\b).*$/i, '').trim() || o.name) + tail
+  return (n.replace(/\s+(no|light|with)\s(?!cheese\b|chicken\b).*$/i, '').trim() || o.name) + tail
 }
 
 // ---- helpers ----------------------------------------------------------------
