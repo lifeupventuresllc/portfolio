@@ -61,6 +61,7 @@ export interface PickContext {
   memory?: MealMemory
   todayIso: string
   slotCalBudget?: number      // from planDay(): this meal's share of what's left today
+  nearby?: Map<string, number> // chains open near her right now → miles (Google Places); absent = location unknown
 }
 
 export interface PickResult {
@@ -233,6 +234,9 @@ function eatOutCandidates(ctx: PickContext): MealOption[] {
   const grabAndGo = [...wc.days.flatMap((d) => d.meals), ...wc.extraOptions].filter((m) => m.restaurant === 'Grab & go')
   for (const m of [...CHAIN_MENU, ...grabAndGo]) {
     if (!want.includes(m.slot)) continue
+    // Where she is (2026-10-23): once we know her location, only chains
+    // that are open near her right now — grab & go works anywhere.
+    if (ctx.nearby && m.restaurant !== 'Grab & go' && !ctx.nearby.has(m.restaurant)) continue
     const key = `out:${slugify(m.restaurant)}:${slugify(m.order)}`
     if (seen.has(key)) continue
     seen.add(key)
@@ -369,6 +373,9 @@ export function pickMeals(ctx: PickContext): PickResult {
     // skipped earlier today: don't hand it straight back at the next meal
     if (mem.skip === ctx.todayIso) score -= 30
     if (light) score += Math.max(0, 15 - o.cal / 40)
+    // closer is faster: up to +10 for a place right next to her
+    const miles = ctx.nearby?.get(o.place)
+    if (miles != null) score += Math.max(0, 10 - miles * 6)
     // protein keeps her full and on plan: grams per 100 calories, up to +10
     if (o.cal > 0) score += Math.min(10, (o.protein / o.cal) * 100 * 1.2)
     // Fresh every meal, every day: a small shuffle seeded by today + this

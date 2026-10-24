@@ -5,6 +5,9 @@ import NutritionPicks, { EatStyleAsk, type PickCard } from '@/components/Nutriti
 import { loadNutritionDay, localMinute } from '@/lib/nutrition-day'
 import { pickMeals, planDay, clockLabel, defaultMealBudget, orderDestination, mealPhoto, shortName, type EatStyle, type MealMemory, type MealSlot, type OrderApp } from '@/lib/meal-pick'
 import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
+import { placesNear, chainsNear } from '@/lib/fos/nearby-food'
+import { verifiedChains } from '@/lib/chain-menu'
+import LocationOptIn from '@/components/LocationOptIn'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,7 +34,7 @@ export default async function NutritionPage() {
   // Her calorie target comes from the plan she already has — never asked
   // again here. No plan yet → send her through the existing plan creation.
   if (!data || !data.calBudget || !data.intake) return <NoPlanYet />
-  const { intake, foodRows, calBudget, weekPlan, mealIdx, todayIso, tz, mealTimes } = data
+  const { enrollment, intake, foodRows, calBudget, weekPlan, mealIdx, todayIso, tz, mealTimes } = data
 
   const loggedToday = foodRows.reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
   const remainingCal = Math.max(0, Math.round(calBudget - loggedToday))
@@ -45,7 +48,24 @@ export default async function NutritionPage() {
   const mealBudget = eatStyle ? (Number(formData.meal_budget) || defaultMealBudget(eatStyle, Number(intake.weekly_food_budget) || null)) : 0
   const orderApp: OrderApp = formData.order_app === 'ubereats' ? 'ubereats' : 'doordash'
 
-  const result = eatStyle ? pickMeals({
+  // Where she is (2026-10-23, Google Places): eating out + a position from the
+  // last hour → only chains open within a mile of her (3 miles if fewer than
+  // two are). She never sees the distance — it just decides the two picks.
+  let nearby: Map<string, number> | undefined
+  const lat = enrollment.last_lat as number | null, lng = enrollment.last_lng as number | null
+  const locAt = enrollment.last_location_at as string | null
+  const locFresh = !!locAt && Date.now() - new Date(locAt).getTime() < 60 * 60000
+  if (eatStyle === 'out' && locFresh && lat != null && lng != null && process.env.GOOGLE_PLACES_API_KEY) {
+    nearby = chainsNear(await placesNear(lat, lng, 1609), verifiedChains(), lat, lng)
+    if (nearby.size < 2) {
+      const wider = chainsNear(await placesNear(lat, lng, 4828), verifiedChains(), lat, lng)
+      // Nothing we know is open within 3 miles (or Google had trouble):
+      // fall back to every pick rather than an empty screen.
+      nearby = wider.size >= 1 ? wider : undefined
+    }
+  }
+
+  const pick = (near: typeof nearby) => eatStyle ? pickMeals({
     eatStyle, mealBudget, remainingCal, slot,
     weightLbs: Number(intake.weight_lbs) || 170,
     dislikesAllergies: intake.dislikes_allergies as string | null,
@@ -54,7 +74,11 @@ export default async function NutritionPage() {
     memory: (formData.meal_memory || {}) as MealMemory,
     todayIso,
     slotCalBudget: day.calBudget,
+    nearby: near,
   }) : null
+  let result = pick(nearby)
+  // Fewer than two nearby meals fit her calories → every pick, never one card.
+  if (nearby && result && result.options.length < 2) result = pick(undefined)
   const cards: PickCard[] = (result?.options || []).slice(0, 12).map((o) => ({
     ...o, dest: orderDestination(o, orderApp), photo: mealPhoto(o), short: shortName(o),
   }))
@@ -66,6 +90,7 @@ export default async function NutritionPage() {
   return (
     <div className="px-4 pt-6 flex flex-col" style={{ background: '#021F16', height: 'calc(100dvh - 64px)' }}>
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col min-h-0">
+        {eatStyle === 'out' && !locFresh && <LocationOptIn prompt="Show meals open near you right now?" refreshOnPing />}
         {eatStyle && result ? (
           <NutritionPicks key={`${day.current?.id ?? 'done'}:${cards.map((c) => c.key).join('|')}`} cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} nextUp={next} refreshInMin={day.refreshInMin} />
         ) : (

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 const KEY = 'luf_location_prompt_dismissed'
 // Re-send her position at most this often once she's said yes once — no
@@ -18,8 +19,12 @@ async function sendPing(lat: number, lng: number) {
 // that, matching item 3's own "no button without a tap" rule
 // (components/ReminderPrompt.tsx): never calls the browser's own
 // location prompt until she taps Yes here herself.
-export default function LocationOptIn() {
+// prompt / refreshOnPing (2026-10-23): the Nutrition tab reuses this same
+// ask, in its own words, and re-renders the two picks once her position
+// lands so they come from places open near her.
+export default function LocationOptIn({ prompt, refreshOnPing = false }: { prompt?: string; refreshOnPing?: boolean } = {}) {
   const [show, setShow] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     if (!('geolocation' in navigator)) return
@@ -32,8 +37,9 @@ export default function LocationOptIn() {
         if (perm?.state === 'granted') {
           const last = Number(localStorage.getItem('luf_last_ping_at') || 0)
           if (Date.now() - last > REPING_MINUTES * 60000) {
-            navigator.geolocation.getCurrentPosition((pos) => {
-              sendPing(pos.coords.latitude, pos.coords.longitude)
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+              await sendPing(pos.coords.latitude, pos.coords.longitude)
+              if (refreshOnPing) router.refresh()
               try { localStorage.setItem('luf_last_ping_at', String(Date.now())) } catch { /* fine */ }
             }, () => {}, { maximumAge: 10 * 60000, timeout: 5000 })
           }
@@ -45,7 +51,7 @@ export default function LocationOptIn() {
       } catch { /* never block Home over this */ }
     })()
     return () => { cancelled = true }
-  }, [])
+  }, [refreshOnPing, router])
 
   const dismiss = () => {
     try { localStorage.setItem(KEY, '1') } catch { /* ignore */ }
@@ -54,7 +60,7 @@ export default function LocationOptIn() {
 
   const allow = () => {
     navigator.geolocation.getCurrentPosition(
-      (pos) => { sendPing(pos.coords.latitude, pos.coords.longitude); try { localStorage.setItem('luf_last_ping_at', String(Date.now())) } catch { /* fine */ } setShow(false) },
+      async (pos) => { await sendPing(pos.coords.latitude, pos.coords.longitude); try { localStorage.setItem('luf_last_ping_at', String(Date.now())) } catch { /* fine */ } setShow(false); if (refreshOnPing) router.refresh() },
       () => setShow(false), // denied or failed — never ask again this visit; permission state itself remembers her real answer
       { maximumAge: 10 * 60000, timeout: 8000 },
     )
@@ -64,7 +70,7 @@ export default function LocationOptIn() {
   return (
     <div className="rounded-xl px-3 py-2.5 mb-2 flex items-center gap-2.5" style={{ fontFamily: 'var(--font-poppins)', background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(229,169,60,0.4)' }}>
       <span className="text-lg shrink-0" aria-hidden>📍</span>
-      <p className="flex-1 text-white text-[11.5px] leading-snug">Want a real pick from wherever you are, the moment you need one?</p>
+      <p className="flex-1 text-white text-[11.5px] leading-snug">{prompt || 'Want a real pick from wherever you are, the moment you need one?'}</p>
       <button onClick={allow} className="shrink-0 rounded-full px-3 h-[26px] text-[11px] font-bold" style={{ background: '#E5A93C', color: '#0A0A0F' }}>Yes</button>
       <button onClick={dismiss} className="shrink-0 text-white/50 text-[11px] font-semibold px-1">Not now</button>
     </div>
