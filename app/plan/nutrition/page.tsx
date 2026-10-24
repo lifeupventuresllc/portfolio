@@ -5,7 +5,7 @@ import NutritionPicks, { EatStyleAsk, type PickCard } from '@/components/Nutriti
 import { loadNutritionDay, localMinute } from '@/lib/nutrition-day'
 import { pickMeals, planDay, clockLabel, defaultMealBudget, orderDestination, mealPhoto, shortName, type EatStyle, type MealMemory, type MealSlot, type OrderApp } from '@/lib/meal-pick'
 import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
-import { placesNear, chainsNear } from '@/lib/fos/nearby-food'
+import { chainPlacesNear, chainsWithin } from '@/lib/fos/nearby-food'
 import { verifiedChains } from '@/lib/chain-menu'
 import LocationOptIn from '@/components/LocationOptIn'
 
@@ -56,11 +56,13 @@ export default async function NutritionPage() {
   const locAt = enrollment.last_location_at as string | null
   const locFresh = !!locAt && Date.now() - new Date(locAt).getTime() < 60 * 60000
   if (eatStyle === 'out' && locFresh && lat != null && lng != null && process.env.GOOGLE_PLACES_API_KEY) {
-    nearby = chainsNear(await placesNear(lat, lng, 1609), verifiedChains(), lat, lng)
+    const chains = verifiedChains()
+    const places = await chainPlacesNear(lat, lng, chains)
+    nearby = chainsWithin(places, chains, lat, lng, 1)
+    // Fewer than two within a mile → up to 3 miles; none at all (or Google
+    // had trouble) → every pick rather than an empty screen.
     if (nearby.size < 2) {
-      const wider = chainsNear(await placesNear(lat, lng, 4828), verifiedChains(), lat, lng)
-      // Nothing we know is open within 3 miles (or Google had trouble):
-      // fall back to every pick rather than an empty screen.
+      const wider = chainsWithin(places, chains, lat, lng, 3)
       nearby = wider.size >= 1 ? wider : undefined
     }
   }
