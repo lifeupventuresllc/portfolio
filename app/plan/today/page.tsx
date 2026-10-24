@@ -274,7 +274,7 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
     // div would eat into Garden's fill the exact same way — the Today branch
     // below adds its own pb-6 directly so its long list still gets breathing
     // room before the nav, without Garden having to fight it.
-    <div className="px-4 pt-6 flex flex-col" style={{ minHeight: 'calc(100dvh - 64px)', background: '#0b1712' }}>
+    <div className="px-4 pt-6 flex flex-col" style={{ minHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom))', background: '#0b1712' }}>
       <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between gap-3 mb-4" style={{ flex: '0 0 auto' }}>
           <Link href="/plan" className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all" style={{ background: '#12241a', border: '1px solid #24402f', color: '#c9a84c' }}>← Home</Link>

@@ -10,7 +10,10 @@ export default function PlanLayout({ children }: { children: React.ReactNode }) 
   return (
     <>
       <TrackAppOpen />
-      <div className="pb-16">{children}</div>
+      {/* Bar height PLUS the iPhone home-indicator strip (2026-10-23, Asa:
+          "sometimes you can't click all the buttons… it gets cut off") —
+          pb-16 alone left the last ~34px of every page under the tab bar. */}
+      <div style={{ paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}>{children}</div>
       <NextStepBar />
       <BottomTabBar />
     </>

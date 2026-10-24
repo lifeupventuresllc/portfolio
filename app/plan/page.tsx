@@ -158,7 +158,7 @@ export default async function PlanDashboard() {
   }
 
   // Layout notes kept from the earlier feed-first dashboard: h-[100dvh] with
-  // -mb-16 cancels app/plan/layout.tsx's pb-16 (otherwise the page scrolls and
+  // the negative marginBottom cancels app/plan/layout.tsx's bottom padding (otherwise the page scrolls and
   // a swipe reveals a gap), and paddingBottom reserves the fixed BottomTabBar's
   // real 63px height. position:fixed can't be used here — an ancestor
   // (.luf-page) has a transform, which makes it the containing block.
@@ -210,7 +210,7 @@ export default async function PlanDashboard() {
   )
 
   return (
-    <div className="h-[100dvh] -mb-16 flex flex-col overflow-hidden" style={{ background: '#021F16', paddingBottom: 'calc(63px + env(safe-area-inset-bottom))' }}>
+    <div className="h-[100dvh] flex flex-col overflow-hidden" style={{ background: '#021F16', paddingBottom: 'calc(63px + env(safe-area-inset-bottom))', marginBottom: 'calc(-4.5rem - env(safe-area-inset-bottom))' }}>
       <TimezoneSync />
       {!user.is_anonymous && !user.email_confirmed_at && user.email && <VerifyEmailBanner email={user.email} />}
       {hasPlan ? (

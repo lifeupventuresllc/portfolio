@@ -22,7 +22,7 @@ async function sendPing(lat: number, lng: number) {
 // prompt / refreshOnPing (2026-10-23): the Nutrition tab reuses this same
 // ask, in its own words, and re-renders the two picks once her position
 // lands so they come from places open near her.
-export default function LocationOptIn({ prompt, refreshOnPing = false }: { prompt?: string; refreshOnPing?: boolean } = {}) {
+export default function LocationOptIn({ prompt, refreshOnPing = false, large = false }: { prompt?: string; refreshOnPing?: boolean; large?: boolean } = {}) {
   const [show, setShow] = useState(false)
   const router = useRouter()
 
@@ -67,6 +67,20 @@ export default function LocationOptIn({ prompt, refreshOnPing = false }: { promp
   }
 
   if (!show) return null
+  // large (Nutrition tab, 2026-10-23 — Asa: "make the banner larger"): same
+  // ask, easy to read and easy to tap with a thumb.
+  if (large) return (
+    <div className="max-w-md mx-auto w-full rounded-2xl px-4 py-4 mb-4 flex flex-col gap-3" style={{ fontFamily: 'var(--font-poppins)', background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(229,169,60,0.5)' }}>
+      <div className="flex items-center gap-3">
+        <span className="text-2xl shrink-0" aria-hidden>📍</span>
+        <p className="flex-1 text-white text-[16px] font-semibold leading-snug">{prompt || 'Want a real pick from wherever you are, the moment you need one?'}</p>
+      </div>
+      <div className="flex gap-2.5">
+        <button onClick={allow} className="flex-1 rounded-full h-11 text-[15px] font-bold" style={{ background: '#E5A93C', color: '#0A0A0F' }}>Yes</button>
+        <button onClick={dismiss} className="flex-1 rounded-full h-11 text-[15px] font-semibold text-white/70" style={{ border: '1px solid rgba(237,231,218,0.25)' }}>Not now</button>
+      </div>
+    </div>
+  )
   return (
     <div className="rounded-xl px-3 py-2.5 mb-2 flex items-center gap-2.5" style={{ fontFamily: 'var(--font-poppins)', background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(229,169,60,0.4)' }}>
       <span className="text-lg shrink-0" aria-hidden>📍</span>

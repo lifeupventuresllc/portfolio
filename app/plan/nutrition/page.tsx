@@ -90,9 +90,9 @@ export default async function NutritionPage() {
   const next = day.next ? `Next up: your ${day.next.label}${day.next.start > nowMin + 30 ? `, around ${clockLabel(day.next.start)}` : ''}.` : null
 
   return (
-    <div className="px-4 pt-6 flex flex-col" style={{ background: '#021F16', height: 'calc(100dvh - 64px)' }}>
+    <div className="px-4 pt-6 flex flex-col" style={{ background: '#021F16', minHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom))' }}>
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col min-h-0">
-        {eatStyle === 'out' && !locFresh && <LocationOptIn prompt="Show meals open near you right now?" refreshOnPing />}
+        {eatStyle === 'out' && !locFresh && <LocationOptIn prompt="Show meals open near you right now?" refreshOnPing large />}
         {eatStyle && result ? (
           <NutritionPicks key={`${day.current?.id ?? 'done'}:${cards.map((c) => c.key).join('|')}`} cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} nextUp={next} refreshInMin={day.refreshInMin} />
         ) : (
