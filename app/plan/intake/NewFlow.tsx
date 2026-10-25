@@ -20,6 +20,13 @@ export const C = { bg: '#021F16', card: 'rgba(237,231,218,.06)', line: 'rgba(237
 export const HEAD = "var(--font-barlow), 'Barlow Condensed', sans-serif"
 export const MONO = "var(--font-jbmono), 'JetBrains Mono', monospace"
 export const BODY = "var(--font-inter), Inter, system-ui, sans-serif"
+// The raw photos are 1–2.6 MB — serve them through Next's image optimizer
+// (resized + compressed) so they show instantly as backgrounds.
+const img = (src: string) => `url(/_next/image?url=${encodeURIComponent(src)}&w=1080&q=70)`
+const PHOTOS = ['/images/onboarding/name-step.jpg', '/images/onboarding/goal-lose.jpg', '/images/onboarding/goal-gain.jpg', '/images/onboarding/goal-maintain.jpg', '/images/meals/food/bowl.jpg']
+// The plan layout pads every page for the tab bar, which the intake hides —
+// pull that space back so the dark screen runs to the bottom edge.
+const FULL = { marginBottom: 'calc(-4.5rem - env(safe-area-inset-bottom))' }
 
 const STEPS = ['name', 'goal', 'body', 'days', 'train', 'hurts', 'foodintro', 'never', 'eat', 'location'] as const
 type Step = typeof STEPS[number]
@@ -86,6 +93,8 @@ export default function NewFlow(p: {
   const [i, setI] = useState(0)
   const [dir, setDir] = useState<'fwd' | 'back'>('fwd')
   const step = STEPS[i]
+  // Warm every photo up front so no screen ever waits on one.
+  useEffect(() => { PHOTOS.forEach((src) => { const im = new Image(); im.src = img(src).slice(4, -1) }) }, [])
   const set = (k: string, v: string) => setF((s) => ({ ...s, [k]: v }))
   const go = (n: number) => { setDir(n > i ? 'fwd' : 'back'); setI(Math.max(0, Math.min(STEPS.length - 1, n))); if (typeof window !== 'undefined') window.scrollTo(0, 0) }
   const next = () => { hapticTap(); go(i + 1) }
@@ -112,7 +121,7 @@ export default function NewFlow(p: {
   }, [age, heightIn, weight, goals, lifeStage, f.activity_level, f.target_lbs])
 
   return (
-    <div className="min-h-[100dvh] relative overflow-x-hidden" style={{ background: C.bg, color: C.ink, fontFamily: BODY }}>
+    <div className="min-h-[100dvh] relative overflow-x-hidden" style={{ background: C.bg, color: C.ink, fontFamily: BODY, ...FULL }}>
       <style>{CSS}</style>
       <div key={step} className={dir === 'fwd' ? 'nf-in' : 'nf-in-back'}>
         {step === 'name' && <NameWhy {...p} next={next} />}
@@ -129,7 +138,7 @@ export default function NewFlow(p: {
                     if (g.v === 'maintain') setGoals(on ? [] : ['maintain'])
                     else { const base = goals.filter((x) => x !== 'maintain'); setGoals(base.includes(g.v) ? base.filter((x) => x !== g.v) : [...base, g.v]) }
                   }} className="nf-press relative h-[150px] rounded-[22px] overflow-hidden text-left"
-                    style={{ border: `3px solid ${on ? C.gold : 'transparent'}`, backgroundImage: `url(${g.img})`, backgroundSize: 'cover', backgroundPosition: g.pos }}>
+                    style={{ border: `3px solid ${on ? C.gold : 'transparent'}`, backgroundImage: img(g.img), backgroundSize: 'cover', backgroundPosition: g.pos }}>
                     <span className="absolute inset-0" style={{ background: `linear-gradient(90deg, rgba(2,31,22,.92) 0%, rgba(2,31,22,.55) 55%, rgba(2,31,22,${on ? '.05' : '.35'}) 100%)` }} />
                     <span className="absolute left-5 bottom-4 flex flex-col gap-1">
                       <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 36, lineHeight: 1, textTransform: 'uppercase' }}>{g.l}</span>
@@ -195,7 +204,7 @@ export default function NewFlow(p: {
           const days = f.days_per_week || '3'
           return (
             <div className="min-h-[100dvh] relative flex flex-col">
-              <div className="absolute inset-x-0 top-0 h-[54vh]" style={{ backgroundImage: 'url(/images/onboarding/goal-gain.jpg)', backgroundSize: 'cover', backgroundPosition: 'center 15%' }} />
+              <div className="absolute inset-x-0 top-0 h-[54vh]" style={{ backgroundImage: img('/images/onboarding/goal-gain.jpg'), backgroundSize: 'cover', backgroundPosition: 'center 15%' }} />
               <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,.35) 0%, rgba(2,31,22,0) 18%, rgba(2,31,22,.75) 40%, #021F16 54%)' }} />
               <div className="relative max-w-md w-full mx-auto px-4 flex-1 flex flex-col" style={{ paddingTop: 'calc(16px + env(safe-area-inset-top))', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}>
                 <TopBar left={LEFT.train} cal={cal} onBack={back} onPhoto />
@@ -276,7 +285,7 @@ export default function NewFlow(p: {
           const pm = perMeal(style || 'mix', weekly)
           return (
             <div className="min-h-[100dvh] relative flex flex-col">
-              <div className="absolute inset-x-0 top-0 h-[34vh]" style={{ backgroundImage: 'url(/images/meals/food/bowl.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              <div className="absolute inset-x-0 top-0 h-[34vh]" style={{ backgroundImage: img('/images/meals/food/bowl.jpg'), backgroundSize: 'cover', backgroundPosition: 'center' }} />
               <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,.3) 0%, rgba(2,31,22,.1) 12%, rgba(2,31,22,.88) 26%, #021F16 34%)' }} />
               <div className="relative max-w-md w-full mx-auto px-4 flex-1 flex flex-col" style={{ paddingTop: 'calc(16px + env(safe-area-inset-top))', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}>
                 <TopBar left={LEFT.eat} cal={cal} onBack={back} onPhoto />
@@ -330,7 +339,7 @@ function NameWhy(p: Parameters<typeof NewFlow>[0] & { next: () => void }) {
   const first = (p.f.name || '').trim().split(' ')[0]
   return (
     <div className="min-h-[100dvh] relative flex flex-col">
-      <div className="absolute inset-x-0 top-0 h-[40vh]" style={{ backgroundImage: 'url(/images/onboarding/name-step.jpg)', backgroundSize: 'cover', backgroundPosition: 'center 18%' }} />
+      <div className="absolute inset-x-0 top-0 h-[40vh]" style={{ backgroundImage: img('/images/onboarding/name-step.jpg'), backgroundSize: 'cover', backgroundPosition: 'center 18%' }} />
       <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,0) 8%, rgba(2,31,22,.8) 26%, #021F16 36%)' }} />
       <div className="relative max-w-md w-full mx-auto px-4 flex-1 flex flex-col" style={{ paddingTop: 'calc(16px + env(safe-area-inset-top))', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}>
         <TopBar left={LEFT.name} cal={null} onBack={p.onExit} onPhoto backLabel="Home" />
@@ -389,7 +398,7 @@ function FoodIntro({ onDone }: { onDone: () => void }) {
   const line = { fontFamily: HEAD, fontStyle: 'italic' as const, fontWeight: 800, fontSize: 52, lineHeight: 1, textTransform: 'uppercase' as const }
   return (
     <button onClick={finish} className="block w-full min-h-[100dvh] relative overflow-hidden text-left" aria-label="Tap to skip">
-      <div className="fi-food absolute inset-0" style={{ backgroundImage: 'url(/images/meals/food/bowl.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+      <div className="fi-food absolute inset-0" style={{ backgroundImage: img('/images/meals/food/bowl.jpg'), backgroundSize: 'cover', backgroundPosition: 'center' }} />
       <div className="absolute inset-0" style={{ background: 'rgba(2,31,22,.78)' }} />
       <div className="fi-flash absolute inset-0" style={{ background: C.gold }} />
       <div className="absolute left-4 right-4 h-1 rounded-full overflow-hidden" style={{ top: 'calc(16px + env(safe-area-inset-top))', background: 'rgba(237,231,218,.25)' }}>
@@ -491,7 +500,7 @@ function Location({ onBack, onDone, editMode }: { onBack: () => void; onDone: ()
 
 export function NewBuilding({ name }: { name: string }) {
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center px-6" style={{ background: C.bg, color: C.ink, fontFamily: BODY }}>
+    <div className="min-h-[100dvh] flex items-center justify-center px-6" style={{ background: C.bg, color: C.ink, fontFamily: BODY, ...FULL }}>
       <style>{CSS}</style>
       <div className="text-center nf-in">
         <div className="relative w-20 h-20 mx-auto mb-8">
@@ -531,7 +540,7 @@ export function NewReveal({ name, targets, firstWorkout, track, isAnonymous, onS
     </div>
   )
   return (
-    <div className="min-h-[100dvh] relative overflow-hidden" style={{ background: C.bg, color: C.ink, fontFamily: BODY }}>
+    <div className="min-h-[100dvh] relative overflow-hidden" style={{ background: C.bg, color: C.ink, fontFamily: BODY, ...FULL }}>
       <style>{CSS}</style>
       <div className="absolute -left-24 -top-16 w-[150%] h-[520px]" style={{ background: 'radial-gradient(circle at 40% 40%, rgba(229,169,60,.28), rgba(229,169,60,0) 60%)' }} />
       <div className="relative max-w-md mx-auto px-4 flex flex-col gap-3.5 min-h-[100dvh]" style={{ paddingTop: 'calc(28px + env(safe-area-inset-top))', paddingBottom: 'calc(28px + env(safe-area-inset-bottom))' }}>

@@ -37,6 +37,10 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
   // starts looking. Starts on the engine's own top pair.
   const [shown, setShown] = useState<number[]>(() => {
     if (cards.length < 2) return cards.length ? [0] : []
+    // "A mix" eaters (one home pick + one eat-out pick): the other kind
+    // always wins the second spot, even over a look-alike photo.
+    const otherKind = cards.findIndex((c, i) => i > 0 && c.kind !== cards[0].kind)
+    if (otherKind > 0) return [0, otherKind]
     // Two photos that look different whenever there's a choice.
     const second = cards.findIndex((c, i) => i > 0 && c.photo !== cards[0].photo && differs(c, cards[0]))
     return [0, second > 0 ? second : 1]
@@ -69,6 +73,7 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
     const other = shown[1 - pos]
     const out = shown[pos]
     const n = cards.length
+    const mixed = cards.some((c) => c.kind !== cards[0].kind)
     let pick = -1
     // Strictest first: a different place/dish AND a different-looking photo
     // from the card that stays; then loosen.
@@ -76,6 +81,8 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
       for (let k = 0; k < n && pick < 0; k++) {
         const idx = (cursor + k) % n
         if (idx === out || idx === other) continue
+        // A mix keeps its shape: a home pick swaps for another home pick.
+        if (mixed && cards[idx].kind !== cards[out].kind) continue
         if (other != null && level >= 1 && !differs(cards[idx], cards[other])) continue
         if (other != null && level >= 2 && cards[idx].photo === cards[other].photo) continue
         pick = idx
