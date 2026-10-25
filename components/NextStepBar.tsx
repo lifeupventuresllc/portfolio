@@ -21,7 +21,8 @@ type Bar = { kind: string; instruction: string; restaurant?: string; mealSlot?: 
 
 // '/plan/nutrition' (2026-10-19): the Nutrition tab's two meal cards are
 // the only thing on that screen — nothing floats over them.
-const HIDE_ON = ['/plan/intake', '/plan/next', '/plan/coach', '/plan/nutrition']
+// /plan/today added 2026-10-25: My Day's own "Let's go" card already is this step.
+const HIDE_ON = ['/plan/intake', '/plan/next', '/plan/coach', '/plan/nutrition', '/plan/today']
 
 export default function NextStepBar() {
   const pathname = usePathname() || ''
@@ -98,10 +99,10 @@ export default function NextStepBar() {
           bottom: 'calc(68px + env(safe-area-inset-bottom))',
           height: 62,
           padding: '0 12px 0 12px',
-          background: '#0d3a2a',
-          border: '1.5px solid #E5A93C',
+          background: '#021F16',
+          border: '1.5px solid rgba(229,169,60,.6)',
           boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-          fontFamily: 'var(--font-poppins)',
+          fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
           transform: tucked ? 'translateY(140%)' : 'translateY(0)',
           opacity: tucked ? 0 : 1,
           pointerEvents: tucked ? 'none' : 'auto',
@@ -114,16 +115,16 @@ export default function NextStepBar() {
           style={{ width: 34, height: 34, background: 'radial-gradient(circle at 50% 45%, #f2c879 0%, #E5A93C 40%, #7a5a1c 100%)', boxShadow: '0 0 12px rgba(229,169,60,0.55)' }}
         />
         <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-          <span className="text-[9.5px] font-bold uppercase tracking-[0.16em]" style={{ color: '#E5A93C' }}>Your next step</span>
+          <span style={{ color: '#E5A93C', fontFamily: "var(--font-jbmono), monospace", fontSize: 10, fontWeight: 700, letterSpacing: '.14em' }}>YOUR NEXT STEP</span>
           <span
             className="leading-tight text-[#EDE7DA]"
-            style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', fontWeight: 600, fontSize: 14, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+            style={{ fontWeight: 600, fontSize: 14, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
           >
             {action.instruction}
           </span>
         </span>
-        <span className="shrink-0 rounded-full px-3.5 h-[32px] flex items-center text-[12px] font-bold" style={{ background: '#E5A93C', color: '#0A0A0F' }}>
-          Start
+        <span className="shrink-0 rounded-full px-4 h-[36px] flex items-center" style={{ background: '#E5A93C', color: '#021F16', fontFamily: "var(--font-jbmono), monospace", fontSize: 12, fontWeight: 700, letterSpacing: '.1em' }}>
+          START
         </span>
       </button>
     </>

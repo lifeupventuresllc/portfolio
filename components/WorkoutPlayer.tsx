@@ -15,6 +15,8 @@ import type { WorkoutProgram } from '@/lib/workout'
 import { hapticTap } from '@/lib/haptics'
 import { playCountdownBeep, unlockAudioContext } from '@/lib/countdown-beep'
 
+const FALLBACK_PHOTOS = ['/images/app/pexels-8846586.jpg', '/images/app/pexels-8402239.jpg', '/images/app/pexels-7746282.jpg']
+
 function formatClock(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60)
   const s = totalSeconds % 60
@@ -305,9 +307,9 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
         {step.imageUrl ? (
           <Image src={step.imageUrl} alt={step.name} fill sizes="(max-width: 480px) 100vw, 480px" className="object-cover" priority />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 96, textTransform: 'uppercase', color: 'rgba(237,231,218,.08)' }}>{step.rest ? 'Breathe' : step.phase}</span>
-          </div>
+          // No move photo (warm-up, rest, most home moves) → one of three
+          // calm photos of a woman training, steady for the whole step.
+          <Image src={FALLBACK_PHOTOS[i % FALLBACK_PHOTOS.length]} alt="" fill sizes="(max-width: 480px) 100vw, 480px" className="object-cover" style={{ objectPosition: 'center 25%', opacity: step.rest ? 0.45 : 0.85 }} />
         )}
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,.65) 0%, rgba(2,31,22,0) 22%, rgba(2,31,22,0) 55%, #021F16 100%)' }} />
       </div>
@@ -355,11 +357,17 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
         <div className="flex items-baseline gap-3 flex-wrap">
           {isTimed && left != null ? (
             <span className="tabular-nums" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 64, lineHeight: 1, color: GOLD }}>{formatClock(left)}</span>
-          ) : step.detail ? (
+          ) : step.detail && step.detail.length <= 24 ? (
             <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 46, lineHeight: 1, color: GOLD, textTransform: 'uppercase' }}>{step.detail}</span>
           ) : null}
-          {isTimed && step.detail && <span className="text-[15px] font-semibold" style={{ color: MUTE }}>{step.detail}</span>}
+          {isTimed && step.detail && step.detail.length <= 24 && <span className="text-[15px] font-semibold" style={{ color: MUTE }}>{step.detail}</span>}
         </div>
+        {/* A long detail (the warm-up's move list) reads as plain lines, not a giant headline. */}
+        {step.detail && step.detail.length > 24 && (
+          <ul className="flex flex-col gap-1.5 text-[16px] font-semibold">
+            {step.detail.split(/\s·\s/).map((d, k) => <li key={k} className="flex gap-2"><span style={{ color: GOLD }}>•</span>{d}</li>)}
+          </ul>
+        )}
         {step.cue && <p className="text-[15px] leading-relaxed" style={{ color: MUTE }}>{step.cue}</p>}
         {program.progressionNote && i === 0 && <p className="text-[13px]" style={{ color: GOLD }}>{program.progressionNote}</p>}
       </div>
