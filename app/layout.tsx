@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import { Playfair_Display, Poppins, Fraunces, Orbitron, Rajdhani } from "next/font/google";
+import { Playfair_Display, Poppins, Fraunces, Orbitron, Rajdhani, Barlow_Condensed, JetBrains_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import SiteChrome from "@/components/SiteChrome";
 import JsonLd, { organizationSchema } from "@/components/JsonLd";
@@ -36,6 +36,12 @@ const fraunces = Fraunces({ subsets: ["latin"], weight: ["500", "600"], style: [
 // used on app/plan/today/page.tsx and its LifePatternCard/PlanEvolutionCard.
 const orbitron = Orbitron({ subsets: ["latin"], weight: ["700", "900"], variable: "--font-orbitron" });
 const rajdhani = Rajdhani({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-rajdhani" });
+// New intake look (2026-10-25, Asa's pick after the INTVL-style mockup): big
+// slanted Barlow Condensed headlines, JetBrains Mono for small labels and
+// buttons, Inter for body text.
+const barlow = Barlow_Condensed({ subsets: ["latin"], weight: ["800"], style: ["italic"], variable: "--font-barlow" });
+const jbMono = JetBrains_Mono({ subsets: ["latin"], weight: ["500", "700"], variable: "--font-jbmono" });
+const inter = Inter({ subsets: ["latin"], weight: ["400", "600", "700"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.asaluke.io'),
@@ -93,7 +99,7 @@ export default function RootLayout({
         <JsonLd data={organizationSchema} />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${poppins.variable} ${fraunces.variable} ${orbitron.variable} ${rajdhani.variable} antialiased bg-obsidian min-h-[100dvh] flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${poppins.variable} ${fraunces.variable} ${orbitron.variable} ${rajdhani.variable} ${barlow.variable} ${jbMono.variable} ${inter.variable} antialiased bg-obsidian min-h-[100dvh] flex flex-col`}
       >
         <PWARegister />
         <SiteChrome>{children}</SiteChrome>

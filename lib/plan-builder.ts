@@ -70,8 +70,16 @@ export interface PlanBuildInput {
   payoffs?: string[]
   // 2026-10-19, Nutrition tab — how she eats + her money for one meal, asked
   // once in the required intake. Same sticky carry-forward as payoffs.
-  eat_style?: 'cook' | 'out'
+  // 'mix' added 2026-10-25 (new intake): cooks some meals, eats out others —
+  // the Nutrition tab then shows one home pick and one eat-out pick.
+  eat_style?: 'cook' | 'out' | 'mix'
   meal_budget?: number
+  // 2026-10-25 new intake, safety: pregnant → no calorie cut; nursing → no
+  // cut plus extra calories. Both get the gentler (postpartum-safe) workouts.
+  // null = asked and she's neither; undefined = not asked this time (sticky).
+  life_stage?: 'pregnant' | 'nursing' | null
+  // Her own words for why this matters to her (typed, optional).
+  why_own?: string
   training_style?: TrainingStyle
   // training_styles (plural) is now the real source of truth passed to the
   // generator — see lib/training-styles.ts. training_style (singular) is
@@ -130,7 +138,9 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
   const payoffs = inp.payoffs?.length ? inp.payoffs : priorPayoffs
   // Nutrition tab answers + its learning memory are written by
   // /api/plan/meal-pick between intake submits — never wipe them here.
-  const eatStyle = inp.eat_style || (priorFormData.eat_style as 'cook' | 'out' | undefined)
+  const eatStyle = inp.eat_style || (priorFormData.eat_style as 'cook' | 'out' | 'mix' | undefined)
+  const lifeStage = inp.life_stage !== undefined ? inp.life_stage : ((priorFormData.life_stage as 'pregnant' | 'nursing' | null | undefined) ?? null)
+  const whyOwn = inp.why_own !== undefined ? inp.why_own.trim() : ((priorFormData.why_own as string | undefined) || '')
   const mealBudget = inp.meal_budget || (priorFormData.meal_budget as number | undefined)
   const mealMemory = priorFormData.meal_memory
   const orderApp = priorFormData.order_app
@@ -173,6 +183,8 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
       payoffs,
       ...(eatStyle ? { eat_style: eatStyle } : {}),
       ...(mealBudget ? { meal_budget: mealBudget } : {}),
+      life_stage: lifeStage,
+      ...(whyOwn ? { why_own: whyOwn } : {}),
       ...(mealMemory ? { meal_memory: mealMemory } : {}),
       ...(orderApp ? { order_app: orderApp } : {}),
     },
@@ -209,7 +221,8 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     sex: inp.sex === 'male' ? 'male' : 'female',
     height_in: inp.height_in,
     weight_lbs: inp.weight_lbs,
-    goal: inp.goal,
+    // Pregnant or nursing → never a calorie cut (or a bulk), whatever goal she picked.
+    goal: lifeStage ? 'maintain' : inp.goal,
     activity: inp.activity_level,
     // Preserves the structured intake route's original (undocumented) behavior of
     // always computing off a 4-day split when this isn't explicitly passed.
@@ -223,9 +236,12 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
   // out of sync with what the dashboard actually shows. Zeroed out (not a fake
   // number) when bp is null — callers report these back to her, so a Quickstart
   // return value must read as "nothing calculated yet," not a fabricated target.
+  // Nursing burns roughly 300–500 extra calories a day — add the low end,
+  // all as carbs (75g), on top of maintenance.
+  const nurseCal = lifeStage === 'nursing' ? 300 : 0, nurseCarb = lifeStage === 'nursing' ? 75 : 0
   let targets = bp ? (() => {
     const t = averageDayTargets(bp)
-    return { calories: t.calories, protein_g: t.protein_g, carbs_g: t.carbs_g, fats_g: t.fats_g }
+    return { calories: t.calories + nurseCal, protein_g: t.protein_g, carbs_g: t.carbs_g + nurseCarb, fats_g: t.fats_g }
   })() : { calories: 0, protein_g: 0, carbs_g: 0, fats_g: 0 }
 
   // Real rest-day vs workout-day split (Asa's ask, 2026-09-07 — see
@@ -238,8 +254,8 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
   // the same Mon-Sat spread the meal auto-fill path already used.
   const dayTargets = bp ? {
     schedule: dayTypesForFrequency(inp.days_per_week),
-    rest: { calories: bp.current.rest.eat, protein_g: bp.current.rest.macros.protein_g, carbs_g: bp.current.rest.macros.carbs_g, fats_g: bp.current.rest.macros.fats_g },
-    workout: { calories: bp.current.workout.eat, protein_g: bp.current.workout.macros.protein_g, carbs_g: bp.current.workout.macros.carbs_g, fats_g: bp.current.workout.macros.fats_g },
+    rest: { calories: bp.current.rest.eat + nurseCal, protein_g: bp.current.rest.macros.protein_g, carbs_g: bp.current.rest.macros.carbs_g + nurseCarb, fats_g: bp.current.rest.macros.fats_g },
+    workout: { calories: bp.current.workout.eat + nurseCal, protein_g: bp.current.workout.macros.protein_g, carbs_g: bp.current.workout.macros.carbs_g + nurseCarb, fats_g: bp.current.workout.macros.fats_g },
   } : null
 
   const level = (inp.experience_level === 'advanced' ? 3 : inp.experience_level === 'intermediate' ? 2 : 1) as Level
@@ -259,7 +275,7 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     daysPerWeek: inp.days_per_week,
     weekNumber: 1,
     injuries: inp.injuries ?? [],
-    postpartum: !!inp.postpartum,
+    postpartum: !!inp.postpartum || !!lifeStage,
     // Real bug found live, 2026-09-04: this is the VERY FIRST workout ever
     // built at intake time — same narrow single-style read as the goal bug
     // above meant a member who picked more than one training style never
@@ -286,8 +302,8 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     const cookDays = ([1, 2, 3].includes(inp.cook_days_per_week || 0) ? inp.cook_days_per_week : 2) as 1 | 2 | 3
     weekPlan = buildWeekFromSelections({
       name: inp.name,
-      workoutDayCal: bp.current.workout.eat,
-      restDayCal: bp.current.rest.eat,
+      workoutDayCal: bp.current.workout.eat + nurseCal,
+      restDayCal: bp.current.rest.eat + nurseCal,
       proteinTarget: targets.protein_g,
       cookDays,
       dayTypes: dayTypesForFrequency(inp.days_per_week),

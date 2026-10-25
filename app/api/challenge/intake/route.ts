@@ -22,8 +22,9 @@ export async function POST(request: NextRequest) {
     // a real target with nothing catching it. Same bounds as the Blueprint
     // route, so the two stay consistent.
     const ageN = Number(body.age), heightN = Number(body.height_in), weightN = Number(body.weight_lbs)
-    if (!(ageN >= 13 && ageN <= 100) || !(heightN >= 36 && heightN <= 90) || !(weightN >= 60 && weightN <= 700)) {
-      return NextResponse.json({ error: 'Please double-check your age, height, and weight — those values look off.' }, { status: 400 })
+    if (!(ageN >= 18 && ageN <= 100) || !(heightN >= 36 && heightN <= 90) || !(weightN >= 60 && weightN <= 700)) {
+      // 18+ only (Asa, 2026-10-25) — no fat-loss math for teens.
+      return NextResponse.json({ error: ageN < 18 && ageN > 0 ? 'This app is for adults 18 and over.' : 'Please double-check your age, height, and weight — those values look off.' }, { status: 400 })
     }
 
     const svc = createServiceClient()
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
     const primaryGoal = goals.length ? effectiveGoal(goals) : (body.goal || 'lose')
     const primaryTrainingStyle = trainingStyles[0] || body.training_style || 'none'
 
-    const { targets } = await buildInitialPlans({
+    const { targets, program } = await buildInitialPlans({
       enrollmentId: enrollment.id,
       userId: user.id,
       name: enrollment.name || body.name || 'Your',
@@ -92,7 +93,9 @@ export async function POST(request: NextRequest) {
       // buildInitialPlans' sticky carry-forward keeps whatever she already
       // answered instead of treating "didn't ask this time" as "cleared."
       payoffs: Array.isArray(body.payoffs) ? body.payoffs : undefined,
-      eat_style: body.eat_style === 'cook' || body.eat_style === 'out' ? body.eat_style : undefined,
+      eat_style: body.eat_style === 'cook' || body.eat_style === 'out' || body.eat_style === 'mix' ? body.eat_style : undefined,
+      life_stage: body.life_stage === 'pregnant' || body.life_stage === 'nursing' ? body.life_stage : body.life_stage === 'none' ? null : undefined,
+      why_own: typeof body.why_own === 'string' ? body.why_own.slice(0, 200) : undefined,
       meal_budget: Number(body.meal_budget) > 0 ? Math.round(Number(body.meal_budget)) : undefined,
       postpartum: !!body.postpartum,
       training_style: primaryTrainingStyle,
@@ -116,7 +119,9 @@ export async function POST(request: NextRequest) {
       requiredTierCompleted: !body.refining,
     })
 
-    return NextResponse.json({ success: true, targets })
+    // First workout's name, for the plan reveal ("Tomorrow: Lower body").
+    const firstWorkout = program?.gymDays?.[0]?.title || program?.home?.days?.[0]?.title || null
+    return NextResponse.json({ success: true, targets, firstWorkout, track: program?.track || null })
   } catch (error) {
     console.error('Challenge intake error:', error)
     return NextResponse.json({ error: 'Failed to submit intake' }, { status: 500 })

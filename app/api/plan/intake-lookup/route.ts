@@ -68,6 +68,9 @@ export async function GET() {
       payoffs: Array.isArray(formData.payoffs) ? formData.payoffs : [],
       eat_style: formData.eat_style || '',
       meal_budget: formData.meal_budget ?? null,
+      // New intake (2026-10-25): pregnant/nursing + her why in her own words.
+      life_stage: formData.life_stage ?? null,
+      why_own: formData.why_own || '',
     },
   })
 }

@@ -44,8 +44,13 @@ export default async function NutritionPage() {
   const slot: MealSlot = day.current?.slot ?? 'Snack'
 
   const formData = (intake.form_data || {}) as Record<string, unknown>
-  const eatStyle = (formData.eat_style === 'cook' || formData.eat_style === 'out') ? formData.eat_style as EatStyle : null
-  const mealBudget = eatStyle ? (Number(formData.meal_budget) || defaultMealBudget(eatStyle, Number(intake.weekly_food_budget) || null)) : 0
+  // 'mix' (2026-10-25 new intake): she cooks some meals and eats out others —
+  // one eat-out pick and one home pick, side by side. Location + nearby work
+  // off the eat-out side.
+  const mix = formData.eat_style === 'mix'
+  const eatStyle: EatStyle | null = (formData.eat_style === 'cook' || formData.eat_style === 'out') ? formData.eat_style as EatStyle : mix ? 'out' : null
+  const weekly = Number(intake.weekly_food_budget) || null
+  const mealBudget = eatStyle ? (Number(formData.meal_budget) || defaultMealBudget(eatStyle, weekly)) : 0
   const orderApp: OrderApp = formData.order_app === 'ubereats' ? 'ubereats' : 'doordash'
 
   // Where she is (2026-10-23, Google Places): eating out + a position from the
@@ -81,7 +86,28 @@ export default async function NutritionPage() {
   let result = pick(nearby)
   // Fewer than two nearby meals fit her calories → every pick, never one card.
   if (nearby && result && result.options.length < 2) result = pick(undefined)
-  const cards: PickCard[] = (result?.options || []).slice(0, 12).map((o) => ({
+  let options = result?.options || []
+  if (mix && result) {
+    const home = pickMeals({
+      eatStyle: 'cook', mealBudget: defaultMealBudget('cook', weekly), remainingCal, slot,
+      weightLbs: Number(intake.weight_lbs) || 170,
+      dislikesAllergies: intake.dislikes_allergies as string | null,
+      foodPreferences: intake.food_preferences as string | null,
+      weekPlan, todayIdx: mealIdx,
+      memory: (formData.meal_memory || {}) as MealMemory,
+      todayIso,
+      slotCalBudget: day.calBudget,
+    }).options
+    // Interleave so the two cards on screen are one out, one home — and a
+    // swap keeps that rhythm.
+    const both: typeof options = []
+    for (let i = 0; i < Math.max(options.length, home.length); i++) {
+      if (options[i]) both.push(options[i])
+      if (home[i]) both.push(home[i])
+    }
+    options = both
+  }
+  const cards: PickCard[] = options.slice(0, 12).map((o) => ({
     ...o, dest: orderDestination(o, orderApp), photo: mealPhoto(o), short: shortName(o),
   }))
 

@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     // Guardrail: reject out-of-range inputs so a typo can't generate nonsense numbers
     const ageN = Number(age), heightN = Number(height_in), weightN = Number(weight_lbs)
-    if (!(ageN >= 13 && ageN <= 100) || !(heightN >= 36 && heightN <= 90) || !(weightN >= 60 && weightN <= 700)) {
+    if (!(ageN >= 18 && ageN <= 100) || !(heightN >= 36 && heightN <= 90) || !(weightN >= 60 && weightN <= 700)) {
       return NextResponse.json({ error: 'Please double-check your age, height, and weight — those values look off.' }, { status: 400 })
     }
 

@@ -25,7 +25,8 @@ export default async function FoodLogPage() {
   const { intake, planned, calBudget, todaysDayType, eatingOutToday, todayMeals, mealIdx } = day
 
   const formData = (intake.form_data || {}) as Record<string, unknown>
-  const eatStyle = (formData.eat_style === 'cook' || formData.eat_style === 'out') ? formData.eat_style as EatStyle : null
+  // 'mix' (new intake) shows here as eating out — that's the side her money number is for.
+  const eatStyle = (formData.eat_style === 'cook' || formData.eat_style === 'out') ? formData.eat_style as EatStyle : formData.eat_style === 'mix' ? 'out' : null
   const mealBudget = eatStyle ? (Number(formData.meal_budget) || defaultMealBudget(eatStyle, Number(intake.weekly_food_budget) || null)) : 0
 
   return (

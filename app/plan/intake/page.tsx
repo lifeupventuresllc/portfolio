@@ -2,26 +2,11 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Image from 'next/image'
-import CountUp from '@/components/CountUp'
-import FocusAreaPhoto from '@/components/FocusAreaPhoto'
 import { hapticTap } from '@/lib/haptics'
 import { createClient, clearLocalSession } from '@/lib/supabase/client'
-import { PAYOFF_OPTIONS } from '@/lib/payoff'
+import NewFlow, { NewBuilding, NewReveal, NEVER, type LifeStage } from './NewFlow'
 
 type Targets = { calories: number; protein_g: number; carbs_g: number; fats_g: number; bmr: number; tdee: number }
-
-const INJURIES = [
-  { v: 'knee', l: 'Knee' }, { v: 'lower_back', l: 'Lower back' }, { v: 'shoulder', l: 'Shoulder' },
-  { v: 'wrist', l: 'Wrist' }, { v: 'elbow', l: 'Elbow' }, { v: 'hip', l: 'Hip' }, { v: 'ankle', l: 'Ankle' },
-]
-
-const FOCUS_AREAS = [
-  { v: 'core', l: 'Core & waistline', d: 'Flatter stomach, defined middle' },
-  { v: 'legs', l: 'Legs & glutes', d: 'Lift, shape, and strengthen' },
-  { v: 'arms', l: 'Arms & back', d: 'Tone and define upper body' },
-  { v: 'overall', l: 'All-over', d: 'Balanced, head to toe' },
-]
 
 
 // Module-level, NOT defined inside the component — the real cause of the reported
@@ -39,8 +24,6 @@ function Screen({ step, dir, children }: { step: number; dir: 'fwd' | 'back'; ch
 }
 const Q = ({ children }: { children: React.ReactNode }) => <h2 className="text-2xl sm:text-3xl font-bold text-white leading-snug mb-1">{children}</h2>
 const Hint = ({ children }: { children: React.ReactNode }) => <p className="text-ivory/60 text-sm mb-7">{children}</p>
-const LQ = ({ children }: { children: React.ReactNode }) => <h2 className="text-3xl sm:text-4xl font-bold text-ink leading-snug mb-2 text-balance">{children}</h2>
-const LHint = ({ children }: { children: React.ReactNode }) => <p className="text-ink/50 text-base mb-10">{children}</p>
 
 // Required tier: the minimum to get her a real plan fast (name, goal, focus, body).
 // Everything else is a second, optional pass she's invited into AFTER she's already
@@ -62,9 +45,13 @@ const LHint = ({ children }: { children: React.ReactNode }) => <p className="tex
 // 'eating' added 2026-10-19 (Asa's Nutrition tab, mockup v3): how she eats
 // (cook vs eat out) + her money for one meal, asked once here so the
 // Nutrition tab already knows and never makes her decide.
-const REQUIRED_STEPS = ['name', 'goal', 'why', 'focus', 'body', 'location', 'injuries', 'food', 'eating']
+// 2026-10-25: the required tier is now the new dark flow in ./NewFlow.tsx
+// (name + why → goal → body → her days → where/how often → anything hurt →
+// food intro → never foods → how she eats + weekly money → location).
+// Training days and the weekly food budget moved into it; focus area and
+// foods she loves stay as she last set them (fine-tune later).
 const OPTIONAL_STEPS = [
-  'target', 'experience', 'training_style', 'days', 'cook', 'postpartum', 'other',
+  'target', 'experience', 'training_style', 'cook', 'postpartum', 'other',
 ]
 
 // One warm question per screen. Same data as before — just effortless, and
@@ -130,20 +117,19 @@ function ConversationalIntakeInner() {
   const [goals, setGoals] = useState<string[]>([])
   const [trainingStyles, setTrainingStyles] = useState<string[]>([])
   const [payoffs, setPayoffs] = useState<string[]>([])
-  const toggleGoal = (v: string) => setGoals((a) => (a.includes(v) ? a.filter((x) => x !== v) : [...a, v]))
-  const togglePayoff = (v: string) => { hapticTap(); setPayoffs((a) => (a.includes(v) ? a.filter((x) => x !== v) : [...a, v])) }
   const primaryGoal = goals[0] || ''
   const [injuries, setInjuries] = useState<string[]>([])
+  // New intake (2026-10-25): pregnant/nursing safety, her why in her own
+  // words, and "never" foods as taps (saved into dislikes_allergies).
+  const [lifeStage, setLifeStage] = useState<LifeStage>('none')
+  const [whyOwn, setWhyOwn] = useState('')
+  const [never, setNever] = useState<string[]>([])
+  const [neverOther, setNeverOther] = useState('')
+  const [firstWorkout, setFirstWorkout] = useState<string | null>(null)
+  const [track, setTrack] = useState<string | null>(null)
   const [phase, setPhase] = useState<'quiz' | 'building' | 'done'>('quiz')
   const [targets, setTargets] = useState<Targets | null>(null)
   const [error, setError] = useState('')
-  const [carriedFromBlueprint, setCarriedFromBlueprint] = useState(false)
-  // Manual fallback for when her app-signup email doesn't match the one she used
-  // for the free Blueprint — the automatic lookup below can't catch that case
-  // since it only ever checks her logged-in session email.
-  const [blueprintEmail, setBlueprintEmail] = useState('')
-  const [blueprintLookupStatus, setBlueprintLookupStatus] = useState<'idle' | 'loading' | 'notfound'>('idle')
-  const [showBlueprintLookup, setShowBlueprintLookup] = useState(false)
 
   function applyBlueprint(b: Record<string, unknown>) {
     const ACTIVITY_MAP: Record<string, string> = { none: 'sedentary', sedentary: 'sedentary', light: 'light', moderate: 'moderate', active: 'active', very_active: 'active' }
@@ -160,26 +146,9 @@ function ConversationalIntakeInner() {
       days_per_week: b.workout_days ? String(b.workout_days) : s.days_per_week,
     }))
     if (b.goal) setGoals((g) => (g.length ? g : [b.goal as string]))
-    setCarriedFromBlueprint(true)
   }
 
-  async function lookupBlueprintByEmail() {
-    if (!blueprintEmail.trim()) return
-    setBlueprintLookupStatus('loading')
-    try {
-      const r = await fetch(`/api/plan/blueprint-lookup?email=${encodeURIComponent(blueprintEmail.trim())}`)
-      const d = await r.json()
-      if (d?.found && d.blueprint) {
-        applyBlueprint(d.blueprint)
-        setShowBlueprintLookup(false)
-        setBlueprintLookupStatus('idle')
-      } else {
-        setBlueprintLookupStatus('notfound')
-      }
-    } catch {
-      setBlueprintLookupStatus('notfound')
-    }
-  }
+
 
   // Real gap found live (Priority 1, 2026-08-25 beta feedback — "can't go back
   // and change my preferences"): this used to only ever pull her real existing
@@ -229,6 +198,19 @@ function ConversationalIntakeInner() {
       if (Array.isArray(i.goals) && i.goals.length) setGoals(i.goals)
       if (Array.isArray(i.training_styles) && i.training_styles.length) setTrainingStyles(i.training_styles)
       if (Array.isArray(i.payoffs) && i.payoffs.length) setPayoffs(i.payoffs)
+      if (i.life_stage === 'pregnant' || i.life_stage === 'nursing') setLifeStage(i.life_stage)
+      if (i.why_own) setWhyOwn(i.why_own)
+      // Her saved "never" text back into taps; anything that isn't one of
+      // the taps stays in the "anything else" box, never dropped.
+      if (i.dislikes_allergies) {
+        const parts = String(i.dislikes_allergies).split(/[,;]+/).map((x: string) => x.trim()).filter(Boolean)
+        const chips: string[] = [], rest: string[] = []
+        for (const part of parts) {
+          const hit = NEVER.find((n) => part.toLowerCase().replace(/^no\s+/, '') === n.toLowerCase())
+          if (hit) chips.push(hit); else rest.push(part)
+        }
+        setNever(chips); setNeverOther(rest.join(', '))
+      }
     }).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -250,7 +232,6 @@ function ConversationalIntakeInner() {
   const go = (n: number) => { setDir(n > step ? 'fwd' : 'back'); setError(''); setStep(n) }
   const next = () => go(step + 1)
   const back = () => go(Math.max(0, step - 1))
-  const toggleInjury = (v: string) => setInjuries((a) => (a.includes(v) ? a.filter((x) => x !== v) : [...a, v]))
 
   // choosing a single-select option auto-advances (that "texting a coach" feel)
   // 420ms — the 280 bump wasn't enough on its own; against a busy photo
@@ -261,12 +242,12 @@ function ConversationalIntakeInner() {
 
   const firstName = f.name.trim().split(' ')[0] || 'you'
 
-  const STEPS = tier === 'required' ? REQUIRED_STEPS : OPTIONAL_STEPS
-  const total = STEPS.length
+  const total = OPTIONAL_STEPS.length
   const pct = Math.round(((step + 1) / total) * 100)
 
   async function build(refining: boolean) {
     if (!f.age || !f.weight_lbs) { setError('I just need your age and weight to get your numbers right.'); return }
+    const dislikes = [...never.map((n) => n.toLowerCase()), neverOther.trim()].filter(Boolean).join(', ')
     setPhase('building')
     setError('')
     try {
@@ -275,15 +256,15 @@ function ConversationalIntakeInner() {
       const res = await fetch('/api/challenge/intake', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: f.name, age: Number(f.age), sex: f.sex, height_in, weight_lbs: Number(f.weight_lbs),
+          name: f.name, age: Number(f.age), sex: 'female', height_in, weight_lbs: Number(f.weight_lbs),
           goal: primaryGoal || 'lose', goals, target_lbs: Number(f.target_lbs) || null, focus_area: f.focus_area || 'overall',
           activity_level: f.activity_level || 'moderate', experience_level: f.experience_level || 'beginner',
           training_location: f.training_location || 'gym', days_per_week: Number(f.days_per_week) || 3,
           cook_days_per_week: Number(f.cook_days_per_week) || 2, weekly_food_budget: Number(f.weekly_food_budget) || null,
-          food_preferences: f.food_preferences, dislikes_allergies: f.dislikes_allergies,
+          food_preferences: f.food_preferences, dislikes_allergies: dislikes,
           injuries, injuries_limitations: '', postpartum: f.postpartum === 'yes',
           training_style: trainingStyles[0] || 'none', training_styles: trainingStyles, other_info: f.other_info,
-          payoffs,
+          payoffs, why_own: whyOwn, life_stage: lifeStage,
           eat_style: f.eat_style || undefined,
           meal_budget: Number(f.meal_budget) || (f.eat_style ? (f.eat_style === 'cook' ? 6 : 12) : undefined),
           refining,
@@ -295,6 +276,7 @@ function ConversationalIntakeInner() {
       await new Promise((r) => setTimeout(r, wait))
       if (data.success) {
         setTargets(data.targets)
+        setFirstWorkout(data.firstWorkout || null); setTrack(data.track || null)
         if (refining) { router.refresh(); router.push('/plan') }
         else setPhase('done')
       } else { setError(data.error || 'Something went wrong.'); setPhase('quiz') }
@@ -309,375 +291,52 @@ function ConversationalIntakeInner() {
   const opt = (active: boolean) => `w-full text-left px-5 py-4 rounded-2xl border font-semibold transition-all duration-200 ${active ? 'bg-charcoal bg-gradient-to-br from-gold/20 to-charcoal border-gold scale-[1.01] text-gold' : 'bg-charcoal border-smoke hover:border-gold/50 hover:bg-charcoal/70 text-white'}`
   const input = 'w-full px-4 py-3.5 bg-obsidian border border-smoke rounded-xl text-white focus:outline-none focus:border-gold transition-colors'
   const primaryBtn = 'w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-[1.02] disabled:opacity-40'
-  // Active state was too subtle to register against a busy photo thumbnail
-  // (thin 1px border + a 0.14-opacity shadow) — thicker gold border + a real
-  // ring + a much stronger shadow so it visibly "lights up," not just changes
-  // a hairline.
-  const lopt = (active: boolean) => `w-full text-left px-6 py-5 rounded-3xl border-2 transition-all duration-200 ${active ? 'bg-gold/5 border-gold ring-2 ring-gold/40 shadow-[0_8px_30px_rgba(201,168,76,0.45)] scale-[1.015] text-ink' : 'bg-white border-ink/10 hover:border-gold/50 hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] text-ink'}`
-  const linput = 'w-full px-5 py-4 bg-white border border-ink/15 rounded-2xl text-ink text-lg placeholder-ink/30 focus:outline-none focus:border-gold transition-colors'
-  const lPrimaryBtn = 'w-full bg-gold text-obsidian px-8 py-5 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-40'
-
   // ---------- BUILDING moment ----------
   if (phase === 'building') {
-    const light = tier === 'required'
+    if (tier === 'required') return <NewBuilding name={f.name.trim().split(' ')[0]} />
     return (
-      <div className={`min-h-[100dvh] flex items-center justify-center px-6 ${light ? 'bg-paper' : 'bg-obsidian'}`}>
+      <div className="min-h-[100dvh] flex items-center justify-center px-6 bg-obsidian">
         <div className="text-center q-in-fwd">
           <div className="relative w-24 h-24 mx-auto mb-8">
-            <div className={`absolute inset-0 rounded-full border-2 ${light ? 'border-gold/25' : 'border-gold/20'}`} />
+            <div className="absolute inset-0 rounded-full border-2 border-gold/20" />
             <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-gold animate-spin" style={{ animationDuration: '0.9s' }} />
-            <div className="absolute inset-0 flex items-center justify-center text-3xl">💪🏽</div>
           </div>
           <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">One moment</p>
-          <h1 className={`text-2xl sm:text-3xl font-bold mb-2 ${light ? 'text-ink' : 'text-white'}`}>
-            {tier === 'optional' ? 'Fine-tuning your plan…' : 'Coach is building your plan…'}
-          </h1>
-          <p className={light ? 'text-ink/50 text-sm' : 'text-ivory/60 text-sm'}>Crunching your numbers, matching your workout, and setting up your meals for {firstName}.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-white">Fine-tuning your plan…</h1>
+          <p className="text-ivory/60 text-sm">Crunching your numbers and matching your workout for {firstName}.</p>
         </div>
       </div>
     )
   }
 
-  // ---------- DONE / reveal (light — this is the reward moment, stays part of the same light experience) ----------
+  // ---------- DONE / reveal ----------
   if (phase === 'done' && targets) {
     return (
-      <div className="min-h-[100dvh] bg-paper px-4 py-16">
-        <div className="max-w-lg mx-auto text-center q-in-fwd">
-          <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-3">Your plan is ready</p>
-          <h1 className="text-3xl sm:text-4xl font-bold text-ink mb-3">Let&apos;s do this, {firstName} 🎉</h1>
-          <p className="text-ink/50 text-sm mb-8">I built your numbers, generated your workout, and set up your meal budget. Here&apos;s your daily target:</p>
-          <div className="grid grid-cols-2 gap-3 mb-8">
-            {[
-              { l: 'Daily calories', v: targets.calories, c: 'text-gold' },
-              { l: 'Protein', v: targets.protein_g, s: 'g', c: 'text-emerald-600' },
-              { l: 'Carbs', v: targets.carbs_g, s: 'g', c: 'text-ink' },
-              { l: 'Fats', v: targets.fats_g, s: 'g', c: 'text-ink' },
-            ].map((t) => (
-              <div key={t.l} className="bg-white border border-ink/10 rounded-3xl p-5">
-                <p className="text-ink/35 text-xs uppercase tracking-wider mb-1">{t.l}</p>
-                <p className={`text-3xl font-bold ${t.c}`}><CountUp value={t.v} suffix={t.s || ''} /></p>
-              </div>
-            ))}
-          </div>
-          {/* Real gap found live: she'd almost always visited /plan right
-              before landing here (that's how she reaches intake), so
-              router.push alone could serve Next's cached pre-intake RSC
-              payload for /plan instead of refetching — showing her old name/
-              "add your weight" prompt even though the build above just
-              genuinely completed. router.refresh() invalidates that cache
-              so the next /plan render is guaranteed fresh. */}
-          <button onClick={() => { router.refresh(); router.push('/plan') }} className={lPrimaryBtn}>See my plan</button>
-          <button onClick={startOptionalTier} className="w-full mt-3 text-ink/50 text-sm font-semibold hover:text-gold transition-colors">
-            Fine-tune it for you — 60 seconds →
-          </button>
-          {/* Offered here, not forced — the exact "look, it worked" moment
-              she has real proof (her own numbers) in front of her, matching
-              the Instagram/TikTok pattern: ask to keep it only once she's
-              actually seen it work. */}
-          {isAnonymous && (
-            <button onClick={() => router.push('/plan/save')} className="w-full mt-3 text-gold text-sm font-semibold hover:text-gold/80 transition-colors">
-              💾 Save your progress →
-            </button>
-          )}
-          <p className="text-gold text-sm font-semibold mt-5">— Coach</p>
-        </div>
-      </div>
+      <NewReveal
+        name={f.name.trim().split(' ')[0]} targets={targets} firstWorkout={firstWorkout} track={track} isAnonymous={isAnonymous}
+        // Real gap found live: router.push alone could serve Next's cached
+        // pre-intake /plan — router.refresh() first so it's fresh.
+        onGo={() => { router.refresh(); router.push('/plan') }}
+        onSave={() => router.push('/plan/save')}
+        onFineTune={startOptionalTier}
+      />
     )
   }
 
-  // ---------- REQUIRED TIER (light, spacious, one thing at a time) ----------
+  // ---------- REQUIRED TIER (new dark flow, ./NewFlow.tsx) ----------
   if (tier === 'required') {
-    const s = REQUIRED_STEPS[step]
     return (
-      <div className={`min-h-[100dvh] px-4 py-10 flex flex-col relative overflow-hidden ${s === 'name' ? '' : 'bg-paper'}`}>
-        {s === 'name' && (
-          <>
-            <Image src="/images/onboarding/name-step.jpg" alt="" fill sizes="100vw" priority
-              className="object-cover object-[center_22%] -z-20" />
-            {/* Scrim: near-transparent at the top (the photo's own background
-                is already light there, so the header still reads fine over
-                it) fading to solid white by ~72% so the form at the bottom
-                has full contrast without a hard edge. */}
-            <div className="absolute inset-0 -z-10" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.16) 50%, rgba(255,255,255,0.97) 72%, #fff 100%)' }} />
-          </>
-        )}
-        <div className="max-w-md w-full mx-auto mb-12">
-          <div className="flex items-center gap-3">
-            {step > 0 ? <button onClick={back} className="text-ink/40 hover:text-gold text-sm">←</button> : <span className="w-3" />}
-            <div className="flex-1 h-1 bg-ink/8 rounded-full overflow-hidden">
-              <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
-            </div>
-            <span className="text-ink/30 text-xs tabular-nums">{step + 1}/{total}</span>
-            {/* Real bug found live, 2026-09-09: this was a plain Link — no
-                router.refresh() — visible throughout the WHOLE intake flow,
-                not just the "See my plan" completion button (which already
-                had the fix below). Tapping Home right after saving anything
-                served /plan's stale pre-save cached page instead of a fresh
-                one, reading as "sent back to intake again." Same fix,
-                applied everywhere this exists now, not just the one button
-                that happened to already have it. */}
-            <button onClick={() => { router.refresh(); router.push('/plan') }} className="text-ink/30 hover:text-gold text-xs whitespace-nowrap">Home</button>
-            {!isAnonymous && <button onClick={handleSignOut} className="text-ink/30 hover:text-gold text-xs whitespace-nowrap">Sign out</button>}
-          </div>
-        </div>
-
-        <div className="max-w-md w-full mx-auto flex-1">
-          <Screen step={step} dir={dir}>
-            {s === 'name' && (<>
-              {/* Pushed down so the photo leads — mirrors the mockup Asa
-                  picked (hero photo up top, form anchored near the bottom
-                  over the scrim). mt-[38vh] not absolute positioning, so it
-                  stays in normal flow with the Screen transition. The
-                  Blueprint-carryover banner moved in here too (was rendered
-                  above the photo where a green line had poor contrast) — it
-                  only ever shows on step 0, which is always this step. */}
-              <div className="mt-[38vh]">
-                {carriedFromBlueprint && (
-                  <p className="text-emerald-600 text-xs font-semibold mb-4">🎉 Pulled in your info from your Calorie Blueprint — just confirm as you go.</p>
-                )}
-                <LQ>First — what should I call you?</LQ>
-                <LHint>I coach you by name, not by number.</LHint>
-                <input ref={primaryInputRef} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Your first name" className={linput}
-                  autoCorrect="off" autoCapitalize="words" spellCheck={false}
-                  onKeyDown={(e) => e.key === 'Enter' && f.name.trim() && next()} />
-                <button onClick={next} disabled={!f.name.trim()} className={`${lPrimaryBtn} mt-8`}>Let&apos;s go →</button>
-
-                {/* Manual fallback: only offered when the automatic same-email match
-                    didn't fire — covers signing up with a different email than the
-                    one used for the free Blueprint. */}
-                {!carriedFromBlueprint && (
-                  <div className="mt-6">
-                    {!showBlueprintLookup ? (
-                      <button type="button" onClick={() => setShowBlueprintLookup(true)} className="text-ink/40 text-xs underline">
-                        Already got your free Calorie Blueprint? Pull in your info
-                      </button>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        <p className="text-ink/50 text-xs">Email you used for your free Calorie Blueprint:</p>
-                        <div className="flex gap-2">
-                          <input
-                            value={blueprintEmail}
-                            onChange={(e) => { setBlueprintEmail(e.target.value); setBlueprintLookupStatus('idle') }}
-                            placeholder="you@email.com"
-                            type="email"
-                            className={`${linput} !text-sm`}
-                            onKeyDown={(e) => e.key === 'Enter' && lookupBlueprintByEmail()}
-                          />
-                          <button type="button" onClick={lookupBlueprintByEmail} disabled={!blueprintEmail.trim() || blueprintLookupStatus === 'loading'}
-                            className="px-4 rounded-xl bg-gold text-ink text-sm font-semibold whitespace-nowrap disabled:opacity-40">
-                            {blueprintLookupStatus === 'loading' ? '...' : 'Pull it in'}
-                          </button>
-                        </div>
-                        {blueprintLookupStatus === 'notfound' && (
-                          <p className="text-red-500 text-xs">No Blueprint found for that email — no worries, just fill it out below.</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </>)}
-
-            {s === 'goal' && (<>
-              <LQ>What are we doing together, {firstName}?</LQ>
-              {/* Multi-select (Priority 1, 2026-08-25 beta feedback) — a real,
-                  common goal is "lose fat AND tone/build," which the old
-                  single-select + auto-advance couldn't express at all. Tap
-                  toggles, explicit Continue (same pattern as the injuries
-                  step) instead of advancing on the first tap. */}
-              <LHint>Tap all that apply.</LHint>
-              <div className="space-y-3 mb-6">
-                {[
-                  { v: 'lose', l: '🔥 Lose fat', d: 'Lean out, keep your curves', img: '/images/onboarding/goal-lose.jpg' },
-                  { v: 'gain', l: '💪🏽 Build & tone', d: 'Add shape and strength', img: '/images/onboarding/goal-gain.jpg' },
-                  { v: 'maintain', l: '⚖️ Maintain', d: 'Hold steady, feel great', img: '/images/onboarding/goal-maintain.jpg' },
-                ].map((o) => (
-                  <button key={o.v} onClick={() => { hapticTap(); toggleGoal(o.v) }} className={`${lopt(goals.includes(o.v))} !flex items-center justify-between gap-4 !py-4`}>
-                    <span>
-                      <span className="block text-lg">{o.l}</span><span className="block text-sm font-normal mt-0.5 text-ink/40">{o.d}</span>
-                    </span>
-                    <span className="relative w-24 h-32 shrink-0 rounded-2xl overflow-hidden">
-                      <Image src={o.img} alt="" fill sizes="96px" className="object-cover" />
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <button onClick={next} disabled={!goals.length} className={lPrimaryBtn} style={!goals.length ? { opacity: 0.4 } : undefined}>Continue →</button>
-            </>)}
-
-            {/* 'why' (2026-09-24, Asa's ask, mockup-approved) — real, optional,
-                multi-select. Continue has no disabled condition on purpose:
-                a real "skip it" stays available (same principle as the
-                injuries step), it just means she doesn't get the
-                personalized "why it matters to you" line later — nothing
-                else breaks (lib/next-action/payoff-messages.ts falls back
-                cleanly to streak/quick-win/progress copy when this is empty). */}
-            {s === 'why' && (<>
-              <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-2">Part of your plan</p>
-              <LQ>What&apos;s your why?</LQ>
-              <LHint>Choose what&apos;s true for you — this is what we&apos;ll remind you of, not just your numbers.</LHint>
-              <div className="space-y-3 mb-6">
-                {PAYOFF_OPTIONS.map((o) => {
-                  const active = payoffs.includes(o.v)
-                  return (
-                    <button key={o.v} onClick={() => togglePayoff(o.v)} className={`${lopt(active)} !flex items-center gap-3.5`}>
-                      <span className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${active ? 'bg-gold/15 text-gold' : 'bg-ink/5 text-ink/45'}`}>
-                        {o.v === 'energy' && <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" /></svg>}
-                        {o.v === 'kids' && <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20c0-3.6 2.9-6.2 6.5-6.2s6.5 2.6 6.5 6.2" /></svg>}
-                        {o.v === 'mood' && <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8.5 15c1 1 2.2 1.5 3.5 1.5s2.5-.5 3.5-1.5M9 10h.01M15 10h.01" /></svg>}
-                        {o.v === 'family' && <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11.5 12 4l8 7.5" /><path d="M6.5 10v9a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-9" /></svg>}
-                        {o.v === 'look' && <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8" /><circle cx="12" cy="12" r="4" /></svg>}
-                      </span>
-                      <span>
-                        <span className="block">{o.label}</span>
-                        <span className="block text-sm font-normal mt-0.5 text-ink/40">{o.desc}</span>
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-              <button onClick={next} className={lPrimaryBtn}>Continue →</button>
-            </>)}
-
-            {s === 'focus' && (<>
-              {/* Heading stays off the photo (plain text block, not overlaid)
-                  — Asa's call after the mockup: text sitting on top of her
-                  face read wrong. Photo below is sized to dominate the
-                  screen, full width at its true aspect ratio; the option
-                  pills float over its bottom third on a scrim instead of
-                  living in a separate section below it. */}
-              <h2 className="text-xl font-bold text-ink leading-snug mb-0.5 text-balance">What do you want to feel proudest of?</h2>
-              <p className="text-ink/50 text-xs mb-2">Tap one — watch it light up.</p>
-              {/* Full width, TRUE 9:16 — tried a shorter cropped ratio to avoid
-                  any scrolling, but Asa's explicit call after seeing it live:
-                  he'd rather scroll a little than have her body visibly
-                  cropped in the photo. Continue is pinned to the viewport
-                  bottom below regardless of how tall this renders. */}
-              <div className="relative w-full aspect-[9/16] mb-3">
-                <FocusAreaPhoto active={(f.focus_area || null) as 'core' | 'legs' | 'arms' | 'overall' | null}>
-                  <div className="absolute inset-x-0 bottom-0 h-[42%] pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(255,255,255,0.98) 30%, rgba(255,255,255,0) 100%)' }} />
-                  <div className="absolute inset-x-2.5 bottom-2.5 grid grid-cols-2 gap-2">
-                    {FOCUS_AREAS.map((o) => (
-                      <button key={o.v} onClick={() => { hapticTap(); set('focus_area', o.v) }} className={`text-center rounded-2xl px-3 py-2.5 border-2 transition-all duration-200 ${f.focus_area === o.v ? 'bg-gold/5 border-gold ring-2 ring-gold/40 shadow-[0_8px_24px_rgba(201,168,76,0.4)]' : 'bg-white/95 border-ink/10'}`}>
-                        <span className="block text-xs font-semibold text-ink">{o.l}</span>
-                        <span className="block text-[10px] font-normal mt-0.5 text-ink/40">{o.d}</span>
-                      </button>
-                    ))}
-                  </div>
-                </FocusAreaPhoto>
-              </div>
-              {/* Plain spacer in normal flow, NOT padding on the photo box above
-                  — padding-bottom on an aspect-ratio'd container shrinks its own
-                  content area (the bottom-anchored pills got measured against
-                  the padding edge instead of the real bottom, clipping their
-                  text). This just reserves scroll clearance so the fixed bar
-                  below never covers the photo. */}
-              <div className="h-28" aria-hidden="true" />
-              {/* Fixed to the real viewport bottom, not normal document flow —
-                  keeping the photo this large means the page can genuinely
-                  run taller than one screen on shorter phones, and Asa
-                  explicitly wants the photo size kept, not shrunk again. A
-                  fixed bar guarantees Continue is always visible/pressable
-                  regardless of how tall the photo renders on her device. */}
-              <div className="fixed inset-x-0 bottom-0 z-20 bg-paper/95 backdrop-blur-sm border-t border-ink/10 px-4 pt-3" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
-                <div className="max-w-md mx-auto">
-                  <button onClick={next} disabled={!f.focus_area} className={lPrimaryBtn}>Continue →</button>
-                </div>
-              </div>
-            </>)}
-
-            {s === 'body' && (<>
-              <LQ>Tell me about your body.</LQ>
-              <LHint>This dials in your exact calories — no guessing.</LHint>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div><label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Age</label><input ref={primaryInputRef} type="number" inputMode="numeric" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={f.age} onChange={(e) => set('age', e.target.value)} className={linput} /></div>
-                <div><label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Weight (lbs)</label><input type="number" inputMode="numeric" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={f.weight_lbs} onChange={(e) => set('weight_lbs', e.target.value)} className={linput} /></div>
-              </div>
-              <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Height</label>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <select value={f.heightFt} onChange={(e) => set('heightFt', e.target.value)} className={linput}>{[4, 5, 6].map((n) => <option key={n} value={n}>{n} ft</option>)}</select>
-                <select value={f.heightIn} onChange={(e) => set('heightIn', e.target.value)} className={linput}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={i}>{i} in</option>)}</select>
-              </div>
-              <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Gender (for your metabolism math)</label>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                {[{ v: 'female', l: 'Female' }, { v: 'male', l: 'Male' }].map((o) => <button key={o.v} onClick={() => { hapticTap(); set('sex', o.v) }} className={`py-3.5 rounded-2xl text-sm font-semibold border transition-colors ${f.sex === o.v ? 'bg-white border-gold text-ink' : 'bg-white border-ink/10 text-ink/50'}`}>{o.l}</button>)}
-              </div>
-              {/* Same question the standalone Calorie Blueprint asks — was only
-                  in the OPTIONAL tier before, so anyone who skipped fine-tuning
-                  got a hardcoded 'moderate' guess baked into their real calorie
-                  math instead of their real activity level. Pre-filled and
-                  already answered (not hidden — she can still see/change it)
-                  when she's carried over from a real Blueprint submission, via
-                  the same ACTIVITY_MAP lookup above. */}
-              <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">How active is your day, outside workouts?</label>
-              <div className="grid grid-cols-2 gap-2.5 mb-8">
-                {[{ v: 'sedentary', l: 'Mostly sitting' }, { v: 'light', l: 'Lightly active' }, { v: 'moderate', l: 'On my feet a lot' }, { v: 'active', l: 'Very active' }].map((o) => (
-                  <button key={o.v} onClick={() => { hapticTap(); set('activity_level', o.v) }} className={`py-3 px-3 rounded-2xl text-sm font-semibold border transition-colors text-center ${f.activity_level === o.v ? 'bg-white border-gold text-ink shadow-[0_4px_20px_rgba(201,168,76,0.14)]' : 'bg-white border-ink/10 text-ink/50 hover:border-gold/50'}`}>{o.l}</button>
-                ))}
-              </div>
-              {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
-              <button onClick={() => { if (!f.age || !f.weight_lbs) { setError('Add your age and weight so I can nail your numbers.'); return }; if (!f.activity_level) { setError('Pick how active your day is — it changes your calorie math.'); return }; next() }} className={`${lPrimaryBtn} mt-8`}>Continue →</button>
-            </>)}
-
-            {s === 'location' && (<>
-              <LQ>Where will you train?</LQ>
-              <LHint>I&apos;ll build your workouts to fit your actual setup.</LHint>
-              <div className="space-y-3">
-                {[{ v: 'gym', l: '🏋🏽 Gym' }, { v: 'home', l: '🏠 Home' }, { v: 'both', l: '🔀 Both' }].map((o) => (
-                  <button key={o.v} onClick={() => pick('training_location', o.v)} className={lopt(f.training_location === o.v)}>{o.l}</button>
-                ))}
-              </div>
-            </>)}
-
-            {s === 'injuries' && (<>
-              <LQ>Anything I should train around?</LQ>
-              <LHint>Tap any that apply — I&apos;ll route your workout around them. (None is totally fine.)</LHint>
-              <div className="flex flex-wrap gap-2 mb-8">
-                {INJURIES.map((i) => (
-                  <button key={i.v} onClick={() => toggleInjury(i.v)} className={`px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${injuries.includes(i.v) ? 'bg-white border-gold text-ink shadow-[0_4px_20px_rgba(201,168,76,0.14)]' : 'bg-white border-ink/10 text-ink/50 hover:border-gold/50'}`}>{i.l}</button>
-                ))}
-              </div>
-              <button onClick={next} className={lPrimaryBtn}>{injuries.length ? 'Continue →' : 'None — continue →'}</button>
-            </>)}
-
-            {s === 'food' && (<>
-              <LQ>Now let&apos;s make the food *yours*.</LQ>
-              <LHint>This is how I build meals you actually crave, not ones you&apos;ll dread.</LHint>
-              <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Foods you love</label>
-              <input ref={primaryInputRef} value={f.food_preferences} onChange={(e) => set('food_preferences', e.target.value)} placeholder="e.g. chicken, rice bowls, tacos" className={`${linput} mb-3`} autoCorrect="off" spellCheck={false} />
-              <label className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Dislikes / allergies</label>
-              <input value={f.dislikes_allergies} onChange={(e) => set('dislikes_allergies', e.target.value)} placeholder="e.g. no mushrooms, dairy-free" className={`${linput} mb-6`} autoCorrect="off" spellCheck={false} />
-              <button onClick={next} className={lPrimaryBtn}>Continue →</button>
-            </>)}
-
-            {s === 'eating' && (() => {
-              const budget = Number(f.meal_budget) || (f.eat_style === 'cook' ? 6 : 12)
-              return (<>
-              <LQ>How do you usually eat?</LQ>
-              <LHint>Your Nutrition tab will pick meals that fit how you live and what you want to spend.</LHint>
-              <div className="space-y-3 mb-8">
-                {[{ v: 'cook', l: 'I mostly cook' }, { v: 'out', l: 'I mostly eat out' }].map((o) => (
-                  <button key={o.v} onClick={() => { hapticTap(); setF((st) => ({ ...st, eat_style: o.v, meal_budget: st.eat_style === o.v ? st.meal_budget : '' })) }} className={lopt(f.eat_style === o.v)}>{o.l}</button>
-                ))}
-              </div>
-              {f.eat_style && (<>
-                <label htmlFor="meal-budget" className="text-ink/40 text-xs uppercase tracking-wider mb-1 block">Most you&apos;d spend on one meal</label>
-                <p className="text-gold text-4xl font-bold text-center my-2 tabular-nums">${budget}{budget >= 30 ? '+' : ''}</p>
-                <input id="meal-budget" type="range" min={f.eat_style === 'cook' ? 2 : 5} max={30} step={1} value={budget}
-                  onChange={(e) => set('meal_budget', e.target.value)} className="w-full accent-[#c9a84c] mb-1" />
-                <div className="flex justify-between text-ink/35 text-xs mb-8"><span>${f.eat_style === 'cook' ? 2 : 5}</span><span>$30+</span></div>
-              </>)}
-              {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
-              {editMode ? (
-                <button onClick={() => { setTier('optional'); setStep(0) }} className={lPrimaryBtn}>Continue →</button>
-              ) : (
-                <button onClick={() => build(false)} disabled={!f.eat_style} className={lPrimaryBtn}>✨ Build my plan</button>
-              )}
-            </>)
-            })()}
-          </Screen>
-        </div>
-      </div>
+      <NewFlow
+        f={f} setF={(fn) => setF((s) => ({ ...s, ...fn(s) }))}
+        goals={goals} setGoals={setGoals} payoffs={payoffs} setPayoffs={setPayoffs}
+        injuries={injuries} setInjuries={setInjuries}
+        lifeStage={lifeStage} setLifeStage={setLifeStage} whyOwn={whyOwn} setWhyOwn={setWhyOwn}
+        never={never} setNever={setNever} neverOther={neverOther} setNeverOther={setNeverOther}
+        error={error} editMode={editMode}
+        onBuild={() => build(false)}
+        onEditDone={() => { setTier('optional'); setStep(0) }}
+        onExit={() => { router.refresh(); router.push('/plan') }}
+      />
     )
   }
 
@@ -767,16 +426,6 @@ function ConversationalIntakeInner() {
             <button onClick={next} disabled={!trainingStyles.length} className={primaryBtn}>Continue →</button>
           </>)}
 
-          {s === 'days' && (<>
-            <Q>How many days a week can you train?</Q>
-            <Hint>Be honest — consistency beats intensity.</Hint>
-            <div className="grid grid-cols-3 gap-3">
-              {['3', '4', '5', '6'].map((d) => (
-                <button key={d} onClick={() => pick('days_per_week', d)} className={`py-6 rounded-2xl border text-2xl font-bold ${f.days_per_week === d ? 'bg-charcoal bg-gradient-to-br from-gold/20 to-charcoal text-gold border-gold' : 'bg-charcoal border-smoke text-white hover:border-gold/50'}`}>{d}</button>
-              ))}
-            </div>
-          </>)}
-
           {s === 'cook' && (<>
             <Q>How many days do you want to cook?</Q>
             <Hint>Cook once and I&apos;ll stretch it, or cook fresh more often — your call.</Hint>
@@ -787,8 +436,6 @@ function ConversationalIntakeInner() {
                 </button>
               ))}
             </div>
-            <label className="text-ivory/50 text-xs uppercase tracking-wider mb-1 block">Weekly food budget ($) — optional</label>
-            <input type="number" inputMode="numeric" value={f.weekly_food_budget} onChange={(e) => set('weekly_food_budget', e.target.value)} placeholder="e.g. 90" className={`${input} mb-6`} autoCorrect="off" autoCapitalize="off" spellCheck={false} />
             <button onClick={next} disabled={!f.cook_days_per_week} className={primaryBtn}>Continue →</button>
           </>)}
 

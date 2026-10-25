@@ -5,7 +5,7 @@
 // re-derived or duplicated — the next-action engine, pushes, and the intake/
 // preferences UI all read the exact same list below.
 
-export type Payoff = 'energy' | 'kids' | 'mood' | 'family' | 'look'
+export type Payoff = 'energy' | 'kids' | 'mood' | 'family' | 'look' | 'health' | 'confidence'
 
 export const PAYOFF_OPTIONS: { v: Payoff; label: string; desc: string }[] = [
   { v: 'energy', label: 'My energy', desc: 'Feeling less drained day to day' },
@@ -13,6 +13,9 @@ export const PAYOFF_OPTIONS: { v: Payoff; label: string; desc: string }[] = [
   { v: 'mood', label: 'My mood', desc: 'Feeling steadier, less on edge' },
   { v: 'family', label: 'My family', desc: 'Being around, in good shape, longer' },
   { v: 'look', label: 'How I want to look', desc: 'Feeling good in my own skin' },
+  // Added 2026-10-25 with the new intake (Asa's mockup): health + confidence.
+  { v: 'health', label: 'My health', desc: 'Feeling strong and well for years' },
+  { v: 'confidence', label: 'Confidence', desc: 'Walking in the room feeling like me' },
 ]
 
 const VALID = new Set<string>(PAYOFF_OPTIONS.map((o) => o.v))

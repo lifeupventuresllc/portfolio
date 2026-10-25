@@ -51,6 +51,18 @@ const TEMPLATES: Record<Payoff, string[]> = {
     "This is exactly the kind of day that moves the needle.",
     "Feeling good in your skin starts with days exactly like this.",
   ],
+  health: [
+    "This is how you stay strong for the long run.",
+    "Your future self is thanking you for this one.",
+    "This is health you can feel, not just numbers on a chart.",
+    "Days like this are what keep you well for years.",
+  ],
+  confidence: [
+    "This is how you walk in the room feeling like you.",
+    "Every one of these adds to how you carry yourself.",
+    "This is the kind of day that builds real confidence.",
+    "You keep a promise to yourself every time you do this.",
+  ],
 }
 
 // Picks one of her real stored payoffs (if she has more than one, a random
