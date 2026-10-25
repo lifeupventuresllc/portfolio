@@ -110,7 +110,7 @@ const ENCOURAGEMENTS = [
 // centered instruction + one gold button, for the first screen of Home when
 // she's signed in and has a plan (components/HomeSwipe.tsx). Same engine, same
 // fetch, same done/route logic as the dock — only the presentation differs.
-export default function NextActionCard({ variant = 'full', hasPlan = true, firstRun = false }: { variant?: 'full' | 'dock' | 'hero'; hasPlan?: boolean; firstRun?: boolean }) {
+export default function NextActionCard({ variant = 'full', hasPlan = true, firstRun = false, heroSub, heroFooter }: { variant?: 'full' | 'dock' | 'hero'; hasPlan?: boolean; firstRun?: boolean; heroSub?: React.ReactNode; heroFooter?: React.ReactNode }) {
   const router = useRouter()
   const [action, setAction] = useState<NextAction | null>(null)
   const [loading, setLoading] = useState(true)
@@ -487,86 +487,50 @@ export default function NextActionCard({ variant = 'full', hasPlan = true, first
     // functional" per the usability research he shared) — it only moves
     // when she actually taps it.
     const { headline } = heroCopy(action.kind, action.instruction)
-    const headlineSize = headline.length > 90
-      ? 'clamp(19px, 5.2vw, 23px)'
-      : headline.length > 60
-        ? 'clamp(21px, 6vw, 26px)'
-        : 'clamp(24px, 7vw, 30px)'
     // Status line = what tapping the circle DOES, shown before she taps it;
     // goLabel = what it says the moment the ring finishes. Separate from
     // EXPANSION_ROUTE's labels used elsewhere (dock/full "Start" pill) —
     // this is a sentence read inside a circle, not a short button word.
-    const heroStatus: Partial<Record<ActionKind, string>> = { workout: 'Tap to start', location: 'Tap to see your picks', coach: 'Tap to talk it through', partner: 'Tap to check in' }
-    const statusLabel = isPassive ? 'Tap when done' : heroStatus[action.kind]
+    // 2026-10-25 simple look (Asa: same feel as the new intake): no circle —
+    // a big slanted headline over her photo and one big gold button. Same
+    // action, same heroTap, same "let's go" moment when she taps.
+    const heroButton: Partial<Record<ActionKind, string>> = { workout: 'Start', location: 'See my picks', coach: 'Talk it through', partner: 'Check in' }
+    const buttonLabel = isPassive ? 'Done' : heroButton[action.kind]
     const goLabel = isPassive ? 'Nice!' : "Let's go"
-    const showCircleAction = action.kind !== 'complete' && isTappable && !!statusLabel
-    // r=115 on a 238-unit viewBox (matches the approved mockup exactly) —
-    // circumference below is 2*pi*r, kept as a literal so the SVG's own
-    // dasharray/dashoffset numbers are easy to eyeball against it.
-    const RING_R = 115
-    const RING_CIRCUMFERENCE = 722
+    const showAction = action.kind !== 'complete' && isTappable && !!buttonLabel
+    const big = headline.length > 60 ? 44 : headline.length > 32 ? 58 : 76
+    const HEAD = "var(--font-barlow), 'Barlow Condensed', sans-serif"
+    const MONO = "var(--font-jbmono), 'JetBrains Mono', monospace"
     return (
-      <div className="text-center" style={{ fontFamily: 'var(--font-poppins)' }}>
+      <div className="flex flex-col gap-3 text-left" style={{ fontFamily: "var(--font-inter), Inter, system-ui, sans-serif" }}>
         {celebration && (
-          <button
-            onClick={() => setCelebration(null)}
-            className="w-full text-left rounded-xl px-3 py-2 mb-5 flex items-start gap-2 active:scale-[0.99] transition-transform"
-            style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(229,169,60,0.5)' }}
-          >
+          <button onClick={() => setCelebration(null)} className="nf-press w-full text-left rounded-2xl px-3.5 py-2.5 flex items-start gap-2"
+            style={{ background: 'rgba(2,31,22,0.75)', border: '1px solid rgba(229,169,60,0.5)' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="#E5A93C" className="shrink-0 mt-0.5"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2Z" /></svg>
-            <span className="text-white text-xs font-semibold">{celebration}, love — you&apos;ve kept showing up, and you deserve it.</span>
+            <span className="text-white text-[13px] font-semibold">{celebration}, love — you&apos;ve kept showing up, and you deserve it.</span>
           </button>
         )}
-
-        <div
-          role={showCircleAction ? 'button' : undefined}
-          tabIndex={showCircleAction ? 0 : undefined}
-          onClick={showCircleAction ? heroTap : undefined}
-          onKeyDown={showCircleAction ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); heroTap() } } : undefined}
-          aria-label={showCircleAction ? statusLabel : undefined}
-          className="relative mx-auto rounded-full"
-          style={{
-            // Made bigger, Asa's ask 2026-09-28 (live screenshot review) —
-            // matches the old pre-strip-down circle's own max size (300px).
-            width: 'clamp(240px, 78vw, 300px)', height: 'clamp(240px, 78vw, 300px)',
-            cursor: showCircleAction ? 'pointer' : 'default',
-            background: 'radial-gradient(65% 65% at 50% 34%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(160deg, #0d3a2a 0%, #06231a 55%, #021F16 100%)',
-            boxShadow: '0 16px 34px -14px rgba(0,0,0,0.6), inset 0 0 0 1.5px rgba(229,169,60,0.5)',
-          }}
-        >
-          <svg className="absolute inset-[-4px]" viewBox="0 0 238 238" style={{ transform: 'rotate(-90deg)' }} aria-hidden>
-            <circle
-              cx="119" cy="119" r={RING_R} fill="none" stroke="#E5A93C" strokeWidth="3" strokeLinecap="round"
-              strokeDasharray={RING_CIRCUMFERENCE}
-              strokeDashoffset={heroStarting ? 0 : RING_CIRCUMFERENCE}
-              style={{ transition: heroStarting ? `stroke-dashoffset ${HERO_DURATION}ms cubic-bezier(0.3,0.6,0.3,1)` : 'none' }}
-            />
-          </svg>
-
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center px-6"
-            style={{ opacity: heroStarting ? 0 : 1, transform: heroStarting ? 'scale(0.94)' : 'scale(1)', transition: 'opacity 0.3s ease, transform 0.3s ease' }}
-          >
-            <p className="text-[10.5px] font-bold uppercase" style={{ color: '#E5A93C', letterSpacing: '0.16em' }}>Today&apos;s win</p>
-            <h1 className="text-white leading-[1.12] mt-2 font-bold text-balance" style={{ fontSize: headlineSize }}>{headline}</h1>
-            {statusLabel && <p className="text-white/65 text-[11px] font-semibold mt-2.5">{statusLabel}</p>}
-          </div>
-
-          {showCircleAction && (
-            <div
-              className="absolute inset-0 flex items-center justify-center gap-1.5 font-bold text-white"
-              style={{ fontSize: 17, opacity: heroStarting ? 1 : 0, transform: heroStarting ? 'scale(1)' : 'scale(0.92)', transition: 'opacity 0.3s ease 0.15s, transform 0.3s ease 0.15s' }}
-            >
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
-              {goLabel}
-            </div>
-          )}
-        </div>
-
-        {action.kind === 'complete' && (
-          <p className="text-white/50 text-xs mt-6">That&apos;s everything for today. Swipe up for your feed.</p>
+        <span className="nf-rise" style={{ animationDelay: '.1s', fontFamily: MONO, fontSize: 13, fontWeight: 700, letterSpacing: '.2em', color: '#E5A93C' }}>TODAY&apos;S WIN</span>
+        <h1 className="nf-head text-balance" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: big, lineHeight: 0.88, textTransform: 'uppercase', color: '#EDE7DA' }}>{headline}</h1>
+        {heroSub && <div className="nf-rise text-[16px]" style={{ animationDelay: '.3s', color: 'rgba(237,231,218,.85)' }}>{heroSub}</div>}
+        {showAction && (
+          <button onClick={heroTap} className="nf-press nf-rise relative overflow-hidden mt-1.5 h-16 rounded-full flex items-center justify-center gap-2.5"
+            style={{ animationDelay: '.4s', background: '#E5A93C', color: '#021F16', fontFamily: MONO, fontWeight: 700, fontSize: 17, letterSpacing: '.14em' }} aria-label={buttonLabel}>
+            {/* fills left to right while it starts — same timing as before */}
+            <span className="absolute inset-y-0 left-0" style={{ width: heroStarting ? '100%' : '0%', background: 'rgba(2,31,22,.14)', transition: heroStarting ? `width ${HERO_DURATION}ms cubic-bezier(0.3,0.6,0.3,1)` : 'none' }} />
+            <span className="relative flex items-center gap-2.5 uppercase">
+              {heroStarting ? (
+                <><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#021F16" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 13l4 4L19 7" /></svg>{goLabel}</>
+              ) : (
+                <>{action.kind === 'workout' && <svg width="18" height="18" viewBox="0 0 24 24" fill="#021F16" aria-hidden><path d="M7 4l13 8-13 8z" /></svg>}{buttonLabel}</>
+              )}
+            </span>
+          </button>
         )}
-
+        {action.kind === 'complete' && (
+          <p className="text-[15px]" style={{ color: 'rgba(237,231,218,.75)' }}>That&apos;s everything for today. Swipe up for your feed.</p>
+        )}
+        {heroFooter && <div className="nf-rise" style={{ animationDelay: '.5s' }}>{heroFooter}</div>}
         <ReminderPrompt trigger={askReminder} />
       </div>
     )

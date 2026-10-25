@@ -240,7 +240,7 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
   const isGuest = !!user.is_anonymous
 
   return (
-    <div className="min-h-[100dvh] bg-obsidian px-4 py-8">
+    <div className="min-h-[100dvh] px-4 pt-0 pb-6" style={{ background: '#021F16' }}>
       <WorkoutPlayer program={program} firstName={firstName} hasRealName={hasRealName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} askQuickstartGoal={askQuickstartGoal} isGuest={isGuest} />
       {/* The quickstart flow (QuickstartWorkout) only ever shows its home/gym
           picker once, on the very first build — real behavior, not a bug, since
@@ -250,7 +250,7 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
           uses (see the trackOverride block above), rather than building a
           second, separate switching path. */}
       <div className="max-w-lg mx-auto text-center mt-6">
-        <a href="/plan/coach" className="text-ivory/40 text-sm underline underline-offset-4">
+        <a href="/plan/coach" className="text-sm underline underline-offset-4" style={{ color: 'rgba(237,231,218,.45)' }}>
           Training somewhere different today? Tell Coach
         </a>
       </div>

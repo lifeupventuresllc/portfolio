@@ -10,6 +10,8 @@ import FeedEngagementRail from '@/components/FeedEngagementRail'
 import HomeSwipe from '@/components/HomeSwipe'
 import StartPlanBar from '@/components/StartPlanBar'
 import WelcomeVideo from '@/components/WelcomeVideo'
+import LunchChip from '@/components/LunchChip'
+import { whyTitle } from '@/lib/payoff'
 import { getFeedVideos } from '@/lib/feed-videos'
 import { affirmationForDay } from '@/lib/affirmations'
 import { localDayNumber, localDateISO } from '@/lib/localdate'
@@ -152,9 +154,15 @@ export default async function PlanDashboard() {
   // (not a second client fetch) since this page already has `svc`+`enrollment`
   // in scope and streakFrom is a cheap pure function.
   let streak = 0
+  let why: string | null = null
   if (hasPlan) {
-    const { data: dailyRows } = await svc.from('challenge_progress').select('logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__')
+    const [{ data: dailyRows }, { data: intakeRow }] = await Promise.all([
+      svc.from('challenge_progress').select('logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
+      svc.from('challenge_intake').select('form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
+    ])
     streak = streakFrom(new Set((dailyRows || []).map((r) => r.logged_on as string)), localDateISO())
+    const fd = (intakeRow?.form_data || {}) as { payoffs?: unknown; why_own?: unknown }
+    why = whyTitle(fd.payoffs, fd.why_own)
   }
 
   // Layout notes kept from the earlier feed-first dashboard: h-[100dvh] with
@@ -172,39 +180,29 @@ export default async function PlanDashboard() {
     </div>
   )
 
+  // Today's win (2026-10-25, Asa's pick — same simple look as the new
+  // intake): her photo full screen, the win in big slanted letters, her why,
+  // one gold button, and her next meal already picked. Same NextActionCard
+  // logic underneath — only the look changed.
   const heroNode = (
-    <div
-      className="absolute inset-0 flex flex-col items-center justify-center px-6"
-      style={{
-        background: 'radial-gradient(90% 55% at 50% 40%, rgba(229,169,60,0.10), transparent 60%), linear-gradient(180deg, #06231a 0%, #021F16 45%, #010b07 100%)',
-        paddingBottom: 90,
-      }}
-    >
-      <div className="w-full max-w-md">
-        {/* Greeting card (Asa's approved mockup round, 2026-09-28: "version B" —
-            the streak as a small gold sticker tucked in the corner, not a
-            separate line competing with the win below). Same card
-            gradient/border this page's own shell() above already uses for its
-            other screens — not a new color introduced just for this one. */}
-        <div
-          className="relative rounded-2xl px-4 py-3 mb-4 text-left"
-          style={{ background: 'linear-gradient(135deg, #0d3a2a, #044A34 60%, #08281d)', border: '1.5px solid #E5A93C' }}
-        >
+    <div className="absolute inset-0 overflow-hidden" style={{ background: '#021F16' }}>
+      <div className="absolute inset-0 home-hero-photo" style={{ backgroundImage: 'url(/_next/image?url=%2Fimages%2Fapp%2Fpexels-7746282.jpg&w=1080&q=70)', backgroundSize: 'cover', backgroundPosition: 'center 22%' }} />
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,.6) 0%, rgba(2,31,22,.05) 20%, rgba(2,31,22,.3) 40%, rgba(2,31,22,.9) 58%, #021F16 70%)' }} />
+      <style>{`.home-hero-photo{animation:homeKb 12s ease-out both}@keyframes homeKb{from{transform:scale(1.12)}to{transform:scale(1)}}@media (prefers-reduced-motion: reduce){.home-hero-photo{animation:none}}`}</style>
+      <div className="relative h-full max-w-md mx-auto px-5 flex flex-col" style={{ paddingTop: 'calc(18px + env(safe-area-inset-top))', paddingBottom: 96 }}>
+        <div className="flex justify-between items-center">
+          <span style={{ fontFamily: 'var(--font-jbmono), monospace', fontSize: 13, fontWeight: 700, letterSpacing: '.14em', color: '#EDE7DA' }}>HEY {firstName.toUpperCase()}</span>
           {streak >= 1 && (
-            <span
-              className="absolute -top-2.5 -right-2 flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-bold"
-              style={{ background: '#E5A93C', color: '#0A0A0F', fontFamily: 'var(--font-poppins)', boxShadow: '0 4px 10px rgba(0,0,0,0.35)' }}
-            >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="#0A0A0F"><path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c1 1 2 2 2 4a5 5 0 0 1-10 0c0-5 5-6 5-13Z" /></svg>
-              {streak} day{streak === 1 ? '' : 's'}
+            <span className="flex items-center gap-1.5 rounded-full px-3 py-2" style={{ background: '#EDE7DA', color: '#021F16', fontFamily: 'var(--font-jbmono), monospace', fontSize: 12, fontWeight: 700, letterSpacing: '.06em' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#E5A93C" stroke="#021F16" strokeWidth="1.5" aria-hidden><path d="M12 2c1 4 5 5 5 10a5 5 0 01-10 0c0-3 2-4 2-7 2 1 3 2 3 4 0-3 0-5 0-7z" /></svg>
+              {streak}-DAY STREAK
             </span>
           )}
-          <p className="text-white font-bold" style={{ fontFamily: 'var(--font-poppins)', fontSize: 18 }}>Hey {firstName}</p>
         </div>
-        {affirmation && (
-          <p className="text-center italic leading-snug mb-4 text-balance" style={{ fontFamily: 'var(--font-poppins)', fontSize: 11.5, color: 'rgba(229,169,60,0.85)' }}>&ldquo;{affirmation}&rdquo;</p>
-        )}
-        <NextActionCard variant="hero" hasPlan />
+        <div className="flex-1" />
+        <NextActionCard variant="hero" hasPlan
+          heroSub={why ? `${why} One step today, that\u2019s the whole win.` : affirmation ? `\u201c${affirmation}\u201d` : undefined}
+          heroFooter={<LunchChip />} />
       </div>
     </div>
   )

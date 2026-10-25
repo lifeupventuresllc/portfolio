@@ -34,27 +34,19 @@ export default function ProgressViewToggle({ plan, garden }: { plan: ReactNode; 
     // Today keeps flexShrink:0 so its long scrollable content is never
     // compressed — it just grows the page and scrolls, same as before.
     <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 }}>
-      {/* HUD redesign (2026-09-04, Asa's pick): green active state instead of
-          gold, matching the rest of this page's recolor — angled corners
-          instead of a full pill, same family as the quest-plate/CTA shapes
-          elsewhere on /plan/today. Still just a visual restyle: same tabs,
-          same localStorage-remembered pick, same Garden underneath. */}
-      <div className="flex gap-1.5 mb-4" style={{ flex: '0 0 auto' }}>
-        {([['garden', 'Progress'], ['plan', 'Today']] as const).map(([t, label]) => (
-          <button
-            key={t}
-            onClick={() => pick(t)}
-            className="flex-1 text-center text-[10.5px] font-bold uppercase tracking-[0.14em] py-2.5 transition-colors"
-            style={tab === t
-              ? { background: 'linear-gradient(135deg, rgba(127,230,179,0.22), rgba(76,175,125,0.12))', border: '1px solid rgba(127,230,179,0.6)', color: '#eafff2', clipPath: 'polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)' }
-              : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(76,175,125,0.22)', color: '#6fae8e', clipPath: 'polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)' }}
-          >
+      {/* 2026-10-25 simple look (Asa: the HUD "feels like a video game"):
+          one rounded pill, cream for the open tab, Today first. Same tabs,
+          same remembered pick. */}
+      <div className="grid grid-cols-2 rounded-full p-1 mb-4" style={{ flex: '0 0 auto', background: 'rgba(237,231,218,.08)' }}>
+        {([['plan', 'Today'], ['garden', 'Progress']] as const).map(([t, label]) => (
+          <button key={t} onClick={() => pick(t)} className="nf-press h-10 rounded-full uppercase"
+            style={{ background: tab === t ? '#EDE7DA' : 'transparent', color: tab === t ? '#021F16' : '#EDE7DA', fontFamily: "var(--font-jbmono), monospace", fontSize: 13, fontWeight: 700, letterSpacing: '.1em' }}>
             {label}
           </button>
         ))}
       </div>
-      <div style={{ display: tab === 'garden' ? 'flex' : 'none', flexDirection: 'column', flex: '1 1 0%', minHeight: 0 }}>{garden}</div>
-      <div style={{ display: tab === 'plan' ? 'block' : 'none', flex: '1 1 auto', flexShrink: 0 }}>{plan}</div>
+      <div className={tab === 'garden' ? 'nf-screen' : ''} style={{ display: tab === 'garden' ? 'block' : 'none', flex: '1 1 auto', flexShrink: 0 }}>{garden}</div>
+      <div className={tab === 'plan' ? 'nf-screen' : ''} style={{ display: tab === 'plan' ? 'block' : 'none', flex: '1 1 auto', flexShrink: 0 }}>{plan}</div>
     </div>
   )
 }

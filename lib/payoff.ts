@@ -24,3 +24,15 @@ export function parseStoredPayoffs(raw: unknown): Payoff[] {
   if (!Array.isArray(raw)) return []
   return raw.filter((v): v is Payoff => typeof v === 'string' && VALID.has(v))
 }
+
+// Short "who it's for" line shown on Home and My Day (2026-10-25). Her own
+// typed words win; else her first picked reason; null when she gave none.
+const WHY_TITLE: Record<string, string> = {
+  energy: 'For your energy.', kids: 'For your kids.', mood: 'For your peace of mind.', family: 'For your family.',
+  look: 'For you, feeling good in your skin.', health: 'For your health.', confidence: 'For your confidence.',
+}
+export function whyTitle(payoffs: unknown, whyOwn?: unknown): string | null {
+  if (typeof whyOwn === 'string' && whyOwn.trim()) return `“${whyOwn.trim()}”`
+  const first = parseStoredPayoffs(payoffs).find((p) => WHY_TITLE[p])
+  return first ? WHY_TITLE[first] : null
+}

@@ -11,7 +11,7 @@ import QuickstartGoalAsk from '@/components/QuickstartGoalAsk'
 import WorkoutMusicPlayer from '@/components/WorkoutMusicPlayer'
 import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { buildSteps, dayLabels, estimateWorkoutMinutes, trimStepsToTarget, type WorkoutStep } from '@/lib/workout-steps'
-import { GOAL_LABEL, type WorkoutProgram } from '@/lib/workout'
+import type { WorkoutProgram } from '@/lib/workout'
 import { hapticTap } from '@/lib/haptics'
 import { playCountdownBeep, unlockAudioContext } from '@/lib/countdown-beep'
 
@@ -22,28 +22,13 @@ function formatClock(totalSeconds: number): string {
 }
 
 function PlayIcon() {
-  return <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
 }
 function PauseIcon() {
-  return <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" /><rect x="14" y="5" width="4" height="14" /></svg>
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" /><rect x="14" y="5" width="4" height="14" /></svg>
 }
 function CheckIcon() {
-  return <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M4 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-}
-function SkipBackIcon() {
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM20 6v12l-8.5-6z" /></svg>
-}
-function SkipForwardIcon() {
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4 6l8.5 6L4 18z" /></svg>
-}
-function DumbbellIcon() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gold/40">
-      <path d="M6.5 9v6M4 10v4M17.5 9v6M20 10v4M9 12h6" strokeLinecap="round" strokeLinejoin="round" />
-      <rect x="5" y="8" width="3" height="8" rx="1" />
-      <rect x="16" y="8" width="3" height="8" rx="1" />
-    </svg>
-  )
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M4 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
 }
 
 // Guided in-workout player. Opens straight into TODAY'S session (no picker
@@ -275,27 +260,34 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
     return () => clearInterval(id)
   }, [i, dayIdx, paused, isTimed, done, showEffortTap])
 
+  // ---------- Look (2026-10-25, Asa: same simple feel as the new intake) ----------
+  // Only the look changed below — every timer, save, effort and skip rule
+  // above is exactly as it was.
+  const INK = '#EDE7DA', GOLD = '#E5A93C', BG = '#021F16', MUTE = 'rgba(237,231,218,.72)'
+  const HEAD = "var(--font-barlow), 'Barlow Condensed', sans-serif"
+  const MONO = "var(--font-jbmono), 'JetBrains Mono', monospace"
+  const pill = { fontFamily: MONO, fontWeight: 700, letterSpacing: '.1em' } as const
+
   // ---------- Finished ----------
   if (done) {
     return (
-      <div className="max-w-lg mx-auto text-center q-in-fwd py-10">
+      <div className="max-w-md mx-auto text-center nf-screen pt-10 pb-6 flex flex-col items-center" style={{ color: INK }}>
         <Confetti fire={done} />
-        <p className="text-6xl mb-4">🔥</p>
-        <h1 className="text-3xl font-bold text-white mb-2">That&apos;s done{hasRealName ? `, ${firstName}` : ''}.</h1>
-        <p className="text-ivory/60 text-sm mb-8">You showed up and you finished. That&apos;s the whole game. I logged it for your streak.</p>
+        <span className="w-20 h-20 rounded-full flex items-center justify-center mb-6" style={{ background: GOLD }}>
+          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke={BG} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12l5 5 9-10" /></svg>
+        </span>
+        <h1 className="nf-head" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 58, lineHeight: 0.88, textTransform: 'uppercase' }}>That&apos;s done{hasRealName ? `, ${firstName}` : ''}.</h1>
+        <p className="text-[15px] mt-3 mb-7" style={{ color: MUTE }}>You showed up and you finished. That&apos;s the whole game. It&apos;s logged for your streak.</p>
         <EffortTap />
-        {/* Real gap found live, 2026-09-21 (new-visitor test): sign-in only
-            AFTER value. Guests only; reuses the existing save flow. */}
         {isGuest && !saveHidden && (
-          <div className="mt-6 rounded-2xl border border-gold/30 bg-gold/10 px-5 py-5">
-            <p className="text-white text-base font-bold">You did it. Tomorrow&apos;s is made for you.</p>
-            <p className="text-ivory/60 text-sm mt-1 mb-4">Keep your plan and progress? One tap.</p>
-            <a href="/plan/save" className="luf-glow block w-full bg-gold text-obsidian px-6 py-3.5 font-bold text-sm uppercase tracking-wider rounded-2xl">Save my plan</a>
-            <button onClick={() => setSaveHidden(true)} className="mt-3 text-ivory/40 text-xs underline underline-offset-4">Not now</button>
+          <div className="w-full mt-6 rounded-[22px] px-5 py-5" style={{ background: 'rgba(229,169,60,.12)', border: '1px solid rgba(229,169,60,.4)' }}>
+            <p className="text-base font-bold">You did it. Tomorrow&apos;s is made for you.</p>
+            <p className="text-sm mt-1 mb-4" style={{ color: MUTE }}>Keep your plan and progress? One tap.</p>
+            <a href="/plan/save" className="nf-press flex items-center justify-center w-full h-14 rounded-full uppercase" style={{ ...pill, background: GOLD, color: BG, fontSize: 15 }}>Save my plan</a>
+            <button onClick={() => setSaveHidden(true)} className="mt-3 text-xs underline underline-offset-4" style={{ color: 'rgba(237,231,218,.5)' }}>Not now</button>
           </div>
         )}
-        <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} className="luf-glow w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl mt-6">← Home</button>
-        <p className="text-gold text-sm font-semibold mt-4">— Coach</p>
+        <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} className="nf-press w-full h-16 rounded-full mt-6 uppercase" style={{ ...pill, background: GOLD, color: BG, fontSize: 16 }}>Home</button>
         <QuickFeedback category="workout" context={`${labels[dayIdx]} · day ${dayIdx + 1}`} dark reviewGate emphasize />
       </div>
     )
@@ -303,72 +295,54 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
 
   if (!step) return null
   const progress = Math.round(((i + 1) / steps.length) * 100)
+  const segmented = steps.length <= 20
+  const nameSize = step.name.length > 28 ? 40 : step.name.length > 18 ? 50 : 60
 
   return (
-    <div className="max-w-lg mx-auto flex flex-col min-h-[86vh]">
-      {/* Header: today's session + day switcher + back to week */}
-      <div className="flex items-center justify-between gap-3 mb-3">
-        {/* Real gap found live (beta feedback Priority 10, 2026-08-25): this
-            said "My week" but only ever went back to the dashboard — no real
-            week view existed. Now points at an actual one (app/plan/workout/
-            week), the direct proof that a saved preference change reshapes
-            the whole week, not just today. */}
-        {/* Real gap, Asa's direct ask 2026-08-31: an active session had NO way
-            back to the dashboard at all — "My week" only ever chained one
-            level (workout -> week), never a direct jump. Deliberately kept
-            small/plain text here, not the big gold pill used everywhere
-            else — a large, tempting exit control mid-session risks the exact
-            accidental-abandonment problem "My week" was already changed
-            away from once before (see the comment below); this is a real
-            escape hatch, not an invitation to bail. */}
-        <div className="flex items-center gap-2.5">
-          <button onClick={() => router.push('/plan/workout/week')} className="text-ivory/50 hover:text-gold text-xs font-semibold">← My week</button>
-          <span className="text-ivory/20 text-xs">·</span>
-          <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} className="text-ivory/50 hover:text-gold text-xs font-semibold">Home</button>
-          <span className="text-ivory/20 text-xs">·</span>
-          <button onClick={tapElsewhere} className={`text-xs font-semibold ${confirmElsewhere ? 'text-gold' : 'text-ivory/50 hover:text-gold'}`}>
-            {confirmElsewhere ? 'Tap again to confirm' : 'Trained elsewhere?'}
+    <div className="max-w-md mx-auto flex flex-col min-h-[100dvh] relative" style={{ color: INK, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif" }}>
+      {/* Photo — full width at the top; warm-up / rest / no-photo steps get a calm panel instead */}
+      <div key={`ph-${dayIdx}-${i}`} className="nf-screen relative -mx-4 h-[46vh] min-h-[300px] overflow-hidden" style={{ background: step.rest ? 'linear-gradient(160deg, #0B3B2B, #021F16)' : '#0B2E22' }}>
+        {step.imageUrl ? (
+          <Image src={step.imageUrl} alt={step.name} fill sizes="(max-width: 480px) 100vw, 480px" className="object-cover" priority />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 96, textTransform: 'uppercase', color: 'rgba(237,231,218,.08)' }}>{step.rest ? 'Breathe' : step.phase}</span>
+          </div>
+        )}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,.65) 0%, rgba(2,31,22,0) 22%, rgba(2,31,22,0) 55%, #021F16 100%)' }} />
+      </div>
+
+      {/* Top bar over the photo */}
+      <div className="absolute inset-x-0 top-0 flex flex-col gap-2.5" style={{ paddingTop: 'calc(4px + env(safe-area-inset-top))' }}>
+        {segmented ? (
+          <div className="flex gap-1">
+            {steps.map((_, k) => <span key={k} className="flex-1 h-1 rounded-full" style={{ background: k < i ? GOLD : k === i ? INK : 'rgba(237,231,218,.25)' }} />)}
+          </div>
+        ) : (
+          <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(237,231,218,.25)' }}>
+            <div className="h-1 rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: GOLD }} />
+          </div>
+        )}
+        <div className="flex items-center justify-between gap-2">
+          <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} aria-label="Close workout, go home" className="nf-press w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(2,31,22,.65)' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
+          <button onClick={() => setSwitching((x) => !x)} className="nf-press min-w-0 rounded-full px-3 py-2 text-[12px] font-semibold truncate" style={{ background: 'rgba(2,31,22,.65)' }}>
+            {labels[dayIdx].replace(/^Day \d+:\s*/, '')} · {estimateWorkoutMinutes(steps)} min ▾
+          </button>
+          <span className="rounded-full px-3 py-2 shrink-0" style={{ ...pill, fontSize: 12, background: INK, color: BG }}>{i + 1} OF {steps.length}</span>
         </div>
-        <button onClick={() => setSwitching((s) => !s)} className="text-center">
-          <p className="text-gold text-[10px] font-semibold tracking-[0.2em] uppercase">
-            {targetMinutes ? 'Shortened for today' : "Today's session"} · about {estimateWorkoutMinutes(steps)} min
-            {/* Real, not cosmetic — reps/sets and cardio duration are now
-                actually built for this goal (see lib/workout.ts's
-                repScheme()), not just labeled with it. */}
-            {(GOAL_LABEL as Record<string, string>)[program.goal] && ` · ${(GOAL_LABEL as Record<string, string>)[program.goal]}`}
-          </p>
-          <p className="text-white text-sm font-bold leading-tight">{labels[dayIdx]} <span className="text-ivory/40">▾</span></p>
-        </button>
-        <span className="text-ivory/50 text-xs tabular-nums w-10 text-right">{i + 1}/{steps.length}</span>
+        {switching && (
+          <div className="rounded-[20px] p-2 flex flex-col gap-1" style={{ background: 'rgba(2,31,22,.92)', border: '1px solid rgba(237,231,218,.14)' }}>
+            {labels.map((l, d) => (
+              <button key={d} onClick={() => selectDay(d)} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium"
+                style={{ background: d === dayIdx ? 'rgba(229,169,60,.15)' : 'transparent', color: d === dayIdx ? GOLD : 'rgba(237,231,218,.8)' }}>{l}</button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Real progressive-overload callout — see applyProgressiveOverload in
-          lib/workout.ts. Only ever appears once she's actually earned it. */}
-      {program.progressionNote && (
-        <p className="text-gold/90 text-xs font-medium text-center mb-3 -mt-1">{program.progressionNote}</p>
-      )}
-
-      {/* progress bar */}
-      <div className="h-1.5 bg-charcoal rounded-full overflow-hidden mb-4">
-        <div className="h-full bg-gold rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
-      </div>
-
-      <WorkoutMusicPlayer duck={musicDucked} />
-
-      {/* Day switcher sheet */}
-      {switching && (
-        <div className="mb-6 bg-charcoal border border-smoke rounded-2xl p-2 space-y-1">
-          {labels.map((l, d) => (
-            <button key={d} onClick={() => selectDay(d)}
-              className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${d === dayIdx ? 'bg-gold/15 text-gold' : 'text-ivory/70 hover:bg-obsidian'}`}>
-              {l}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div key={`${dayIdx}-${i}`} className="relative q-in-fwd flex-1 flex flex-col">
+      <div key={`${dayIdx}-${i}`} className="relative nf-screen flex-1 flex flex-col gap-2.5 -mt-16 px-1">
         {showEffortTap && steps[i - 1] && (
           <SetEffortTap
             exerciseName={steps[i - 1].name}
@@ -376,90 +350,55 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
             onDismiss={() => { handledRestIdx.current.add(i); setShowEffortTap(false) }}
           />
         )}
-        {/* Info + timer band — the countdown lives here now, not layered over
-            the image, so a real photo and a running clock can both show at
-            once instead of being an either/or (real gap that used to mean
-            the image never rendered for ANY timed step, home track included,
-            since every home exercise is timed). */}
-        <div className={`rounded-t-3xl px-5 py-4 flex items-center justify-between border border-b-0 ${step.rest ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-gold/10 border-gold/30'}`}>
-          <div>
-            <p className={`text-xs font-semibold tracking-[0.2em] uppercase ${step.rest ? 'text-emerald-400' : 'text-gold'}`}>{step.phase}</p>
-            <p className="text-ivory/50 text-xs font-medium mt-0.5 tabular-nums">Exercise {i + 1}/{steps.length}</p>
-          </div>
-          {isTimed && left != null && <p className="text-4xl font-bold text-white tabular-nums">{formatClock(left)}</p>}
+        <span style={{ ...pill, fontSize: 12, letterSpacing: '.16em', color: step.rest ? '#9FDCC4' : GOLD }}>{step.phase.toUpperCase()}{program.progressionNote && !step.rest ? ' · LEVELED UP' : ''}</span>
+        <h1 className="nf-head text-balance" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: nameSize, lineHeight: 0.88, textTransform: 'uppercase' }}>{step.name}</h1>
+        <div className="flex items-baseline gap-3 flex-wrap">
+          {isTimed && left != null ? (
+            <span className="tabular-nums" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 64, lineHeight: 1, color: GOLD }}>{formatClock(left)}</span>
+          ) : step.detail ? (
+            <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 46, lineHeight: 1, color: GOLD, textTransform: 'uppercase' }}>{step.detail}</span>
+          ) : null}
+          {isTimed && step.detail && <span className="text-[15px] font-semibold" style={{ color: MUTE }}>{step.detail}</span>}
         </div>
-
-        {/* Main card — image, name, reps/sets (large font throughout, per spec) */}
-        <div className="bg-charcoal border border-t-0 border-smoke rounded-b-3xl px-5 pt-6 pb-8 flex flex-col items-center text-center">
-          {step.imageUrl ? (
-            <div className="w-full max-w-sm aspect-[4/3] rounded-2xl overflow-hidden mb-5 bg-obsidian">
-              <Image src={step.imageUrl} alt={step.name} width={480} height={360} className="w-full h-full object-cover" />
-            </div>
-          ) : (
-            <div className="w-full max-w-sm aspect-[4/3] rounded-2xl mb-5 bg-obsidian border border-gold/20 flex items-center justify-center">
-              <DumbbellIcon />
-            </div>
-          )}
-
-          <h1 className="text-4xl font-bold text-white mb-2 leading-tight text-balance">{step.name}</h1>
-          {step.detail && <p className="text-gold text-2xl font-bold mb-3">{step.detail}</p>}
-          {step.cue && <p className="text-ivory/60 text-sm max-w-sm leading-relaxed">{step.cue}</p>}
-        </div>
+        {step.cue && <p className="text-[15px] leading-relaxed" style={{ color: MUTE }}>{step.cue}</p>}
+        {program.progressionNote && i === 0 && <p className="text-[13px]" style={{ color: GOLD }}>{program.progressionNote}</p>}
       </div>
 
-      {/* Transport controls — one big circular action in the center (pause/
-          resume for a timed step, a checkmark to advance for a rep-based
-          one), skip back/forward on either side. */}
-      <div className="mt-6">
-        <div className="flex items-center justify-center gap-6">
-          <button onClick={() => setI(Math.max(0, i - 1))} disabled={i === 0} aria-label="Previous step"
-            className="w-14 h-14 rounded-full bg-charcoal border border-smoke text-ivory/60 disabled:opacity-30 flex items-center justify-center active:scale-95 transition-transform">
-            <SkipBackIcon />
-          </button>
+      {/* Controls — one big gold button, two small ones */}
+      <div className="mt-5 flex flex-col gap-2.5 pb-2">
+        <WorkoutMusicPlayer duck={musicDucked} />
+        {step.rest ? (
+          <button onClick={skipStep} disabled={showEffortTap || isLastStep} className="nf-press w-full h-16 rounded-full uppercase disabled:opacity-40"
+            style={{ ...pill, fontSize: 16, background: '#9FDCC4', color: BG }}>Skip rest</button>
+        ) : (
           <button
-            onClick={isTimed ? () => setPaused((p) => !p) : () => { hapticTap(); advanceRef.current() }}
+            onClick={isTimed ? () => setPaused((x) => !x) : () => { hapticTap(); advanceRef.current() }}
             aria-label={isTimed ? (paused ? 'Resume' : 'Pause') : 'Done, next exercise'}
-            className="luf-glow w-20 h-20 rounded-full bg-gold text-obsidian flex items-center justify-center active:scale-95 transition-transform">
-            {isTimed ? (paused ? <PlayIcon /> : <PauseIcon />) : <CheckIcon />}
+            className="nf-press w-full h-16 rounded-full uppercase flex items-center justify-center gap-2.5"
+            style={{ ...pill, fontSize: 17, letterSpacing: '.12em', background: GOLD, color: BG }}>
+            {isTimed ? (paused ? <><PlayIcon /> Resume</> : <><PauseIcon /> Pause</>) : <><CheckIcon /> {isLastStep ? 'Finish' : 'Done · next'}</>}
           </button>
-          <button onClick={skipStep} disabled={isLastStep} aria-label="Skip to next step"
-            className="w-14 h-14 rounded-full bg-charcoal border border-smoke text-ivory/60 disabled:opacity-30 flex items-center justify-center active:scale-95 transition-transform">
-            <SkipForwardIcon />
-          </button>
+        )}
+        <div className="grid grid-cols-2 gap-2.5">
+          <button onClick={() => setI(Math.max(0, i - 1))} disabled={i === 0} className="nf-press h-12 rounded-full uppercase disabled:opacity-30"
+            style={{ ...pill, fontSize: 13, border: '2px solid rgba(237,231,218,.22)', color: INK }}>Back</button>
+          {step.rest && isTimed ? (
+            <button onClick={() => setPaused((x) => !x)} className="nf-press h-12 rounded-full uppercase" style={{ ...pill, fontSize: 13, border: '2px solid rgba(237,231,218,.22)', color: INK }}>{paused ? 'Resume' : 'Pause'}</button>
+          ) : (
+            <button onClick={skipStep} disabled={isLastStep} className="nf-press h-12 rounded-full uppercase disabled:opacity-30" style={{ ...pill, fontSize: 13, border: '2px solid rgba(237,231,218,.22)', color: INK }}>Skip</button>
+          )}
         </div>
-        {/* Goal question — only on a rest step, only once the effort question is
-            out of the way (answered/dismissed), so it can never cover it. Plain
-            state updates only: no router.refresh(), the open program stays put. */}
         {askQuickstartGoal && !goalHidden && step.rest && !showEffortTap && handledRestIdx.current.has(i) && (
-          <QuickstartGoalAsk
-            onDone={() => setGoalHidden(true)}
-            onSkip={() => setGoalHidden(true)}
-          />
+          <QuickstartGoalAsk onDone={() => setGoalHidden(true)} onSkip={() => setGoalHidden(true)} />
         )}
-        {/* Rest runs itself (countdown above); this is the big, obvious way to
-            cut it short. Held off while the effort question is open so that
-            question can't be skipped past by accident. Also held off on the
-            LAST step (rare, but a session can end on a rest step) — same
-            skip-loophole fix as the arrow above: the real countdown has to
-            reach zero for a rest step to be able to end the workout. */}
-        {/* Real gap found live, 2026-09-21 (monkey test): a faint 15%-opacity
-            fill read as a disabled ghost button and got missed next to the
-            loud gradient Easy/Difficult pop-up. Solid fill + real border +
-            dark text when enabled so it reads as a genuine tappable button;
-            the old dim/ghost look is now reserved for the disabled state only
-            (effort question open, or last step) so it still looks untappable
-            then. */}
-        {step.rest && (
-          <button onClick={skipStep} disabled={showEffortTap || isLastStep}
-            className="w-full mt-5 py-4 rounded-2xl bg-emerald-500 border-2 border-emerald-300 text-obsidian font-bold text-sm uppercase tracking-wider shadow-[0_8px_20px_-6px_rgba(16,185,129,0.5)] active:scale-95 transition-transform disabled:shadow-none disabled:bg-emerald-500/15 disabled:border-emerald-500/40 disabled:text-emerald-300 disabled:opacity-40">
-            Skip rest
-          </button>
-        )}
-        <p className="text-center text-ivory/40 text-xs mt-4">
-          {i + 1 < steps.length
-            ? <>Up next · <span className="text-ivory/70 font-medium">{steps[i + 1].name}</span></>
-            : "Last one — you're almost done"}
+        <p className="text-center text-[13px] mt-1" style={{ color: 'rgba(237,231,218,.55)' }}>
+          {i + 1 < steps.length ? <>Next: <span style={{ color: 'rgba(237,231,218,.85)' }}>{steps[i + 1].name}</span></> : "Last one. You're almost done."}
         </p>
+        <div className="flex items-center justify-center gap-3 text-xs mt-1" style={{ color: 'rgba(237,231,218,.5)' }}>
+          <button onClick={() => router.push('/plan/workout/week')} className="underline underline-offset-4">My week</button>
+          <span>·</span>
+          <button onClick={tapElsewhere} className="underline underline-offset-4" style={{ color: confirmElsewhere ? GOLD : undefined }}>{confirmElsewhere ? 'Tap again to confirm' : 'Trained elsewhere?'}</button>
+        </div>
       </div>
     </div>
   )

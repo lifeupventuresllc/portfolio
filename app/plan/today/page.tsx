@@ -2,17 +2,17 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import ProgressViewToggle from '@/components/ProgressViewToggle'
-import BuilderView from '@/components/BuilderView'
 import LifePatternCard from '@/components/LifePatternCard'
 import PlanEvolutionCard from '@/components/PlanEvolutionCard'
 import ClientMenu from '@/components/ClientMenu'
 import RebuildPlanButton from '@/components/RebuildPlanButton'
-import StreakChip from '@/components/StreakChip'
+import ProgressNew, { type DayDot } from './ProgressNew'
+import { streakFrom } from '@/lib/streak'
 import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday, resolveTodayCalorieTarget, resolvedDayType, scheduleDayType, workoutTodayStatus, type DayTargets } from '@/lib/fos/effective-plan'
+import { getEffectiveTodayWorkout, getEffectiveCalorieBudget, isEatingOutToday, resolveTodayCalorieTarget, scheduleDayType, workoutTodayStatus, type DayTargets } from '@/lib/fos/effective-plan'
 import { shortVersionFor } from '@/lib/workout-short'
 import { LIVE_CALL } from '@/lib/live-call'
 import { pickFocusDayIndex, type WorkoutProgram, type FocusArea } from '@/lib/workout'
@@ -78,7 +78,7 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
     svc.from('challenge_nutrition_plans').select('meals, calories, protein_g, day_targets').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('measurements, logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
-    svc.from('challenge_intake').select('form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
+    svc.from('challenge_intake').select('form_data, weight_lbs').eq('enrollment_id', enrollment.id).maybeSingle(),
     // Real numbers for the slim nutrition row below (Whoop-mockup match) — the
     // same challenge_food_log table FoodLog itself reads client-side, queried
     // here server-side so the glance row never has to wait on a second
@@ -119,7 +119,6 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   // /api/plan/food-log's own loadTarget() already reads for FoodLog's ring.
   // This page needs the same fallback so it never disagrees with FoodLog.
   const flatCalTarget = Number(nutritionPlan?.calories) || null
-  const flatProteinTarget = Number(nutritionPlan?.protein_g) || null
   const dayTargets = (nutritionPlan?.day_targets as DayTargets) || null
   const scheduledDayType = todayMeals?.dayType ?? scheduleDayType(dayTargets, mealIdx)
   // The real signal from the workout brain — did she actually do (or
@@ -130,18 +129,15 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   const workoutDoneToday = (doneRows || []).some((r) => r.logged_on === todayIso && (r.measurements as { workout?: boolean } | null)?.workout)
   const todaysWorkoutAction = (recentWorkoutActions || []).find((r) => localDateISO(tz, new Date(r.shown_at as string)) === todayIso)
   const workoutSimplifiedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)
-  const todaysDayType = resolvedDayType(scheduledDayType, workoutTodayStatus(workoutDoneToday, workoutSimplifiedToday))
   const baseCalTarget = resolveTodayCalorieTarget(todayMeals?.target, scheduledDayType, dayTargets, flatCalTarget, workoutTodayStatus(workoutDoneToday, workoutSimplifiedToday))
   // Protein anchors to bodyweight, not day type (buildBlueprint passes the
   // same protein_g into rest AND workout macrosFor calls) — no split needed.
-  const baseProteinTarget = todayMeals?.totalProtein ?? flatProteinTarget ?? undefined
   // Coach Asa adjusted today's calories? Reflect it in the budget — same as /plan's dashboard.
   const calBudget = baseCalTarget != null ? getEffectiveCalorieBudget(baseCalTarget, todayAdjustment) : null
   // Real numbers for the slim nutrition row (Whoop-mockup match) and the
   // hero ring's second half — what she's actually logged today, not what
   // the plan merely intends. foodLoggedToday also feeds the ring below.
   const loggedCalories = (foodRows || []).reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
-  const loggedProtein = (foodRows || []).reduce((sum, r) => sum + (Number(r.protein_g) || 0), 0)
   const calRemaining = calBudget != null ? Math.max(0, calBudget - loggedCalories) : null
   // Real bug fixed 2026-08-28 (Asa's live report): this used to mean "logged
   // ANY food today" — so one small snack lit up the ring's second half and
@@ -150,7 +146,6 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   // it, matching the same real-completion definition the circle's terminal
   // state uses (lib/next-action/candidates.ts's nutritionDoneToday). With no
   // budget to compare against, a real entry still counts.
-  const foodLoggedToday = calBudget != null ? loggedCalories >= calBudget : (foodRows || []).length > 0
 
   // She told Coach Asa she's eating out today (an ad-hoc chat approval, not a
   // pre-scheduled plan day) — the fixed meal list below is now irrelevant, she's
@@ -168,7 +163,6 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   // this card — see the comment there.
   // The hero ring's real "1/2" — two genuine today-specific wins (workout,
   // real logged food), not an arbitrary made-up score.
-  const dailyScore = (workoutDoneToday ? 1 : 0) + (foodLoggedToday ? 1 : 0)
   // The investment loop the app was missing: a real, banked number that makes
   // NOT coming back today feel like a loss. Reuses the exact same streak
   // definition already driving the dashboard chip, Monday memo, dip detection,
@@ -241,43 +235,59 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
   // ← Home stays gold on purpose (see the pre-intake branch above and
   // app/plan/nutrition/page.tsx) — that's nav chrome, already consistent
   // across every page today, untouched by this recolor.
-  const ACCENT = '#4CAF7D'
-  const INK = '#021F16'
-  const CARD_BG = 'radial-gradient(80% 60% at 50% 38%, rgba(76,175,125,0.14), transparent 60%), radial-gradient(140% 100% at 50% 115%, rgba(0,0,0,0.7), transparent 55%), linear-gradient(180deg, #06231a 0%, #021F16 45%, #010b07 100%)'
-  const CARD_BORDER = '1px solid rgba(76,175,125,0.24)'
-  const CARD_GLOW = 'none'
-  const CARD_TEXT = '#ffffff'
-  const CARD_MUTED = 'rgba(232,223,200,0.62)'
-  const CARD_ACCENT = '#4CAF7D'
-  // Simplify pass: every card on this page repeated this same three-property
-  // style object by hand — the actual friction that made scoping the gold
-  // recolor to just the budget card require several rounds of careful
-  // find-and-replace instead of one change. One definition, used everywhere.
-  const cardStyle = { background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW }
-  // Real, not guessed: the same rotation function the hero ring/session
-  // player use, one step ahead in completion count, no adjustment or focus
-  // override applied (those are today-only approvals, meaningless for a day
-  // that hasn't happened yet) — a locked preview, not an invented label.
+  // ---- Progress tab (2026-10-25): her real week ----
+  const isoAdd = (iso: string, n: number) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10) }
+  const monday = isoAdd(todayIso, -mealIdx)
+  const sunday = isoAdd(monday, 6)
+  const [{ data: weekFood }, { data: lastWeigh }] = await Promise.all([
+    svc.from('challenge_food_log').select('calories, logged_on').eq('enrollment_id', enrollment.id).gte('logged_on', monday).lte('logged_on', sunday),
+    svc.from('challenge_progress').select('weight_lbs').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+  ])
+  const calByDay = new Map<string, number>()
+  for (const f of weekFood || []) calByDay.set(f.logged_on as string, (calByDay.get(f.logged_on as string) || 0) + (Number(f.calories) || 0))
+  const workoutDays = new Set((doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).map((r) => r.logged_on as string))
+  // "On target" = she logged food that day and landed within about 10% of
+  // her number — never counts a day she logged nothing.
+  const onTarget = (iso: string) => { const c = calByDay.get(iso) || 0; return !!flatCalTarget && c >= flatCalTarget * 0.8 && c <= flatCalTarget * 1.1 }
+  const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+  const days: DayDot[] = DAY_NAMES.map((name, k) => {
+    const iso = isoAdd(monday, k), isToday = iso === todayIso, isFuture = iso > todayIso
+    const w = workoutDays.has(iso), f = onTarget(iso), cal = calByDay.get(iso) || 0
+    const parts: string[] = []
+    if (w) parts.push('workout done')
+    if (cal) parts.push(`${cal.toLocaleString('en-US')} cal logged${f ? ', on target' : ''}`)
+    const text = isFuture ? `${name}: already planned for you.`
+      : parts.length ? `${name}: ${parts.join('. ')}.`
+      : isToday ? `${name}: today. Your plan is ready when you are.` : `${name}: a quiet day. That's okay, you came back.`
+    return { label: name[0], iso, workout: w, foodOnTarget: f, isToday, isFuture, text }
+  })
+  const workoutsDone = days.filter((d) => d.workout).length
+  const workoutsGoal = Math.max(workoutsDone, program?.daysPerWeek || numDays || 3)
+  const foodDays = days.filter((d) => d.foodOnTarget).length
+  const startWeight = Number(intakeRow?.weight_lbs) || null
+  const lastWeight = Number(lastWeigh?.weight_lbs) || null
+  const weightChange = startWeight && lastWeight ? Math.round((lastWeight - startWeight) * 10) / 10 : null
+  const streak = streakFrom(checkinDates, todayIso)
+  const fd = (intakeRow?.form_data || {}) as { payoffs?: string[]; why_own?: string }
+  const WHY_TITLE: Record<string, string> = { energy: 'For your energy.', kids: 'For your kids.', mood: 'For your peace of mind.', family: 'For your family.', look: 'For you, feeling good in your skin.', health: 'For your health.', confidence: 'For your confidence.' }
+  const firstPayoff = (fd.payoffs || []).find((p) => WHY_TITLE[p])
+  const showUps = workoutsDone ? `${workoutsDone} workout${workoutsDone === 1 ? '' : 's'} this week is ${workoutsDone} time${workoutsDone === 1 ? '' : 's'} you showed up.` : 'Every workout this week is you showing up for it.'
+  const why = fd.why_own ? { title: `“${fd.why_own}”`, line: showUps } : firstPayoff ? { title: WHY_TITLE[firstPayoff], line: showUps } : null
+
+  // ---- Today tab look ----
+  const INK = '#EDE7DA', GOLD = '#E5A93C', BG = '#021F16', MUTE = 'rgba(237,231,218,.72)'
+  const HEAD = "var(--font-barlow), 'Barlow Condensed', sans-serif"
+  const MONO = "var(--font-jbmono), 'JetBrains Mono', monospace"
+  const label = (t: string, c = GOLD) => <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.1em', color: c }}>{t}</span>
   const tomorrowWorkout = program ? getEffectiveTodayWorkout(program, completed + 1, null, undefined) : null
+  const workoutName = (todayWorkout?.title || '').replace(/^Day \d+:\s*/, '')
+  const onTrack = workoutDoneToday || showedUpToday || (calBudget != null && loggedCalories > 0 && loggedCalories <= calBudget * 1.1)
 
   return (
-    // flex column filling the real leftover space after the header/toggle —
-    // flex:1 on the toggle's content region hands the Garden branch whatever
-    // is actually left, computed every layout pass instead of a guessed
-    // `calc(100dvh - Npx)` that goes stale the moment header content changes
-    // size on a given device. minHeight subtracts ONE known constant: the
-    // 64px `pb-16` app/plan/layout.tsx wraps every /plan/* page in to keep
-    // the fixed nav from covering content — without it Garden still comes up
-    // ~64px short of the nav even though it correctly fills this div (the
-    // gap was one level up, in an ancestor this file doesn't otherwise touch).
-    // No bottom padding here (py-6 → pt-6): a shared bottom pad on this same
-    // div would eat into Garden's fill the exact same way — the Today branch
-    // below adds its own pb-6 directly so its long list still gets breathing
-    // room before the nav, without Garden having to fight it.
-    <div className="px-4 pt-6 flex flex-col" style={{ minHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom))', background: '#0b1712' }}>
-      <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col min-h-0">
+    <div className="px-4 pt-6 flex flex-col" style={{ minHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom))', background: BG, color: INK, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif" }}>
+      <div className="max-w-md mx-auto w-full flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between gap-3 mb-4" style={{ flex: '0 0 auto' }}>
-          <Link href="/plan" className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full active:scale-95 transition-all" style={{ background: '#12241a', border: '1px solid #24402f', color: '#c9a84c' }}>← Home</Link>
+          <Link href="/plan" className="nf-press inline-flex items-center gap-1.5 h-11 px-4 rounded-full" style={{ background: 'rgba(237,231,218,.1)', color: INK, fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.1em' }}>← HOME</Link>
           <ClientMenu firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} isAnonymous={!!user.is_anonymous} />
         </div>
 
@@ -285,160 +295,72 @@ export default async function TodayView({ searchParams }: { searchParams?: { [ke
         {structuralMessage && <PlanEvolutionCard title={structuralMessage.title} body={structuralMessage.body} />}
 
         <ProgressViewToggle
-          garden={<BuilderView />}
+          garden={<ProgressNew days={days} workoutsDone={workoutsDone} workoutsGoal={workoutsGoal} weightChange={weightChange} startWeight={startWeight} foodDays={foodDays} streak={streak} why={why} />}
           plan={
-            <div className="pb-6 space-y-4">
-              <div className="flex items-center justify-end">
-                {/* The always-visible half of the streak loop — banked progress
-                    she'd see, and feel the loss of, every single time she opens
-                    this page. Reuses the same chip already live on the
-                    dashboard (same /api/plan/daily streak, same component)
-                    rather than a second hand-rolled counter. */}
-                <StreakChip />
+            // Today (2026-10-25, Asa: "two things today" felt like effort and
+            // work) — not a to-do list: everything is already handled for her.
+            <div className="pb-6 flex flex-col gap-3.5">
+              <div className="px-1 flex flex-col gap-2">
+                {onTrack && (
+                  <span className="self-start flex items-center gap-1.5 rounded-full px-2.5 py-1.5" style={{ background: 'rgba(110,190,160,.16)', border: '1px solid rgba(110,190,160,.5)', color: '#9FDCC4', fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.1em' }}>
+                    <span className="w-[7px] h-[7px] rounded-full" style={{ background: '#9FDCC4' }} />{workoutDoneToday ? 'YOU SHOWED UP TODAY' : "YOU'RE ON TRACK"}
+                  </span>
+                )}
+                <h1 className="nf-head" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 62, lineHeight: 0.86, textTransform: 'uppercase' }}>Today&apos;s<br />handled.</h1>
+                <p className="text-[15px]" style={{ color: 'rgba(237,231,218,.78)' }}>We planned it. You just show up.</p>
               </div>
 
-              {/* HUD redesign (2026-09-04, Asa's pick after a published mockup
-                  comparison): the ring is still the one thing on the page
-                  deliberately not boxed in a card, just restyled — Orbitron
-                  numerals, a gradient stroke matching FoodLog's own ring, and
-                  the "next" text moved into a real quest-plate instead of a
-                  plain sentence underneath. workoutDoneToday is a real,
-                  today-specific signal, not the cumulative rotation counter. */}
-              <section className="flex flex-col items-center text-center py-2">
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] mb-3" style={{ color: ACCENT, fontFamily: 'var(--font-orbitron)' }}>Daily Quest</p>
-                {todayWorkout ? (
-                  <>
-                    <div className="relative w-44 h-44 mb-5">
-                      <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transform: 'rotate(-90deg)', filter: 'drop-shadow(0 0 14px rgba(76,175,125,0.5))' }}>
-                        <defs>
-                          <linearGradient id="todayRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#c8f9dd" />
-                            <stop offset="50%" stopColor="#4CAF7D" />
-                            <stop offset="100%" stopColor="#164d33" />
-                          </linearGradient>
-                        </defs>
-                        {/* Real gap found live (Asa's ask, 2026-08-28): this track
-                            used to read identically on a day she genuinely
-                            engaged (simplified her workout, logged some food) and
-                            a day she did nothing at all — both flat, unlit gray.
-                            A dim accent tint (not the full solid arc dailyScore
-                            earns) gives real effort a visibly different look
-                            from a blank day, without claiming either slot is
-                            actually done. */}
-                        <circle cx="50" cy="50" r="45" fill="none" stroke={showedUpToday && dailyScore < 2 ? 'rgba(76,175,125,0.3)' : 'rgba(255,255,255,0.08)'} strokeWidth="5" strokeDasharray="2.2 3.3" />
-                        <circle cx="50" cy="50" r="45" fill="none" stroke="url(#todayRingGrad)" strokeWidth="5" strokeLinecap="round"
-                          strokeDasharray={`${2 * Math.PI * 45}`} strokeDashoffset={`${2 * Math.PI * 45 * (1 - dailyScore / 2)}`} />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <p className="font-black" style={{ color: '#eafff2', fontFamily: 'var(--font-orbitron)', fontSize: '2.1rem', textShadow: '0 0 16px rgba(127,230,179,0.7)' }}>{dailyScore}/2</p>
-                        <p className="text-[9.5px] uppercase tracking-[0.2em] font-bold mt-1" style={{ color: ACCENT, fontFamily: 'var(--font-orbitron)' }}>
-                          {dailyScore < 2 && showedUpToday ? 'showed up today' : 'done today'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="w-full max-w-xs flex items-stretch mb-4" style={{ background: 'rgba(0,0,0,0.32)', border: '1px solid rgba(76,175,125,0.24)', clipPath: 'polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)' }}>
-                      <div className="w-1 shrink-0" style={{ background: 'linear-gradient(180deg, #7fe6b3, #2f8a5c)' }} />
-                      <div className="px-4 py-2.5 text-left" style={{ fontFamily: 'var(--font-rajdhani)' }}>
-                        <p className="text-[9px] uppercase tracking-[0.2em] font-bold" style={{ color: '#6fae8e' }}>
-                          {workoutDoneToday ? 'Complete' : workoutSimplifiedToday ? 'Simplified' : 'Up next'}
-                        </p>
-                        <p className="text-sm font-semibold" style={{ color: '#eafff2' }}>
-                          {workoutDoneToday
-                            ? 'You already showed up today.'
-                            // Real gap found live (Asa's ask, 2026-08-28): she
-                            // consciously kept today simple via the circle, but
-                            // this card — reading its own separate rotation,
-                            // not the circle's live decision — kept nagging
-                            // her toward the very workout she'd already chosen
-                            // not to do, with a pulsing "Start" CTA.
-                            // Acknowledge the real choice instead of
-                            // contradicting it.
-                            : workoutSimplifiedToday ? 'You kept it simple today — that still counts.' : todayWorkout.title}
-                        </p>
-                      </div>
-                    </div>
-                    {!workoutDoneToday && !workoutSimplifiedToday && todayAdjustment?.workoutChange && (
-                      <p className="text-[11px] mb-3 font-semibold" style={{ color: ACCENT }}>Adjusted: {todayAdjustment.workoutChange.toMinutes ? `${todayAdjustment.workoutChange.toMinutes}-min ` : ''}{todayAdjustment.workoutChange.swapTo || 'adapted for today'}</p>
-                    )}
-                    {!workoutDoneToday && !workoutSimplifiedToday && (
-                      <Link href="/plan/workout" className="luf-pulse w-full max-w-xs inline-flex items-center justify-center gap-1.5 px-4 py-3.5 font-black text-xs uppercase tracking-wider hover:scale-[1.02] transition-transform" style={{ background: 'linear-gradient(135deg, #7fe6b3, #4CAF7D 60%, #2f8a5c)', color: INK, clipPath: 'polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%)', boxShadow: '0 0 24px rgba(76,175,125,0.5)', fontFamily: 'var(--font-orbitron)' }}>▶ Start</Link>
-                    )}
-                    {workoutSimplifiedToday && !workoutDoneToday && (
-                      // Quieter, optional — not the same insistent pulsing CTA a
-                      // day she hasn't engaged at all gets. Still real and
-                      // reachable, never removed outright (see bug #13: never
-                      // leave the real workout unreachable).
-                      <Link href="/plan/workout" className="text-xs font-semibold underline underline-offset-2" style={{ color: CARD_MUTED }}>Still want to do it today?</Link>
-                    )}
-                  </>
-                ) : (
-                  <div className="rounded-2xl p-5 w-full" style={cardStyle}>
-                    <p className="font-semibold mb-1" style={{ color: CARD_TEXT }}>We hit a snag building your workout</p>
-                    <p className="text-sm mb-3" style={{ color: CARD_MUTED }}>Shouldn&apos;t take more than a second to fix.</p>
-                    <RebuildPlanButton />
+              {todayWorkout ? (
+                <div className="nf-rise rounded-[22px] overflow-hidden" style={{ background: 'rgba(237,231,218,.06)', border: `2px solid ${workoutDoneToday ? GOLD : 'transparent'}`, animationDelay: '.1s' }}>
+                  <div className="h-[130px] relative" style={{ backgroundImage: 'url(/_next/image?url=%2Fimages%2Fapp%2Fpexels-8402239.jpg&w=828&q=70)', backgroundSize: 'cover', backgroundPosition: 'center 35%' }}>
+                    <span className="absolute left-3 top-3 rounded-full px-2.5 py-1.5" style={{ background: INK, color: BG, fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.1em' }}>
+                      {workoutDoneToday ? 'DONE. PROUD OF YOU.' : workoutSimplifiedToday ? 'KEPT IT SIMPLE. THAT COUNTS.' : "YOUR WORKOUT'S READY"}
+                    </span>
                   </div>
-                )}
-              </section>
-
-              {/* Calories, promoted to its own primary panel per Asa's keep-list
-                  (2026-09-04) — was a one-line glance competing for space with
-                  everything else; now the second-biggest thing on the page
-                  after the ring, with a real spent/left bar and a one-tap log
-                  action instead of only a link to go find one. */}
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: '#6fae8e', fontFamily: 'var(--font-orbitron)' }}>Calories</p>
-                  {baseCalTarget != null && (
-                    <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ color: todaysDayType === 'workout' ? '#7fe6b3' : '#6fae8e', background: todaysDayType === 'workout' ? 'rgba(76,175,125,0.18)' : 'rgba(255,255,255,0.06)' }}>{todaysDayType === 'workout' ? 'Workout day' : 'Rest day'}</span>
-                  )}
+                  <div className="px-3.5 pt-3 pb-3.5 flex items-center justify-between gap-3">
+                    <span className="flex flex-col gap-0.5 min-w-0">
+                      <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 26, lineHeight: 1, textTransform: 'uppercase' }}>{workoutName || 'Today\'s workout'}</span>
+                      {!workoutDoneToday && todayAdjustment?.workoutChange && (
+                        <span className="text-[13px]" style={{ color: GOLD }}>Adjusted: {todayAdjustment.workoutChange.toMinutes ? `${todayAdjustment.workoutChange.toMinutes}-min ` : ''}{todayAdjustment.workoutChange.swapTo || 'adapted for today'}</span>
+                      )}
+                    </span>
+                    {workoutDoneToday ? (
+                      <span className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ background: GOLD }}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={BG} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12l5 5 9-10" /></svg>
+                      </span>
+                    ) : (
+                      <Link href="/plan/workout" className="nf-press h-12 px-5 rounded-full flex items-center shrink-0" style={{ background: GOLD, color: BG, fontFamily: MONO, fontWeight: 700, fontSize: 14, letterSpacing: '.1em' }}>{workoutSimplifiedToday ? 'DO IT ANYWAY' : "LET'S GO"}</Link>
+                    )}
+                  </div>
                 </div>
-                {eatingOutToday ? (
-                  <Link href="/plan/eating-out" className="block rounded-2xl px-5 py-4" style={cardStyle}>
-                    <span className="text-sm font-semibold" style={{ color: CARD_TEXT }}>Eating out today — see exactly what to order</span>
-                  </Link>
-                ) : baseCalTarget != null && calBudget != null && calRemaining != null ? (
-                  <div className="rounded-2xl px-4 py-4" style={{ background: 'rgba(0,0,0,0.35)', border: CARD_BORDER, clipPath: 'polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)' }}>
-                    <div className="flex items-baseline justify-between mb-2.5 gap-2 flex-wrap">
-                      <span className="font-black" style={{ color: '#eafff2', fontFamily: 'var(--font-orbitron)', fontSize: '1.35rem', textShadow: '0 0 10px rgba(127,230,179,0.5)' }}>${calRemaining}</span>
-                      <span className="text-[11px] font-semibold text-right" style={{ color: '#6fae8e' }}>left of ${calBudget}{baseProteinTarget != null ? ` · ${Math.max(0, baseProteinTarget - loggedProtein)}g protein to go` : ''}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full overflow-hidden mb-3" style={{ background: 'rgba(255,255,255,0.07)' }}>
-                      <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, (calRemaining / calBudget) * 100))}%`, background: 'linear-gradient(90deg, #2f8a5c, #4CAF7D, #7fe6b3)' }} />
-                    </div>
-                    <Link href="/plan/nutrition/log" className="block text-center py-2.5 rounded-lg text-[11.5px] font-black uppercase tracking-wider" style={{ background: 'rgba(76,175,125,0.14)', border: '1px solid rgba(127,230,179,0.5)', color: '#c8f9dd' }}>+ Log food</Link>
-                  </div>
-                ) : (
-                  <Link href="/plan/nutrition" className="block rounded-2xl px-5 py-4" style={cardStyle}>
-                    <span className="text-sm" style={{ color: CARD_MUTED }}>{mealIdx > 5 ? 'Sunday — no cook plan, log whatever you have.' : 'No meal plan yet — tap to build one.'}</span>
-                  </Link>
-                )}
-              </div>
-
-              {/* The zero-decision escape hatch — for the moment she's out, off-plan, and
-                  would otherwise have to decide (or skip eating entirely). Hidden when
-                  today's already flagged as an eat-out day (the calories panel above
-                  becomes this exact same link) so she isn't shown the same CTA twice. */}
-              {!eatingOutToday && (
-                <Link href="/plan/eating-out" className="group flex items-center justify-between gap-3 rounded-2xl px-5 py-4 transition-colors" style={cardStyle}>
-                  <div>
-                    <p className="font-semibold text-sm" style={{ color: CARD_TEXT }}>Away from home right now?</p>
-                    <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>Tap for exactly what to order — no thinking, no searching.</p>
-                  </div>
-                  <span className="text-sm group-hover:translate-x-0.5 transition-transform shrink-0" style={{ color: CARD_ACCENT }}>→</span>
-                </Link>
+              ) : (
+                <div className="rounded-[22px] p-5" style={{ background: 'rgba(237,231,218,.06)' }}>
+                  <p className="font-semibold mb-1">We hit a snag building your workout</p>
+                  <p className="text-sm mb-3" style={{ color: MUTE }}>Shouldn&apos;t take more than a second to fix.</p>
+                  <RebuildPlanButton />
+                </div>
               )}
 
-              {/* Tomorrow preview (new, 2026-09-04, Asa's ask): same rotation
-                  function as the hero ring, one completion ahead, no
-                  adjustment/focus override — a real locked-looking teaser,
-                  not an invented label. Dashed border + reduced opacity reads
-                  as "not actionable yet" without a separate lock icon system. */}
+              <Link href={eatingOutToday ? '/plan/eating-out' : '/plan/nutrition'} className="nf-press nf-rise rounded-[22px] overflow-hidden flex" style={{ background: 'rgba(237,231,218,.06)', animationDelay: '.2s', color: INK }}>
+                <div className="w-[104px] shrink-0" style={{ backgroundImage: 'url(/images/meals/food/bowl.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div className="px-3.5 pt-3 pb-3.5 flex flex-col gap-1.5 flex-1 min-w-0">
+                  {label("YOUR FOOD'S HANDLED")}
+                  <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 26, lineHeight: 1, textTransform: 'uppercase' }}>{eatingOutToday ? 'Eating out? Covered.' : 'Your picks are ready'}</span>
+                  {calBudget != null && calRemaining != null && (<>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(237,231,218,.12)' }}>
+                      <div className="h-2 rounded-full" style={{ width: `${Math.max(0, Math.min(100, (loggedCalories / calBudget) * 100))}%`, background: GOLD }} />
+                    </div>
+                    <span className="text-[13px]" style={{ color: MUTE }}>{calRemaining.toLocaleString('en-US')} cal left, and we&apos;re counting so you don&apos;t.</span>
+                  </>)}
+                  {calBudget == null && <span className="text-[13px]" style={{ color: MUTE }}>{mealIdx > 5 ? 'Sunday. Eat easy, we picked a few.' : 'Tap to see what we picked.'}</span>}
+                </div>
+              </Link>
+              <Link href="/plan/nutrition/log" className="self-center text-[13px] py-1" style={{ color: 'rgba(237,231,218,.6)' }}>Ate something else? Log it →</Link>
+
               {tomorrowWorkout && (
-                <div className="flex items-center gap-3 rounded-2xl px-5 py-4 opacity-60" style={{ ...cardStyle, borderStyle: 'dashed' }}>
-                  <div>
-                    <p className="font-semibold text-sm" style={{ color: 'rgba(232,223,200,0.75)' }}>🔒 Tomorrow · {tomorrowWorkout.title}</p>
-                    <p className="text-xs mt-0.5" style={{ color: CARD_MUTED }}>Unlocks in the morning</p>
-                  </div>
+                <div className="flex items-center gap-3 rounded-[18px] px-3.5 py-3" style={{ background: 'rgba(237,231,218,.04)' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(237,231,218,.6)" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" /></svg>
+                  <span className="text-sm" style={{ color: MUTE }}>Tomorrow&apos;s already planned. Rest easy tonight.</span>
                 </div>
               )}
             </div>

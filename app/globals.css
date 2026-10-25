@@ -115,3 +115,15 @@ body {
   .luf-gear-on { animation: none !important; }
   .luf-flow-dot { animation: none !important; left: 50% !important; opacity: .6 !important; }
 }
+
+/* New simple look (2026-10-25, intake + My Day + Home + workout): shared
+   motion. Screens slide in, big headlines rise, buttons squish on tap. */
+.nf-screen{animation:nfScreenIn .45s cubic-bezier(.2,1,.3,1) both}
+@keyframes nfScreenIn{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+.nf-head{animation:nfHeadIn .55s .08s cubic-bezier(.2,1,.3,1) both}
+@keyframes nfHeadIn{from{transform:translateY(22px) skewX(-6deg);opacity:0}to{transform:none;opacity:1}}
+.nf-press{transition:transform .12s ease}
+.nf-press:active{transform:scale(.96)}
+.nf-rise{animation:nfRiseIn .6s cubic-bezier(.2,1,.3,1) both}
+@keyframes nfRiseIn{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.nf-screen,.nf-head,.nf-rise{animation:none}}
