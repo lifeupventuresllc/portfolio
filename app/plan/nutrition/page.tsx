@@ -116,7 +116,7 @@ export default async function NutritionPage() {
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col min-h-0">
         {eatStyle === 'out' && !locFresh && <LocationOptIn prompt="Show meals open near you right now?" refreshOnPing large />}
         {eatStyle && result ? (
-          <NutritionPicks key={`${day.current?.id ?? 'done'}:${cards.map((c) => c.key).join('|')}`} cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} nextUp={next} refreshInMin={day.refreshInMin} />
+          <NutritionPicks key={`${day.current?.id ?? 'done'}:${cards.map((c) => c.key).join('|')}`} cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} nextUp={next} refreshInMin={day.refreshInMin} calBudget={Math.round(calBudget)} />
         ) : (
           <EatStyleAsk />
         )}
