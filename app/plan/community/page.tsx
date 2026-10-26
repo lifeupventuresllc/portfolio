@@ -9,6 +9,14 @@ import CommunityTabs from '@/components/CommunityTabs'
 
 export const dynamic = 'force-dynamic'
 
+// Connect tab (2026-10-26, Asa: "make it look like the rest of the app") —
+// same dark look as the new intake + My Day. Look only; data is unchanged.
+const HEAD = "var(--font-barlow), 'Barlow Condensed', sans-serif"
+const MONO = "var(--font-jbmono), 'JetBrains Mono', monospace"
+const INK = '#EDE7DA', GOLD = '#E5A93C', BG = '#021F16', MUTE = 'rgba(237,231,218,.72)'
+const CARD = 'rgba(237,231,218,.06)', LINE = 'rgba(237,231,218,.14)'
+const LABEL = { fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.16em', color: GOLD } as const
+
 function ago(s: string) {
   const d = (Date.now() - new Date(s).getTime()) / 1000
   if (d < 60) return 'just now'
@@ -40,42 +48,44 @@ export default async function Community() {
   const linked = COMMUNITY_URL && COMMUNITY_URL !== '#'
 
   return (
-    <div className="min-h-[100dvh] bg-obsidian px-4 py-12">
-      <div className="max-w-xl mx-auto">
-        <Link href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold hover:bg-gold/10 active:scale-95 transition-all mb-4">← Home</Link>
-        <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">The Curve Collective</p>
-        <h1 className="text-3xl font-bold text-white mb-2">You&apos;re not doing this alone, {firstName} 💛</h1>
-        <p className="text-ivory/60 text-sm mb-6">Our private circle of women walking it out together. Share a win, ask a question, cheer each other on.</p>
+    <div className="nf-screen px-4 flex flex-col" style={{ paddingTop: 24, minHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom))', background: BG, color: INK, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif" }}>
+      <div className="max-w-md mx-auto w-full pb-6">
+        <div className="mb-5">
+          <Link href="/plan" className="nf-press inline-flex items-center gap-1.5 h-11 px-4 rounded-full" style={{ background: 'rgba(237,231,218,.1)', color: INK, fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.1em' }}>← HOME</Link>
+        </div>
+        <span style={LABEL}>THE CURVE COLLECTIVE</span>
+        <h1 className="nf-head" style={{ margin: '4px 0 10px', fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 56, lineHeight: 0.88, textTransform: 'uppercase', color: INK }}>You&apos;re not<br />alone.</h1>
+        <p className="text-[15px] leading-snug mb-6" style={{ color: MUTE }}>{firstName}, this is our private circle of women walking it out together. Share a win, ask a question, cheer each other on.</p>
 
         <CommunityTabs
           match={<ProviderMatchTeaser />}
           community={
             <>
               {linked && (
-                <a href={COMMUNITY_URL} target="_blank" rel="noopener noreferrer" className="block text-center bg-charcoal border border-gold/30 rounded-2xl py-3 mb-5 text-gold font-semibold text-sm hover:bg-gold/5">
-                  Join the live community →
+                <a href={COMMUNITY_URL} target="_blank" rel="noopener noreferrer" className="nf-press flex items-center justify-center h-14 rounded-full mb-5" style={{ border: '2px solid rgba(237,231,218,.22)', color: INK, fontFamily: MONO, fontSize: 13, fontWeight: 700, letterSpacing: '.1em' }}>
+                  JOIN THE LIVE COMMUNITY →
                 </a>
               )}
 
               {spotlight && (
-                <div className="bg-charcoal border border-gold/30 rounded-2xl p-4 mb-5">
-                  <p className="text-gold text-xs font-semibold tracking-[0.2em] uppercase mb-1">This week&apos;s spotlight</p>
-                  <p className="text-white text-sm">
-                    <span className="font-semibold">{spotlight.isYou ? 'You' : spotlight.name}</span> — {spotlight.streak} day streak 🔥
+                <div className="nf-rise rounded-[22px] px-4 py-3.5 mb-4" style={{ background: 'rgba(229,169,60,.1)', borderLeft: `4px solid ${GOLD}` }}>
+                  <span style={{ ...LABEL, fontSize: 11 }}>THIS WEEK&apos;S SPOTLIGHT</span>
+                  <p className="text-[15px] mt-1" style={{ color: INK }}>
+                    <span className="font-semibold">{spotlight.isYou ? 'You' : spotlight.name}</span> — {spotlight.streak}-day streak
                   </p>
                 </div>
               )}
 
               {leaderboard.length > 1 && (
-                <div className="bg-charcoal border border-smoke rounded-2xl p-4 mb-5">
-                  <p className="text-ivory/50 text-xs font-semibold tracking-[0.2em] uppercase mb-3">Leaderboard</p>
-                  <div className="space-y-2">
+                <div className="nf-rise rounded-[22px] p-4 mb-4" style={{ background: CARD, border: `1px solid ${LINE}`, animationDelay: '.1s' }}>
+                  <span style={{ ...LABEL, fontSize: 11, color: MUTE }}>LEADERBOARD</span>
+                  <div className="space-y-2 mt-3">
                     {leaderboard.map((entry, i) => (
-                      <div key={i} className="flex items-center justify-between text-sm">
-                        <span className={entry.isYou ? 'text-gold font-semibold' : 'text-ivory/70'}>
+                      <div key={i} className="flex items-center justify-between gap-3 text-[15px]">
+                        <span className="truncate" style={{ color: entry.isYou ? GOLD : INK, fontWeight: entry.isYou ? 600 : 400 }}>
                           {i + 1}. {entry.isYou ? 'You' : entry.name}
                         </span>
-                        <span className="text-ivory/40">{entry.streak}d</span>
+                        <span className="shrink-0" style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, color: MUTE }}>{entry.streak}D</span>
                       </div>
                     ))}
                   </div>
@@ -86,18 +96,18 @@ export default async function Community() {
 
               <div className="space-y-3">
                 {(posts || []).map((p) => (
-                  <div key={p.id} className="bg-charcoal border border-smoke rounded-2xl p-4">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-white font-semibold text-sm">{p.name || 'A sister'}</span>
-                      <span className="text-ivory/30 text-xs">{ago(p.created_at)}</span>
+                  <div key={p.id} className="rounded-[22px] p-4" style={{ background: CARD, border: `1px solid ${LINE}` }}>
+                    <div className="flex items-center justify-between gap-3 mb-1.5">
+                      <span className="truncate font-semibold text-[15px]" style={{ color: INK }}>{p.name || 'A sister'}</span>
+                      <span className="shrink-0" style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.06em', color: 'rgba(237,231,218,.45)' }}>{ago(p.created_at)}</span>
                     </div>
-                    <p className="text-ivory/70 text-sm whitespace-pre-wrap">{p.body}</p>
+                    <p className="text-[15px] leading-snug whitespace-pre-wrap break-words" style={{ color: 'rgba(237,231,218,.85)' }}>{p.body}</p>
                   </div>
                 ))}
                 {(!posts || posts.length === 0) && (
                   <div className="text-center py-10">
-                    <p className="text-3xl mb-2">👋🏽</p>
-                    <p className="text-ivory/60 text-sm">Be the first to post — start the conversation, {firstName}.</p>
+                    <p style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 30, lineHeight: 1, textTransform: 'uppercase', color: INK }}>Be the first.</p>
+                    <p className="text-[15px] mt-2" style={{ color: MUTE }}>Start the conversation, {firstName}.</p>
                   </div>
                 )}
               </div>

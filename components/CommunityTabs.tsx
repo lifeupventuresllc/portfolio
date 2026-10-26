@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
+import { hapticTap } from '@/lib/haptics'
 
 // The page itself stays a server component (real data fetching, redirects) —
 // this is just the tab chrome + active-tab state around two pre-rendered
@@ -18,14 +19,15 @@ export default function CommunityTabs({ match, community }: { match: ReactNode; 
   const [tab, setTab] = useState<'match' | 'community'>('community')
   return (
     <div>
-      <div className="flex gap-1 bg-charcoal border border-smoke rounded-full p-1 mb-5">
+      <div className="flex gap-1 rounded-full p-1 mb-5" style={{ background: 'rgba(237,231,218,.06)', border: '1px solid rgba(237,231,218,.14)' }}>
         {(['match', 'community'] as const).map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
-            className={`flex-1 text-center text-xs font-bold tracking-wide py-2 rounded-full transition-colors ${tab === t ? 'bg-gold text-obsidian' : 'text-ivory/55'}`}
+            onClick={() => { hapticTap(); setTab(t) }}
+            className="nf-press flex-1 text-center h-11 rounded-full transition-colors"
+            style={{ fontFamily: "var(--font-jbmono), 'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, letterSpacing: '.12em', ...(tab === t ? { background: '#E5A93C', color: '#021F16' } : { background: 'transparent', color: 'rgba(237,231,218,.72)' }) }}
           >
-            {t === 'match' ? 'Match' : 'Community'}
+            {t === 'match' ? 'MATCH' : 'COMMUNITY'}
           </button>
         ))}
       </div>

@@ -2,6 +2,11 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
+import { hapticTap } from '@/lib/haptics'
+
+const MONO = "var(--font-jbmono), 'JetBrains Mono', monospace"
+const INK = '#EDE7DA', GOLD = '#E5A93C', BG = '#021F16', MUTE = 'rgba(237,231,218,.72)'
+const CARD = 'rgba(237,231,218,.06)', LINE = 'rgba(237,231,218,.14)'
 
 // Beta fake-door test (Asa's call, 2026-08-23): no real matching engine or
 // provider backend yet — just gauging whether users actually want this before
@@ -33,26 +38,27 @@ export default function ProviderMatchTeaser() {
     <div className="mb-5">
       {/* The split-photo hero — real people, not icons, is the whole point:
           this reads as "real specialists," not "a form." */}
-      <div className="relative rounded-2xl overflow-hidden h-40 mb-3">
+      <div className="relative rounded-[22px] overflow-hidden h-44 mb-4">
         <div className="absolute inset-0 flex">
           <div className="relative w-1/2 h-full"><Image src="/images/community/trainer.jpg" alt="" fill sizes="50vw" className="object-cover brightness-[0.55]" /></div>
           <div className="relative w-1/2 h-full"><Image src="/images/community/nutritionist.jpg" alt="" fill sizes="50vw" className="object-cover brightness-[0.55]" /></div>
         </div>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-          <p className="text-gold text-[10px] font-bold tracking-[0.2em] uppercase mb-1.5">New — beta</p>
-          <p className="text-white font-bold leading-snug text-[15px]" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>
+          <p className="mb-1.5" style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.16em', color: GOLD }}>NEW — BETA</p>
+          <p className="font-semibold leading-snug text-[16px]" style={{ color: INK, textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>
             Based on your goals and your budget — real specialists near you, not random ones.
           </p>
         </div>
       </div>
 
       <label className="block mb-3">
-        <span className="text-ivory/50 text-xs font-semibold tracking-wide uppercase mb-1.5 flex items-center gap-1"><PinIcon /> Find people where you&apos;re at</span>
+        <span className="mb-2 flex items-center gap-1.5" style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.12em', color: GOLD }}><PinIcon /> FIND PEOPLE NEAR YOU</span>
         <input
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           placeholder="e.g. Los Angeles, CA"
-          className="w-full bg-charcoal border border-smoke rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-ivory/30 focus:border-gold/60 outline-none"
+          className="w-full h-14 rounded-2xl px-4 text-base outline-none placeholder:text-[rgba(237,231,218,.4)]"
+          style={{ background: CARD, border: `1px solid ${LINE}`, color: INK }}
         />
       </label>
 
@@ -60,20 +66,21 @@ export default function ProviderMatchTeaser() {
         {PROVIDERS.map((p) => {
           const done = requested.has(p.role)
           return (
-            <div key={p.role} className="flex items-center gap-3 bg-charcoal border border-smoke rounded-xl px-3 py-2.5">
-              <div className="relative w-11 h-11 rounded-full overflow-hidden border-[1.5px] border-gold/50 shrink-0">
+            <div key={p.role} className="flex items-center gap-3 rounded-[20px] px-3 py-3" style={{ background: CARD, border: `1px solid ${LINE}` }}>
+              <div className="relative w-11 h-11 rounded-full overflow-hidden shrink-0" style={{ border: `1.5px solid rgba(229,169,60,.6)` }}>
                 <Image src={p.photo} alt={p.role} fill sizes="44px" className="object-cover" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-semibold">{p.role}</p>
-                <p className="text-ivory/50 text-[11px] leading-snug truncate">{p.blurb}</p>
+                <p className="text-[15px] font-semibold" style={{ color: INK }}>{p.role}</p>
+                <p className="text-xs leading-snug truncate" style={{ color: MUTE }}>{p.blurb}</p>
               </div>
               <button
-                onClick={() => setRequested((s) => new Set(s).add(p.role))}
+                onClick={() => { hapticTap(); setRequested((s) => new Set(s).add(p.role)) }}
                 disabled={done}
-                className={`shrink-0 text-[11px] font-bold uppercase tracking-wide rounded-lg px-3 py-2 transition-colors whitespace-nowrap ${done ? 'bg-transparent border border-gold/30 text-gold/70' : 'bg-gold text-obsidian hover:opacity-90'}`}
+                className="nf-press shrink-0 h-10 px-3.5 rounded-full whitespace-nowrap"
+                style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.08em', ...(done ? { background: 'transparent', border: '2px solid rgba(237,231,218,.22)', color: GOLD } : { background: GOLD, color: BG }) }}
               >
-                {done ? "You're on the list" : 'Get matched'}
+                {done ? "YOU'RE ON THE LIST" : 'GET MATCHED'}
               </button>
             </div>
           )
