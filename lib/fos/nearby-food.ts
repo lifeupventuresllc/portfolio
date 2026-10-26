@@ -149,8 +149,24 @@ export async function chainPlacesNear(lat: number, lng: number, chains: Iterable
   if (!process.env.GOOGLE_PLACES_API_KEY) return []
   const key = Array.from(chains).sort().join('|')
   const places = await cachedChainPlaces(lat.toFixed(2), lng.toFixed(2), key).catch(() => [] as ChainPlace[])
-  const now = new Date()
-  return places.map((p) => ({ name: p.name, lat: p.lat, lng: p.lng, openNow: openAt(p, now) }))
+  // 2026-10-26 (Asa: late at night it showed places that weren't open):
+  // "open" means open now AND still open 45 minutes from now, so a delivery
+  // never lands on a closed door. No hours from Google = not promised open.
+  const now = new Date(), soon = new Date(now.getTime() + OPEN_BUFFER_MIN * 60000)
+  return places.map((p) => ({ name: p.name, lat: p.lat, lng: p.lng, openNow: openAt(p, now) === true && openAt(p, soon) === true }))
+}
+
+const OPEN_BUFFER_MIN = 45
+
+/** Our chains she can order from right now: open within a mile (3 miles if
+ * fewer than two are). An EMPTY map is a real answer ("nothing near her is
+ * open") and must never fall back to showing every chain. undefined = we
+ * couldn't look (no key, Google trouble, nothing of ours anywhere near). */
+export async function openChainsNear(lat: number, lng: number, chains: Set<string>): Promise<Map<string, number> | undefined> {
+  const places = await chainPlacesNear(lat, lng, chains)
+  if (!places.length) return undefined
+  const near = chainsWithin(places, chains, lat, lng, 1)
+  return near.size >= 2 ? near : chainsWithin(places, chains, lat, lng, 3)
 }
 
 /** Same as chainsNear, only places within maxMiles of her. */
@@ -166,7 +182,7 @@ export function chainsNear(places: NearbyPlace[], chains: Iterable<string>, lat:
   const out = new Map<string, number>()
   const list = Array.from(chains).map((c) => ({ c, re: new RegExp(`(^| )${norm(c).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( |$)`) }))
   for (const p of places) {
-    if (p.openNow === false) continue
+    if (p.openNow !== true) continue
     const n = norm(p.name)
     if (/\b(station|stop|terminal|platform)\b/.test(n)) continue // "Union Sq Subway Station" isn't a Subway
     const hit = list.find(({ re }) => re.test(n))

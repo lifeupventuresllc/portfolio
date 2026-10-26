@@ -5,7 +5,7 @@ import NutritionPicks, { EatStyleAsk, type PickCard } from '@/components/Nutriti
 import { loadNutritionDay, localMinute } from '@/lib/nutrition-day'
 import { pickMeals, planDay, clockLabel, defaultMealBudget, orderDestination, mealPhoto, shortName, type EatStyle, type MealMemory, type MealSlot, type OrderApp } from '@/lib/meal-pick'
 import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
-import { chainPlacesNear, chainsWithin } from '@/lib/fos/nearby-food'
+import { openChainsNear } from '@/lib/fos/nearby-food'
 import { verifiedChains } from '@/lib/chain-menu'
 import LocationOptIn from '@/components/LocationOptIn'
 
@@ -53,23 +53,18 @@ export default async function NutritionPage() {
   const mealBudget = eatStyle ? (Number(formData.meal_budget) || defaultMealBudget(eatStyle, weekly)) : 0
   const orderApp: OrderApp = formData.order_app === 'ubereats' ? 'ubereats' : 'doordash'
 
-  // Where she is (2026-10-23, Google Places): eating out + a position from the
-  // last hour → only chains open within a mile of her (3 miles if fewer than
-  // two are). She never sees the distance — it just decides the two picks.
+  // Where she is (2026-10-23, Google Places): eating out + a known position
+  // → only chains open near her right now (lib/fos/nearby-food). 2026-10-26
+  // (Asa: late at night it showed closed places): any position from the last
+  // day counts for open/closed — what's open near home doesn't need a fresh
+  // ping — and "nothing open" stays nothing open, never every chain.
   let nearby: Map<string, number> | undefined
   const lat = enrollment.last_lat as number | null, lng = enrollment.last_lng as number | null
   const locAt = enrollment.last_location_at as string | null
-  const locFresh = !!locAt && Date.now() - new Date(locAt).getTime() < 60 * 60000
-  if (eatStyle === 'out' && locFresh && lat != null && lng != null && process.env.GOOGLE_PLACES_API_KEY) {
-    const chains = verifiedChains()
-    const places = await chainPlacesNear(lat, lng, chains)
-    nearby = chainsWithin(places, chains, lat, lng, 1)
-    // Fewer than two within a mile → up to 3 miles; none at all (or Google
-    // had trouble) → every pick rather than an empty screen.
-    if (nearby.size < 2) {
-      const wider = chainsWithin(places, chains, lat, lng, 3)
-      nearby = wider.size >= 1 ? wider : undefined
-    }
+  const locAge = locAt ? Date.now() - new Date(locAt).getTime() : Infinity
+  const locFresh = locAge < 60 * 60000
+  if (eatStyle === 'out' && locAge < 24 * 3600000 && lat != null && lng != null && process.env.GOOGLE_PLACES_API_KEY) {
+    nearby = await openChainsNear(lat, lng, verifiedChains())
   }
 
   const pick = (near: typeof nearby) => eatStyle ? pickMeals({
@@ -83,11 +78,12 @@ export default async function NutritionPage() {
     slotCalBudget: day.calBudget,
     nearby: near,
   }) : null
-  let result = pick(nearby)
-  // Fewer than two nearby meals fit her calories → every pick, never one card.
-  if (nearby && result && result.options.length < 2) result = pick(undefined)
+  const result = pick(nearby)
   let options = result?.options || []
-  if (mix && result) {
+  // Fewer than two open spots fit her calories (late at night) → fill with
+  // home picks, never a closed restaurant.
+  const fillHome = !mix && eatStyle === 'out' && !!nearby && options.length < 2
+  if ((mix || fillHome) && result) {
     const home = pickMeals({
       eatStyle: 'cook', mealBudget: defaultMealBudget('cook', weekly), remainingCal, slot,
       weightLbs: Number(intake.weight_lbs) || 170,
