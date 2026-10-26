@@ -8,7 +8,8 @@ import ClientMenu from '@/components/ClientMenu'
 import RebuildPlanButton from '@/components/RebuildPlanButton'
 import ProgressNew, { type DayDot } from './ProgressNew'
 import { streakFrom } from '@/lib/streak'
-import { getTimezone, localMondayIndex, localDateISO } from '@/lib/localdate'
+import { getTimezone, localMondayIndex, localDateISO, localDayNumber } from '@/lib/localdate'
+import { affirmationForDay } from '@/lib/affirmations'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
@@ -248,6 +249,7 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   const workoutName = (todayWorkout?.title || '').replace(/^Day \d+:\s*/, '')
   const onTrack = workoutDoneToday || showedUpToday || (calBudget != null && loggedCalories > 0 && loggedCalories <= calBudget * 1.1)
 
+  const selfTalk = affirmationForDay(localDayNumber(tz))
   return (
     <div className="px-4 flex flex-col"
       style={{
@@ -274,6 +276,16 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
           )}
           <ClientMenu firstName={firstName} liveUrl={LIVE_CALL.zoomUrl || undefined} callAccess={enrollment.tier === 'inner_circle' ? 'weekly' : enrollment.tier === 'challenge' ? 'monthly' : 'none'} isAnonymous={!!user.is_anonymous} />
         </div>
+
+        {/* Today's self-talk (2026-10-26, Asa: "what happened to the self
+            talk… should show up when she sees her progress, and on the win
+            for today page too"). Above the toggle, so both tabs have it. */}
+        {selfTalk && (
+          <div className="nf-rise mb-4 rounded-[20px] px-4 py-3" style={{ background: 'rgba(229,169,60,.1)', borderLeft: `4px solid ${GOLD}` }}>
+            <span style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: '.16em', color: GOLD }}>TODAY&apos;S SELF-TALK</span>
+            <p className="mt-1 text-balance" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 22, lineHeight: 1.05, color: INK }}>&ldquo;{selfTalk}&rdquo;</p>
+          </div>
+        )}
 
         {patternMessage && <LifePatternCard title={patternMessage.title} body={patternMessage.body} showWorkoutAction={showWorkoutAction} moves={dipMoves} />}
         {structuralMessage && <PlanEvolutionCard title={structuralMessage.title} body={structuralMessage.body} />}
