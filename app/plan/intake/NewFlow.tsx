@@ -103,7 +103,10 @@ export default function NewFlow(p: {
   // Body sliders always hold a value — these are the starting points until
   // she slides (or what we already have on file).
   const age = Number(f.age) || 30
-  const heightIn = (Number(f.heightFt) || 5) * 12 + (Number(f.heightIn) || 4)
+  // 2026-10-26 (Asa: slider "skipped from 5'11 all the way to 6"): 0 inches is
+  // a real answer — `|| 4` turned 6′0″ into 6′4″. Default only when blank.
+  const inches = f.heightIn === '' || f.heightIn == null ? 4 : Number(f.heightIn)
+  const heightIn = (Number(f.heightFt) || 5) * 12 + (Number.isFinite(inches) ? inches : 4)
   const weight = Number(f.weight_lbs) || 165
   const weekly = Number(f.weekly_food_budget) || 150
 
