@@ -175,6 +175,22 @@ export function chainsWithin(places: NearbyPlace[], chains: Iterable<string>, la
   return new Map(Array.from(all).filter(([, miles]) => miles <= maxMiles))
 }
 
+/** The live map on the intake's location screen (2026-10-26, Asa: "a live
+ * map instead of this grid"): the same open chains as openChainsNear, with
+ * where the nearest open location of each actually is. */
+export async function openSpotsNear(lat: number, lng: number, chains: Set<string>, limit = 4): Promise<{ name: string; miles: number; lat: number; lng: number }[]> {
+  const near = await openChainsNear(lat, lng, chains)
+  if (!near?.size) return []
+  const places = await chainPlacesNear(lat, lng, chains)
+  const out: { name: string; miles: number; lat: number; lng: number }[] = []
+  for (const [name, miles] of Array.from(near).sort((a, b) => a[1] - b[1]).slice(0, limit)) {
+    // the place chainsNear measured: same name match, same distance
+    const hit = places.filter((p) => p.openNow === true && chainsNear([p], [name], lat, lng).get(name) === miles)[0]
+    if (hit) out.push({ name, miles, lat: hit.lat, lng: hit.lng })
+  }
+  return out
+}
+
 /** Which of OUR known chains are open within reach, nearest distance each.
  * Word-boundary match so "Cava" never matches "Cavalier Pizza". */
 export function chainsNear(places: NearbyPlace[], chains: Iterable<string>, lat: number, lng: number): Map<string, number> {

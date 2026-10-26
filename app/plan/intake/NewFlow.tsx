@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { hapticTap } from '@/lib/haptics'
+import LiveMap from '@/components/LiveMap'
 import { buildBlueprint, averageDayTargets, type Activity } from '@/lib/nutrition'
 import { effectiveGoal } from '@/lib/goals'
 
@@ -432,7 +433,9 @@ function FoodIntro({ onDone }: { onDone: () => void }) {
 
 function Location({ onBack, onDone, editMode }: { onBack: () => void; onDone: () => void; editMode: boolean }) {
   const [state, setState] = useState<'ask' | 'finding' | 'on' | 'none'>('ask')
-  const [spots, setSpots] = useState<{ name: string; miles: number }[]>([])
+  const [spots, setSpots] = useState<{ name: string; miles: number; lat: number; lng: number }[]>([])
+  const [me, setMe] = useState<{ lat: number; lng: number } | null>(null)
+  const [mapFailed, setMapFailed] = useState(false)
   const turnOn = () => {
     hapticTap()
     if (!('geolocation' in navigator)) { setState('none'); return }
@@ -443,8 +446,8 @@ function Location({ onBack, onDone, editMode }: { onBack: () => void; onDone: ()
         await fetch('/api/plan/location-ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lat, lng }) })
         try { localStorage.setItem('luf_last_ping_at', String(Date.now())) } catch { /* fine */ }
         const r = await fetch('/api/plan/nearby-spots').then((x) => x.json()).catch(() => null)
-        const list = (r?.spots || []) as { name: string; miles: number }[]
-        setSpots(list.slice(0, 4)); setState(list.length ? 'on' : 'none')
+        const list = (r?.spots || []) as { name: string; miles: number; lat: number; lng: number }[]
+        setSpots(list.slice(0, 4)); setMe({ lat, lng }); setState(list.length ? 'on' : 'none')
         if (list.length) hapticTap(20)
       } catch { setState('none') }
     }, () => setState('none'), { maximumAge: 10 * 60000, timeout: 9000 })
@@ -457,6 +460,8 @@ function Location({ onBack, onDone, editMode }: { onBack: () => void; onDone: ()
   return (
     <div className="min-h-[100dvh] relative overflow-hidden">
       <div className="absolute inset-0 nf-map" />
+      {state === 'on' && me && !mapFailed && <LiveMap me={me} spots={spots} bottomPad={300} onFail={() => setMapFailed(true)} />}
+      {!(state === 'on' && me && !mapFailed) && (<>
       <div className="absolute left-[-5%] top-[50%] w-[130%] h-2.5 -rotate-[28deg] origin-left" style={{ background: 'rgba(237,231,218,.16)' }} />
       <div className="absolute left-[5%] top-[11%] w-[30%] h-[13%] rounded-md" style={{ background: 'rgba(229,169,60,.16)', border: '2px solid rgba(229,169,60,.45)' }} />
       <div className="absolute left-[62%] top-[18%] w-[33%] h-[18%] rounded-md" style={{ background: 'rgba(110,190,160,.14)', border: '2px solid rgba(110,190,160,.4)' }} />
@@ -466,7 +471,8 @@ function Location({ onBack, onDone, editMode }: { onBack: () => void; onDone: ()
         <span className="nf-pulse absolute inset-0 rounded-full" style={{ background: 'rgba(90,160,255,.6)' }} />
         <span className="absolute inset-[3px] rounded-full" style={{ background: '#4C8DFF', border: '3px solid #EDE7DA' }} />
       </div>
-      {state === 'on' && spots.map((s, k) => (
+      </>)}
+      {state === 'on' && (mapFailed || !me) && spots.map((s, k) => (
         <div key={s.name} className="nf-pin absolute flex items-center gap-2 rounded-full pl-1.5 pr-3 py-1.5" style={{ left: PIN_POS[k].x, top: PIN_POS[k].y, animationDelay: `${k * 0.12}s`, background: C.gold, color: C.bg, boxShadow: '0 6px 18px rgba(0,0,0,.35)' }}>
           <span className="w-[26px] h-[26px] rounded-full flex items-center justify-center" style={{ background: C.bg }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.gold} strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M7 3v8M5 3v5a2 2 0 004 0V3M7 11v10M17 3c-2 0-3 3-3 6s1 4 3 4v8" /></svg>

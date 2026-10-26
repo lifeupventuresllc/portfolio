@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { openChainsNear } from '@/lib/fos/nearby-food'
+import { openSpotsNear } from '@/lib/fos/nearby-food'
 import { verifiedChains } from '@/lib/chain-menu'
 
 export const dynamic = 'force-dynamic'
@@ -20,7 +20,7 @@ export async function GET() {
   const lat = enrollment?.last_lat as number | null, lng = enrollment?.last_lng as number | null
   if (lat == null || lng == null) return NextResponse.json({ spots: [] })
 
-  const near = (await openChainsNear(lat, lng, verifiedChains())) || new Map<string, number>()
-  const spots = Array.from(near).sort((a, b) => a[1] - b[1]).slice(0, 4).map(([name, miles]) => ({ name, miles: Math.round(miles * 10) / 10 }))
-  return NextResponse.json({ spots })
+  // 2026-10-26: with where each one is, for the live map.
+  const spots = await openSpotsNear(lat, lng, verifiedChains())
+  return NextResponse.json({ spots, me: { lat, lng } })
 }
