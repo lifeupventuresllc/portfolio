@@ -4,18 +4,13 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import StreakChip from '@/components/StreakChip'
 import VerifyEmailBanner from '@/components/VerifyEmailBanner'
 import TimezoneSync from '@/components/TimezoneSync'
-import NextActionCard from '@/components/NextActionCard'
 import DashboardVideoFeed from '@/components/DashboardVideoFeed'
 import FeedEngagementRail from '@/components/FeedEngagementRail'
 import HomeSwipe from '@/components/HomeSwipe'
 import StartPlanBar from '@/components/StartPlanBar'
 import WelcomeVideo from '@/components/WelcomeVideo'
-import LunchChip from '@/components/LunchChip'
-import { whyTitle } from '@/lib/payoff'
+import MyDayBody from './today/MyDayBody'
 import { getFeedVideos } from '@/lib/feed-videos'
-import { affirmationForDay } from '@/lib/affirmations'
-import { localDayNumber, localDateISO } from '@/lib/localdate'
-import { streakFrom } from '@/lib/streak'
 
 export const dynamic = 'force-dynamic'
 
@@ -136,8 +131,8 @@ export default async function PlanDashboard() {
   const hasPlan = !!enrollment.intake_completed
 
   // Home is TWO core screens (Asa's spec, 2026-09-28):
-  //  - has a plan -> Screen 1 "your win for today" (name, one self-talk line,
-  //    today's win, one Start), swipe up to Screen 2, the feed with a small
+  //  - has a plan -> Screen 1 is her My Day, opening on Progress (changed
+  //    2026-10-26, see heroNode below), swipe up to Screen 2, the feed with a small
   //    "Your win for today" bar at the bottom (components/HomeSwipe.tsx).
   //  - no plan yet -> a one-time welcome video, then straight to the feed, whose
   //    bottom bar says "Start your plan" (components/StartPlanBar.tsx).
@@ -145,25 +140,7 @@ export default async function PlanDashboard() {
   // to be layered on here; none of them are on either screen now. They live
   // under the bottom tabs (My Day has the food log and the menu; the camera
   // button snaps a meal photo), so nothing was removed from the app.
-  const affirmation = affirmationForDay(localDayNumber())
   const videos = getFeedVideos()
-
-  // Real streak for the win-screen greeting card (Asa's ask, 2026-09-28: "4-day
-  // streak" on the win screen, not a generic cheer). Same streakFrom(), same
-  // '__daily__' rows /api/plan/daily's own chip reads — computed here directly
-  // (not a second client fetch) since this page already has `svc`+`enrollment`
-  // in scope and streakFrom is a cheap pure function.
-  let streak = 0
-  let why: string | null = null
-  if (hasPlan) {
-    const [{ data: dailyRows }, { data: intakeRow }] = await Promise.all([
-      svc.from('challenge_progress').select('logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
-      svc.from('challenge_intake').select('form_data').eq('enrollment_id', enrollment.id).maybeSingle(),
-    ])
-    streak = streakFrom(new Set((dailyRows || []).map((r) => r.logged_on as string)), localDateISO())
-    const fd = (intakeRow?.form_data || {}) as { payoffs?: unknown; why_own?: unknown }
-    why = whyTitle(fd.payoffs, fd.why_own)
-  }
 
   // Layout notes kept from the earlier feed-first dashboard: h-[100dvh] with
   // the negative marginBottom cancels app/plan/layout.tsx's bottom padding (otherwise the page scrolls and
@@ -180,32 +157,12 @@ export default async function PlanDashboard() {
     </div>
   )
 
-  // Today's win (2026-10-25, Asa's pick — same simple look as the new
-  // intake): her photo full screen, the win in big slanted letters, her why,
-  // one gold button, and her next meal already picked. Same NextActionCard
-  // logic underneath — only the look changed.
-  const heroNode = (
-    <div className="absolute inset-0 overflow-hidden" style={{ background: '#021F16' }}>
-      <div className="absolute inset-0 home-hero-photo" style={{ backgroundImage: 'url(/_next/image?url=%2Fimages%2Fapp%2Fpexels-7746282.jpg&w=1080&q=70)', backgroundSize: 'cover', backgroundPosition: 'center 22%' }} />
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,.6) 0%, rgba(2,31,22,.05) 20%, rgba(2,31,22,.3) 40%, rgba(2,31,22,.9) 58%, #021F16 70%)' }} />
-      <style>{`.home-hero-photo{animation:homeKb 12s ease-out both}@keyframes homeKb{from{transform:scale(1.12)}to{transform:scale(1)}}@media (prefers-reduced-motion: reduce){.home-hero-photo{animation:none}}`}</style>
-      <div className="relative h-full max-w-md mx-auto px-5 flex flex-col" style={{ paddingTop: 'calc(18px + env(safe-area-inset-top))', paddingBottom: 96 }}>
-        <div className="flex justify-between items-center">
-          <span style={{ fontFamily: 'var(--font-jbmono), monospace', fontSize: 13, fontWeight: 700, letterSpacing: '.14em', color: '#EDE7DA' }}>HEY {firstName.toUpperCase()}</span>
-          {streak >= 1 && (
-            <span className="flex items-center gap-1.5 rounded-full px-3 py-2" style={{ background: '#EDE7DA', color: '#021F16', fontFamily: 'var(--font-jbmono), monospace', fontSize: 12, fontWeight: 700, letterSpacing: '.06em' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#E5A93C" stroke="#021F16" strokeWidth="1.5" aria-hidden><path d="M12 2c1 4 5 5 5 10a5 5 0 01-10 0c0-3 2-4 2-7 2 1 3 2 3 4 0-3 0-5 0-7z" /></svg>
-              {streak}-DAY STREAK
-            </span>
-          )}
-        </div>
-        <div className="flex-1" />
-        <NextActionCard variant="hero" hasPlan
-          heroSub={why ? `${why} One step today, that\u2019s the whole win.` : affirmation ? `\u201c${affirmation}\u201d` : undefined}
-          heroFooter={<LunchChip />} />
-      </div>
-    </div>
-  )
+  // Screen 1 = her My Day (2026-10-26, Asa: "progress should be the first
+  // thing once they created an account"). Same Today/Progress body as
+  // /plan/today (./today/MyDayBody), opening on Progress; her win for today
+  // ("Let's go" on the workout card) is one tap away under Today. Replaces
+  // the full-photo TODAY'S WIN hero. Swipe up still goes to the feed.
+  const heroNode = hasPlan ? <MyDayBody enrollment={enrollment} user={user} where="home" /> : null
 
   return (
     <div className="h-[100dvh] flex flex-col overflow-hidden" style={{ background: '#021F16', paddingBottom: 'calc(63px + env(safe-area-inset-bottom))', marginBottom: 'calc(-4.5rem - env(safe-area-inset-bottom))' }}>

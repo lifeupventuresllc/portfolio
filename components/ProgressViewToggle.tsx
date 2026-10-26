@@ -10,18 +10,32 @@ type Tab = 'plan' | 'garden'
 // one shows. Plan stays the default/active tab (today's real page, unchanged
 // behavior); the last pick is remembered per-device so returning to Garden
 // doesn't require a re-tap every visit.
-export default function ProgressViewToggle({ plan, garden }: { plan: ReactNode; garden: ReactNode }) {
-  const [tab, setTab] = useState<Tab>('plan')
+//
+// 2026-10-26 (Asa: "progress should be the first thing"): Home passes
+// initialTab='garden' + remember=false so it always opens on Progress, and
+// the feed's "Your win for today" bar fires TODAY_EVENT to flip it to Today.
+export const TODAY_EVENT = 'luf:my-day-today'
+
+export default function ProgressViewToggle({ plan, garden, initialTab = 'plan', remember = true }: { plan: ReactNode; garden: ReactNode; initialTab?: Tab; remember?: boolean }) {
+  const [tab, setTab] = useState<Tab>(initialTab)
 
   useEffect(() => {
+    if (!remember) return
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved === 'plan' || saved === 'garden') setTab(saved)
     } catch { /* private mode — default stands */ }
+  }, [remember])
+
+  useEffect(() => {
+    const show = () => setTab('plan')
+    window.addEventListener(TODAY_EVENT, show)
+    return () => window.removeEventListener(TODAY_EVENT, show)
   }, [])
 
   const pick = (t: Tab) => {
     setTab(t)
+    if (!remember) return
     try { localStorage.setItem(STORAGE_KEY, t) } catch { /* private mode */ }
   }
 
