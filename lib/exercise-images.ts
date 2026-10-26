@@ -16,6 +16,72 @@
 // plyo bodyweight moves — Jumping Jacks, Burpees, Donkey Kick, kickboxing-style kicks, and
 // the postpartum/branded ab moves). This list will grow as more real matches or custom
 // photos are sourced.
+// 2026-10-26: photo refresh — every demo photo now shows a Black woman (Asa: "for the
+// photos only use african american women"). Kept as-is (already a Black woman doing the
+// move): bicep-curl-db-supinated, bird-dog, crunch, reverse-lunge-db. All others replaced
+// with free Pexels License photos (no credit required; originals at
+// https://www.pexels.com/photo/<id>/). A few are the closest honest match rather than the
+// exact move/equipment (no Pexels photo of a Black woman doing it exists), e.g. machine
+// and barbell bench moves, leg machines, cable crunch, kettlebell moves.
+// file -> Pexels ID:
+//   barbell-back-squat.jpg -> 34043595
+//   barbell-bench-press.jpg -> 18961994
+//   barbell-bent-over-row.jpg -> 6455898
+//   barbell-curl.jpg -> 6998811
+//   barbell-hip-thrust.jpg -> 8846204
+//   bent-over-reverse-fly.jpg -> 6455904
+//   bodyweight-squats.jpg -> 8846119
+//   cable-bicep-curl.jpg -> 33832199
+//   cable-crunch.jpg -> 6455845
+//   cable-face-pull.jpg -> 33832200
+//   cable-glute-kickback.jpg -> 6303435
+//   cable-lateral-raise.jpg -> 33832202
+//   close-grip-bench-press.jpg -> 8353397
+//   concentration-curl.jpg -> 6455925
+//   db-bent-over-row.jpg -> 8032920
+//   db-front-raise.jpg -> 6496099
+//   db-lateral-raise.jpg -> 8846592
+//   db-rear-delt-fly.jpg -> 6455904
+//   db-shoulder-press.jpg -> 8846561
+//   db-squat.jpg -> 8032754
+//   db-step-up.jpg -> 36531948
+//   db-tricep-kickback.jpg -> 8353397
+//   dead-bug.jpg -> 6516222
+//   dumbbell-snatch.jpg -> 8846089
+//   flutter-kicks.jpg -> 6516222
+//   glute-bridge-marches.jpg -> 8846115
+//   glute-bridge-single-leg-lift.jpg -> 8846204
+//   goblet-squat.jpg -> 8846530
+//   hack-squat.jpg -> 34043586
+//   hammer-curl.jpg -> 8846585
+//   hanging-knee-raise.jpg -> 8770413
+//   high-intensity-mountain-climbers.jpg -> 8402214
+//   hip-thrust.jpg -> 20263479
+//   incline-barbell-press.jpg -> 18961994
+//   kb-around-the-worlds.jpg -> 2413552
+//   kb-windmill.jpg -> 2413551
+//   lat-pulldown.jpg -> 33832203
+//   leg-extension.jpg -> 18961994
+//   leg-press-single-seated.jpg -> 8846280
+//   lying-leg-curl.jpg -> 8846104
+//   mountain-climbers.jpg -> 8402214
+//   overhead-tricep-extension-db.jpg -> 8846596
+//   plank-holds.jpg -> 5149167
+//   push-up.jpg -> 8846275
+//   reverse-crunch.jpg -> 6455826
+//   reverse-pec-deck.jpg -> 18961994
+//   romanian-deadlift-barbell.jpg -> 6455898
+//   romanian-deadlift-db.jpg -> 8032920
+//   seated-cable-row.jpg -> 33832200
+//   seated-leg-curl.jpg -> 8846104
+//   single-arm-db-row.jpg -> 6455909
+//   sit-ups.jpg -> 6455829
+//   skull-crusher.jpg -> 8353397
+//   slow-sit-up.jpg -> 6455829
+//   standing-calf-raise-db.jpg -> 8846281
+//   straight-arm-cable-pulldown.jpg -> 33832203
+//   thrusters.jpg -> 8846212
+//   walking-lunge-db.jpg -> 8032831
 export const FORM_IMAGES: Record<string, string> = {
   'Barbell Curl': '/images/exercises/barbell-curl.jpg',
   'Barbell Hip Thrust': '/images/exercises/barbell-hip-thrust.jpg',
