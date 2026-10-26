@@ -261,16 +261,17 @@ export default function NewFlow(p: {
         {step === 'foodintro' && <FoodIntro onDone={() => go(i + 1)} />}
         {step === 'never' && (
           <Shell left={LEFT.never} cal={cal} onBack={() => go(STEPS.indexOf('hurts'))}>
-            <H1>Any food you never eat?</H1>
-            <Sub>Tap it once. It never lands on your plate.</Sub>
-            <div className="flex flex-wrap gap-2 mt-4">
+            <H1 size={46}>Any food you never eat?</H1>
+            <Sub>Tap it. We flick it off your plate for good.</Sub>
+            <NeverPlate never={p.never} />
+            <div className="flex flex-wrap justify-center gap-2 mt-3">
               {NEVER.map((n) => {
                 const on = p.never.includes(n)
                 return (
-                  <button key={n} onClick={() => { hapticTap(); p.setNever(on ? p.never.filter((x) => x !== n) : [...p.never, n]) }}
-                    className="nf-press h-12 rounded-full px-4 text-[15px] font-semibold flex items-center gap-2"
-                    style={{ border: `2px solid ${on ? C.ink : 'rgba(237,231,218,.22)'}`, background: on ? C.ink : 'transparent', color: on ? C.bg : C.ink }}>
-                    {on && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>}
+                  <button key={n} onClick={() => { hapticTap(on ? 8 : 18); p.setNever(on ? p.never.filter((x) => x !== n) : [...p.never, n]) }}
+                    className="nf-press h-10 rounded-full px-3 text-[14px] font-semibold flex items-center gap-1.5"
+                    style={{ border: `2px solid ${on ? '#C8452D' : 'rgba(237,231,218,.22)'}`, background: on ? 'rgba(200,69,45,.18)' : 'transparent', color: on ? '#F0B3A6' : C.ink }}>
+                    <span className="text-[17px] leading-none" aria-hidden>{FOOD_ICON[n]}</span>
                     {n}
                   </button>
                 )
@@ -389,13 +390,49 @@ function NameWhy(p: Parameters<typeof NewFlow>[0] & { next: () => void }) {
   )
 }
 
+// Never foods as a plate (2026-10-26, Asa: "make it more immersive... the
+// bubbles are fine, add one way the experience is better"). Every food sits
+// on her plate; tapping one flicks it off with a "NEVER." stamp. Tap again
+// and it lands back on.
+const FOOD_ICON: Record<string, string> = { Pork: '🥓', Beef: '🥩', Chicken: '🍗', Fish: '🐟', Shellfish: '🦐', Dairy: '🧀', Eggs: '🥚', Gluten: '🍞', Nuts: '🌰', Peanuts: '🥜', Soy: '🫘', Mushrooms: '🍄', Spicy: '🌶️', Onions: '🧅' }
+function NeverPlate({ never }: { never: string[] }) {
+  const [stamp, setStamp] = useState(0)
+  const prev = useRef(never.length)
+  useEffect(() => { if (never.length > prev.current) setStamp((n) => n + 1); prev.current = never.length }, [never.length])
+  const R = 92, c = 125
+  return (
+    <div className="flex flex-col items-center mt-3">
+      <div className={`relative rounded-full ${stamp ? (stamp % 2 ? 'nv-shakeA' : 'nv-shakeB') : ''}`} style={{ width: 250, height: 250, background: 'radial-gradient(circle,#F4EFE4 0 52%,#E3DCCB 53% 60%,#EDE7DA 61% 100%)', boxShadow: '0 18px 40px rgba(0,0,0,.4)' }}>
+        {NEVER.map((n, i) => {
+          const a = (i / NEVER.length) * Math.PI * 2 - Math.PI / 2
+          const r = i % 2 ? R : R - 34
+          const gone = never.includes(n)
+          return (
+            <span key={n} aria-hidden className="absolute text-[32px] leading-[44px] text-center" style={{
+              width: 44, height: 44, left: c + Math.cos(a) * r - 22, top: c + Math.sin(a) * r - 22,
+              opacity: gone ? 0 : 1, transition: 'transform .5s cubic-bezier(.5,-0.4,.7,1), opacity .5s ease',
+              transform: gone ? `translate(${Math.cos(a) * 260}px, ${Math.sin(a) * 260 - 120}px) rotate(${i % 2 ? 260 : -260}deg) scale(.6)` : 'none',
+            }}>{FOOD_ICON[n]}</span>
+          )
+        })}
+        {stamp > 0 && <span key={stamp} className="nv-nope absolute left-1/2 top-1/2 pointer-events-none" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 40, color: '#C8452D' }}>NEVER.</span>}
+      </div>
+      <span className="mt-2.5" style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.14em', color: 'rgba(237,231,218,.6)' }}>
+        {never.length ? `${never.length} OFF YOUR PLATE FOR GOOD` : 'YOUR PLATE'}
+      </span>
+    </div>
+  )
+}
+
 // The 6-second food intro — plays like a short video, then moves on.
 function FoodIntro({ onDone }: { onDone: () => void }) {
   const done = useRef(false)
   const finish = () => { if (!done.current) { done.current = true; onDone() } }
   useEffect(() => {
-    const t = setTimeout(finish, 6000)
-    const h = [1750, 2300, 2850, 4000].map((ms) => setTimeout(() => hapticTap(ms === 4000 ? 25 : 10), ms + (ms === 4000 ? 0 : 350)))
+    // 2026-10-26 (Asa): new ending: one finger tap orders it, and it rides
+    // to her door. No decision for her, just "it's handled". ~8.5s total.
+    const t = setTimeout(finish, 8600)
+    const h = [[1700, 10], [2150, 10], [2600, 10], [3050, 25], [5450, 30], [6800, 20]].map(([ms, d]) => setTimeout(() => hapticTap(d), ms))
     return () => { clearTimeout(t); h.forEach(clearTimeout) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -422,8 +459,26 @@ function FoodIntro({ onDone }: { onDone: () => void }) {
           <div className="absolute inset-x-6 top-[14%] flex flex-col items-center gap-4 text-center">
             <span className="fi-s3" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 64, lineHeight: 0.9, textTransform: 'uppercase' }}>We&apos;ve got all three.</span>
             <span className="fi-s3 text-lg" style={{ color: 'rgba(237,231,218,.85)' }}>You just eat.</span>
-            <span className="fi-s3b mt-6" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 46, lineHeight: 0.9, textTransform: 'uppercase', color: C.gold }}>Let&apos;s lock in your food plan.</span>
           </div>
+          <div className="fi-ord absolute inset-x-0 top-0 flex flex-col items-center gap-3.5">
+            <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, letterSpacing: '.18em', color: C.gold }}>ONE TAP</span>
+            <div className="fi-card w-[260px] rounded-3xl overflow-hidden" style={{ background: C.ink, color: C.bg, boxShadow: '0 20px 50px rgba(0,0,0,.45)' }}>
+              <div className="h-[120px]" style={{ backgroundImage: img('/images/meals/food/bowl.jpg'), backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              <div className="px-4 pt-3.5 pb-4 flex flex-col gap-2">
+                <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.1em', opacity: 0.7 }}>YOUR LUNCH · 520 CAL</span>
+                <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 30, lineHeight: 0.9, textTransform: 'uppercase' }}>Chicken bowl</span>
+                <span className="fi-obtn relative h-[50px] rounded-full flex items-center justify-center" style={{ background: C.gold, fontFamily: MONO, fontWeight: 700, fontSize: 15, letterSpacing: '.12em' }}>ORDER IT<span className="fi-ripple" /></span>
+              </div>
+            </div>
+            <svg className="fi-finger absolute" width="70" height="70" viewBox="0 0 64 64" style={{ left: '50%', top: 250, marginLeft: -10 }} aria-hidden><path d="M26 8c3 0 5 2 5 5v17l3-1c3-1 6 1 6 4l4-1c3 0 5 2 5 5l3 0c3 0 5 2 5 5v8c0 8-6 13-14 13H33c-5 0-9-3-11-7l-8-15c-1-3 0-5 3-6 2-1 4 0 5 2l3 5V13c0-3 1-5 1-5z" fill={C.ink} stroke={C.bg} strokeWidth="2.5" strokeLinejoin="round" /></svg>
+            <svg className="absolute overflow-visible" width="330" height="150" viewBox="0 0 330 150" style={{ top: 300, left: '50%', marginLeft: -165 }} aria-hidden>
+              <path className="fi-route" d="M30 30 C 120 10, 180 140, 290 110" fill="none" stroke={C.gold} strokeWidth="4" strokeLinecap="round" />
+              <g className="fi-bag"><rect x="-16" y="-14" width="32" height="30" rx="6" fill={C.gold} /><path d="M-8 -14v-5a8 8 0 0116 0v5" fill="none" stroke={C.gold} strokeWidth="3.5" /></g>
+              <g className="fi-door"><path d="M282 118 L300 98 L318 118 V140 H282 Z" fill={C.ink} /><rect x="295" y="124" width="10" height="16" fill={C.bg} /></g>
+            </svg>
+            <span className="fi-at absolute inset-x-0 text-center" style={{ top: 460, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 40, lineHeight: 1, textTransform: 'uppercase' }}>At your door.</span>
+          </div>
+          <span className="fi-lock absolute inset-x-6 text-center" style={{ top: '34%', fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 44, lineHeight: 0.9, textTransform: 'uppercase', color: C.gold }}>Let&apos;s lock in your food plan.</span>
         </div>
       </div>
       <span className="absolute inset-x-0 text-center" style={{ bottom: 'calc(40px + env(safe-area-inset-bottom))', fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.14em', color: 'rgba(237,231,218,.6)' }}>TAP TO SKIP</span>
@@ -704,25 +759,49 @@ const CSS = `
 @keyframes nfDrop{from{transform:translateY(-30px) scale(.6);opacity:0}to{transform:none;opacity:1}}
 .nf-sheet{animation:nfUp .5s cubic-bezier(.2,1,.3,1) both}
 @keyframes nfUp{from{transform:translateY(100%)}to{transform:none}}
-.fi-food{animation:fiKb 6s linear both}
+.fi-food{animation:fiKb 8.6s linear both}
 @keyframes fiKb{from{transform:scale(1.05)}to{transform:scale(1.25)}}
-.fi-bar{width:100%;transform-origin:left;animation:fiBar 6s linear both}
+.fi-bar{width:100%;transform-origin:left;animation:fiBar 8.6s linear both}
 @keyframes fiBar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-.fi-s1{animation:fiS1 1.7s cubic-bezier(.2,1,.3,1) both}
+.fi-s1{animation:fiS1 1.4s cubic-bezier(.2,1,.3,1) both}
 @keyframes fiS1{0%{opacity:0;transform:scale(.8)}20%{opacity:1;transform:scale(1)}80%{opacity:1;transform:scale(1.04)}100%{opacity:0;transform:scale(1.15)}}
-.fi-s2{opacity:0;animation:fiS2 2.4s 1.6s ease both}
+.fi-s2{opacity:0;animation:fiS2 1.9s 1.3s ease both}
 @keyframes fiS2{0%{opacity:0}8%{opacity:1}88%{opacity:1}100%{opacity:0}}
-.fi-line{position:relative;width:max-content;opacity:0;animation:fiLine .35s cubic-bezier(.2,1,.3,1) both}
+.fi-line{position:relative;width:max-content;opacity:0;animation:fiLine .3s cubic-bezier(.2,1,.3,1) both}
 @keyframes fiLine{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:none}}
-.fi-line::after{content:"";position:absolute;left:-6px;right:-6px;top:50%;height:6px;border-radius:6px;background:#E5A93C;transform:scaleX(0);transform-origin:left;animation:fiStrike .35s ease forwards}
-.fi-l1{animation-delay:1.75s}.fi-l1::after{animation-delay:2.1s}
-.fi-l2{animation-delay:2.3s}.fi-l2::after{animation-delay:2.65s}
-.fi-l3{animation-delay:2.85s}.fi-l3::after{animation-delay:3.2s}
+.fi-line::after{content:"";position:absolute;left:-6px;right:-6px;top:50%;height:6px;border-radius:6px;background:#E5A93C;transform:scaleX(0);transform-origin:left;animation:fiStrike .3s ease forwards}
+.fi-l1{animation-delay:1.4s}.fi-l1::after{animation-delay:1.7s}
+.fi-l2{animation-delay:1.85s}.fi-l2::after{animation-delay:2.15s}
+.fi-l3{animation-delay:2.3s}.fi-l3::after{animation-delay:2.6s}
 @keyframes fiStrike{to{transform:scaleX(1)}}
-.fi-s3{opacity:0;animation:fiS3 .6s 4s cubic-bezier(.2,1,.3,1) both}
-.fi-s3b{opacity:0;animation:fiS3 .6s 4.5s cubic-bezier(.2,1,.3,1) both}
-@keyframes fiS3{from{opacity:0;transform:translateY(30px) scale(.95)}to{opacity:1;transform:none}}
-.fi-flash{opacity:0;animation:fiFlash .7s 3.95s ease both}
+.fi-s3{opacity:0;animation:fiS3out 1.5s 3.1s cubic-bezier(.2,1,.3,1) both}
+@keyframes fiS3out{0%{opacity:0;transform:translateY(30px) scale(.95)}20%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0;transform:translateY(-20px)}}
+.fi-flash{opacity:0;animation:fiFlash .7s 3.05s ease both}
 @keyframes fiFlash{0%{opacity:0}30%{opacity:.5}100%{opacity:0}}
+.fi-ord{opacity:0;animation:fiOrd 2.7s 4.6s ease both}
+@keyframes fiOrd{0%{opacity:0;transform:translateY(40px)}12%{opacity:1;transform:none}90%{opacity:1}100%{opacity:0}}
+.fi-card{animation:fiCard 2.6s 4.6s cubic-bezier(.5,0,.3,1) both}
+@keyframes fiCard{0%,42%{transform:none;opacity:1}55%,100%{transform:scale(.25) translate(-260px,420px);opacity:0}}
+.fi-obtn{animation:fiPress .25s 5.45s ease both}
+@keyframes fiPress{0%{transform:scale(1)}50%{transform:scale(.92);background:#F2C46A}100%{transform:scale(1)}}
+.fi-ripple{position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-10px;border-radius:999px;border:3px solid #EDE7DA;opacity:0;animation:fiRip .6s 5.45s ease-out both}
+@keyframes fiRip{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(6)}}
+.fi-finger{opacity:0;animation:fiTap 1.1s 4.75s cubic-bezier(.3,0,.3,1) both}
+@keyframes fiTap{0%{opacity:0;transform:translate(60px,140px)}55%{opacity:1;transform:translate(0,8px)}70%{transform:translate(0,0) scale(.92)}82%{transform:translate(0,4px) scale(1)}100%{opacity:0;transform:translate(30px,60px)}}
+.fi-route{stroke-dasharray:6 8;stroke-dashoffset:300;opacity:0;animation:fiRoute 1s 5.8s linear both}
+@keyframes fiRoute{from{stroke-dashoffset:300;opacity:1}to{stroke-dashoffset:0;opacity:1}}
+.fi-bag{offset-path:path("M30 30 C 120 10, 180 140, 290 110");opacity:0;animation:fiBag 1.1s 5.75s cubic-bezier(.5,0,.4,1) both}
+@keyframes fiBag{0%{offset-distance:0%;opacity:0}10%{opacity:1}100%{offset-distance:100%;opacity:1}}
+.fi-door{transform-box:fill-box;transform-origin:center;animation:fiDoor .4s 6.8s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes fiDoor{0%{transform:scale(1)}50%{transform:scale(1.25)}100%{transform:scale(1)}}
+.fi-at{opacity:0;animation:fiAt .4s 6.8s ease both}
+@keyframes fiAt{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.fi-lock{opacity:0;animation:fiS3 .6s 7.25s cubic-bezier(.2,1,.3,1) both}
+@keyframes fiS3{from{opacity:0;transform:translateY(30px) scale(.95)}to{opacity:1;transform:none}}
+.nv-shakeA{animation:nvShakeA .35s ease}.nv-shakeB{animation:nvShakeB .35s ease}
+@keyframes nvShakeB{0%,100%{transform:none}25%{transform:translateX(-6px) rotate(-2deg)}75%{transform:translateX(6px) rotate(2deg)}}
+@keyframes nvShakeA{0%,100%{transform:none}25%{transform:translateX(-6px) rotate(-2deg)}75%{transform:translateX(6px) rotate(2deg)}}
+.nv-nope{opacity:0;transform:translate(-50%,-50%) rotate(-8deg);animation:nvNope .7s ease both}
+@keyframes nvNope{0%{opacity:0;transform:translate(-50%,-50%) rotate(-8deg) scale(.6)}25%{opacity:1;transform:translate(-50%,-50%) rotate(-8deg) scale(1.1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-60%) rotate(-8deg) scale(1)}}
 @media (prefers-reduced-motion: reduce){.nf-in,.nf-in-back,.nf-head,.nf-rise,.nf-pin,.nf-sheet,.fi-food{animation:none}}
 `
