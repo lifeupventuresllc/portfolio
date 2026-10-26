@@ -436,9 +436,10 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
             <div className="text-center leading-none">
               {hasCalBudget ? (
                 <>
-                  <p className="text-[8px] uppercase tracking-wider mb-0.5" style={{ color: MUTED }}>{calOver ? 'over' : 'left'}</p>
-                  <p className="font-bold text-xl" style={{ color: '#fff', textShadow: calOver ? undefined : '0 0 18px rgba(76,175,125,0.65)' }}>{calOver ? '-' : ''}${Math.abs(remaining)}</p>
-                  <p className="text-[9px] tracking-wider mt-0.5" style={{ color: MUTED }}>of ${calBudget}</p>
+                  {/* 2026-10-26 (Asa): calories, never a dollar sign — "1,753 cal left". */}
+                  <p className="font-bold text-xl tabular-nums" style={{ color: '#fff', textShadow: calOver ? undefined : '0 0 18px rgba(76,175,125,0.65)' }}>{Math.abs(Math.round(remaining)).toLocaleString()}</p>
+                  <p className="text-[9px] uppercase tracking-wider mt-0.5" style={{ color: MUTED }}>{calOver ? 'cal over' : 'cal left'}</p>
+                  <p className="text-[8px] tracking-wider mt-0.5" style={{ color: MUTED }}>of {Math.round(calBudget).toLocaleString()}</p>
                 </>
               ) : (
                 <>
@@ -467,8 +468,8 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
             {loading
               ? 'Loading your day…'
               : !hasCalBudget
-              ? (t.calories === 0 ? 'Log your first meal below — set a calorie goal anytime to track against it.' : `Logged $${t.calories} so far — set a calorie goal to see what's left.`)
-              : `$${Math.abs(remaining)} over budget — no guilt, fresh budget tomorrow.`}
+              ? (t.calories === 0 ? 'Log your first meal below — set a calorie goal anytime to track against it.' : `Logged ${t.calories.toLocaleString()} cal so far — set a calorie goal to see what's left.`)
+              : `${Math.abs(Math.round(remaining)).toLocaleString()} cal over — no guilt, fresh budget tomorrow.`}
           </p>
           {!hasCalBudget && !loading && (
             <a href="/plan/intake" className="inline-block mt-1.5 text-xs font-semibold underline" style={{ color: ACCENT }}>Set my calorie goal →</a>

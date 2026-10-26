@@ -4,21 +4,23 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { MealOption, EatStyle, OrderDestination } from '@/lib/meal-pick'
-import { orderParts, skipLine, chainAddOns, GENERIC_ADDONS, type AddOn } from '@/lib/order-exact'
+import { orderParts, skipLine, chainAddOns, GENERIC_ADDONS, pasteText, copyText, type AddOn } from '@/lib/order-exact'
 import { hapticTap } from '@/lib/haptics'
+import LocationOptIn from '@/components/LocationOptIn'
 
 // The Nutrition tab's decision screen, v4 (2026-10-20, Asa's mockup
 // https://claude.ai/artifact/K8zUHkNNUFkipumXE3k6s5): two big photos, one
 // tap. No numbers to read but the price and calories on the photo.
-// The swap law (Asa): never "Neither", never a third option — ↻ on a card
-// takes that one away and puts another in its place. Always exactly two.
+// The shoe salesman law (Asa, 2026-10-26): always exactly two. "Not this
+// one" on a card takes THAT one away and brings the next in its spot; the
+// card she didn't remove stays. SHUFFLE keeps her kept card and swaps the
+// other. Never zero, never a wall of options.
 export type PickCard = MealOption & { dest: OrderDestination; photo: string; short: string }
 
 const C = {
-  bg: '#021F16', card: '#08281d', line: '#0d3a2a', green: '#4CAF7D', gold: '#E5A93C', pink: '#EA5C87',
-  ivory: '#EDE7DA', muted: 'rgba(237,231,218,0.55)', faint: 'rgba(237,231,218,0.35)',
+  bg: '#021F16', card: '#08281d', line: '#0d3a2a', green: '#4CAF7D', gold: '#E5A93C',
+  ivory: '#EDE7DA', muted: 'rgba(237,231,218,0.72)', faint: 'rgba(237,231,218,0.45)',
 }
-const DISPLAY = 'var(--font-fraunces), Georgia, serif'
 // The new simple look (2026-10-25) for the order + logged screens.
 const HEAD = "var(--font-barlow), 'Barlow Condensed', sans-serif"
 const MONO = "var(--font-jbmono), 'JetBrains Mono', monospace"
@@ -51,9 +53,10 @@ type Props = {
   nextUp: string | null       // 'Next up: your dinner, around 5pm.'
   refreshInMin: number        // when this meal's time is up
   calBudget?: number          // her whole day, for the bar on the logged screen
+  askLocation?: boolean       // eating out with no fresh position → the "near you" ask, pick view only
 }
 
-export default function NutritionPicks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBudget }: Props) {
+export default function NutritionPicks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBudget, askLocation }: Props) {
   const router = useRouter()
   // Indexes into `cards` for the two on screen, plus where the next swap
   // starts looking. Starts on the engine's own top pair.
@@ -69,6 +72,9 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
   })
   const [cursor, setCursor] = useState(2)
   const [fading, setFading] = useState<number | null>(null)
+  // The card she kept — the one she didn't take away. Starts on card 1,
+  // her best fit. SHUFFLE never touches it.
+  const [kept, setKept] = useState(0)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<{ card: PickCard; left: number; entryId: string | null } | null>(null)
   // 2026-10-26 (Asa's mockup): an eat-out tap shows "Order exactly this"
@@ -116,7 +122,9 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
       if (pick >= 0) break
     }
     if (pick < 0) return
+    hapticTap()
     post({ action: 'skipped', keys: [cards[out].key] })
+    setKept(1 - pos)
     setFading(pos)
     setTimeout(() => {
       setShown((s) => s.map((v, i) => (i === pos ? pick : v)))
@@ -152,6 +160,9 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
     router.refresh()
   }
 
+  // SHUFFLE: keep the one she kept, swap the other.
+  const shuffle = () => swap(1 - kept)
+
   // A delivery pick goes through "Order exactly this"; home + grab-and-go
   // picks keep the one-tap flow.
   const tapCard = (card: PickCard) => {
@@ -166,100 +177,107 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
     return <Logged done={done} slot={slot} meal={meal} remainingCal={remainingCal} calBudget={calBudget} nextUp={nextUp} />
   }
   if (done) {
+    // A home or grab-and-go pick (2026-10-26: same new look as the order screens).
     const { card, left } = done
-    const pct = remainingCal > 0 ? Math.min(100, Math.round(((remainingCal - left) / remainingCal) * 100)) : 100
-    const appName = card.dest.app === 'ubereats' ? 'Uber Eats' : 'DoorDash'
+    const whole = calBudget && calBudget > 0 ? calBudget : remainingCal
+    const pct = whole > 0 ? Math.min(100, Math.max(0, Math.round(((whole - left) / whole) * 100))) : 100
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 pb-6 overflow-y-auto">
-        <div className="rounded-full grid place-items-center shrink-0" style={{ width: 150, height: 150, background: `conic-gradient(${C.line} 0 ${pct}%, ${C.green} ${pct}% 100%)` }}>
-          <div className="rounded-full grid place-items-center" style={{ width: 122, height: 122, background: C.bg }}>
-            <div>
-              <p className="text-[34px] font-bold leading-none tabular-nums" style={{ color: C.ivory, fontFamily: DISPLAY }}>{left.toLocaleString()}</p>
-              <p className="text-[11px] mt-1" style={{ color: C.muted }}>cal left</p>
+      <div className="nf-screen flex-1 flex flex-col gap-4 pb-6 overflow-y-auto" style={{ color: C.ivory, fontFamily: BODY }}>
+        <div className="flex-1 flex flex-col justify-center gap-3.5 px-1">
+          <span style={{ ...mono(12), color: MINT }}>LOGGED FOR YOU</span>
+          <h1 className="nf-head" style={head(60)}>Done.<br />You&apos;re on track.</h1>
+          <div className="flex items-baseline gap-2.5 mt-2">
+            <span className="tabular-nums" style={{ ...head(72), lineHeight: 1, color: C.gold }}>{left.toLocaleString()}</span>
+            <span style={{ ...mono(12), color: SOFT }}>CAL LEFT TODAY</span>
+          </div>
+          <div style={{ height: 10, borderRadius: 999, background: 'rgba(237,231,218,.12)', overflow: 'hidden' }}>
+            <div style={{ width: `${pct}%`, height: '100%', background: C.gold, borderRadius: 999, transition: 'width .4s ease' }} />
+          </div>
+          {card.ingredients && card.ingredients.length > 0 ? (
+            <div className="nf-rise flex flex-col gap-2 mt-1" style={{ borderRadius: 20, padding: '14px 16px', background: 'rgba(237,231,218,.06)' }}>
+              <span style={{ ...mono(11), color: C.gold }}>WHAT YOU NEED</span>
+              <ul className="flex flex-col gap-1" style={{ margin: 0, padding: 0, listStyle: 'none', fontSize: 15 }}>
+                {card.ingredients.map((i) => <li key={i}>{i}</li>)}
+              </ul>
             </div>
-          </div>
+          ) : (
+            <p style={{ margin: 0, fontSize: 15, color: SOFT }}>{card.dest.label}.</p>
+          )}
+          {nextUp && <span style={{ fontSize: 14, color: SOFT }}>{nextUp}</span>}
         </div>
-        <h2 className="text-[28px] font-bold mt-4" style={{ color: C.ivory, fontFamily: DISPLAY }}>Done. You&apos;re on track.</h2>
-
-        {card.dest.url ? (
-          <>
-            <p className="text-sm" style={{ color: C.muted }}>Opening {card.place} on {appName}…</p>
-            <p className="text-[13px] max-w-xs" style={{ color: C.ivory }}>Order: {card.name}</p>
-            <a href={card.dest.url} target="_blank" rel="noopener noreferrer"
-              className="w-full max-w-sm text-center rounded-2xl py-4 mt-2 font-bold text-[15px] active:scale-[0.98] transition-transform"
-              style={{ background: `linear-gradient(90deg, ${C.gold}, ${C.pink})`, color: '#0A0A0F' }}>
-              Didn&apos;t open? Tap here
-            </a>
-          </>
-        ) : card.ingredients && card.ingredients.length > 0 ? (
-          <div className="w-full max-w-sm text-left rounded-2xl p-4 mt-1" style={{ background: C.card, border: `1px solid ${C.line}` }}>
-            <p className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: C.green }}>What you need</p>
-            <ul className="text-sm space-y-1" style={{ color: C.ivory }}>
-              {card.ingredients.map((i) => <li key={i}>{i}</li>)}
-            </ul>
-          </div>
-        ) : (
-          <p className="text-sm" style={{ color: C.muted }}>{card.dest.label}.</p>
-        )}
-
-        {nextUp && <p className="text-[13px] mt-2" style={{ color: C.green }}>{nextUp}</p>}
-        <button onClick={() => { setDone(null); router.refresh() }} className="text-sm py-2 mt-1" style={{ color: C.muted }}>Back</button>
-        <button onClick={undo} className="text-xs underline underline-offset-2" style={{ color: C.faint }}>Tapped by mistake? Undo</button>
+        <button type="button" onClick={() => { hapticTap(); setDone(null); router.refresh() }} className="nf-press rounded-full"
+          style={{ height: 56, background: C.ivory, color: C.bg, ...mono(14) }}>BACK</button>
+        <button type="button" onClick={undo} className="self-center underline underline-offset-2" style={{ fontSize: 13, color: C.faint }}>Tapped by mistake? Undo</button>
       </div>
     )
   }
 
   // ---------- the two photos ----------
+  const ask = askLocation ? <LocationOptIn prompt="Show meals open near you right now?" refreshOnPing large /> : null
   if (shown.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
-        <h1 className="text-[26px] font-bold" style={{ color: C.ivory, fontFamily: DISPLAY }}>Nothing fits right now.</h1>
-        <Link href="/plan/nutrition/log" className="text-sm underline underline-offset-[3px]" style={{ color: C.gold }}>Change how you eat</Link>
+      <div className="nf-screen flex-1 flex flex-col gap-3" style={{ color: C.ivory, fontFamily: BODY }}>
+        {ask}
+        <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
+          <h1 className="nf-head" style={head(44)}>Nothing fits<br />right now.</h1>
+          <Link href="/plan/nutrition/log" className="underline underline-offset-[3px]" style={{ ...mono(12), color: C.gold }}>CHANGE HOW YOU EAT</Link>
+        </div>
       </div>
     )
   }
 
   const canSwap = cards.length > shown.length
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      <h1 className="text-[30px] font-bold leading-tight mb-4" style={{ color: C.ivory, fontFamily: DISPLAY }}>{heading}</h1>
-      <div className="flex-1 flex flex-col gap-3.5 min-h-0 pb-4">
+    <div className="nf-screen flex-1 flex flex-col min-h-0" style={{ color: C.ivory, fontFamily: BODY }}>
+      <style>{`.np-out{animation:npOut .18s ease-in both}@keyframes npOut{to{transform:translateX(-36px);opacity:0}}.np-in{animation:npIn .32s cubic-bezier(.2,1,.3,1) both}@keyframes npIn{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}@media (prefers-reduced-motion: reduce){.np-out,.np-in{animation:none}}`}</style>
+      {ask}
+      <h1 className="nf-head mb-4" style={head(44)}>{heading}</h1>
+      <div className="flex-1 flex flex-col gap-3 min-h-0">
         {shown.map((idx, pos) => {
           const c = cards[idx]
           return (
-            <div key={pos} className="relative flex-1 min-h-[150px] rounded-3xl overflow-hidden" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+            <div key={`${pos}-${idx}`} className={`relative flex-1 min-h-[150px] rounded-3xl overflow-hidden ${fading === pos ? 'np-out' : 'np-in'}`}
+              style={{ background: C.card, border: `2px solid ${kept === pos && canSwap ? 'rgba(229,169,60,.55)' : 'rgba(237,231,218,.12)'}` }}>
               <button onClick={() => tapCard(c)} disabled={busy} aria-label={`${c.short}, ${c.place}, ${c.cal} calories`}
-                className="absolute inset-0 w-full h-full text-left active:scale-[0.98] transition-transform disabled:opacity-70">
+                className="nf-press absolute inset-0 w-full h-full text-left disabled:opacity-70">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={c.photo} alt="" className="absolute inset-0 w-full h-full object-cover transition-opacity duration-200" style={{ opacity: fading === pos ? 0 : 1 }} />
-                <span className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,0) 35%, rgba(2,31,22,0.92) 100%)' }} />
-                <span className="absolute left-4 right-4 bottom-3.5 flex items-end justify-between gap-3 transition-opacity duration-200" style={{ opacity: fading === pos ? 0 : 1 }}>
+                <img src={c.photo} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                <span className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,0) 30%, rgba(2,31,22,0.94) 100%)' }} />
+                <span className="absolute left-4 right-4 bottom-3.5 flex items-end justify-between gap-3">
                   <span className="min-w-0">
-                    <span className="block font-bold text-[19px] leading-tight" style={{ color: C.ivory }}>{c.short}</span>
-                    <span className="block text-[13px] mt-0.5" style={{ color: 'rgba(237,231,218,0.8)' }}>
-                      {c.kind === 'cook' ? 'Cook it' : c.place}
-                      {c.price != null && <> · <b className="font-semibold" style={{ color: C.gold }}>${c.price}</b></>}
+                    <span className="block" style={{ ...head(26), lineHeight: 0.95, color: C.ivory }}>{c.short}</span>
+                    <span className="block mt-1" style={{ ...mono(11), color: SOFT }}>
+                      {c.kind === 'cook' ? 'COOK IT' : c.place.toUpperCase()}
+                      {c.price != null && <> · <span style={{ color: C.gold }}>${c.price}</span></>}
                     </span>
                   </span>
                   <span className="shrink-0 text-right leading-none">
-                    <span className="block text-[30px] font-bold tabular-nums" style={{ color: C.ivory, fontFamily: DISPLAY }}>{c.cal}</span>
-                    <span className="block text-[11px] mt-0.5" style={{ color: C.muted }}>cal</span>
+                    <span className="block tabular-nums" style={{ ...head(38), lineHeight: 1, color: C.gold }}>{c.cal}</span>
+                    <span className="block mt-0.5" style={{ ...mono(10), color: SOFT }}>CAL</span>
                   </span>
                 </span>
               </button>
               {canSwap && (
-                <button onClick={() => swap(pos)} disabled={busy} aria-label="Swap this one"
-                  className="absolute top-3 right-3 w-10 h-10 rounded-full grid place-items-center active:rotate-180 transition-transform duration-300"
-                  style={{ background: 'rgba(2,31,22,0.72)', border: '1px solid rgba(237,231,218,0.25)', backdropFilter: 'blur(6px)' }}>
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke={C.ivory} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M21 12a9 9 0 0 1-15.5 6.2L3 16" /><path d="M3 21v-5h5" /><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8" /><path d="M21 3v5h-5" />
-                  </svg>
+                <button type="button" onClick={() => swap(pos)} disabled={busy || fading != null} aria-label={`Not this one — swap out ${c.short}`}
+                  className="nf-press absolute top-3 right-3 rounded-full px-3 flex items-center gap-1.5"
+                  style={{ height: 34, background: 'rgba(2,31,22,0.78)', border: '1px solid rgba(237,231,218,0.28)', backdropFilter: 'blur(6px)', color: C.ivory, ...mono(10) }}>
+                  <span aria-hidden style={{ fontSize: 12 }}>✕</span> NOT THIS ONE
                 </button>
               )}
             </div>
           )
         })}
       </div>
+      {canSwap && (
+        <button type="button" onClick={shuffle} disabled={busy || fading != null} aria-label="Shuffle: keep one, swap the other"
+          className="nf-press w-full rounded-full mt-3 mb-4 flex items-center justify-center gap-2 disabled:opacity-60"
+          style={{ height: 54, border: `2px solid ${C.gold}`, background: 'transparent', color: C.gold, ...mono(14) }}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M16 3h5v5" /><path d="M4 20 21 3" /><path d="M21 16v5h-5" /><path d="m15 15 6 6" /><path d="M4 4l5 5" />
+          </svg>
+          SHUFFLE
+        </button>
+      )}
     </div>
   )
 }
@@ -271,7 +289,15 @@ function OrderExact({ card, busy, onBack, onOpen }: { card: PickCard; busy: bool
   const parts = orderParts(card.name)
   const [on, setOn] = useState<number[]>([])
   const appName = card.dest.app === 'ubereats' ? 'UBER EATS' : 'DOORDASH'
-  const allSet = parts.length > 0 && on.length === parts.length
+  // Copy and paste (2026-10-26, Asa: "copy it into DoorDash or Uber Eats and
+  // it goes directly to the restaurant and the food item").
+  const text = pasteText(card.place, card.name)
+  const [copied, setCopied] = useState(0)
+  const copy = () => {
+    hapticTap()
+    copyText(text)
+    setCopied((n) => n + 1)
+  }
   return (
     <div className="nf-screen flex-1 flex flex-col gap-3.5 pb-6" style={{ color: C.ivory, fontFamily: BODY }}>
       <style>{`.nf-pop{animation:nfPop .35s ease}@keyframes nfPop{0%{transform:scale(1)}40%{transform:scale(1.15)}100%{transform:scale(1)}}@media (prefers-reduced-motion: reduce){.nf-pop{animation:none}}`}</style>
@@ -304,12 +330,22 @@ function OrderExact({ card, busy, onBack, onOpen }: { card: PickCard; busy: bool
       <div style={{ borderRadius: 16, padding: '12px 14px', background: 'rgba(229,169,60,.1)', border: '1px solid rgba(229,169,60,.4)', fontSize: 14, lineHeight: 1.4 }}>
         <b style={{ color: C.gold }}>Skip these:</b> {skipLine(card.place)}. They add 100–500 cal.
       </div>
-      <button type="button" onClick={() => { hapticTap(); onOpen() }} disabled={busy}
-        className="nf-press mt-auto w-full rounded-full disabled:opacity-70" style={{ height: 62, background: C.gold, color: C.bg, ...mono(16) }}>
-        {allSet ? `ALL SET · OPEN ${appName}` : `OPEN ${appName}`}
+      <div className="flex flex-col gap-1.5">
+        <span style={{ ...mono(11), color: SOFT }}>WHAT TO SEARCH</span>
+        <div className="flex items-center gap-2" style={{ borderRadius: 16, padding: 6, paddingLeft: 16, background: C.ivory }}>
+          <span className="flex-1 min-w-0 truncate" style={{ color: C.bg, fontSize: 17, fontWeight: 700 }}>{text}</span>
+          <button type="button" onClick={copy} aria-label={`Copy "${text}"`}
+            className="nf-press shrink-0 rounded-xl px-4" style={{ height: 44, background: C.gold, color: C.bg, ...mono(12) }}>
+            <span key={copied} className={copied ? 'nf-pop inline-block' : 'inline-block'}>{copied ? 'COPIED ✓' : 'COPY'}</span>
+          </button>
+        </div>
+      </div>
+      <button type="button" onClick={() => { copy(); onOpen() }} disabled={busy}
+        className="nf-press mt-auto w-full rounded-full disabled:opacity-70" style={{ height: 62, background: C.gold, color: C.bg, ...mono(15) }}>
+        COPY + OPEN {appName}
       </button>
-      <span className="text-center" style={{ fontSize: 13, color: 'rgba(237,231,218,.6)' }}>
-        Opens {card.place} on {card.dest.app === 'ubereats' ? 'Uber Eats' : 'DoorDash'}. Delivery time shows there.
+      <span className="text-center" style={{ fontSize: 13, color: SOFT }}>
+        Paste it in the search bar. Your exact meal comes up.
       </span>
     </div>
   )
@@ -389,8 +425,8 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp }: {
         </div>
         {nextUp && <span style={{ fontSize: 14, color: SOFT }}>{nextUp}</span>}
         {card.dest.url && (
-          <a href={card.dest.url} target="_blank" rel="noopener noreferrer" className="self-start text-[13px] underline underline-offset-2" style={{ color: 'rgba(237,231,218,.55)' }}>
-            Didn&apos;t open? Open {appName}
+          <a href={card.dest.url} target="_blank" rel="noopener noreferrer" onClick={() => { copyText(pasteText(card.place, card.name)) }} className="self-start text-[13px] underline underline-offset-2" style={{ color: SOFT }}>
+            Didn&apos;t open? Copy + open {appName}
           </a>
         )}
       </div>
@@ -435,8 +471,8 @@ export function EatStyleAsk() {
   }
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[28px] font-bold" style={{ color: C.ivory, fontFamily: DISPLAY }}>How do you usually eat?</p>
-      <p className="text-sm -mt-1 mb-2" style={{ color: C.muted }}>One tap. We&apos;ll pick every meal to fit it.</p>
+      <h1 className="nf-head" style={{ ...head(44), color: C.ivory }}>How do you<br />usually eat?</h1>
+      <p className="text-sm mb-2" style={{ color: C.muted, fontFamily: BODY }}>One tap. We&apos;ll pick every meal to fit it.</p>
       {(['cook', 'out'] as EatStyle[]).map((s) => (
         <button key={s} onClick={() => set(s)} disabled={busy}
           className="w-full text-left rounded-2xl px-5 py-4 font-semibold active:scale-[0.99] transition-transform disabled:opacity-50"

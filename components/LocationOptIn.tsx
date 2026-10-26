@@ -69,15 +69,20 @@ export default function LocationOptIn({ prompt, refreshOnPing = false, large = f
   if (!show) return null
   // large (Nutrition tab, 2026-10-23 — Asa: "make the banner larger"): same
   // ask, easy to read and easy to tap with a thumb.
+  // large (Nutrition tab, 2026-10-23 — Asa: "make the banner larger"): same
+  // ask, easy to read and easy to tap with a thumb. 2026-10-26: the new look
+  // (cream on deep green, gold, JetBrains Mono buttons).
   if (large) return (
-    <div className="max-w-md mx-auto w-full rounded-2xl px-4 py-4 mb-4 flex flex-col gap-3" style={{ fontFamily: 'var(--font-poppins)', background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(229,169,60,0.5)' }}>
+    <div className="nf-rise max-w-md mx-auto w-full rounded-2xl px-4 py-4 mb-4 flex flex-col gap-3" style={{ fontFamily: 'var(--font-inter), Inter, system-ui, sans-serif', background: 'rgba(237,231,218,.06)', border: '2px solid rgba(229,169,60,.45)' }}>
       <div className="flex items-center gap-3">
-        <span className="text-2xl shrink-0" aria-hidden>📍</span>
-        <p className="flex-1 text-white text-[16px] font-semibold leading-snug">{prompt || 'Want a real pick from wherever you are, the moment you need one?'}</p>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E5A93C" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0">
+          <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" />
+        </svg>
+        <p className="flex-1 text-[16px] font-semibold leading-snug" style={{ margin: 0, color: '#EDE7DA' }}>{prompt || 'Want a real pick from wherever you are, the moment you need one?'}</p>
       </div>
       <div className="flex gap-2.5">
-        <button onClick={allow} className="flex-1 rounded-full h-11 text-[15px] font-bold" style={{ background: '#E5A93C', color: '#0A0A0F' }}>Yes</button>
-        <button onClick={dismiss} className="flex-1 rounded-full h-11 text-[15px] font-semibold text-white/70" style={{ border: '1px solid rgba(237,231,218,0.25)' }}>Not now</button>
+        <button onClick={allow} className="nf-press flex-1 rounded-full h-12" style={{ background: '#E5A93C', color: '#021F16', fontFamily: "var(--font-jbmono), 'JetBrains Mono', monospace", fontWeight: 700, fontSize: 13, letterSpacing: '.12em' }}>YES</button>
+        <button onClick={dismiss} className="nf-press flex-1 rounded-full h-12" style={{ border: '2px solid rgba(237,231,218,.22)', color: '#EDE7DA', fontFamily: "var(--font-jbmono), 'JetBrains Mono', monospace", fontWeight: 700, fontSize: 13, letterSpacing: '.12em' }}>NOT NOW</button>
       </div>
     </div>
   )

@@ -7,7 +7,6 @@ import { pickMeals, planDay, clockLabel, defaultMealBudget, orderDestination, me
 import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
 import { openChainsNear } from '@/lib/fos/nearby-food'
 import { verifiedChains } from '@/lib/chain-menu'
-import LocationOptIn from '@/components/LocationOptIn'
 
 export const dynamic = 'force-dynamic'
 
@@ -111,12 +110,13 @@ export default async function NutritionPage() {
   // What's waiting after this one — said once she's picked.
   const next = day.next ? `Next up: your ${day.next.label}${day.next.start > nowMin + 30 ? `, around ${clockLabel(day.next.start)}` : ''}.` : null
 
+  // The "near you" ask lives inside NutritionPicks now (2026-10-26, Asa): only
+  // on the two-pick view, never above the order or logged screens.
   return (
     <div className="px-4 pt-6 flex flex-col" style={{ background: '#021F16', minHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom))' }}>
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col min-h-0">
-        {eatStyle === 'out' && !locFresh && <LocationOptIn prompt="Show meals open near you right now?" refreshOnPing large />}
         {eatStyle && result ? (
-          <NutritionPicks key={`${day.current?.id ?? 'done'}:${cards.map((c) => c.key).join('|')}`} cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} nextUp={next} refreshInMin={day.refreshInMin} calBudget={Math.round(calBudget)} />
+          <NutritionPicks key={`${day.current?.id ?? 'done'}:${cards.map((c) => c.key).join('|')}`} cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} nextUp={next} refreshInMin={day.refreshInMin} calBudget={Math.round(calBudget)} askLocation={eatStyle === 'out' && !locFresh} />
         ) : (
           <EatStyleAsk />
         )}

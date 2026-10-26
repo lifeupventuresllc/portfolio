@@ -113,3 +113,33 @@ export const GENERIC_ADDONS: AddOn[] = [
 export function chainAddOns(place: string): AddOn[] {
   return OFFICIAL[place] || []
 }
+
+// What she pastes into the delivery app's search bar (2026-10-26, Asa: "copy
+// it into DoorDash or Uber Eats and it goes directly to the restaurant and
+// the food item"): the restaurant + the main item — "Chipotle Chicken Bowl".
+// Tested live: putting the item in DoorDash's search link pushed another
+// restaurant to the top, so the link keeps just the restaurant and this
+// rides on the clipboard.
+export function pasteText(place: string, order: string): string {
+  const main = orderParts(order)[0] || order
+  return main.toLowerCase().startsWith(place.toLowerCase()) ? main : `${place} ${main}`
+}
+
+/** Copy inside the tap. Clipboard API first; old-browser fallback is a hidden textarea. */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); return true }
+  } catch { /* fall through */ }
+  try {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.setAttribute('readonly', '')
+    ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0'
+    document.body.appendChild(ta)
+    ta.select()
+    ta.setSelectionRange(0, text.length)
+    const ok = document.execCommand('copy')
+    ta.remove()
+    return ok
+  } catch { return false }
+}
