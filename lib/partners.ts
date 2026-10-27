@@ -266,17 +266,17 @@ export async function endPartnership(enrollmentId: string): Promise<boolean> {
   const { error } = await svc.from('accountability_partnerships').update({ status: 'ended' }).eq('id', partnership.id)
   if (error) return false
   const partnerEnrollmentId = partnership.enrollment_a === enrollmentId ? partnership.enrollment_b : partnership.enrollment_a
-  await patchPrefs(svc, partnerEnrollmentId, { partner_ended_notice: partnership.id })
+  await patchPrefs(svc, partnerEnrollmentId, { partner_ended_notice: { id: partnership.id, at: new Date().toISOString() } })
   return true
 }
 
-/** True once if her partner ended things since she last looked — then cleared. */
-export async function takeEndedNotice(enrollmentId: string): Promise<boolean> {
+/** True for 3 days after her partner ended things (or until she pairs
+ * again). Read-only, so a background refresh can never swallow it. */
+export async function hasEndedNotice(enrollmentId: string): Promise<boolean> {
   const svc = createServiceClient()
-  const prefs = await readPrefs(svc, enrollmentId)
-  if (!prefs.partner_ended_notice) return false
-  await patchPrefs(svc, enrollmentId, { partner_ended_notice: undefined })
-  return true
+  const n = (await readPrefs(svc, enrollmentId)).partner_ended_notice as { at?: string } | string | undefined
+  if (!n || typeof n !== 'object' || !n.at) return false
+  return Date.now() - new Date(n.at).getTime() < 3 * 86400000
 }
 
 // ---- team target -------------------------------------------------------------------
@@ -370,6 +370,11 @@ export async function redeemInviteCode(code: string, joiningEnrollmentId: string
   if (pErr || !partnership) return { ok: false, error: 'Something went wrong pairing you up.' }
 
   await svc.from('partner_invites').update({ used_by_enrollment_id: joiningEnrollmentId, used_at: new Date().toISOString() }).eq('id', invite.id)
+  // A new partner: any old "partnership ended" note is done.
+  await Promise.all([
+    patchPrefs(svc, joiningEnrollmentId, { partner_ended_notice: undefined }),
+    patchPrefs(svc, invite.inviter_enrollment_id as string, { partner_ended_notice: undefined }),
+  ])
 
   return { ok: true, partnershipId: partnership.id as string }
 }

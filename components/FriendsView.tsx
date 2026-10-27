@@ -434,7 +434,7 @@ function PairedView({ status, messages, router, onShare }: { status: PartnerStat
                   <div className={`max-w-[78%] px-3.5 py-2 rounded-2xl text-[14px] leading-snug break-words ${mine ? 'rounded-br-md font-medium' : 'rounded-bl-md'}`}
                     style={mine ? { background: GOLD, color: BG } : { background: 'rgba(237,231,218,.1)', color: INK }}>
                     {m.body}
-                    <div className="text-[10px] mt-0.5" style={{ color: mine ? 'rgba(2,31,22,.55)' : 'rgba(237,231,218,.45)' }}>{ago(m.created_at)}</div>
+                    <div suppressHydrationWarning className="text-[10px] mt-0.5" style={{ color: mine ? 'rgba(2,31,22,.55)' : 'rgba(237,231,218,.45)' }}>{ago(m.created_at)}</div>
                   </div>
                 </div>
               )

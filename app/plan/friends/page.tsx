@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getPartnerStatus, getOrCreateInviteCode, getPartnerMessages, enrollmentIdFor, takeEndedNotice } from '@/lib/partners'
+import { getPartnerStatus, getOrCreateInviteCode, getPartnerMessages, enrollmentIdFor, hasEndedNotice } from '@/lib/partners'
 import FriendsView from '@/components/FriendsView'
 
 export const dynamic = 'force-dynamic'
@@ -18,7 +18,7 @@ export default async function FriendsPage() {
   const status = await getPartnerStatus(enrollmentId)
   const messages = status ? await getPartnerMessages(status.partnershipId) : []
   const inviteCode = status ? null : await getOrCreateInviteCode(enrollmentId)
-  const ended = status ? false : await takeEndedNotice(enrollmentId)
+  const ended = status ? false : await hasEndedNotice(enrollmentId)
 
   return <FriendsView status={status} messages={messages} inviteCode={inviteCode} ended={ended} />
 }
