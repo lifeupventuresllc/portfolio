@@ -37,7 +37,7 @@ export default async function Community() {
     enrollment = byEmail || null
   }
   if (!enrollment) redirect('/plan')
-  const firstName = ((enrollment.name as string) || 'there').split(' ')[0]
+  const firstName = ((enrollment.name as string) || '').trim().split(' ')[0]
 
   // Load the feed (gracefully if the table isn't applied yet)
   const { data: posts } = await svc.from('challenge_community_posts')
@@ -55,7 +55,7 @@ export default async function Community() {
         </div>
         <span style={LABEL}>THE CURVE COLLECTIVE</span>
         <h1 className="nf-head" style={{ margin: '4px 0 10px', fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 56, lineHeight: 0.88, textTransform: 'uppercase', color: INK }}>You&apos;re not<br />alone.</h1>
-        <p className="text-[15px] leading-snug mb-6" style={{ color: MUTE }}>{firstName}, this is our private circle of women walking it out together. Share a win, ask a question, cheer each other on.</p>
+        <p className="text-[15px] leading-snug mb-6" style={{ color: MUTE }}>{firstName ? `${firstName}, this is` : 'This is'} our private circle of women walking it out together. Share a win, ask a question, cheer each other on.</p>
 
         <CommunityTabs
           match={<ProviderMatchTeaser />}
@@ -107,7 +107,7 @@ export default async function Community() {
                 {(!posts || posts.length === 0) && (
                   <div className="text-center py-10">
                     <p style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 30, lineHeight: 1, textTransform: 'uppercase', color: INK }}>Be the first.</p>
-                    <p className="text-[15px] mt-2" style={{ color: MUTE }}>Start the conversation, {firstName}.</p>
+                    <p className="text-[15px] mt-2" style={{ color: MUTE }}>Start the conversation{firstName ? `, ${firstName}` : ''}.</p>
                   </div>
                 )}
               </div>
