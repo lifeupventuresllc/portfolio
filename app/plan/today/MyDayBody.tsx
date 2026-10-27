@@ -7,7 +7,8 @@ import PlanEvolutionCard from '@/components/PlanEvolutionCard'
 import ClientMenu from '@/components/ClientMenu'
 import RebuildPlanButton from '@/components/RebuildPlanButton'
 import ProgressNew, { type DayDot } from './ProgressNew'
-import { streakFrom } from '@/lib/streak'
+import { streakDetail } from '@/lib/streak'
+import { loadDrops, shieldDatesFrom, winsFrom } from '@/lib/reward-drop'
 import { getTimezone, localMondayIndex, localDateISO, localDayNumber } from '@/lib/localdate'
 import { affirmationForDay } from '@/lib/affirmations'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
@@ -205,9 +206,12 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   const isoAdd = (iso: string, n: number) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10) }
   const monday = isoAdd(todayIso, -mealIdx)
   const sunday = isoAdd(monday, 6)
-  const [{ data: weekFood }, { data: lastWeigh }] = await Promise.all([
+  const [{ data: weekFood }, { data: lastWeigh }, rewardStore] = await Promise.all([
     svc.from('challenge_food_log').select('calories, logged_on').eq('enrollment_id', enrollment.id).gte('logged_on', monday).lte('logged_on', sunday),
     svc.from('challenge_progress').select('weight_lbs').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    // Reward Drops (rewards-plan.md phase 3): her wins shelf + banked streak
+    // shields. Empty until migration 047 runs — never an error.
+    loadDrops(svc, enrollment.id as string),
   ])
   const calByDay = new Map<string, number>()
   for (const f of weekFood || []) calByDay.set(f.logged_on as string, (calByDay.get(f.logged_on as string) || 0) + (Number(f.calories) || 0))
@@ -233,7 +237,10 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   const startWeight = Number(intakeRow?.weight_lbs) || null
   const lastWeight = Number(lastWeigh?.weight_lbs) || null
   const weightChange = startWeight && lastWeight ? Math.round((lastWeight - startWeight) * 10) / 10 : null
-  const streak = streakFrom(checkinDates, todayIso)
+  // Same streak as everywhere else, plus any shields she banked from a
+  // Reward Drop (each covers one missed day after she earned it).
+  const { streak, shieldsLeft: shields } = streakDetail(checkinDates, todayIso, shieldDatesFrom(rewardStore.drops))
+  const wins = winsFrom(rewardStore.drops)
   const fd = (intakeRow?.form_data || {}) as { payoffs?: string[]; why_own?: string }
   const WHY_TITLE: Record<string, string> = { energy: 'For your energy.', kids: 'For your kids.', mood: 'For your peace of mind.', family: 'For your family.', look: 'For you, feeling good in your skin.', health: 'For your health.', confidence: 'For your confidence.' }
   const firstPayoff = (fd.payoffs || []).find((p) => WHY_TITLE[p])
@@ -242,6 +249,8 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
 
   // ---- Today tab look ----
   const INK = '#EDE7DA', GOLD = '#E5A93C', BG = '#021F16', MUTE = 'rgba(237,231,218,.72)'
+  // Reward moments only (rewards-plan.md §4): hot gold for "go", emerald for "done".
+  const HOT = '#FFB21E', EMERALD = '#1EE38A'
   const HEAD = "var(--font-barlow), 'Barlow Condensed', sans-serif"
   const MONO = "var(--font-jbmono), 'JetBrains Mono', monospace"
   const label = (t: string, c = GOLD) => <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.1em', color: c }}>{t}</span>
@@ -265,9 +274,16 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
             <span className="flex items-center gap-2 min-w-0">
               <span className="truncate" style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, letterSpacing: '.14em', color: INK }}>HEY {firstName.toUpperCase()}</span>
               {streak >= 1 && (
-                <span className="shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1.5" style={{ background: 'rgba(229,169,60,.14)', border: '1px solid rgba(229,169,60,.45)', color: GOLD, fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.08em' }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill={GOLD} aria-hidden><path d="M12 2c1 4 5 5 5 10a5 5 0 01-10 0c0-3 2-4 2-7 2 1 3 2 3 4 0-3 0-5 0-7z" /></svg>
-                  {streak}-DAY STREAK
+                // Punchier color (rewards-plan.md §4): hot-gold number with an
+                // emerald flame, glows once on load, shields beside it.
+                <span className="rw-chip-once shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1.5" style={{ background: 'rgba(30,227,138,.1)', border: '1px solid rgba(30,227,138,.45)', color: HOT, fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.08em' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill={EMERALD} aria-hidden><path d="M12 2c1 4 5 5 5 10a5 5 0 01-10 0c0-3 2-4 2-7 2 1 3 2 3 4 0-3 0-5 0-7z" /></svg>
+                  <span className="rw-glow-once">{streak}-DAY STREAK</span>
+                  {shields > 0 && (
+                    <span className="flex items-center gap-0.5 ml-0.5" aria-label={`${shields} streak shield${shields === 1 ? '' : 's'}`}>
+                      {Array.from({ length: Math.min(shields, 3) }, (_, k) => <svg key={k} width="11" height="11" viewBox="0 0 24 24" aria-hidden><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z" fill={EMERALD} /></svg>)}
+                    </span>
+                  )}
                 </span>
               )}
             </span>
@@ -292,7 +308,7 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
 
         <ProgressViewToggle
           {...(home ? { initialTab: 'garden' as const, remember: false } : {})}
-          garden={<ProgressNew days={days} workoutsDone={workoutsDone} workoutsGoal={workoutsGoal} weightChange={weightChange} startWeight={startWeight} foodDays={foodDays} streak={streak} why={why} />}
+          garden={<ProgressNew days={days} workoutsDone={workoutsDone} workoutsGoal={workoutsGoal} weightChange={weightChange} startWeight={startWeight} foodDays={foodDays} streak={streak} why={why} wins={wins} shields={shields} />}
           plan={
             // Today (2026-10-25, Asa: "two things today" felt like effort and
             // work) — not a to-do list: everything is already handled for her.
@@ -308,8 +324,8 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
               </div>
 
               {todayWorkout ? (
-                <div className="nf-rise rounded-[22px] overflow-hidden" style={{ background: 'rgba(237,231,218,.06)', border: `2px solid ${workoutDoneToday ? GOLD : 'transparent'}`, animationDelay: '.1s' }}>
-                  <div className="h-[130px] relative" style={{ backgroundImage: 'url(/_next/image?url=%2Fimages%2Fapp%2Fpexels-8402239.jpg&w=828&q=70)', backgroundSize: 'cover', backgroundPosition: 'center 35%' }}>
+                <div className="nf-rise rounded-[22px] overflow-hidden" style={{ background: 'rgba(237,231,218,.06)', border: `2px solid ${workoutDoneToday ? EMERALD : 'transparent'}`, animationDelay: '.1s' }}>
+                  <div className="h-[130px] relative rw-photo" style={{ backgroundImage: 'url(/_next/image?url=%2Fimages%2Fapp%2Fpexels-8402239.jpg&w=828&q=70)', backgroundSize: 'cover', backgroundPosition: 'center 35%' }}>
                     <span className="absolute left-3 top-3 rounded-full px-2.5 py-1.5" style={{ background: INK, color: BG, fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.1em' }}>
                       {workoutDoneToday ? 'DONE. PROUD OF YOU.' : workoutSimplifiedToday ? 'KEPT IT SIMPLE. THAT COUNTS.' : "YOUR WORKOUT'S READY"}
                     </span>
@@ -322,11 +338,11 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
                       )}
                     </span>
                     {workoutDoneToday ? (
-                      <span className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ background: GOLD }}>
+                      <span className="rw-check w-12 h-12 rounded-full flex items-center justify-center shrink-0">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={BG} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12l5 5 9-10" /></svg>
                       </span>
                     ) : (
-                      <Link href="/plan/workout" className="nf-press h-12 px-5 rounded-full flex items-center shrink-0" style={{ background: GOLD, color: BG, fontFamily: MONO, fontWeight: 700, fontSize: 14, letterSpacing: '.1em' }}>{workoutSimplifiedToday ? 'DO IT ANYWAY' : "LET'S GO"}</Link>
+                      <Link href="/plan/workout" className="rw-cta nf-press h-12 px-5 rounded-full flex items-center shrink-0" style={{ background: HOT, color: BG, fontFamily: MONO, fontWeight: 700, fontSize: 14, letterSpacing: '.1em' }}>{workoutSimplifiedToday ? 'DO IT ANYWAY' : "LET'S GO"}</Link>
                     )}
                   </div>
                 </div>
@@ -339,7 +355,7 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
               )}
 
               <Link href={eatingOutToday ? '/plan/eating-out' : '/plan/nutrition'} className="nf-press nf-rise rounded-[22px] overflow-hidden flex" style={{ background: 'rgba(237,231,218,.06)', animationDelay: '.2s', color: INK }}>
-                <div className="w-[104px] shrink-0" style={{ backgroundImage: 'url(/images/meals/food/bowl.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div className="w-[104px] shrink-0 rw-photo" style={{ backgroundImage: 'url(/images/meals/food/bowl.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
                 <div className="px-3.5 pt-3 pb-3.5 flex flex-col gap-1.5 flex-1 min-w-0">
                   {label("YOUR FOOD'S HANDLED")}
                   <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 26, lineHeight: 1, textTransform: 'uppercase' }}>{eatingOutToday ? 'Eating out? Covered.' : 'Your picks are ready'}</span>

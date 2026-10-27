@@ -9,6 +9,7 @@ import EffortTap from '@/components/EffortTap'
 import SetEffortTap, { type Effort } from '@/components/SetEffortTap'
 import QuickstartGoalAsk from '@/components/QuickstartGoalAsk'
 import WorkoutMusicPlayer from '@/components/WorkoutMusicPlayer'
+import RewardDrop from '@/components/RewardDrop'
 import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { buildSteps, dayLabels, estimateWorkoutMinutes, trimStepsToTarget, type WorkoutStep } from '@/lib/workout-steps'
 import type { WorkoutProgram } from '@/lib/workout'
@@ -275,12 +276,18 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
     return (
       <div className="max-w-md mx-auto text-center nf-screen pt-10 pb-6 flex flex-col items-center" style={{ color: INK }}>
         <Confetti fire={done} />
-        <span className="w-20 h-20 rounded-full flex items-center justify-center mb-6" style={{ background: GOLD }}>
-          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke={BG} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12l5 5 9-10" /></svg>
+        {/* Done gets its own color (rewards-plan.md §4): an emerald check
+            that pops once, so gold stays "go". */}
+        <span className="rw-check w-[72px] h-[72px] rounded-full flex items-center justify-center mb-5">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke={BG} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12l5 5 9-10" /></svg>
         </span>
         <h1 className="nf-head" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 58, lineHeight: 0.88, textTransform: 'uppercase' }}>That&apos;s done{hasRealName ? `, ${firstName}` : ''}.</h1>
-        <p className="text-[15px] mt-3 mb-7" style={{ color: MUTE }}>You showed up and you finished. That&apos;s the whole game. It&apos;s logged for your streak.</p>
-        <EffortTap />
+        <p className="text-[15px] mt-3 mb-5" style={{ color: MUTE }}>You showed up and you finished. That&apos;s the whole game.</p>
+        {/* Reward Drop (rewards-plan.md phase 2): rolled on the server only
+            after this workout's save lands — the reward is always on the
+            other side of the action. */}
+        <RewardDrop saved={savedRef.current} />
+        <div className="w-full mt-6"><EffortTap /></div>
         {isGuest && !saveHidden && (
           <div className="w-full mt-6 rounded-[22px] px-5 py-5" style={{ background: 'rgba(229,169,60,.12)', border: '1px solid rgba(229,169,60,.4)' }}>
             <p className="text-base font-bold">You did it. Tomorrow&apos;s is made for you.</p>
@@ -289,7 +296,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
             <button onClick={() => setSaveHidden(true)} className="mt-3 text-xs underline underline-offset-4" style={{ color: 'rgba(237,231,218,.5)' }}>Not now</button>
           </div>
         )}
-        <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} className="nf-press w-full h-16 rounded-full mt-6 uppercase" style={{ ...pill, background: GOLD, color: BG, fontSize: 16 }}>Home</button>
+        <button onClick={() => { savedRef.current.finally(() => router.push('/plan')) }} className="rw-cta nf-press w-full h-16 rounded-full mt-6 uppercase" style={{ ...pill, background: GOLD, color: BG, fontSize: 16 }}>Home</button>
         <QuickFeedback category="workout" context={`${labels[dayIdx]} · day ${dayIdx + 1}`} dark reviewGate emphasize />
       </div>
     )
@@ -305,11 +312,11 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
       {/* Photo — full width at the top; warm-up / rest / no-photo steps get a calm panel instead */}
       <div key={`ph-${dayIdx}-${i}`} className="nf-screen relative -mx-4 h-[46vh] min-h-[300px] overflow-hidden" style={{ background: step.rest ? 'linear-gradient(160deg, #0B3B2B, #021F16)' : '#0B2E22' }}>
         {step.imageUrl ? (
-          <Image src={step.imageUrl} alt={step.name} fill sizes="(max-width: 480px) 100vw, 480px" className="object-cover" priority />
+          <Image src={step.imageUrl} alt={step.name} fill sizes="(max-width: 480px) 100vw, 480px" className="object-cover rw-photo" priority />
         ) : (
           // No move photo (warm-up, rest, most home moves) → one of three
           // calm photos of a woman training, steady for the whole step.
-          <Image src={FALLBACK_PHOTOS[i % FALLBACK_PHOTOS.length]} alt="" fill sizes="(max-width: 480px) 100vw, 480px" className="object-cover" style={{ objectPosition: 'center 25%', opacity: step.rest ? 0.45 : 0.85 }} />
+          <Image src={FALLBACK_PHOTOS[i % FALLBACK_PHOTOS.length]} alt="" fill sizes="(max-width: 480px) 100vw, 480px" className="object-cover rw-photo" style={{ objectPosition: 'center 25%', opacity: step.rest ? 0.45 : 0.85 }} />
         )}
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,.65) 0%, rgba(2,31,22,0) 22%, rgba(2,31,22,0) 55%, #021F16 100%)' }} />
       </div>

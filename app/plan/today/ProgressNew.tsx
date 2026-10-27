@@ -2,6 +2,9 @@
 
 import { useState } from 'react'
 import { hapticTap } from '@/lib/haptics'
+import type { Drop } from '@/lib/reward-drop'
+import WinsShelf from '@/components/WinsShelf'
+import { ShieldIcon, FlameIcon } from '@/components/RewardCards'
 
 // My Day → Progress (2026-10-25, Asa: the old garden/HUD "feels like a video
 // game" — same simple look as the new intake). Her real week at a glance:
@@ -14,11 +17,15 @@ export type DayDot = { label: string; iso: string; workout: boolean; foodOnTarge
 const HEAD = "var(--font-barlow), 'Barlow Condensed', sans-serif"
 const MONO = "var(--font-jbmono), 'JetBrains Mono', monospace"
 const INK = '#EDE7DA', GOLD = '#E5A93C', MUTE = 'rgba(237,231,218,.72)'
+// Punchier color (rewards-plan.md §4): hot gold for the numbers that are
+// hers, emerald for done, a deeper card. Base stays calm.
+const HOT = '#FFB21E', EMERALD = '#1EE38A', CARD = '#0A3124'
 
-export default function ProgressNew({ days, workoutsDone, workoutsGoal, weightChange, startWeight, foodDays, streak, why }: {
+export default function ProgressNew({ days, workoutsDone, workoutsGoal, weightChange, startWeight, foodDays, streak, why, wins = [], shields = 0 }: {
   days: DayDot[]; workoutsDone: number; workoutsGoal: number
   weightChange: number | null; startWeight: number | null
   foodDays: number; streak: number; why: { title: string; line: string } | null
+  wins?: Drop[]; shields?: number
 }) {
   const todayIdx = Math.max(0, days.findIndex((d) => d.isToday))
   const [sel, setSel] = useState(todayIdx)
@@ -28,27 +35,27 @@ export default function ProgressNew({ days, workoutsDone, workoutsGoal, weightCh
       <div className="px-1">
         <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.16em', color: GOLD }}>THIS WEEK</span>
         <h1 className="nf-head" style={{ margin: '4px 0 0', fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 60, lineHeight: 0.86, textTransform: 'uppercase', color: INK }}>
-          {workoutsDone} of {workoutsGoal}<br />workouts
+          <span className="rw-glow-once" style={{ color: HOT }}>{workoutsDone} of {workoutsGoal}</span><br />workouts
         </h1>
       </div>
 
       <div className="grid grid-cols-7 gap-1.5">
         {days.map((d, i) => {
           const on = i === sel
-          const dot = d.workout ? GOLD : d.foodOnTarget ? '#6EBEA0' : 'transparent'
+          const dot = d.workout ? EMERALD : d.foodOnTarget ? HOT : 'transparent'
           return (
             <button key={d.iso} onClick={() => { hapticTap(); setSel(i) }} aria-label={d.text}
               className="nf-press h-16 rounded-2xl flex flex-col items-center justify-center gap-1"
-              style={{ border: `2px solid ${on ? INK : d.workout ? 'rgba(229,169,60,.5)' : 'rgba(237,231,218,.14)'}`, background: d.workout ? 'rgba(229,169,60,.14)' : 'rgba(237,231,218,.05)', color: INK, opacity: d.isFuture ? 0.55 : 1 }}>
+              style={{ border: `2px solid ${on ? INK : d.workout ? 'rgba(30,227,138,.5)' : 'rgba(237,231,218,.14)'}`, background: d.workout ? 'rgba(30,227,138,.12)' : 'rgba(237,231,218,.05)', color: INK, opacity: d.isFuture ? 0.55 : 1 }}>
               <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700 }}>{d.label}</span>
-              <span className="w-2.5 h-2.5 rounded-full" style={{ background: dot, border: dot === 'transparent' && !d.isFuture ? '1.5px solid rgba(237,231,218,.25)' : 'none' }} />
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: dot, boxShadow: d.workout ? '0 0 8px rgba(30,227,138,.8)' : 'none', border: dot === 'transparent' && !d.isFuture ? '1.5px solid rgba(237,231,218,.25)' : 'none' }} />
             </button>
           )
         })}
       </div>
       <p className="px-1 text-sm -mt-1" style={{ color: 'rgba(237,231,218,.85)' }}>{days[sel]?.text}</p>
 
-      <div className="rounded-[22px] px-4 py-3.5 flex justify-between items-center gap-3" style={{ background: 'rgba(237,231,218,.06)' }}>
+      <div className="rounded-[22px] px-4 py-3.5 flex justify-between items-center gap-3" style={{ background: CARD, border: '1px solid rgba(255,178,30,.18)' }}>
         <span className="flex flex-col gap-0.5">
           <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: MUTE }}>WEIGHT</span>
           {weightChange != null ? (<>
@@ -67,17 +74,29 @@ export default function ProgressNew({ days, workoutsDone, workoutsGoal, weightCh
       </div>
 
       <div className="grid grid-cols-2 gap-2.5">
-        <div className="rounded-[20px] p-3.5" style={{ background: 'rgba(237,231,218,.06)' }}>
+        <div className="rounded-[20px] p-3.5" style={{ background: CARD, border: '1px solid rgba(255,178,30,.18)' }}>
           <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: MUTE }}>FOOD ON TARGET</span>
           <div style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 34, lineHeight: 1.1, color: INK }}>{foodDays} {foodDays === 1 ? 'DAY' : 'DAYS'}</div>
           <span className="text-xs" style={{ color: MUTE }}>this week</span>
         </div>
-        <div className="rounded-[20px] p-3.5" style={{ background: 'rgba(237,231,218,.06)' }}>
+        <div className="rw-chip-once rounded-[20px] p-3.5" style={{ background: CARD, border: '1px solid rgba(30,227,138,.35)' }}>
           <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: MUTE }}>STREAK</span>
-          <div style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 34, lineHeight: 1.1, color: INK }}>{streak} {streak === 1 ? 'DAY' : 'DAYS'}</div>
-          <span className="text-xs" style={{ color: MUTE }}>{streak ? 'keep it going' : 'starts today'}</span>
+          <div className="flex items-center gap-1.5">
+            <FlameIcon size={22} />
+            <span className="rw-glow-once" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 34, lineHeight: 1.1, color: HOT }}>{streak} {streak === 1 ? 'DAY' : 'DAYS'}</span>
+          </div>
+          {shields > 0 ? (
+            <span className="flex items-center gap-1 text-xs" style={{ color: 'rgba(247,242,231,.78)' }} aria-label={`${shields} streak shield${shields === 1 ? '' : 's'} banked`}>
+              {Array.from({ length: Math.min(shields, 3) }, (_, k) => <ShieldIcon key={k} size={14} check={false} />)}
+              {shields} shield{shields === 1 ? '' : 's'} banked
+            </span>
+          ) : (
+            <span className="text-xs" style={{ color: MUTE }}>{streak ? 'keep it going' : 'starts today'}</span>
+          )}
         </div>
       </div>
+
+      <WinsShelf wins={wins} />
 
       {why && (
         <div className="rounded-[22px] px-4 py-3.5 flex flex-col gap-0.5" style={{ background: GOLD, color: '#021F16' }}>

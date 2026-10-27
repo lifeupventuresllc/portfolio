@@ -7,6 +7,7 @@ import type { MealOption, EatStyle, OrderDestination } from '@/lib/meal-pick'
 import { orderParts, skipLine, chainAddOns, GENERIC_ADDONS, pasteText, copyText, type AddOn } from '@/lib/order-exact'
 import { hapticTap } from '@/lib/haptics'
 import LocationOptIn from '@/components/LocationOptIn'
+import MealDrop from '@/components/MealDrop'
 
 // The Nutrition tab's decision screen, v4 (2026-10-20, Asa's mockup
 // https://claude.ai/artifact/K8zUHkNNUFkipumXE3k6s5): two big photos, one
@@ -18,7 +19,8 @@ import LocationOptIn from '@/components/LocationOptIn'
 export type PickCard = MealOption & { dest: OrderDestination; photo: string; short: string }
 
 const C = {
-  bg: '#021F16', card: '#08281d', line: '#0d3a2a', green: '#4CAF7D', gold: '#E5A93C',
+  // gold = hot gold (rewards-plan.md §4): the pick buttons are this screen's one loud color.
+  bg: '#021F16', card: '#08281d', line: '#0d3a2a', green: '#4CAF7D', gold: '#FFB21E',
   ivory: '#EDE7DA', muted: 'rgba(237,231,218,0.72)', faint: 'rgba(237,231,218,0.45)',
 }
 // The new simple look (2026-10-25) for the order + logged screens.
@@ -193,6 +195,8 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
           <div style={{ height: 10, borderRadius: 999, background: 'rgba(237,231,218,.12)', overflow: 'hidden' }}>
             <div style={{ width: `${pct}%`, height: '100%', background: C.gold, borderRadius: 999, transition: 'width .4s ease' }} />
           </div>
+          {/* Meal drop (rewards-plan.md phase 4): the check, sometimes a bonus. */}
+          <MealDrop slot={slot} left={left} />
           {card.ingredients && card.ingredients.length > 0 ? (
             <div className="nf-rise flex flex-col gap-2 mt-1" style={{ borderRadius: 20, padding: '14px 16px', background: 'rgba(237,231,218,.06)' }}>
               <span style={{ ...mono(11), color: C.gold }}>WHAT YOU NEED</span>
@@ -241,7 +245,7 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
               <button onClick={() => tapCard(c)} disabled={busy} aria-label={`${c.short}, ${c.place}, ${c.cal} calories`}
                 className="nf-press absolute inset-0 w-full h-full text-left disabled:opacity-70">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={c.photo} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                <img src={c.photo} alt="" className="absolute inset-0 w-full h-full object-cover rw-photo" />
                 <span className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,0) 30%, rgba(2,31,22,0.94) 100%)' }} />
                 <span className="absolute left-4 right-4 bottom-3.5 flex items-end justify-between gap-3">
                   <span className="min-w-0">
@@ -423,6 +427,7 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp }: {
         <div style={{ height: 10, borderRadius: 999, background: 'rgba(237,231,218,.12)', overflow: 'hidden' }}>
           <div style={{ width: `${pct}%`, height: '100%', background: C.gold, borderRadius: 999, transition: 'width .4s ease' }} />
         </div>
+        <MealDrop slot={slot} left={done.left} />
         {nextUp && <span style={{ fontSize: 14, color: SOFT }}>{nextUp}</span>}
         {card.dest.url && (
           <a href={card.dest.url} target="_blank" rel="noopener noreferrer" onClick={() => { copyText(pasteText(card.place, card.name)) }} className="self-start text-[13px] underline underline-offset-2" style={{ color: SOFT }}>

@@ -6,7 +6,18 @@ import { addDaysISO } from '@/lib/localdate'
 // days anywhere in the streak don't zero it out, only a THIRD does — this is
 // deliberate, not a bug, precisely so a dip signal doesn't fire on day one of a
 // rough patch. Fully automatic, no decision for her to make.
-export function streakFrom(dates: Set<string>, todayISO: string): number {
+export function streakFrom(dates: Set<string>, todayISO: string, shieldDates?: string[]): number {
+  return streakDetail(dates, todayISO, shieldDates).streak
+}
+
+// Streak shields (2026-10-26, rewards-plan.md): a shield she earned from a
+// reward drop covers ONE more missed day, on top of the grace day above —
+// but only a day she missed AFTER she earned it (banked, then used). The
+// optional third argument keeps every existing caller exactly as it was;
+// only callers that pass her shield dates get the extra cover.
+export function streakDetail(dates: Set<string>, todayISO: string, shieldDates?: string[]): { streak: number; shieldsLeft: number; shieldsUsed: number } {
+  const bank = [...(shieldDates || [])].sort() // earliest first
+  const used = new Set<number>()
   let streak = 0
   let cur = todayISO
   if (!dates.has(cur)) cur = addDaysISO(cur, -1) // grace: streak holds through yesterday
@@ -14,9 +25,18 @@ export function streakFrom(dates: Set<string>, todayISO: string): number {
   for (;;) {
     if (dates.has(cur)) { streak++; cur = addDaysISO(cur, -1); continue }
     if (!graceUsed) { graceUsed = true; cur = addDaysISO(cur, -1); continue }
+    // Only shield a gap when there's real streak on the far side of it —
+    // a shield never invents days, it only bridges a miss.
+    const shield = bank.findIndex((d, i) => !used.has(i) && d <= cur)
+    if (shield >= 0 && hasDayBefore(dates, cur)) { used.add(shield); cur = addDaysISO(cur, -1); continue }
     break
   }
-  return streak
+  return { streak, shieldsUsed: used.size, shieldsLeft: bank.length - used.size }
+}
+
+function hasDayBefore(dates: Set<string>, iso: string): boolean {
+  const prev = addDaysISO(iso, -1)
+  return dates.has(prev) || dates.has(addDaysISO(prev, -1))
 }
 
 // The Hooked Model piece the app had none of: a variable reward. streakFrom
