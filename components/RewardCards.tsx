@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import type { Drop } from '@/lib/reward-drop'
 
 // Shared look for Reward Drops (rewards-plan.md, mockups RewardDrop +
@@ -57,6 +58,22 @@ export function GiftIcon({ size = 96 }: { size?: number }) {
   )
 }
 
+export function NoteIcon({ size = 60, color = RW.emerald }: { size?: number; color?: string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 3h9l4 4v14H6z" /><path d="M15 3v4h4M9 11h7M9 14h7M9 17h4" /></svg>
+}
+
+/** A written note from Coach Asa (2026-10-27 — in place of video clips):
+ * her real numbers, his words, signed. */
+export function CoachNote({ text, color = RW.emerald }: { text: string; color?: string }) {
+  return (
+    <div className="rw-note w-full text-left" style={{ borderRadius: 18, background: 'rgba(247,242,231,.06)', borderLeft: `4px solid ${color}`, padding: '12px 14px' }}>
+      <span style={{ ...rwMono(10, '.16em'), color }}>A NOTE FROM COACH ASA</span>
+      <p style={{ margin: '6px 0 0', fontSize: 15, lineHeight: 1.4, color: RW.cream }}>{text}</p>
+      <span className="block mt-2" style={{ ...rwHead(20), color }}>— Coach Asa</span>
+    </div>
+  )
+}
+
 /** The art strip on top of a bonus card / shelf tile. */
 export function DropArt({ drop, height, small = false }: { drop: Drop; height: number; small?: boolean }) {
   const ring = ringFor(drop)
@@ -68,13 +85,14 @@ export function DropArt({ drop, height, small = false }: { drop: Drop; height: n
       {!photo && drop.kind === 'shield' && <ShieldIcon size={small ? 42 : 70} />}
       {!photo && drop.kind === 'badge' && <BadgeIcon size={small ? 44 : 74} />}
       {!photo && drop.kind === 'milestone' && <FlameIcon size={small ? 40 : 64} color={RW.coral} />}
+      {!photo && drop.kind === 'note' && <NoteIcon size={small ? 40 : 64} />}
     </span>
   )
 }
 
 export function tagFor(drop: Drop): string {
   if (drop.tier === 'rare') return 'RARE'
-  return ({ selftalk: 'SELF-TALK', recipe: 'RECIPE', shield: 'SHIELD', badge: 'BADGE' } as Record<string, string>)[drop.kind] || drop.payload.tag
+  return ({ selftalk: 'SELF-TALK', recipe: 'RECIPE', shield: 'SHIELD', badge: 'BADGE', note: 'COACH NOTE' } as Record<string, string>)[drop.kind] || drop.payload.tag
 }
 
 /** The opened Bonus card (emerald) — also the body of the reopen sheet. */
@@ -88,7 +106,7 @@ export function BonusCard({ drop, saved }: { drop: Drop; saved: boolean }) {
       </span>
       <div className="flex flex-col gap-2 text-left" style={{ padding: '16px 20px 20px' }}>
         <span style={{ ...rwHead(p.quote ? 26 : 34), lineHeight: 0.98, textTransform: p.quote ? 'none' : 'uppercase', color: RW.cream }}>{p.quote ? `“${p.title}”` : p.title}</span>
-        <span style={{ fontSize: 14, color: RW.mute }}>{p.body}</span>
+        {p.note ? <CoachNote text={p.note} /> : <span style={{ fontSize: 14, color: RW.mute }}>{p.body}</span>}
         {saved && (
           <span className="self-start flex items-center gap-1.5 mt-1" style={{ ...rwMono(11), color: RW.emerald }}>
             <CheckMark size={14} color={RW.emerald} />SAVED TO YOUR WINS
@@ -102,7 +120,7 @@ export function BonusCard({ drop, saved }: { drop: Drop; saved: boolean }) {
 const SPARK_COLORS = [RW.coral, RW.gold, RW.emerald, RW.cream]
 
 /** The opened Rare card (coral + gold). */
-export function RareCard({ drop, saved }: { drop: Drop; saved: boolean }) {
+export function RareCard({ drop, saved, share }: { drop: Drop; saved: boolean; share?: ReactNode }) {
   const p = drop.payload
   return (
     <div className="rw-reveal relative w-full" style={{ borderRadius: 28, padding: 3, background: `linear-gradient(135deg, ${RW.coral}, ${RW.gold} 55%, ${RW.coral})`, boxShadow: 'var(--glow-coral)' }}>
@@ -114,6 +132,8 @@ export function RareCard({ drop, saved }: { drop: Drop; saved: boolean }) {
         <span className="rounded-full" style={{ background: RW.coral, color: RW.bg, padding: '6px 12px', ...rwMono(11, '.14em') }}>RARE · {p.tag}</span>
         <span style={{ ...rwHead(62), lineHeight: 0.84, color: RW.gold, textShadow: '0 0 24px rgba(255,178,30,.5)', whiteSpace: 'pre-line' }}>{p.big || p.title}</span>
         <span style={{ fontSize: 16, fontWeight: 700, color: RW.cream }}>{p.body}</span>
+        {p.note && <CoachNote text={p.note} color={RW.gold} />}
+        {share}
         {saved && <span className="flex items-center gap-1.5" style={{ ...rwMono(11), color: RW.gold }}><CheckMark size={14} color={RW.gold} />SAVED TO YOUR WINS</span>}
       </div>
     </div>

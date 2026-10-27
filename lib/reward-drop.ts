@@ -20,7 +20,7 @@ import { computeBadges } from '@/lib/achievements'
 
 export type DropTrigger = 'workout' | 'meal'
 export type DropTier = 'every' | 'bonus' | 'rare'
-export type DropKind = 'kind' | 'selftalk' | 'badge' | 'shield' | 'recipe' | 'milestone' | 'check'
+export type DropKind = 'kind' | 'selftalk' | 'badge' | 'shield' | 'recipe' | 'milestone' | 'check' | 'note'
 
 export type DropPayload = {
   tag: string          // 'SELF-TALK CARD', 'BADGE', 'STREAK SHIELD', 'NEW RECIPE', 'MILESTONE'
@@ -29,6 +29,7 @@ export type DropPayload = {
   big?: string         // rare: the big number line ("10 workouts.")
   photo?: string       // recipe photo
   quote?: boolean      // self-talk: show the title as a quote
+  note?: string        // a written note from Coach Asa, built from her real numbers (replaces video clips, 2026-10-27)
 }
 
 export type Drop = {
@@ -41,6 +42,7 @@ export type Drop = {
   payload: DropPayload
   createdAt: string
   openedAt: string | null
+  sharedAt?: string | null
 }
 
 export type RecipeBonus = { key: string; name: string; cal: number; price: number | null; photo: string; minutes?: number }
@@ -71,11 +73,11 @@ export function seededRng(seed: string): () => number {
 // ---- storage (degrades cleanly until migration 047 runs) -----------------
 
 type Svc = ReturnType<typeof createServiceClient>
-type Row = { id: string; trigger: string; day: string; tier: string; kind: string; item_key: string | null; payload: DropPayload; created_at: string; opened_at: string | null }
-const COLS = 'id, trigger, day, tier, kind, item_key, payload, created_at, opened_at'
+type Row = { id: string; trigger: string; day: string; tier: string; kind: string; item_key: string | null; payload: DropPayload; created_at: string; opened_at: string | null; shared_at?: string | null }
+const COLS = 'id, trigger, day, tier, kind, item_key, payload, created_at, opened_at, shared_at'
 
 function toDrop(r: Row): Drop {
-  return { id: r.id, trigger: r.trigger as DropTrigger, day: r.day, tier: r.tier as DropTier, kind: r.kind as DropKind, itemKey: r.item_key, payload: r.payload || { tag: '', title: '', body: '' }, createdAt: r.created_at, openedAt: r.opened_at }
+  return { id: r.id, trigger: r.trigger as DropTrigger, day: r.day, tier: r.tier as DropTier, kind: r.kind as DropKind, itemKey: r.item_key, payload: r.payload || { tag: '', title: '', body: '' }, createdAt: r.created_at, openedAt: r.opened_at, sharedAt: r.shared_at ?? null }
 }
 
 /** Every drop she's earned, newest first. `ok: false` = the table isn't there yet. */
@@ -118,6 +120,8 @@ export type RollInput = {
   payoffs?: string[]
   history: Drop[]               // her past drops (empty when the table is missing)
   recipe?: () => Promise<RecipeBonus | null>
+  firstName?: string
+  mealsHandled?: number          // meals she picked/logged from her picks, all time
 }
 
 function kindLine(inp: RollInput, rng: () => number, recent: Set<string>): { key: string; payload: DropPayload } {
@@ -147,6 +151,27 @@ function selfTalk(rng: () => number, recent: Set<string>): { key: string; payloa
 
 function shield(): { key: string; payload: DropPayload } {
   return { key: 'shield', payload: { tag: 'STREAK SHIELD', title: '1 shield banked', body: 'Life happens. If you miss a day, this holds your streak for you. Automatic.' } }
+}
+
+// A note from Coach Asa (2026-10-27, Asa: no video clips — something like
+// them). Written, short, and built only from her real numbers, so it reads
+// like he was watching. Rare drops always carry one; sometimes it's a bonus.
+function coachNote(inp: RollInput, workouts: number, streak: number, rng: () => number): string {
+  const name = (inp.firstName || '').trim()
+  const hi = name ? `${name},` : 'Hey,'
+  const facts: string[] = []
+  if (workouts) facts.push(`${workouts} workout${workouts === 1 ? '' : 's'} done`)
+  if (inp.mealsHandled) facts.push(`${inp.mealsHandled} meal${inp.mealsHandled === 1 ? '' : 's'} handled`)
+  if (inp.dates.size) facts.push(`${inp.dates.size} day${inp.dates.size === 1 ? '' : 's'} you showed up`)
+  const own = (inp.whyOwn || '').trim().replace(/[.!]+$/, '')
+  const middle = [
+    "You're not trying anymore. This is just who you are now.",
+    "Nobody made you do this. You chose you, again and again.",
+    "Most people quit before here. You didn't. I see it.",
+    "This is what it looks like when it stops being a goal and starts being you.",
+  ]
+  const close = own ? `Keep going for “${own}.”` : streak >= 3 ? `${streak} days in a row. Protect it.` : 'Same time tomorrow. I got the plan.'
+  return `${hi} ${facts.length ? facts.join(', ') + '. ' : ''}${middle[Math.floor(rng() * middle.length)]} ${close}`
 }
 
 export async function rollDrop(inp: RollInput): Promise<Omit<Drop, 'id' | 'createdAt' | 'openedAt'>> {
@@ -182,11 +207,11 @@ export async function rollDrop(inp: RollInput): Promise<Omit<Drop, 'id' | 'creat
 
   // Streak milestones are always rare — fixed, earned moments.
   if (moment && !everGot.has(`milestone:streak:${streak}`)) {
-    return { ...base, tier: 'rare', kind: 'milestone', itemKey: `milestone:streak:${streak}`, payload: { tag: 'MILESTONE', big: `${streak} days\nin a row.`, title: `${streak} days in a row`, body: moment } }
+    return { ...base, tier: 'rare', kind: 'milestone', itemKey: `milestone:streak:${streak}`, payload: { note: coachNote(inp, workouts, streak, rng), tag: 'MILESTONE', big: `${streak} days\nin a row.`, title: `${streak} days in a row`, body: moment } }
   }
   const WORKOUT_MARKS = [10, 25, 50, 75, 100, 150, 200]
   if (WORKOUT_MARKS.includes(workouts) && !everGot.has(`milestone:workouts:${workouts}`)) {
-    return { ...base, tier: 'rare', kind: 'milestone', itemKey: `milestone:workouts:${workouts}`, payload: { tag: 'MILESTONE', big: `${workouts}\nworkouts.`, title: `${workouts} workouts`, body: `That's ${workouts} times you picked you. Most people never get here.` } }
+    return { ...base, tier: 'rare', kind: 'milestone', itemKey: `milestone:workouts:${workouts}`, payload: { note: coachNote(inp, workouts, streak, rng), tag: 'MILESTONE', big: `${workouts}\nworkouts.`, title: `${workouts} workouts`, body: `That's ${workouts} times you picked you. Most people never get here.` } }
   }
 
   // A badge on the day she earns it — earned moments always come with a card.
@@ -208,11 +233,14 @@ export async function rollDrop(inp: RollInput): Promise<Omit<Drop, 'id' | 'creat
   const rareP = rareOk ? 0.05 : 0
   const bonusP = inp.daysEnrolled < 7 ? 0.4 : 0.25
   if (r < rareP && workouts >= 3) {
-    return { ...base, tier: 'rare', kind: 'milestone', itemKey: `rare:${inp.todayIso}`, payload: { tag: 'MILESTONE', big: `${workouts}\nworkouts.`, title: `${workouts} workouts`, body: `${workouts} times you showed up for you. That's real.` } }
+    return { ...base, tier: 'rare', kind: 'milestone', itemKey: `rare:${inp.todayIso}`, payload: { note: coachNote(inp, workouts, streak, rng), tag: 'MILESTONE', big: `${workouts}\nworkouts.`, title: `${workouts} workouts`, body: `${workouts} times you showed up for you. That's real.` } }
   }
   if (r < rareP + bonusP) {
     const pick = rng()
     if (pick < 0.25 && shieldsBanked < 3) return { ...base, tier: 'bonus', kind: 'shield', itemKey: 'shield', payload: shield().payload }
+    if (pick >= 0.45 && pick < 0.6 && workouts >= 2 && !recent.has('note')) {
+      return { ...base, tier: 'bonus', kind: 'note', itemKey: 'note', payload: { tag: 'NOTE FROM COACH ASA', title: 'A note for you', body: 'Read it. Then go be proud.', note: coachNote(inp, workouts, streak, rng) } }
+    }
     if (pick < 0.45 && inp.recipe) {
       const rec = await inp.recipe().catch(() => null)
       if (rec && !recent.has(`recipe:${rec.key}`)) {

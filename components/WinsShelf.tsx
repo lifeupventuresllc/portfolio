@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { hapticTap } from '@/lib/haptics'
 import type { Drop } from '@/lib/reward-drop'
-import { RW, rwHead, rwMono, DropArt, ringFor, tagFor } from '@/components/RewardCards'
+import { RW, rwHead, rwMono, DropArt, ringFor, tagFor, CoachNote } from '@/components/RewardCards'
 
 // "Your wins" on Progress (rewards-plan.md phase 3, mockup
 // RewardProgress.dc.html): every self-talk card, recipe, shield, badge and
@@ -72,6 +72,7 @@ export default function WinsShelf({ wins }: { wins: Drop[] }) {
                 {sel.kind === 'selftalk' ? `“${sel.payload.title}”` : sel.payload.title}
               </span>
               <span style={{ fontSize: 15, color: 'rgba(247,242,231,.82)' }}>{sel.payload.body}</span>
+              {sel.payload.note && <CoachNote text={sel.payload.note} color={ringFor(sel)} />}
               <span style={{ ...rwMono(11), color: 'rgba(247,242,231,.72)' }}>{whenLabel(sel.day)}</span>
               <button type="button" onClick={close} className="rw-cta nf-press mt-2 rounded-full" style={{ height: 54, ...rwMono(14, '.12em') }}>{BUTTON[sel.kind] || 'NICE'}</button>
             </div>

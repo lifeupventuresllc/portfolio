@@ -474,7 +474,7 @@ const FOOD_PHOTO: [RegExp, string][] = [
   [/breakfast burrito|crunchwrap/i, 'breakfast-burrito'], [/mcmuffin|egg white grill|egg.*sandwich|bagel|breakfast sandwich|steak & wake/i, 'breakfast-sandwich'],
   [/burger|whopper|big mac|shackburger|smokeshack|quarter pounder|mcdouble/i, 'burger'],
   [/egg.*wrap|wrap|pocket|pita/i, 'wrap'], [/wings?\b/i, 'wings'], [/tenders|nugget|strips|chicken fingers/i, 'tenders'],
-  [/soup/i, 'soup-sandwich'], [/\bsalad\b/i, 'salad'], [/bravo|dipper|\bblt\b|fiesta chicken|smokehouse/i, 'sub'], [/\bsub\b|6"|footlong|turkey sandwich|baguette/i, 'sub'],
+  [/soup.*(sandwich|panini|grilled cheese|baguette)|(sandwich|panini|grilled cheese).*soup/i, 'soup-sandwich'], [/soup/i, 'soup'], [/\bsalad\b/i, 'salad'], [/bravo|dipper|\bblt\b|fiesta chicken|smokehouse/i, 'sub'], [/\bsub\b|6"|footlong|turkey sandwich|baguette/i, 'sub'],
   [/chicken sandwich|mcchicken|^mccrispy$/i, 'chicken-sandwich'], [/gordita|chalupa/i, 'taco-bowl'],
   [/teriyaki/i, 'teriyaki'], [/fried rice/i, 'fried-rice'], [/stir fry/i, 'stir-fry'], [/noodle|gochujang/i, 'noodles'],
   [/mac (&|and) cheese/i, 'mac'], [/pizza/i, 'pizza'], [/pasta|orzo|bisque/i, 'pasta'],

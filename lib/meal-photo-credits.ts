@@ -201,6 +201,13 @@ export const MEAL_PHOTO_CREDITS: { file: string; title: string; author: string; 
     "source": "https://www.pexels.com/photo/20605008/"
   },
   {
+    "file": "soup.jpg",
+    "title": "Chicken soup",
+    "author": "Pexels photographer",
+    "license": "Pexels License",
+    "source": "https://www.pexels.com/photo/10338451/"
+  },
+  {
     "file": "soup-sandwich.jpg",
     "title": "Soup sandwich",
     "author": "Pexels photographer",

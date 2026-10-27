@@ -88,6 +88,7 @@ export interface PartnerSide {
   weeklyCount: number | null
   goalLine: string | null       // "her health" — only when she shares her goal
   meals: PartnerMeal[]          // today's picked meals — only when she shares meals
+  progressLine?: string | null  // "Down 4 lbs since you paired" — only when she shares progress (never a weight)
 }
 
 export interface TeamTarget {
@@ -110,6 +111,29 @@ export interface PartnerStatus {
   myGoalLine: string | null     // "my health" — the preview on her own switch
   teamAvailable: boolean        // both share "I showed up"
   team: TeamTarget | null
+}
+
+/** Her change since the pair started, in words only (friends-plan phase 5).
+ * Rounded to whole pounds; a gain never shows a number. null = nothing to
+ * show yet (no weigh-in since pairing). The weight itself never leaves here. */
+async function progressSincePaired(svc: Svc, enrollmentId: string, pairedAt: string): Promise<string | null> {
+  try {
+    const [{ data: before }, { data: after }] = await Promise.all([
+      svc.from('challenge_progress').select('weight_lbs').eq('enrollment_id', enrollmentId).not('weight_lbs', 'is', null)
+        .lte('created_at', pairedAt).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      svc.from('challenge_progress').select('weight_lbs, created_at').eq('enrollment_id', enrollmentId).not('weight_lbs', 'is', null)
+        .gt('created_at', pairedAt).order('created_at', { ascending: true }),
+    ])
+    const later = (after || []) as { weight_lbs: number }[]
+    if (!later.length) return null
+    const start = Number(before?.weight_lbs) || Number(later[0].weight_lbs)
+    const latest = Number(later[later.length - 1].weight_lbs)
+    if (!start || !latest || (!before && later.length < 2)) return null
+    const diff = Math.round(start - latest)
+    if (diff >= 1) return `Down ${diff} lb${diff === 1 ? '' : 's'} since you paired`
+    if (diff === 0) return 'Holding steady'
+    return 'Keeping at it'
+  } catch { return null }
 }
 
 async function checkinDates(svc: Svc, enrollmentId: string): Promise<Set<string>> {
@@ -193,6 +217,10 @@ export async function getPartnerStatus(enrollmentId: string): Promise<PartnerSta
 
   // Her partner's side: only what her partner switched on.
   const partnerMeals = theirs.meals ? await todaysPickedMeals(svc, partnerEnrollmentId) : []
+  // Progress: only if she switched it on, and never when she's pregnant or nursing.
+  const partnerLife = (formFor(partnerEnrollmentId) as { life_stage?: string }).life_stage
+  const partnerProgress = theirs.progress && partnerLife !== 'pregnant' && partnerLife !== 'nursing'
+    ? await progressSincePaired(svc, partnerEnrollmentId, String(partnership.created_at || new Date(0).toISOString())) : null
   const myWeek = weeklyCount(myDates)
   const partnerWeek = weeklyCount(partnerDates)
 
@@ -230,6 +258,7 @@ export async function getPartnerStatus(enrollmentId: string): Promise<PartnerSta
       weeklyCount: theirs.showed_up ? partnerWeek : null,
       goalLine: theirs.goal ? goalWords(formFor(partnerEnrollmentId), 1) : null,
       meals: partnerMeals,
+      progressLine: partnerProgress,
     },
     myShares: { ...mine.shares, progress: pregnantOrNursing ? false : mine.shares.progress },
     sharesChosen: mine.chosen,

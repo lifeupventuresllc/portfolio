@@ -11,7 +11,7 @@ import { RW, rwHead, rwMono, GiftIcon, FlameIcon, BonusCard, RareCard, EverydayC
 // roll happens on the server AFTER her workout is saved (never for just
 // opening the app). She never sees odds, points or countdowns.
 
-type DropResponse = { drop: Drop | null; fresh?: boolean; saved?: boolean; streak?: number; shields?: number }
+type DropResponse = { drop: Drop | null; fresh?: boolean; saved?: boolean; streak?: number; shields?: number; partnerName?: string | null; shared?: boolean }
 
 // If the server can't be reached she still gets the baseline — never an
 // empty box, never an error.
@@ -24,6 +24,7 @@ export default function RewardDrop({ saved }: { saved: Promise<unknown> }) {
   const [res, setRes] = useState<DropResponse | null>(null)
   const [opened, setOpened] = useState(false)
   const [waiting, setWaiting] = useState(false)
+  const [sent, setSent] = useState<'idle' | 'sending' | 'sent'>('idle')
   const started = useRef(false)
 
   useEffect(() => {
@@ -83,7 +84,22 @@ export default function RewardDrop({ saved }: { saved: Promise<unknown> }) {
             <span className="rounded-full" style={{ background: RW.gold, color: RW.bg, padding: '10px 18px', ...rwMono(13, '.12em') }}>{waiting ? 'OPENING…' : 'TAP TO OPEN'}</span>
           </button>
         ) : drop?.tier === 'rare' ? (
-          <RareCard drop={drop} saved={!!res?.saved} />
+          <RareCard drop={drop} saved={!!res?.saved} share={res?.partnerName ? (
+            // "Send to <partner>?" (rewards-plan phase 5) — her choice, one tap, never automatic.
+            res.shared || sent === 'sent' ? (
+              <span style={{ ...rwMono(12), color: RW.coral }}>SENT TO {res.partnerName.toUpperCase()}</span>
+            ) : (
+              <button type="button" disabled={sent === 'sending'} className="nf-press rounded-full mt-1"
+                onClick={() => {
+                  hapticTap(30); setSent('sending')
+                  fetch('/api/plan/reward-drop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'share' }) })
+                    .then((r) => r.json()).then((j) => setSent(j.ok ? 'sent' : 'idle')).catch(() => setSent('idle'))
+                }}
+                style={{ background: RW.coral, color: RW.bg, padding: '12px 20px', ...rwMono(13, '.12em') }}>
+                {sent === 'sending' ? 'SENDING…' : `SEND TO ${res.partnerName.toUpperCase()}?`}
+              </button>
+            )
+          ) : null} />
         ) : drop?.tier === 'bonus' ? (
           <BonusCard drop={drop} saved={!!res?.saved} />
         ) : drop ? (

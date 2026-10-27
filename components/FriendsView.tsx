@@ -325,6 +325,7 @@ function PairedView({ status, messages, router, onShare }: { status: PartnerStat
           <span className="flex flex-col gap-1 min-w-0">
             <h1 className="nf-head" style={{ ...head(46), overflowWrap: 'anywhere' }}>{firstName} today</h1>
             {p.goalLine && <span style={{ fontSize: 14, color: MUTE }}>Doing it for: <b style={{ color: INK }}>{p.goalLine}</b></span>}
+            {p.progressLine && <span className="self-start rounded-full px-2.5 py-1" style={{ ...mono(11), color: '#9FDCC4', background: 'rgba(110,190,160,.14)', border: '1px solid rgba(110,190,160,.45)' }}>{p.progressLine.toUpperCase()}</span>}
           </span>
         </div>
 

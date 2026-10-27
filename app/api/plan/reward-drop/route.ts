@@ -6,6 +6,7 @@ import { loadNutritionDay } from '@/lib/nutrition-day'
 import { pickMeals, defaultMealBudget, mealPhoto, shortName, type MealMemory } from '@/lib/meal-pick'
 import { loadDrops, rollDrop, saveDrop, shieldDatesFrom, type DropTrigger, type RecipeBonus } from '@/lib/reward-drop'
 import { streakDetail } from '@/lib/streak'
+import { getActivePartnership, sendPartnerMessage, pushToPartner } from '@/lib/partners'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,7 @@ export const dynamic = 'force-dynamic'
 //
 // POST { trigger: 'workout' | 'meal' }  → { drop, fresh, saved, streak, shields }
 // POST { action: 'open', id }          → marks a saved drop opened
+// POST { action: 'share' }             → today's Rare, sent to her partner (2026-10-27)
 export async function POST(request: NextRequest) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -24,9 +26,9 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({})) as { trigger?: string; action?: string; id?: string }
   const svc = createServiceClient()
 
-  let { data: enrollment } = await svc.from('challenge_enrollments').select('id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).maybeSingle()
+  let { data: enrollment } = await svc.from('challenge_enrollments').select('id, created_at, name').eq('user_id', user.id).order('created_at', { ascending: false }).maybeSingle()
   if (!enrollment && user.email) {
-    const { data: byEmail } = await svc.from('challenge_enrollments').select('id, created_at').eq('email', user.email).order('created_at', { ascending: false }).maybeSingle()
+    const { data: byEmail } = await svc.from('challenge_enrollments').select('id, created_at, name').eq('email', user.email).order('created_at', { ascending: false }).maybeSingle()
     enrollment = byEmail || null
   }
   if (!enrollment) return NextResponse.json({ drop: null })
@@ -37,6 +39,40 @@ export async function POST(request: NextRequest) {
       try { await svc.from('reward_drops').update({ opened_at: new Date().toISOString() }).eq('id', body.id).eq('enrollment_id', enrollmentId).is('opened_at', null) } catch { /* table not there yet */ }
     }
     return NextResponse.json({ ok: true })
+  }
+
+  const firstName = String(enrollment.name || '').trim().split(/\s+/)[0] || ''
+  const partnership = await getActivePartnership(enrollmentId).catch(() => null)
+  const partnerId: string | null = partnership ? (partnership.enrollment_a === enrollmentId ? partnership.enrollment_b : partnership.enrollment_a) : null
+  let partnerName: string | null = null
+  if (partnerId) {
+    const { data: pe } = await svc.from('challenge_enrollments').select('name').eq('id', partnerId).maybeSingle()
+    partnerName = String(pe?.name || '').trim().split(/\s+/)[0] || 'your partner'
+  }
+
+  // "Send to <partner>?" on a Rare — only today's real Rare, only once.
+  if (body.action === 'share') {
+    if (!partnership || !partnerId) return NextResponse.json({ ok: false })
+    const day = localDateISO(getTimezone())
+    const { data: row } = await svc.from('reward_drops').select('id, tier, payload, shared_at').eq('enrollment_id', enrollmentId).eq('trigger', 'workout').eq('day', day).maybeSingle()
+    // Until 047 runs there's no saved row to check — fall back to the sender's
+    // own today's roll, re-checked below as a Rare.
+    let title: string | null = null
+    if (row) {
+      if (row.tier !== 'rare' || row.shared_at) return NextResponse.json({ ok: !!row.shared_at })
+      title = (row.payload as { title?: string } | null)?.title || null
+      await svc.from('reward_drops').update({ shared_at: new Date().toISOString() }).eq('id', row.id)
+    } else {
+      body.trigger = 'workout'
+      ;(body as { shareAfter?: boolean }).shareAfter = true
+    }
+    if (row) {
+      const who = firstName || 'Your partner'
+      const msg = `${who} just hit ${title ? title.toLowerCase() : 'a big one'}! Send her some love.`
+      await sendPartnerMessage(partnership.id, enrollmentId, msg, 'cheer')
+      await pushToPartner(partnerId, `${who} just hit a big one`, msg)
+      return NextResponse.json({ ok: true })
+    }
   }
 
   const trigger: DropTrigger | null = body.trigger === 'workout' || body.trigger === 'meal' ? body.trigger : null
@@ -58,7 +94,7 @@ export async function POST(request: NextRequest) {
   const streakNow = () => streakDetail(dates, todayIso, shieldDates)
   if (already) {
     const s = streakNow()
-    return NextResponse.json({ drop: already, fresh: false, saved: true, streak: s.streak, shields: s.shieldsLeft })
+    return NextResponse.json({ drop: already, fresh: false, saved: true, streak: s.streak, shields: s.shieldsLeft, partnerName, shared: !!already.sharedAt })
   }
 
   // Meal drops only after a real meal is logged today.
@@ -103,12 +139,24 @@ export async function POST(request: NextRequest) {
     dipHigh: pattern?.riskBand === 'high',
     whyOwn: fd.why_own, payoffs: fd.payoffs,
     history: store.drops, recipe,
+    firstName,
+    mealsHandled: await svc.from('challenge_food_log').select('id', { count: 'exact', head: true }).eq('enrollment_id', enrollmentId).eq('source', 'meal_pick').then((r) => r.count || 0, () => 0),
   })
+
+  // Share fallback (no saved table yet): only a real Rare goes out.
+  if ((body as { shareAfter?: boolean }).shareAfter) {
+    if (rolled.tier !== 'rare' || !partnership || !partnerId) return NextResponse.json({ ok: false })
+    const who = firstName || 'Your partner'
+    const msg = `${who} just hit ${rolled.payload.title.toLowerCase()}! Send her some love.`
+    await sendPartnerMessage(partnership.id, enrollmentId, msg, 'cheer')
+    await pushToPartner(partnerId, `${who} just hit a big one`, msg)
+    return NextResponse.json({ ok: true })
+  }
 
   // Even a plain meal check is saved: it holds the one-per-day spot so a
   // second log can't re-roll for a bonus.
   const saved = store.ok ? await saveDrop(svc, enrollmentId, user.id, rolled) : null
-  const drop = saved?.drop || { ...rolled, id: null, createdAt: new Date().toISOString(), openedAt: null }
+  const drop = saved?.drop || { ...rolled, id: null, createdAt: new Date().toISOString(), openedAt: null, sharedAt: null }
   const s = streakDetail(dates, todayIso, drop.kind === 'shield' ? [...shieldDates, todayIso] : shieldDates)
-  return NextResponse.json({ drop, fresh: saved ? saved.fresh : true, saved: !!saved, streak: s.streak, shields: s.shieldsLeft })
+  return NextResponse.json({ drop, fresh: saved ? saved.fresh : true, saved: !!saved, streak: s.streak, shields: s.shieldsLeft, partnerName, shared: false })
 }
