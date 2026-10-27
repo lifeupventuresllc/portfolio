@@ -241,8 +241,8 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
           const c = cards[idx]
           return (
             <div key={`${pos}-${idx}`} className={`relative flex-1 min-h-[150px] rounded-3xl overflow-hidden ${fading === pos ? 'np-out' : 'np-in'}`}
-              style={{ background: C.card, border: `2px solid ${kept === pos && canSwap ? 'rgba(229,169,60,.55)' : 'rgba(237,231,218,.12)'}` }}>
-              <button onClick={() => tapCard(c)} disabled={busy} aria-label={`${c.short}, ${c.place}, ${c.cal} calories`}
+              style={{ background: C.card, border: `2px solid ${c.friend ? C.gold : kept === pos && canSwap ? 'rgba(229,169,60,.55)' : 'rgba(237,231,218,.12)'}` }}>
+              <button onClick={() => tapCard(c)} disabled={busy} aria-label={`${c.friend ? `${c.friend} had this. ` : ''}${c.short}, ${c.place}, ${c.cal} calories`}
                 className="nf-press absolute inset-0 w-full h-full text-left disabled:opacity-70">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={c.photo} alt="" className="absolute inset-0 w-full h-full object-cover rw-photo" />
@@ -261,6 +261,15 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
                   </span>
                 </span>
               </button>
+              {c.friend && (
+                // "<Name> had this" (Friends, 2026-10-26): her partner picked
+                // this lately, and it passed every one of her own checks.
+                <span className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full pl-1 pr-3 pointer-events-none"
+                  style={{ height: 34, maxWidth: '58%', background: 'rgba(2,31,22,0.82)', border: `1px solid ${C.gold}`, backdropFilter: 'blur(6px)' }}>
+                  <span aria-hidden className="shrink-0 grid place-items-center rounded-full" style={{ width: 26, height: 26, background: C.gold, color: C.bg, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 15 }}>{c.friend.charAt(0).toUpperCase()}</span>
+                  <span className="truncate" style={{ ...mono(10), color: C.gold }}>{c.friend.toUpperCase()} HAD THIS</span>
+                </span>
+              )}
               {canSwap && (
                 <button type="button" onClick={() => swap(pos)} disabled={busy || fading != null} aria-label={`Not this one — swap out ${c.short}`}
                   className="nf-press absolute top-3 right-3 rounded-full px-3 flex items-center gap-1.5"

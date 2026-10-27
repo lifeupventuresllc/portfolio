@@ -7,6 +7,7 @@ import { pickMeals, planDay, clockLabel, defaultMealBudget, orderDestination, me
 import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
 import { openChainsNear } from '@/lib/fos/nearby-food'
 import { verifiedChains } from '@/lib/chain-menu'
+import { partnerMealKeys } from '@/lib/partners'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,6 +67,10 @@ export default async function NutritionPage() {
     nearby = await openChainsNear(lat, lng, verifiedChains())
   }
 
+  // "<Name> had this" (Friends): her partner's recent picks, only when her
+  // partner shares meals. Each still has to pass every one of her own checks.
+  const partner = eatStyle ? await partnerMealKeys(enrollment.id as string) : null
+
   const pick = (near: typeof nearby) => eatStyle ? pickMeals({
     eatStyle, mealBudget, remainingCal, slot,
     weightLbs: Number(intake.weight_lbs) || 170,
@@ -76,6 +81,7 @@ export default async function NutritionPage() {
     todayIso,
     slotCalBudget: day.calBudget,
     nearby: near,
+    partner,
   }) : null
   const result = pick(nearby)
   let options = result?.options || []
@@ -92,6 +98,7 @@ export default async function NutritionPage() {
       memory: (formData.meal_memory || {}) as MealMemory,
       todayIso,
       slotCalBudget: day.calBudget,
+      partner,
     }).options
     // Interleave so the two cards on screen are one out, one home — and a
     // swap keeps that rhythm.
@@ -102,6 +109,13 @@ export default async function NutritionPage() {
     }
     options = both
   }
+  // At most one "<Name> had this" card on the whole screen.
+  let friendShown = false
+  options = options.map((o) => {
+    if (!o.friend) return o
+    if (!friendShown) { friendShown = true; return o }
+    return { ...o, friend: undefined }
+  })
   const cards: PickCard[] = options.slice(0, 12).map((o) => ({
     ...o, dest: orderDestination(o, orderApp), photo: mealPhoto(o), short: shortName(o),
   }))

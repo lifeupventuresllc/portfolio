@@ -40,6 +40,7 @@ export interface MealOption {
   price: number | null       // "about $X" — always an estimate
   why: string                // one real reason, never invented
   ingredients?: string[]     // cooking picks only, portioned to her
+  friend?: string            // "<Name> had this" — her partner's first name (at most one card)
 }
 
 // Per-meal learning signals, stored on her intake row (form_data.meal_memory)
@@ -62,6 +63,7 @@ export interface PickContext {
   todayIso: string
   slotCalBudget?: number      // from planDay(): this meal's share of what's left today
   nearby?: Map<string, number> // chains open near her right now → miles (Google Places); absent = location unknown
+  partner?: { name: string; keys: Set<string> } | null // her partner's picked meals, last 3 days (only when shared)
 }
 
 export interface PickResult {
@@ -218,6 +220,13 @@ function recipeCost(name: string, factor = 1): number | null {
 // ---- candidates -----------------------------------------------------------
 
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
+
+// A picked meal in the food log keeps its name + place (brand) but not its
+// key — rebuild it exactly the way the candidates below build theirs.
+const COOK_PLACES = new Set(['Your meal plan', 'The Menu cookbook'])
+export function mealKeyFromLog(name: string, brand: string | null | undefined): string {
+  return !brand || COOK_PLACES.has(brand) ? `cook:${slugify(name)}` : `out:${slugify(brand)}:${slugify(name)}`
+}
 
 function eatOutCandidates(ctx: PickContext): MealOption[] {
   const wc = weightClassFor(ctx.weightLbs)
@@ -383,7 +392,23 @@ export function pickMeals(ctx: PickContext): PickResult {
     // put while she's looking at it).
     score += (hash(`${ctx.todayIso}:${ctx.slot}:${o.key}`) % 13) - 6
     return { o: { ...o, why: whyFor(o, ctx, mem, loved) }, score }
-  }).sort((a, b) => b.score - a.score)
+  })
+
+  // "<Name> had this" (2026-10-26, friends-plan.md §4): at most ONE of her
+  // partner's recent picks, and only when it already passed every one of her
+  // own checks above (never-foods, eat style, meal time, open near her) AND
+  // fits her calories and money outright — never through a relaxed rule. It
+  // gets a small boost; her own plan still leads.
+  if (ctx.partner && ctx.partner.keys.size) {
+    const best = scored
+      .filter((s) => ctx.partner!.keys.has(s.o.key) && fitsCal(s.o) && fitsMoney(s.o))
+      .sort((a, b) => b.score - a.score)[0]
+    if (best) {
+      best.score += 14
+      best.o = { ...best.o, friend: ctx.partner.name, why: `${ctx.partner.name} had this. Fits your ${ctx.slot.toLowerCase()}.` }
+    }
+  }
+  scored.sort((a, b) => b.score - a.score)
 
   // Order the list so every consecutive pair is two genuinely different meals
   // (different restaurant when eating out, different dish when cooking).
