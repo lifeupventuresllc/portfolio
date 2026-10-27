@@ -90,7 +90,8 @@ export default function NextStepBar() {
   return (
     <>
       {/* Spacer so the fixed bar never covers the bottom of a page. */}
-      <div aria-hidden style={{ height: 76 }} />
+      {/* page-colored, so no dark strip shows under green pages (2026-10-26) */}
+      <div aria-hidden style={{ height: 76, background: '#021F16' }} />
       <button
         onClick={start}
         aria-label={`Your next step: ${action.instruction}. Start`}
