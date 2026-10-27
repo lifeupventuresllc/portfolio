@@ -33,7 +33,7 @@ export default async function FoodLogPage() {
     <div className="min-h-[100dvh] px-4 pt-6 pb-10" style={{ background: '#021F16' }}>
       <div className="max-w-md mx-auto flex flex-col gap-4">
         <Link href="/plan/today" className="self-start text-sm" style={{ color: 'rgba(237,231,218,0.55)' }}>← My Day</Link>
-        <h1 className="text-[28px] font-bold" style={{ color: '#EDE7DA', fontFamily: 'var(--font-fraunces), Georgia, serif' }}>Today&apos;s food</h1>
+        <h1 style={{ color: '#EDE7DA', fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontStyle: 'italic', fontWeight: 800, fontSize: 34, lineHeight: 1, textTransform: 'uppercase' }}>Today&apos;s food</h1>
         <MealPhotoButton />
         <FoodLog
           planned={planned} budget={calBudget} dayType={todaysDayType}

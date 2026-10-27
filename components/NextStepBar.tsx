@@ -99,7 +99,7 @@ export default function NextStepBar() {
         style={{
           bottom: 'calc(68px + env(safe-area-inset-bottom))',
           height: 62,
-          padding: '0 12px 0 12px',
+          padding: '0 10px 0 18px',  // no glowing orb (2026-10-26), same as the win bar
           background: '#021F16',
           border: '1.5px solid rgba(229,169,60,.6)',
           boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
@@ -110,11 +110,6 @@ export default function NextStepBar() {
           transition: 'transform 0.25s ease, opacity 0.2s ease',
         }}
       >
-        <span
-          aria-hidden
-          className="shrink-0 rounded-full"
-          style={{ width: 34, height: 34, background: 'radial-gradient(circle at 50% 45%, #f2c879 0%, #E5A93C 40%, #7a5a1c 100%)', boxShadow: '0 0 12px rgba(229,169,60,0.55)' }}
-        />
         <span className="flex-1 min-w-0 flex flex-col gap-0.5">
           <span style={{ color: '#E5A93C', fontFamily: "var(--font-jbmono), monospace", fontSize: 10, fontWeight: 700, letterSpacing: '.14em' }}>YOUR NEXT STEP</span>
           <span

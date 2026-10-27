@@ -81,13 +81,15 @@ export default function FeedbackWidget() {
         // user didn't recognize the bare flag icon as anything tappable. Now a
         // small pill with a visible "Feedback" label next to the icon, so a
         // stranger knows what it is at a glance — position/behavior unchanged.
-        className="fixed z-[45] bottom-24 right-4 h-12 pl-3 pr-4 rounded-full bg-charcoal border border-gold/40 text-gold shadow-lg shadow-black/40 flex items-center gap-2 hover:border-gold hover:bg-gold/10 active:scale-95 transition-all"
-        style={{ bottom: 'calc(6rem + env(safe-area-inset-bottom))' }}
+        // 2026-10-26: sits above the tab bar + "Your next step" bar (it used to
+        // cover the bar's START), in the app's new dark-green + mono look.
+        className="fixed z-[45] right-4 h-10 pl-3 pr-3.5 rounded-full flex items-center gap-1.5 active:scale-95 transition-all"
+        style={{ bottom: 'calc(144px + env(safe-area-inset-bottom))', background: 'rgba(2,31,22,.92)', border: '1px solid rgba(229,169,60,.45)', color: '#E5A93C', boxShadow: '0 6px 18px rgba(0,0,0,.4)', fontFamily: "var(--font-jbmono), monospace" }}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 21V4a1 1 0 0 1 1-1h13.5a.5.5 0 0 1 .4.8L15 9l3.9 5.2a.5.5 0 0 1-.4.8H5a1 1 0 0 0-1 1Z" />
         </svg>
-        <span className="text-xs font-bold uppercase tracking-wider">Feedback</span>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em' }}>FEEDBACK</span>
       </button>
 
       {open && (
