@@ -12,7 +12,7 @@ import type { GrocerySection } from '@/lib/ingredients'
 // lines are skipped, and a list she already sent this week isn't sent twice.
 
 const BASE = 'https://mealmeai.vercel.app'
-const MAX_ITEMS = 24
+const MAX_ITEMS = 30
 const ITEM_TTL_DAYS = 30
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,10 +57,16 @@ export type CartLine = { item: string; amount: string }
 /** Her week's list → the lines worth buying (no staples, no "to taste"). */
 export function cartLines(grocery: GrocerySection[]): CartLine[] {
   const out: CartLine[] = []
+  const seen = new Set<string>()
+  // Aisles come fresh-food first (proteins, produce, dairy, grains), so the
+  // cap drops condiments and pantry basics she most likely has.
   for (const sec of grocery || []) {
     for (const it of sec.items || []) {
-      if (!it?.item || /to taste/i.test(it.amount || '')) continue
+      if (!it?.item || /to taste/i.test(it.amount || '') || /optional/i.test(it.item)) continue
       if (STAPLE.test(it.item)) continue
+      const key = it.item.toLowerCase().replace(/\b(diced|chopped|sliced|cooked|shredded|fresh)\b/g, '').replace(/[^a-z]+/g, ' ').trim()
+      if (seen.has(key)) continue
+      seen.add(key)
       out.push({ item: it.item, amount: it.amount })
     }
   }
