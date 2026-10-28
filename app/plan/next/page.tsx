@@ -36,7 +36,7 @@ export default async function NextActionPage() {
           <div className="rounded-3xl p-6 text-center" style={{ background: '#0d3a2a', border: '1.5px solid rgba(229,169,60,0.3)' }}>
             <p className="text-white font-semibold mb-2">Let&apos;s build your plan first</p>
             <p className="text-ivory/50 text-sm mb-5">Your next action comes from your real plan — set that up and this fills in on its own.</p>
-            <Link href="/plan" className="inline-block bg-gold text-obsidian px-6 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl">Go to dashboard</Link>
+            <Link href="/plan/intake" className="inline-block bg-gold text-obsidian px-6 py-3 font-bold text-sm uppercase tracking-wider rounded-2xl">Build my plan</Link>
           </div>
         )}
       </div>

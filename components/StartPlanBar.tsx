@@ -6,33 +6,21 @@ import { hapticTap } from '@/lib/haptics'
 
 // Bottom bar of the feed for someone with NO plan yet (Asa's two-core-screens
 // spec, 2026-09-28): it just says "Start your plan" — no mention of workouts.
-// One tap builds the same real beginner plan the old first-run card did
-// (components/FirstWorkoutStartCard.tsx, app/api/plan/quickstart-workout),
-// then goes straight into it. No sign-in anywhere on this path. Without this
+// One tap opens the intake. No sign-in anywhere on this path. Without this
 // bar a brand-new visitor has no way to get a plan at all.
 export default function StartPlanBar() {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
 
-  async function start() {
+  // 2026-10-28 (Asa: "start plan takes you to a workout instead of the
+  // intake"): every "start your plan" goes to the intake now. The old
+  // one-tap quickstart workout skipped her real answers.
+  function start() {
     if (busy) return
     setBusy(true)
     setError(false)
-    try {
-      const res = await fetch('/api/plan/quickstart-workout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ location: 'home' }),
-      })
-      if (!res.ok) throw new Error('failed')
-      router.push('/plan/workout')
-      router.refresh()
-    } catch {
-      // Never a dead button: re-enable so she can just tap again.
-      setError(true)
-      setBusy(false)
-    }
+    router.push('/plan/intake')
   }
 
   // 2026-10-26 (Asa's screenshot of this bar): same new look as the feed's
@@ -57,7 +45,7 @@ export default function StartPlanBar() {
           className="nf-press shrink-0 h-10 px-5 rounded-full disabled:opacity-70"
           style={{ background: '#E5A93C', color: '#021F16', fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.1em' }}
         >
-          {busy ? 'BUILDING…' : 'START'}
+          {busy ? 'OPENING…' : 'START'}
         </button>
       </div>
     </div>

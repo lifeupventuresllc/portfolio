@@ -72,6 +72,9 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
   const lowFuelToday = computeLowFuelToday(caloriesSoFar, localHourNumber(getTimezone()))
 
   if (!workoutPlan?.plan) {
+    // Brand-new (no intake yet): her plan starts at the intake, never a
+    // generic workout (2026-10-28, Asa).
+    if (!enrollment.intake_completed) redirect('/plan/intake')
     // The Sculpt Sessions fast lane — one photo, one question (home or gym),
     // straight into a real beginner-friendly full-body workout. No injury/focus
     // question here (that's Coach Asa's chat path for anything more tailored).
