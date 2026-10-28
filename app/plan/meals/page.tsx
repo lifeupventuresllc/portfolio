@@ -4,6 +4,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { buildBlueprint } from '@/lib/nutrition'
 import MealBuilder from '@/components/MealBuilder'
 import GroceryPricing from '@/components/GroceryPricing'
+import KrogerCart from '@/components/KrogerCart'
 import { parseStoredGoal } from '@/lib/goals'
 
 export const dynamic = 'force-dynamic'
@@ -75,6 +76,9 @@ export default async function MealsPage() {
           dislikesAllergies: intake.dislikes_allergies || undefined,
         }} />
 
+        <div className="mt-8">
+          <KrogerCart />
+        </div>
         <div className="mt-8">
           <GroceryPricing />
         </div>
