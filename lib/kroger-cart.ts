@@ -14,6 +14,7 @@ import type { GrocerySection } from '@/lib/ingredients'
 const BASE = 'https://mealmeai.vercel.app'
 const MAX_ITEMS = 30
 const ITEM_TTL_DAYS = 30
+const MATCH_V = 2
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Json = any
@@ -42,6 +43,13 @@ function listIn(body: Json): Json[] {
   for (const k of ['products', 'items', 'results', 'data', 'stores', 'catalog']) if (Array.isArray(body?.[k])) return body[k]
   for (const v of Object.values(body || {})) if (Array.isArray(v) && v.length && typeof v[0] === 'object') return v as Json[]
   return []
+}
+/** The first https link anywhere in a response (sign-in / checkout links). */
+function firstUrl(o: Json, depth = 0): string | null {
+  if (typeof o === 'string') return /^https:\/\//.test(o) ? o : null
+  if (!o || typeof o !== 'object' || depth > 4) return null
+  for (const v of Object.values(o)) { const u = firstUrl(v, depth + 1); if (u) return u }
+  return null
 }
 const pick = (o: Json, keys: string[]): string | null => {
   for (const k of keys) { const v = o?.[k] ?? o?.raw?.[k]; if (v != null && v !== '') return String(v) }
@@ -75,8 +83,30 @@ export function cartLines(grocery: GrocerySection[]): CartLine[] {
 
 /** A plain store search term ("93/7 ground turkey" → "ground turkey 93/7"
  * stays as is; parentheses and "lean" percents trimmed). */
+const REWRITE: [RegExp, string][] = [
+  [/^chicken breasts?$/i, 'boneless skinless chicken breast'],
+  [/^whole eggs?$|^eggs?$/i, 'large eggs'],
+  [/^(fat-free|nonfat|non-fat) greek yogurt$/i, 'plain nonfat greek yogurt'],
+  [/^fat-free american cheese$/i, 'fat free american cheese singles'],
+  [/^fat-free (shredded )?cheese$/i, 'fat free shredded cheddar cheese'],
+  [/^pico de gallo$/i, 'pico de gallo fresh'],
+  [/^fruit$/i, 'fresh strawberries'],
+]
 function searchTerm(item: string): string {
-  return item.replace(/\([^)]*\)/g, '').replace(/\s{2,}/g, ' ').trim()
+  const t = item.replace(/\([^)]*\)/g, '').replace(/\s{2,}/g, ' ').trim()
+  const hit = REWRITE.find(([re]) => re.test(t))
+  return hit ? hit[1] : t
+}
+
+const STOP = new Set(['and', 'with', 'of', 'the', 'a', 'fresh', 'diced', 'chopped', 'sliced', 'cooked', 'large', 'plain', 'lean', 'light', 'lite'])
+const words = (x: string) => x.toLowerCase().replace(/[^a-z0-9/% ]+/g, ' ').split(/\s+/).filter((w) => w && !STOP.has(w)).map((w) => w.replace(/(es|s)$/, ''))
+/** How well a store product's name fits the term: share of the term's words
+ * it contains, and the term's last word (the food itself) must be there. */
+function fit(term: string, name: string): number {
+  const t = words(term), n = new Set(words(name))
+  if (!t.length) return 0
+  if (!n.has(t[t.length - 1])) return 0
+  return t.filter((w) => n.has(w)).length / t.length
 }
 
 // ---- her saved Kroger state (fos_profile.preferences.kroger) ----------------
@@ -85,6 +115,7 @@ type KrogerPrefs = {
   zip?: string
   store?: { id: string; name: string; address: string }
   items?: Record<string, { id: string; name: string; at: string } | null>   // term → match (null = none at that store)
+  itemsV?: number                                                         // matcher version — a better matcher re-matches
   sent?: { week: string; hash: string; checkoutUrl: string; added: number; missing: string[] }
 }
 
@@ -136,11 +167,15 @@ async function findStore(zip: string): Promise<KrogerPrefs['store'] | null> {
 
 async function matchItem(locationId: string, term: string): Promise<{ id: string; name: string } | null> {
   try {
-    const body = await mm(`/api/catalog/search?providerId=kroger&locationId=${encodeURIComponent(locationId)}&query=${encodeURIComponent(term)}&limit=5`)
-    const p = listIn(body)[0]
-    if (!p) return null
-    const id = pick(p, ['providerItemId', 'productId', 'upc', 'id'])
-    return id ? { id, name: pick(p, ['name', 'description', 'title']) || term } : null
+    const body = await mm(`/api/catalog/search?providerId=kroger&locationId=${encodeURIComponent(locationId)}&query=${encodeURIComponent(term)}&limit=8`)
+    let best: { id: string; name: string; score: number } | null = null
+    for (const p of listIn(body)) {
+      const id = pick(p, ['providerItemId', 'productId', 'upc', 'id'])
+      const name = pick(p, ['name', 'description', 'title']) || ''
+      const score = fit(term, name)
+      if (id && score > (best?.score ?? 0.59)) best = { id, name, score }
+    }
+    return best ? { id: best.id, name: best.name } : null
   } catch (e) {
     if (e instanceof MealMeError && e.code === 'product_not_found') return null
     throw e
@@ -186,6 +221,7 @@ export async function sendToKroger(opts: {
     }
     k.zip = zip
     k.store = store
+    if (k.itemsV !== MATCH_V) { k.items = {}; k.itemsV = MATCH_V }
     const items = k.items || {}
     const fresh = (iso: string) => Date.now() - new Date(iso).getTime() < ITEM_TTL_DAYS * 86400000
 
@@ -216,7 +252,7 @@ export async function sendToKroger(opts: {
     } catch (e) {
       if (e instanceof MealMeError && (e.status === 409 || e.code === 'kroger_customer_auth_required')) {
         const o = await mm('/api/kroger/oauth/start', { method: 'POST', body: { externalCustomerId: opts.enrollmentId, redirectAfter: opts.returnTo } })
-        const loginUrl = pick(o, ['url', 'authorizationUrl', 'authUrl', 'oauthUrl', 'redirectUrl'])
+        const loginUrl = pick(o, ['url', 'authorizationUrl', 'authorizeUrl', 'authUrl', 'oauthUrl', 'redirectUrl', 'loginUrl']) || firstUrl(o)
         if (!loginUrl) return { status: 'error', message: 'Kroger sign-in could not start. Try again.' }
         return { status: 'login', loginUrl, store: store.name }
       }
@@ -227,7 +263,7 @@ export async function sendToKroger(opts: {
 
     // 3. The checkout link on Kroger's site.
     const co = await mm(`/api/carts/${encodeURIComponent(cartId)}/checkout`, { method: 'POST', body: {} })
-    const checkoutUrl = pick(co, ['checkoutUrl', 'url', 'link']) || 'https://www.kroger.com/cart'
+    const checkoutUrl = pick(co, ['checkoutUrl', 'url', 'link']) || firstUrl(co) || 'https://www.kroger.com/cart'
     const allMissing = [...missing, ...failed]
     k.sent = { week: opts.week, hash, checkoutUrl, added: found.length - failed.length, missing: allMissing }
     await writeKroger(opts.enrollmentId, k)
