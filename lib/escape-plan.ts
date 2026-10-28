@@ -544,6 +544,8 @@ export function pickForRestaurant(wc: WeightClass, restaurantName: string, slot:
 }
 
 /** No API/OAuth needed — DoorDash's public search URL, not order automation. */
+// Goes through our own /api/go hop (2026-10-28) so an iPhone opens DoorDash's
+// website, which lands on the restaurant, not the app's home screen.
 export function doordashSearchUrl(restaurant: string): string {
-  return `https://www.doordash.com/search/store/${encodeURIComponent(restaurant)}/`
+  return `/api/go?app=doordash&q=${encodeURIComponent(restaurant)}`
 }

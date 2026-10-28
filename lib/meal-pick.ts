@@ -457,7 +457,7 @@ export function orderDestination(o: MealOption, app: OrderApp = 'doordash'): Ord
   if (o.kind === 'cook') return { url: null, label: 'What you need', kind: 'recipe', app: null }
   if (o.place === 'Grab & go') return { url: null, label: 'Grab it at any store', kind: 'recipe', app: null }
   const url = app === 'ubereats'
-    ? `https://www.ubereats.com/search?q=${encodeURIComponent(o.place)}`
+    ? `/api/go?app=ubereats&q=${encodeURIComponent(o.place)}`
     : doordashSearchUrl(o.place)
   return { url, label: `Order on ${ORDER_APP_NAME[app]}`, kind: 'delivery', app }
 }

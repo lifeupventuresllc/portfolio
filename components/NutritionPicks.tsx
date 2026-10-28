@@ -358,7 +358,7 @@ function OrderExact({ card, busy, onBack, onOpen }: { card: PickCard; busy: bool
         COPY + OPEN {appName}
       </button>
       <span className="text-center" style={{ fontSize: 13, color: SOFT }}>
-        Paste it in the search bar. Your exact meal comes up.
+        Tap {card.place} at the top. Your meal is on its menu.
       </span>
     </div>
   )
