@@ -243,20 +243,12 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
   const isGuest = !!user.is_anonymous
 
   return (
-    <div className="min-h-[100dvh] px-4 pt-0 pb-6" style={{ background: '#021F16' }}>
+    // Full screen (2026-10-29): cancels the layout's tab-bar padding, since
+    // the tab bar is hidden here.
+    <div className="min-h-[100dvh] px-4 pt-0" style={{ background: '#021F16', marginBottom: 'calc(-4.5rem - env(safe-area-inset-bottom))' }}>
       <WorkoutPlayer program={program} firstName={firstName} hasRealName={hasRealName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} askQuickstartGoal={askQuickstartGoal} isGuest={isGuest} />
-      {/* The quickstart flow (QuickstartWorkout) only ever shows its home/gym
-          picker once, on the very first build — real behavior, not a bug, since
-          re-showing it every visit would defeat the "no wall" point. But she
-          still needs a real, visible way to switch after that first choice —
-          this reuses the same trackOverride mechanism Coach Asa's chat already
-          uses (see the trackOverride block above), rather than building a
-          second, separate switching path. */}
-      <div className="max-w-lg mx-auto text-center mt-6">
-        <a href="/plan/coach" className="text-sm underline underline-offset-4" style={{ color: 'rgba(237,231,218,.45)' }}>
-          Training somewhere different today? Tell Coach
-        </a>
-      </div>
+      {/* "Training somewhere different today? Tell Coach" now lives in the
+          workout's ⋯ menu (2026-10-29: full-screen workout, nothing below it). */}
     </div>
   )
 }

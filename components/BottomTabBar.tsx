@@ -77,6 +77,9 @@ export default function BottomTabBar() {
   // For You/Community don't have anywhere real to point her to. Shows up
   // starting the moment she lands on her real dashboard, not before.
   if (pathname.startsWith('/plan/intake')) return null
+  // Mid-workout (2026-10-29, Asa: "nothing on the screen except what she
+  // needs right now"): full screen; the X on the workout goes home.
+  if (pathname === '/plan/workout') return null
 
   // '/' is included because 2026-09-23's root-stays-the-address change
   // (middleware.ts) serves this exact same page's content there via a
