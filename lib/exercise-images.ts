@@ -23,7 +23,34 @@
 // https://www.pexels.com/photo/<id>/). A few are the closest honest match rather than the
 // exact move/equipment (no Pexels photo of a Black woman doing it exists), e.g. machine
 // and barbell bench moves, leg machines, cable crunch, kettlebell moves.
+// 2026-10-29: exact-match pass (same move, same equipment, Black woman only). Replaced
+// sit-ups/slow-sit-up (were a medicine-ball V-sit) and concentration-curl (was a plain
+// seated curl, elbow not braced) with exact photos; added donkey-kick, glute-bridge
+// (same Pexels photo as hip-thrust.jpg — it is a floor glute bridge, not a bench hip
+// thrust), incline-push-ups (incline push-up on an outdoor bar, not literally a couch —
+// same movement) and reverse-lunge-arm-raise. Still NOT exact (closest honest photo, keep
+// until a real match exists): barbell-bench-press, incline-barbell-press, leg-extension,
+// reverse-pec-deck (all a home multi-gym), barbell-bent-over-row, romanian-deadlift-
+// barbell, romanian-deadlift-db, bent-over-reverse-fly, db-rear-delt-fly, db-bent-over-row
+// (single dumbbell / single arm), barbell-hip-thrust + hip-thrust + glute-bridge-marches +
+// glute-bridge-single-leg-lift (floor/ball bridges), cable-crunch + crunch + reverse-crunch
+// (medicine-ball V-sit), bird-dog + cable-glute-kickback (both a bodyweight donkey kick),
+// close-grip-bench-press + db-tricep-kickback + skull-crusher (bench dip), hack-squat
+// (barbell on back), leg-press-single-seated + goblet-squat + db-squat (bodyweight squat),
+// lying-leg-curl + seated-leg-curl (stability-ball curl), seated-cable-row + lat-pulldown
+// (standing cable), kb-around-the-worlds + kb-windmill (seated with a kettlebell),
+// dumbbell-snatch + overhead-tricep-extension-db + thrusters (dumbbells held at shoulders),
+// hanging-knee-raise (standing holding a bar), db-step-up (no dumbbells), dead-bug (leg
+// raise, arms down), standing-calf-raise-db (static stand), cable-bicep-curl, cable-
+// lateral-raise, straight-arm-cable-pulldown (back view, move not visible).
 // file -> Pexels ID:
+//   concentration-curl.jpg -> 30500801 (replaced 2026-10-29)
+//   donkey-kick.jpg -> 6303428
+//   glute-bridge.jpg -> 20263479
+//   incline-push-ups.jpg -> 8770411
+//   reverse-lunge-arm-raise.jpg -> 5149170
+//   sit-ups.jpg -> 8401120 (replaced 2026-10-29)
+//   slow-sit-up.jpg -> 8401962 (replaced 2026-10-29)
 //   barbell-back-squat.jpg -> 34043595
 //   barbell-bench-press.jpg -> 18961994
 //   barbell-bent-over-row.jpg -> 6455898
@@ -37,7 +64,6 @@
 //   cable-glute-kickback.jpg -> 6303435
 //   cable-lateral-raise.jpg -> 33832202
 //   close-grip-bench-press.jpg -> 8353397
-//   concentration-curl.jpg -> 6455925
 //   db-bent-over-row.jpg -> 8032920
 //   db-front-raise.jpg -> 6496099
 //   db-lateral-raise.jpg -> 8846592
@@ -75,9 +101,7 @@
 //   seated-cable-row.jpg -> 33832200
 //   seated-leg-curl.jpg -> 8846104
 //   single-arm-db-row.jpg -> 6455909
-//   sit-ups.jpg -> 6455829
 //   skull-crusher.jpg -> 8353397
-//   slow-sit-up.jpg -> 6455829
 //   standing-calf-raise-db.jpg -> 8846281
 //   straight-arm-cable-pulldown.jpg -> 33832203
 //   thrusters.jpg -> 8846212
@@ -151,4 +175,10 @@ export const FORM_IMAGES: Record<string, string> = {
   'DB Rear Delt Fly': '/images/exercises/db-rear-delt-fly.jpg',
   'Reverse Pec Deck': '/images/exercises/reverse-pec-deck.jpg',
   'Barbell Back Squat': '/images/exercises/barbell-back-squat.jpg',
+  // 2026-10-29 exact-match pass (Pexels IDs in the header)
+  'Donkey Kick': '/images/exercises/donkey-kick.jpg',
+  'Glute Bridge': '/images/exercises/glute-bridge.jpg',
+  'Incline Push-Ups (Couch or Stairs)': '/images/exercises/incline-push-ups.jpg',
+  'Reverse Lunge + Arm Raise': '/images/exercises/reverse-lunge-arm-raise.jpg',
+  'Regular Push-Ups': '/images/exercises/push-up.jpg',
 }
