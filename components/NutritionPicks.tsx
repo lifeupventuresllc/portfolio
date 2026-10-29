@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { MealOption, EatStyle, OrderDestination } from '@/lib/meal-pick'
@@ -38,6 +38,8 @@ async function logFood(body: Record<string, unknown>): Promise<string | null> {
   const res = await fetch('/api/plan/food-log', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   })
+  // A failed save must not look logged (2026-10-29 audit).
+  if (!res.ok) throw new Error('save failed')
   const day = await res.json().catch(() => null) as { entries?: { id: string; name: string; meal: string }[] } | null
   return (day?.entries || []).filter((e) => e.name === body.name && e.meal === body.meal).pop()?.id || null
 }
@@ -78,7 +80,7 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
   // her best fit. SHUFFLE never touches it.
   const [kept, setKept] = useState(0)
   const [busy, setBusy] = useState(false)
-  const [done, setDone] = useState<{ card: PickCard; left: number; entryId: string | null } | null>(null)
+  const [done, setDone] = useState<{ card: PickCard; left: number; entryId: string | null; failed?: boolean } | null>(null)
   // 2026-10-26 (Asa's mockup): an eat-out tap shows "Order exactly this"
   // first, so what she orders is what we count.
   const [ordering, setOrdering] = useState<PickCard | null>(null)
@@ -142,18 +144,40 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
     // window opened after an await.
     if (card.dest.url) window.open(card.dest.url, '_blank', 'noopener,noreferrer')
     let entryId: string | null = null
+    let failed = false
     try {
-      entryId = await logFood({
-        name: card.name, brand: card.place, meal, servings: 1,
-        calories: card.cal, protein_g: card.protein, carbs_g: card.carbs, fats_g: card.fat,
-        source: 'meal_pick',
-      })
+      entryId = await saveCard(card)
       post({ action: 'picked', key: card.key })
-    } catch { /* still show done — the order app is already open */ }
-    setDone({ card, left: Math.max(0, remainingCal - card.cal), entryId })
+    } catch { failed = true /* still show done — the order app is already open */ }
+    // Not saved → the number doesn't move, and the screen says so with a retry.
+    setDone({ card, left: failed ? Math.max(0, remainingCal) : Math.max(0, remainingCal - card.cal), entryId, failed })
     setOrdering(null)
     setBusy(false)
   }
+
+  const saveCard = (card: PickCard) => logFood({
+    name: card.name, brand: card.place, meal, servings: 1,
+    calories: card.cal, protein_g: card.protein, carbs_g: card.carbs, fats_g: card.fat,
+    source: 'meal_pick',
+  })
+
+  // Retry a pick whose save failed (2026-10-29 audit).
+  async function retrySave() {
+    if (!done?.failed || busy) return
+    setBusy(true)
+    try {
+      const entryId = await saveCard(done.card)
+      post({ action: 'picked', key: done.card.key })
+      setDone({ ...done, entryId, failed: false, left: Math.max(0, remainingCal - done.card.cal) })
+    } catch { /* stays failed; she can tap again */ }
+    setBusy(false)
+  }
+  const saveBanner = done?.failed ? (
+    <button type="button" onClick={() => { hapticTap(); retrySave() }} disabled={busy}
+      className="nf-press w-full text-left rounded-2xl px-4 py-3" style={{ background: 'rgba(255,90,78,.14)', border: '1px solid rgba(255,90,78,.5)', color: C.ivory, fontSize: 14 }}>
+      <b>Couldn&apos;t count this meal.</b> {busy ? 'Trying…' : 'Tap to try again.'}
+    </button>
+  ) : null
 
   async function undo() {
     if (!done) return
@@ -176,7 +200,7 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
 
   // ---------- after she taps ----------
   if (done && done.card.kind === 'out' && done.card.dest.url) {
-    return <Logged done={done} slot={slot} meal={meal} remainingCal={remainingCal} calBudget={calBudget} nextUp={nextUp} />
+    return <Logged done={done} slot={slot} meal={meal} remainingCal={remainingCal} calBudget={calBudget} nextUp={nextUp} banner={saveBanner} />
   }
   if (done) {
     // A home or grab-and-go pick (2026-10-26: same new look as the order screens).
@@ -186,7 +210,8 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
     return (
       <div className="nf-screen flex-1 flex flex-col gap-4 pb-6 overflow-y-auto" style={{ color: C.ivory, fontFamily: BODY }}>
         <div className="flex-1 flex flex-col justify-center gap-3.5 px-1">
-          <span style={{ ...mono(12), color: MINT }}>LOGGED FOR YOU</span>
+          {saveBanner}
+          {!done.failed && <span style={{ ...mono(12), color: MINT }}>LOGGED FOR YOU</span>}
           <h1 className="nf-head" style={head(60)}>Done.<br />You&apos;re on track.</h1>
           <div className="flex items-baseline gap-2.5 mt-2">
             <span className="tabular-nums" style={{ ...head(72), lineHeight: 1, color: C.gold }}>{left.toLocaleString()}</span>
@@ -223,7 +248,19 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
       <div className="nf-screen flex-1 flex flex-col gap-3" style={{ color: C.ivory, fontFamily: BODY }}>
         {ask}
         <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
-          <h1 className="nf-head" style={head(44)}>Nothing fits<br />right now.</h1>
+          {remainingCal <= 0 ? (
+            <>
+              <h1 className="nf-head" style={head(44)}>You hit your<br />number today.</h1>
+              <p style={{ margin: 0, fontSize: 15, color: SOFT }}>Still hungry? Water, tea or veggies. Fresh picks tomorrow.</p>
+            </>
+          ) : remainingCal < 250 ? (
+            <>
+              <h1 className="nf-head" style={head(44)}>{remainingCal} cal left.</h1>
+              <p style={{ margin: 0, fontSize: 15, color: SOFT }}>No meal fits that. A piece of fruit or a protein shake will.</p>
+            </>
+          ) : (
+            <h1 className="nf-head" style={head(44)}>Nothing fits<br />right now.</h1>
+          )}
           <Link href="/plan/nutrition/log" className="underline underline-offset-[3px]" style={{ ...mono(12), color: C.gold }}>CHANGE HOW YOU EAT</Link>
         </div>
       </div>
@@ -367,9 +404,9 @@ function OrderExact({ card, busy, onBack, onOpen }: { card: PickCard; busy: bool
 // After the order button (2026-10-26, Asa's approved mockup OrderDone): it's
 // counted already. "Got something different?" fixes the count in one tap —
 // an add-on goes on top, a different meal goes to her food log instead.
-function Logged({ done, slot, meal, remainingCal, calBudget, nextUp }: {
-  done: { card: PickCard; left: number; entryId: string | null }
-  slot: string; meal: string; remainingCal: number; calBudget?: number; nextUp: string | null
+function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner }: {
+  done: { card: PickCard; left: number; entryId: string | null; failed?: boolean }
+  slot: string; meal: string; remainingCal: number; calBudget?: number; nextUp: string | null; banner?: ReactNode
 }) {
   const router = useRouter()
   const { card } = done
@@ -388,6 +425,9 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp }: {
   async function toggle(a: AddOn) {
     hapticTap()
     const cur = added[a.key]
+    // Still saving → ignore the tap, so a quick tap-untap-tap can't save
+    // two rows while only one is tracked (2026-10-29 audit).
+    if (cur && !cur.id) return
     if (cur) {
       setAdded((s) => { const n = { ...s }; delete n[a.key]; return n })
       if (cur.id) await unlog(cur.id)
@@ -400,6 +440,8 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp }: {
     }).catch(() => null)
     // Un-tapped before the save came back → take that row straight back out.
     if (!addedRef.current[a.key]) { if (id) unlog(id); return }
+    // Didn't save → un-tick it, so the number only counts what's really logged.
+    if (!id) { setAdded((s) => { const n = { ...s }; delete n[a.key]; return n }); return }
     setAdded((s) => (s[a.key] ? { ...s, [a.key]: { cal: a.cal, id } } : s))
   }
 
@@ -426,9 +468,10 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp }: {
   return (
     <div className="nf-screen flex-1 flex flex-col gap-4 pb-6" style={{ color: C.ivory, fontFamily: BODY }}>
       <div className="flex-1 flex flex-col justify-center gap-3.5 px-1">
-        <span style={{ ...mono(12), color: MINT }}>LOGGED FOR YOU</span>
+        {banner}
+        {!done.failed && <span style={{ ...mono(12), color: MINT }}>LOGGED FOR YOU</span>}
         <h1 className="nf-head" style={head(64)}>{slot} is<br />on its way.</h1>
-        <p style={{ margin: 0, fontSize: 16, color: 'rgba(237,231,218,.8)' }}>We counted it already. Nothing else to do.</p>
+        {!done.failed && <p style={{ margin: 0, fontSize: 16, color: 'rgba(237,231,218,.8)' }}>We counted it already. Nothing else to do.</p>}
         <div className="flex items-baseline gap-2.5 mt-2">
           <span className="tabular-nums" style={{ ...head(72), lineHeight: 1, color: C.gold }}>{left.toLocaleString()}</span>
           <span style={{ ...mono(12), color: SOFT }}>CAL LEFT TODAY</span>
@@ -436,7 +479,7 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp }: {
         <div style={{ height: 10, borderRadius: 999, background: 'rgba(237,231,218,.12)', overflow: 'hidden' }}>
           <div style={{ width: `${pct}%`, height: '100%', background: C.gold, borderRadius: 999, transition: 'width .4s ease' }} />
         </div>
-        <MealDrop slot={slot} left={done.left} />
+        <MealDrop slot={slot} left={left} />
         {nextUp && <span style={{ fontSize: 14, color: SOFT }}>{nextUp}</span>}
         {card.dest.url && (
           <a href={card.dest.url} target="_blank" rel="noopener noreferrer" onClick={() => { copyText(pasteText(card.place, card.name)) }} className="self-start text-[13px] underline underline-offset-2" style={{ color: SOFT }}>

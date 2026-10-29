@@ -354,10 +354,18 @@ export function pickMeals(ctx: PickContext): PickResult {
     if (calOnly.length >= 2) {
       pool = calOnly
       note = `Nothing came in under $${ctx.mealBudget} right now, so these are the closest.`
-    } else if (all.length > 0) {
-      // She has very little left today: the lightest real options, said kindly.
-      pool = [...all].sort((a, b) => a.cal - b.cal).slice(0, 6)
-      note = remaining > 0 ? 'You’re close to your number today, so these are the lightest picks.' : 'You’ve hit your number for today. If you’re still hungry, these are the lightest picks.'
+    } else {
+      // She has very little left today: only this meal's share is relaxed —
+      // what's left for the WHOLE day is never passed (2026-10-29 audit: this
+      // used to fall back to the 6 lightest meals with no calorie check, so
+      // 150 left showed 200 and 250 cal cards). Nothing under that → no
+      // cards; the screen says she's hit her number.
+      const dayFit = all.filter((o) => o.cal <= remaining)
+      if (dayFit.length > calOnly.length) {
+        pool = dayFit
+        note = 'You’re close to your number today, so these are the lightest picks.'
+      } else if (calOnly.length) pool = calOnly
+      else pool = []
     }
   }
 
