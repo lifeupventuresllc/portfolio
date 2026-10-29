@@ -71,6 +71,9 @@ export interface PickResult {
   slotCalBudget: number       // calories this one meal should land under
   light: boolean              // she's close to her number today
   note: string | null         // plain words when we had to relax something
+  // Nothing fits what's left today → her lightest real options, shown only
+  // if she taps "Still hungry?" — each labeled with how far over it puts her.
+  lightOptions?: MealOption[]
 }
 
 // ---- slots + calorie split ---------------------------------------------
@@ -429,7 +432,21 @@ export function pickMeals(ctx: PickContext): PickResult {
     if (idx >= 0) ranked.push(rest.splice(idx, 1)[0])
   }
 
-  return { options: ranked, slotCalBudget: slotBudget, light, note }
+  // Still hungry after hitting her number (2026-10-29, Asa): never stuck with
+  // nothing — the lightest real meals (money first), one per place/dish.
+  let lightOptions: MealOption[] | undefined
+  if (ranked.length === 0 && all.length) {
+    const byCal = [...all].sort((a, b) => (fitsMoney(b) ? 1 : 0) - (fitsMoney(a) ? 1 : 0) || a.cal - b.cal)
+    const picked: MealOption[] = []
+    for (const o of byCal) {
+      if (picked.length >= 6) break
+      if (picked.some((p) => !(o.kind === 'out' ? o.place !== p.place : o.name !== p.name))) continue
+      picked.push({ ...o, why: 'One of the lightest picks.' })
+    }
+    lightOptions = picked.sort((a, b) => a.cal - b.cal)
+  }
+
+  return { options: ranked, slotCalBudget: slotBudget, light, note, lightOptions }
 }
 
 function whyFor(o: MealOption, ctx: PickContext, mem: { o?: number }, loved?: string): string {

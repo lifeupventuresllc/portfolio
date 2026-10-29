@@ -116,9 +116,13 @@ export default async function NutritionPage() {
     if (!friendShown) { friendShown = true; return o }
     return { ...o, friend: undefined }
   })
-  const cards: PickCard[] = options.slice(0, 12).map((o) => ({
+  const toCard = (o: (typeof options)[number]): PickCard => ({
     ...o, dest: orderDestination(o, orderApp), photo: mealPhoto(o), short: shortName(o),
-  }))
+  })
+  const cards: PickCard[] = options.slice(0, 12).map(toCard)
+  // Hit her number (2026-10-29): the lightest meals, behind "Still hungry?".
+  const lightCards: PickCard[] = cards.length ? [] : (result?.lightOptions || []).map(toCard)
+  const overNow = Math.max(0, Math.round(loggedToday - calBudget))
 
   const heading = day.current ? `Pick your ${day.current.label}.` : 'Still hungry? Pick a light one.'
   // What's waiting after this one — said once she's picked.
@@ -130,7 +134,7 @@ export default async function NutritionPage() {
     <div className="px-4 pt-6 flex flex-col" style={{ background: '#021F16', minHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom))' }}>
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col min-h-0">
         {eatStyle && result ? (
-          <NutritionPicks key={`${day.current?.id ?? 'done'}:${cards.map((c) => c.key).join('|')}`} cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} nextUp={next} refreshInMin={day.refreshInMin} calBudget={Math.round(calBudget)} askLocation={eatStyle === 'out' && !locFresh} />
+          <NutritionPicks key={`${day.current?.id ?? 'done'}:${cards.map((c) => c.key).join('|')}`} cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} nextUp={next} refreshInMin={day.refreshInMin} calBudget={Math.round(calBudget)} askLocation={eatStyle === 'out' && !locFresh} lightCards={lightCards} overNow={overNow} />
         ) : (
           <EatStyleAsk />
         )}

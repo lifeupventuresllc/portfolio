@@ -58,9 +58,22 @@ type Props = {
   refreshInMin: number        // when this meal's time is up
   calBudget?: number          // her whole day, for the bar on the logged screen
   askLocation?: boolean       // eating out with no fresh position → the "near you" ask, pick view only
+  lightCards?: PickCard[]     // nothing fits today → her lightest meals, behind "Still hungry?"
+  overNow?: number            // calories she's already over today (0 when she isn't)
 }
 
-export default function NutritionPicks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBudget, askLocation }: Props) {
+// "Still hungry?" (2026-10-29, Asa): after she hits her number she can still
+// see food — the lightest picks, each saying how far over it puts her.
+export default function NutritionPicks(props: Props) {
+  const [light, setLight] = useState(false)
+  const lightCards = props.lightCards || []
+  if (light && lightCards.length) {
+    return <Picks key="light" {...props} cards={lightCards} heading="Light picks." over onBack={() => setLight(false)} />
+  }
+  return <Picks {...props} onLight={lightCards.length ? () => { hapticTap(); setLight(true) } : undefined} />
+}
+
+function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBudget, askLocation, overNow = 0, over = false, onLight, onBack }: Props & { over?: boolean; onLight?: () => void; onBack?: () => void }) {
   const router = useRouter()
   // Indexes into `cards` for the two on screen, plus where the next swap
   // starts looking. Starts on the engine's own top pair.
@@ -112,6 +125,8 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
   // first, so what she orders is what we count.
   const [ordering, setOrdering] = useState<PickCard | null>(null)
   const meal = slot.toLowerCase()
+  // How far over today a pick puts her (0 when it fits).
+  const overBy = (cal: number) => overNow + Math.max(0, cal - Math.max(0, remainingCal))
 
   // Never stagnant: when this meal's time passes, or she comes back to the
   // app (from DoorDash, from another tab), fetch what's up now. Not while
@@ -230,7 +245,7 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
 
   // ---------- after she taps ----------
   if (done && done.card.kind === 'out' && done.card.dest.url) {
-    return <Logged done={done} slot={slot} meal={meal} remainingCal={remainingCal} calBudget={calBudget} nextUp={nextUp} banner={saveBanner} />
+    return <Logged done={done} slot={slot} meal={meal} remainingCal={remainingCal} calBudget={calBudget} nextUp={nextUp} banner={saveBanner} overNow={overNow} />
   }
   if (done) {
     // A home or grab-and-go pick (2026-10-26: same new look as the order screens).
@@ -242,11 +257,13 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
         <div className="flex-1 flex flex-col justify-center gap-3.5 px-1">
           {saveBanner}
           {!done.failed && <span style={{ ...mono(12), color: MINT }}>LOGGED FOR YOU</span>}
-          <h1 className="nf-head" style={head(60)}>Done.<br />You&apos;re on track.</h1>
+          {(() => { const o = done.failed ? overNow : overBy(card.cal); return (<>
+          <h1 className="nf-head" style={head(60)}>Done.<br />{o > 0 ? 'Fresh start tomorrow.' : <>You&apos;re on track.</>}</h1>
           <div className="flex items-baseline gap-2.5 mt-2">
-            <span className="tabular-nums" style={{ ...head(72), lineHeight: 1, color: C.gold }}>{left.toLocaleString()}</span>
-            <span style={{ ...mono(12), color: SOFT }}>CAL LEFT TODAY</span>
+            <span className="tabular-nums" style={{ ...head(72), lineHeight: 1, color: o > 0 ? '#FF8A7A' : C.gold }}>{o > 0 ? `+${o.toLocaleString()}` : left.toLocaleString()}</span>
+            <span style={{ ...mono(12), color: SOFT }}>{o > 0 ? 'CAL OVER TODAY' : 'CAL LEFT TODAY'}</span>
           </div>
+          </>) })()}
           <div style={{ height: 10, borderRadius: 999, background: 'rgba(237,231,218,.12)', overflow: 'hidden' }}>
             <div style={{ width: `${pct}%`, height: '100%', background: C.gold, borderRadius: 999, transition: 'width .4s ease' }} />
           </div>
@@ -291,6 +308,9 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
           ) : (
             <h1 className="nf-head" style={head(44)}>Nothing fits<br />right now.</h1>
           )}
+          {onLight && (
+            <button type="button" onClick={onLight} className="nf-press rounded-full px-6 mt-2" style={{ height: 52, background: C.gold, color: C.bg, ...mono(13) }}>STILL HUNGRY? SEE LIGHT PICKS</button>
+          )}
           <Link href="/plan/nutrition/log" className="underline underline-offset-[3px]" style={{ ...mono(12), color: C.gold }}>CHANGE HOW YOU EAT</Link>
         </div>
       </div>
@@ -303,6 +323,12 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
       <style>{`.np-out{animation:npOut .18s ease-in both}@keyframes npOut{to{transform:translateX(-36px);opacity:0}}.np-in{animation:npIn .32s cubic-bezier(.2,1,.3,1) both}@keyframes npIn{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}@media (prefers-reduced-motion: reduce){.np-out,.np-in{animation:none}}`}</style>
       {ask}
       <h1 className="nf-head mb-4" style={head(44)}>{heading}</h1>
+      {over && (
+        <div className="flex items-center justify-between gap-3 -mt-2 mb-3">
+          <span style={{ fontSize: 14, color: SOFT }}>You hit your number. These go over, so it&apos;s your call.</span>
+          {onBack && <button type="button" onClick={() => { hapticTap(); onBack() }} className="shrink-0 underline underline-offset-2" style={{ ...mono(11), color: C.gold }}>BACK</button>}
+        </div>
+      )}
       <div className="flex-1 flex flex-col gap-3 min-h-0">
         {shown.map((idx, pos) => {
           const c = cards[idx]
@@ -323,8 +349,17 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
                     </span>
                   </span>
                   <span className="shrink-0 text-right leading-none">
-                    <span className="block tabular-nums" style={{ ...head(38), lineHeight: 1, color: C.gold }}>{c.cal}</span>
-                    <span className="block mt-0.5" style={{ ...mono(10), color: SOFT }}>CAL</span>
+                    {over ? (
+                      <>
+                        <span className="block tabular-nums" style={{ ...head(38), lineHeight: 1, color: '#FF8A7A' }}>+{overBy(c.cal)}</span>
+                        <span className="block mt-0.5" style={{ ...mono(10), color: SOFT }}>OVER · {c.cal} CAL</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="block tabular-nums" style={{ ...head(38), lineHeight: 1, color: C.gold }}>{c.cal}</span>
+                        <span className="block mt-0.5" style={{ ...mono(10), color: SOFT }}>CAL</span>
+                      </>
+                    )}
                   </span>
                 </span>
               </button>
@@ -434,9 +469,9 @@ function OrderExact({ card, busy, onBack, onOpen }: { card: PickCard; busy: bool
 // After the order button (2026-10-26, Asa's approved mockup OrderDone): it's
 // counted already. "Got something different?" fixes the count in one tap —
 // an add-on goes on top, a different meal goes to her food log instead.
-function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner }: {
+function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner, overNow = 0 }: {
   done: { card: PickCard; left: number; entryId: string | null; failed?: boolean }
-  slot: string; meal: string; remainingCal: number; calBudget?: number; nextUp: string | null; banner?: ReactNode
+  slot: string; meal: string; remainingCal: number; calBudget?: number; nextUp: string | null; banner?: ReactNode; overNow?: number
 }) {
   const router = useRouter()
   const { card } = done
@@ -447,6 +482,7 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner }: {
   addedRef.current = added
   const extra = Object.values(added).reduce((sum, a) => sum + a.cal, 0)
   const left = Math.max(0, done.left - extra)
+  const overAll = done.failed ? overNow : overNow + Math.max(0, done.card.cal + extra - Math.max(0, remainingCal))
   const whole = calBudget && calBudget > 0 ? calBudget : remainingCal
   const pct = whole > 0 ? Math.min(100, Math.max(0, Math.round(((whole - left) / whole) * 100))) : 100
   const appName = card.dest.app === 'ubereats' ? 'Uber Eats' : 'DoorDash'
@@ -502,9 +538,10 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner }: {
         {!done.failed && <span style={{ ...mono(12), color: MINT }}>LOGGED FOR YOU</span>}
         <h1 className="nf-head" style={head(64)}>{slot} is<br />on its way.</h1>
         {!done.failed && <p style={{ margin: 0, fontSize: 16, color: 'rgba(237,231,218,.8)' }}>We counted it already. Nothing else to do.</p>}
+        {/* Over today → say so honestly, never a quiet "0 left" (2026-10-29). */}
         <div className="flex items-baseline gap-2.5 mt-2">
-          <span className="tabular-nums" style={{ ...head(72), lineHeight: 1, color: C.gold }}>{left.toLocaleString()}</span>
-          <span style={{ ...mono(12), color: SOFT }}>CAL LEFT TODAY</span>
+          <span className="tabular-nums" style={{ ...head(72), lineHeight: 1, color: overAll > 0 ? '#FF8A7A' : C.gold }}>{overAll > 0 ? `+${overAll.toLocaleString()}` : left.toLocaleString()}</span>
+          <span style={{ ...mono(12), color: SOFT }}>{overAll > 0 ? 'CAL OVER TODAY' : 'CAL LEFT TODAY'}</span>
         </div>
         <div style={{ height: 10, borderRadius: 999, background: 'rgba(237,231,218,.12)', overflow: 'hidden' }}>
           <div style={{ width: `${pct}%`, height: '100%', background: C.gold, borderRadius: 999, transition: 'width .4s ease' }} />
