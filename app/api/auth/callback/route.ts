@@ -8,6 +8,20 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const next = searchParams.get('next') || '/'
 
+  // Google link from the intake's "Save your plan as you go" screen
+  // (app/plan/intake/SaveGate.tsx, linkIdentity on her guest session) came
+  // back refused — Supabase returns ?error_code= instead of ?code=. Most
+  // often that Google account already belongs to a real user: Supabase never
+  // merges or overwrites it, and we don't either — send her back to the
+  // intake, which signs her in to that real account (link=taken). Scoped to
+  // the intake so every other sign-in error keeps its /login handling below.
+  const errorCode = searchParams.get('error_code') || searchParams.get('error')
+  if (!code && errorCode && next.startsWith('/plan/intake')) {
+    const taken = errorCode === 'identity_already_exists' || errorCode === 'email_exists' || errorCode === 'user_already_exists'
+    console.error('Google link refused:', errorCode, searchParams.get('error_description'))
+    return NextResponse.redirect(`${origin}/plan/intake?link=${taken ? 'taken' : 'failed'}`)
+  }
+
   if (code) {
     const response = NextResponse.redirect(`${origin}${next}`)
 

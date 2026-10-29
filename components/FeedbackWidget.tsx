@@ -45,7 +45,7 @@ export default function FeedbackWidget() {
   // available everywhere else, including My Day. '/' is included because
   // the root-stays-the-address change (middleware.ts) serves Home's exact
   // same content there — pathname reads '/', never '/plan', for that visit.
-  if (pathname === '/' || pathname === '/plan') return null
+  if (pathname === '/' || pathname === '/plan' || pathname === '/plan/workout' || pathname?.startsWith('/plan/intake')) return null
   // Friends + Connect (2026-10-27): it sat over Nudge / "Yes, end it" on
   // small phones. Those screens are all buttons, so it's left off there.
   if (pathname?.startsWith('/plan/friends') || pathname?.startsWith('/plan/connect') || pathname?.startsWith('/plan/community')) return null

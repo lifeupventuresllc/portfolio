@@ -662,7 +662,7 @@ function Shell({ left, cal, onBack, children }: { left?: number; cal: number | n
   )
 }
 
-function TopBar({ left, cal, onBack, onPhoto, backLabel }: { left?: number; cal: number | null; onBack: () => void; onPhoto?: boolean; backLabel?: string }) {
+export function TopBar({ left, cal, onBack, onPhoto, backLabel }: { left?: number; cal: number | null; onBack: () => void; onPhoto?: boolean; backLabel?: string }) {
   return (
     <div className="flex justify-between items-center gap-2">
       <button onClick={onBack} aria-label={backLabel || 'Back'} className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: onPhoto ? 'rgba(2,31,22,.6)' : 'rgba(237,231,218,.1)' }}><Chevron color={C.ink} /></button>
@@ -687,10 +687,10 @@ const Check = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.bg} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12l5 5 9-10" /></svg>
   </span>
 )
-function H1({ children, size = 54 }: { children: React.ReactNode; size?: number }) {
+export function H1({ children, size = 54 }: { children: React.ReactNode; size?: number }) {
   return <h1 className="nf-head mx-1" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: size, lineHeight: 0.9, textTransform: 'uppercase', margin: 0 }}>{children}</h1>
 }
-const Sub = ({ children }: { children: React.ReactNode }) => <p className="mx-1 mt-2 text-[15px]" style={{ color: C.mute }}>{children}</p>
+export const Sub = ({ children }: { children: React.ReactNode }) => <p className="mx-1 mt-2 text-[15px]" style={{ color: C.mute }}>{children}</p>
 const Note = ({ children }: { children: React.ReactNode }) => <p className="mx-1 mt-3 text-sm" style={{ color: C.gold }}>{children}</p>
 const Label = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
   <span className={`block mx-1 ${className}`} style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.1em', color: C.mute }}>{children}</span>
@@ -736,7 +736,7 @@ function WhyIcon({ k }: { k: string }) {
   return <svg {...s}><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z" /></svg>
 }
 
-const CSS = `
+export const CSS = `
 .nf-in{animation:nfIn .45s cubic-bezier(.2,1,.3,1) both}
 .nf-in-back{animation:nfInBack .45s cubic-bezier(.2,1,.3,1) both}
 @keyframes nfIn{from{transform:translateX(48px);opacity:0}to{transform:none;opacity:1}}

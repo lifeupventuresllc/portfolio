@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { hapticTap } from '@/lib/haptics'
 import { createClient, clearLocalSession } from '@/lib/supabase/client'
 import NewFlow, { NewBuilding, NewReveal, NEVER, type LifeStage } from './NewFlow'
+import SaveGate from './SaveGate'
 
 type Targets = { calories: number; protein_g: number; carbs_g: number; fats_g: number; bmr: number; tdee: number }
 
@@ -84,8 +85,39 @@ function ConversationalIntakeInner() {
   // same as before — only hides once we've actually confirmed she's
   // anonymous.
   const [isAnonymous, setIsAnonymous] = useState(false)
+
+  // "Save your plan as you go" first screen (./SaveGate.tsx, 2026-10-29):
+  // only for an anonymous guest who hasn't answered yet — never for a real
+  // signed-in account, never in edit mode / the optional pass. `auth` starts
+  // unknown so neither a real user nor a guest ever sees the wrong screen
+  // flash first. ?link=taken|failed is set by
+  // app/api/auth/callback when a Google link didn't go through.
+  const noGate = editMode || startInOptional
+  const [auth, setAuth] = useState<'checking' | 'anon' | 'real'>('checking')
+  const linkParam = searchParams.get('link')
+  const [linkNotice, setLinkNotice] = useState<'taken' | 'failed' | null>(linkParam === 'taken' || linkParam === 'failed' ? linkParam : null)
+  const [gateSkipped, setGateSkipped] = useState(() => {
+    try { return sessionStorage.getItem('luf-save-gate-skipped') === '1' } catch { return false }
+  })
+  function skipGate() {
+    setGateSkipped(true); setLinkNotice(null)
+    try { sessionStorage.setItem('luf-save-gate-skipped', '1') } catch { /* ignore */ }
+    if (linkParam) window.history.replaceState(null, '', window.location.pathname)
+    window.scrollTo(0, 0)
+  }
   useEffect(() => {
-    createClient().auth.getUser().then(({ data }) => setIsAnonymous(!!data.user?.is_anonymous))
+    // getSession() reads the local session — instant, and this only picks
+    // which screen to show (every server route still checks the real user).
+    createClient().auth.getSession().then(({ data }) => {
+      const u = data.session?.user
+      const anon = !u || !!u.is_anonymous
+      setIsAnonymous(!!u?.is_anonymous)
+      setAuth(anon ? 'anon' : 'real')
+      // Just connected Google: her first name is already known — fill the
+      // first question so she doesn't retype it (only if it's still blank).
+      const full = (u?.user_metadata?.full_name || u?.user_metadata?.name || '') as string
+      if (!anon && full.trim()) setF((s) => (s.name ? s : { ...s, name: full.trim().split(' ')[0] }))
+    }).catch(() => setAuth('real'))
   }, [])
 
   async function handleSignOut() {
@@ -325,6 +357,19 @@ function ConversationalIntakeInner() {
 
   // ---------- REQUIRED TIER (new dark flow, ./NewFlow.tsx) ----------
   if (tier === 'required') {
+    if (!noGate && auth === 'checking') {
+      return <div className="min-h-[100dvh]" style={{ background: '#021F16', marginBottom: 'calc(-4.5rem - env(safe-area-inset-bottom))' }} />
+    }
+    if (!noGate && auth === 'anon' && (!gateSkipped || linkNotice)) {
+      return (
+        <SaveGate
+          notice={linkNotice}
+          onSkip={skipGate}
+          onEmail={() => router.push(`/plan/save?redirect=${encodeURIComponent('/plan/intake')}`)}
+          onExit={() => { router.refresh(); router.push('/plan') }}
+        />
+      )
+    }
     return (
       <NewFlow
         f={f} setF={(fn) => setF((s) => ({ ...s, ...fn(s) }))}

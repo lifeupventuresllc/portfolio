@@ -78,7 +78,12 @@ export default function AuthForm({ mode, embedded = false }: AuthFormProps) {
           throw new Error(`Please accept the Terms of Service and EULA to ${mode === 'claim' ? 'save your progress' : 'create your account'}.`)
         }
         const params = new URLSearchParams(window.location.search)
-        const redirect = mode === 'claim' ? '/plan' : (params.get('redirect') || '/plan')
+        // Claim honors an in-app ?redirect= (the intake's "Use my email"
+        // sends /plan/intake so she lands back on the first question) —
+        // same-site paths only, never an outside URL.
+        const want = params.get('redirect') || ''
+        const safe = want.startsWith('/') && !want.startsWith('//') ? want : ''
+        const redirect = mode === 'claim' ? (safe || '/plan') : (params.get('redirect') || '/plan')
 
         // Goes through the server-side admin API (app/api/auth/create-account),
         // not supabase.auth.signUp()/updateUser() directly — Supabase's own
