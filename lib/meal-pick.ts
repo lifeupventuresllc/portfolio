@@ -477,7 +477,7 @@ export function orderDestination(o: MealOption, app: OrderApp = 'doordash'): Ord
 const RECIPE_PHOTOS = new Set(['buffalo-chicken-bowls', 'crispy-honey-garlic-chicken', 'garlic-butter-chicken-meatballs', 'marry-me-chicken-pasta', 'protein-overnight-oats', 'turkey-sausage-sweet-potato-hash'])
 const FOOD_PHOTO: [RegExp, string][] = [
   [/cheesecake/i, 'cheesecake'], [/cookie|brookie|skillet cookie/i, 'cookie'], [/tiramisu|shortcake|pumpkin pie|dough/i, 'cheesecake'],
-  [/egg bites/i, 'egg-bites'], [/shake|core power|premier/i, 'shake'], [/protein bar|quest|bar\b/i, 'protein-bar'], [/parfait|yogurt|yoplait|clusters/i, 'parfait'],
+  [/egg bites/i, 'egg-bites'], [/core power|premier|fairlife|protein shake|muscle milk|ready.to.drink/i, 'protein-shake'], [/shake/i, 'shake'], [/protein bar|quest|bar\b/i, 'protein-bar'], [/parfait|yogurt|yoplait|clusters/i, 'parfait'],
   [/oats|oatmeal/i, 'oats'], [/banana|rice cakes|nut butter|\bpb\b/i, 'banana-pb'], [/protein box/i, 'banana-pb'],
   [/breakfast burrito|crunchwrap/i, 'breakfast-burrito'], [/mcmuffin|egg white grill|egg.*sandwich|bagel|breakfast sandwich|steak & wake/i, 'breakfast-sandwich'],
   [/burger|whopper|big mac|shackburger|smokeshack|quarter pounder|mcdouble/i, 'burger'],

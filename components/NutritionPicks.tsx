@@ -75,6 +75,33 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
     return [0, second > 0 ? second : 1]
   })
   const [cursor, setCursor] = useState(2)
+  // Keeps rotating (2026-10-29, Asa: "stuck on a protein shake and a chicken
+  // bowl"): every time she opens this tab, a fresh pair from her best ~8
+  // fits for this meal. Same rules as the first pair (other kind for a mix,
+  // a different place and photo). After mount only, so the server render
+  // and the first paint match.
+  useEffect(() => {
+    const n = Math.min(cards.length, 8)
+    if (n < 3) return
+    let visit = 0
+    try {
+      const k = `np-rot:${new Date().toDateString()}:${slot}`
+      visit = Number(localStorage.getItem(k) || 0)
+      localStorage.setItem(k, String(visit + 1))
+    } catch { return }
+    if (!visit) return
+    const first = (visit * 2) % n
+    const mixed = cards.some((c) => c.kind !== cards[first].kind)
+    let second = -1
+    for (let k = 1; k < n && second < 0; k++) {
+      const i = (first + k) % n
+      if (mixed ? cards[i].kind !== cards[first].kind : (differs(cards[i], cards[first]) && cards[i].photo !== cards[first].photo)) second = i
+    }
+    if (second < 0) second = (first + 1) % n
+    setShown([first, second])
+    setCursor((Math.max(first, second) + 1) % cards.length)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [fading, setFading] = useState<number | null>(null)
   // The card she kept — the one she didn't take away. Starts on card 1,
   // her best fit. SHUFFLE never touches it.
@@ -192,7 +219,10 @@ export default function NutritionPicks({ cards, slot, heading, remainingCal, nex
   // A delivery pick goes through "Order exactly this"; home + grab-and-go
   // picks keep the one-tap flow.
   const tapCard = (card: PickCard) => {
-    if (card.kind === 'out' && card.dest.url) { hapticTap(); setOrdering(card) } else choose(card)
+    // One tap (2026-10-29, Asa: "still so many steps"): copy her meal, open
+    // the delivery site on that restaurant, and count it — all in this tap.
+    // What to order shows on the next screen instead of a screen before.
+    if (card.kind === 'out' && card.dest.url) { hapticTap(); copyText(pasteText(card.place, card.name)); choose(card) } else choose(card)
   }
 
   // ---------- order exactly this ----------
@@ -480,6 +510,11 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner }: {
           <div style={{ width: `${pct}%`, height: '100%', background: C.gold, borderRadius: 999, transition: 'width .4s ease' }} />
         </div>
         <MealDrop slot={slot} left={left} />
+        <div className="flex flex-col gap-1.5" style={{ borderRadius: 16, padding: '12px 14px', background: 'rgba(237,231,218,.06)' }}>
+          <span style={{ ...mono(11), color: C.gold }}>ORDER EXACTLY THIS AT {card.place.toUpperCase()}</span>
+          <span style={{ fontSize: 15, fontWeight: 600 }}>{orderParts(card.name).join(' · ')}</span>
+          <span style={{ fontSize: 13, color: SOFT }}>Skip {skipLine(card.place)}. Already copied, paste it in search.</span>
+        </div>
         {nextUp && <span style={{ fontSize: 14, color: SOFT }}>{nextUp}</span>}
         {card.dest.url && (
           <a href={card.dest.url} target="_blank" rel="noopener noreferrer" onClick={() => { copyText(pasteText(card.place, card.name)) }} className="self-start text-[13px] underline underline-offset-2" style={{ color: SOFT }}>

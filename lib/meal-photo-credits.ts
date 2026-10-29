@@ -257,6 +257,13 @@ export const MEAL_PHOTO_CREDITS: { file: string; title: string; author: string; 
     "source": "https://www.pexels.com/photo/13294544/"
   },
   {
+    "file": "protein-shake.jpg",
+    "title": "Protein shake in a shaker bottle",
+    "author": "Pexels photographer",
+    "license": "Pexels License",
+    "source": "https://www.pexels.com/photo/16513595/"
+  },
+  {
     "file": "shake.jpg",
     "title": "Shake",
     "author": "Pexels photographer",
