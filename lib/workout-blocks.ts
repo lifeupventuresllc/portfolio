@@ -5,6 +5,10 @@
 // never counted as exercises ("Exercise 2 of 5").
 import type { WorkoutProgram } from './workout'
 import { exerciseVideo } from './exercise-videos'
+import { NOT_EXACT_ON_SCREEN } from './exercise-images'
+
+// Only a photo of the exact move reaches the screen.
+const exactImage = (name: string, url?: string) => (url && !NOT_EXACT_ON_SCREEN.has(name) ? url : undefined)
 
 export interface Move {
   name: string
@@ -50,7 +54,7 @@ export function parseScheme(scheme: string): { sets: number; reps: number[]; sec
 
 const move = (name: string, scheme: string, cue?: string, imageUrl?: string, extra?: { videoUrl?: string }): { m: Move; sets: number } => {
   const p = parseScheme(scheme)
-  return { m: { name, cue, imageUrl, videoUrl: extra?.videoUrl ?? exerciseVideo(name), reps: p.reps, seconds: p.seconds, eachSide: p.eachSide }, sets: p.sets }
+  return { m: { name, cue, imageUrl: exactImage(name, imageUrl), videoUrl: extra?.videoUrl ?? exerciseVideo(name), reps: p.reps, seconds: p.seconds, eachSide: p.eachSide }, sets: p.sets }
 }
 
 export function buildBlocks(program: WorkoutProgram, dayIdx: number): Block[] {
@@ -63,7 +67,7 @@ export function buildBlocks(program: WorkoutProgram, dayIdx: number): Block[] {
     for (const e of day.exercises) {
       const sec = firstNum(e.duration)
       const isSec = /sec/i.test(e.duration)
-      blocks.push({ kind: 'exercise', rounds: 1, restSec: 20, moves: [{ name: e.name, imageUrl: e.imageUrl, videoUrl: exerciseVideo(e.name), reps: [isSec ? 0 : sec || 10], seconds: isSec ? sec : undefined }] })
+      blocks.push({ kind: 'exercise', rounds: 1, restSec: 20, moves: [{ name: e.name, imageUrl: exactImage(e.name, e.imageUrl), videoUrl: exerciseVideo(e.name), reps: [isSec ? 0 : sec || 10], seconds: isSec ? sec : undefined }] })
     }
     blocks.push({ kind: 'cooldown', moves: [], rounds: 1, restSec: 0, lines: program.home.cooldown })
     return blocks

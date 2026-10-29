@@ -182,3 +182,18 @@ export const FORM_IMAGES: Record<string, string> = {
   'Reverse Lunge + Arm Raise': '/images/exercises/reverse-lunge-arm-raise.jpg',
   'Regular Push-Ups': '/images/exercises/push-up.jpg',
 }
+
+// 2026-10-29 (Asa: "do what's visually best for the user's understanding"):
+// these photos show a DIFFERENT movement from the named one (e.g. a
+// medicine-ball sit-up for Crunch, a bench dip for Skull Crusher). On the
+// workout screen a wrong move misleads her mid-set, so they're left out
+// there (a calm panel shows instead) until an exact photo or video is found.
+// Same-move photos with different equipment (a home machine bench press, a
+// one-dumbbell row) stay — they still show her the movement. PDFs unchanged.
+export const NOT_EXACT_ON_SCREEN = new Set<string>([
+  'Bird Dog', 'Cable Crunch', 'Cable Glute Kickback', 'Close-Grip Bench Press', 'Crunch', 'Dead Bug',
+  'Hack Squat', 'Hanging Knee Raise', 'Lat Pulldown', 'Overhead DB Tricep Extension', 'KB Windmill',
+  'Leg Press (single/seated)', 'Seated Leg Curl', 'Lying Leg Curl', 'Straight-Arm Cable Pulldown',
+  'Thrusters', 'Skull Crusher', 'Dumbbell Snatch', 'KB Around the Worlds', 'Seated Cable Row',
+  'Reverse Crunch', 'DB Tricep Kickback', 'Standing Calf Raise', 'Cable Bicep Curl', 'Cable Lateral Raise',
+])
