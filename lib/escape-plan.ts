@@ -4,6 +4,8 @@
 // exact fast-food orders (+ mods) that hit her calorie/protein target.
 // ============================================================
 
+import { CHAIN_MENU, verifiedChains } from '@/lib/chain-menu'
+
 export interface FastFoodMeal {
   slot: 'Breakfast' | 'Lunch' | 'Snack' | 'Dinner'
   restaurant: string
@@ -315,17 +317,20 @@ export const ESCAPE_PLAN: WeightClass[] = [WC1, WC2, WC3]
 // macro data for — the only names the location engine (lib/fos/
 // nearby-food.ts) is ever allowed to match a real nearby place against.
 // Never suggest a real restaurant we'd have to invent numbers for.
-let _knownRestaurants: Set<string> | null = null
+// 2026-10-29 audit: the old combos below had 42 wrong calorie counts and
+// 43 discontinued items, so only the verified chain menu (lib/chain-menu,
+// read off each chain's own site) is ever matched or suggested now.
 export function knownRestaurants(): Set<string> {
-  if (_knownRestaurants) return _knownRestaurants
-  const set = new Set<string>()
-  for (const wc of ESCAPE_PLAN) {
-    for (const day of wc.days) for (const meal of day.meals) set.add(meal.restaurant)
-    for (const meal of wc.extraOptions) set.add(meal.restaurant)
-  }
-  set.delete('Grab & go')
-  _knownRestaurants = set
-  return set
+  return verifiedChains()
+}
+
+/** What every picker here suggests from: the verified chain menu + this
+ * weight class's packaged grab & go (bars, shakes — each checked against
+ * the maker's own label). Never the old estimated combos. */
+function verifiedPool(wc: WeightClass): FastFoodMeal[] {
+  const grab = [...wc.days.flatMap((d) => d.meals), ...wc.extraOptions].filter((m) => m.restaurant === 'Grab & go')
+  const chain = CHAIN_MENU.map(({ slot, restaurant, order, cal, protein, carbs, fat }) => ({ slot, restaurant, order, cal, protein, carbs, fat }))
+  return [...chain, ...grab]
 }
 
 /** Pick the weight class for a bodyweight (lbs). */
@@ -461,7 +466,7 @@ export function violatesRestrictions(order: string, restrictions: Set<DietaryRes
  * budget/calorie narrowing — never shown as a "fits your calories" pick if it
  * actually contains something she can't eat. */
 export function pickForNow(wc: WeightClass, slot: FastFoodMeal['slot'], budgetTier: PriceTier, epochDay: number, remainingCal?: number, restrictions?: Set<DietaryRestriction>): FastFoodMeal[] {
-  const allCandidates = wc.days.flatMap((d) => d.meals.filter((m) => m.slot === slot)).concat(wc.extraOptions.filter((m) => m.slot === slot))
+  const allCandidates = verifiedPool(wc).filter((m) => m.slot === slot)
   // Falls back to the unfiltered pool only if her restrictions would rule
   // out literally everything for this slot — a real gap in curated
   // coverage for her restriction, not something to leave her with nothing
@@ -475,9 +480,11 @@ export function pickForNow(wc: WeightClass, slot: FastFoodMeal['slot'], budgetTi
   // >= 0, not > 0 — see pickForRestaurant's comment: remainingCal===0 (she's
   // already at budget) must still bias toward the smallest real option,
   // not skip the whole calorie-fit step and return an arbitrary one.
+  // Never over what she has left for the day (2026-10-29 audit) — nothing
+  // fits → no pick, and the caller shows its own "you're at your number".
   if (remainingCal != null && remainingCal >= 0) {
-    const fitsCalories = pool.filter((m) => m.cal <= remainingCal * 1.15)
-    pool = fitsCalories.length >= 2 ? fitsCalories : [...pool].sort((a, b) => Math.abs(a.cal - remainingCal) - Math.abs(b.cal - remainingCal))
+    pool = pool.filter((m) => m.cal <= remainingCal)
+    if (pool.length === 0) return []
   }
   const start = epochDay % pool.length
   const first = pool[start]
@@ -522,7 +529,7 @@ const normalizeRestaurant = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g,
 export function pickForRestaurant(wc: WeightClass, restaurantName: string, slot: FastFoodMeal['slot'], remainingCal?: number, restrictions?: Set<DietaryRestriction>): FastFoodMeal[] {
   const needle = normalizeRestaurant(restaurantName)
   if (!needle) return []
-  const nameMatches = wc.days.flatMap((d) => d.meals).concat(wc.extraOptions)
+  const nameMatches = verifiedPool(wc)
     .filter((m) => m.slot === slot && (normalizeRestaurant(m.restaurant).includes(needle) || needle.includes(normalizeRestaurant(m.restaurant))))
   if (nameMatches.length === 0) return []
   // Same "never the disqualified pick when a safe one exists at THIS
@@ -535,9 +542,11 @@ export function pickForRestaurant(wc: WeightClass, restaurantName: string, slot:
   // (state.ts clamps it there), and skipping the sort entirely returned
   // whatever happened to be first in the data instead of genuinely
   // steering toward the smallest real option available.
+  // Closest to what she has left, never over it (2026-10-29 audit).
   const ranked = remainingCal != null && remainingCal >= 0
-    ? [...candidates].sort((a, b) => Math.abs(a.cal - remainingCal) - Math.abs(b.cal - remainingCal))
+    ? candidates.filter((m) => m.cal <= remainingCal).sort((a, b) => Math.abs(a.cal - remainingCal) - Math.abs(b.cal - remainingCal))
     : candidates
+  if (ranked.length === 0) return []
   const first = ranked[0]
   const second = ranked.find((c) => c.order !== first.order)
   return second ? [first, second] : [first]

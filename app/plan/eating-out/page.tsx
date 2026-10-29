@@ -52,7 +52,6 @@ export default async function EatingOutNow({ searchParams }: { searchParams: { r
   // before repeating, instead of seeing the same "Monday" order every single week.
   // Stable within a day (same recommendation if she checks twice today).
   const epochDays = Math.floor(new Date(`${localDateISO()}T00:00:00Z`).getTime() / 86400000)
-  const day = wc.days[epochDays % wc.days.length]
 
   // What she actually has left today — same target/adjustment math as /plan and
   // /plan/today, so "fits my calories" means the same thing everywhere in the app,
@@ -138,26 +137,9 @@ export default async function EatingOutNow({ searchParams }: { searchParams: { r
           </div>
         )}
 
-        <p className="text-ivory/40 text-xs font-semibold uppercase tracking-wider mb-3">Your full day, for reference</p>
-        <div className="bg-charcoal bg-gradient-to-br from-gold/10 to-charcoal border border-gold/30 rounded-2xl p-5 mb-6 flex flex-wrap gap-x-6 gap-y-1 justify-between">
-          <div><p className="text-ivory/40 text-[10px] uppercase tracking-wider">Today&apos;s target</p><p className="text-gold font-bold">{day.total.toLocaleString()} cal</p></div>
-          <div><p className="text-ivory/40 text-[10px] uppercase tracking-wider">Protein</p><p className="text-white font-bold">{wc.proteinTarget}g</p></div>
-        </div>
-
-        <div className="space-y-3">
-          {day.meals.map((m, i) => (
-            <div key={i} className="bg-charcoal border border-smoke rounded-2xl p-5">
-              <div className="flex items-start justify-between gap-3 mb-1">
-                <p className="text-gold text-xs font-bold uppercase tracking-wider">{SLOT_ICON[m.slot] || ''} {m.slot}</p>
-                <p className="text-ivory/50 text-xs whitespace-nowrap">{m.cal} cal · {m.protein}g P</p>
-              </div>
-              <p className="text-white font-semibold text-sm">{m.restaurant}</p>
-              <p className="text-ivory/60 text-sm mt-0.5">{m.order}</p>
-            </div>
-          ))}
-        </div>
-
-        <p className="text-ivory/45 text-xs mt-6 text-center">This is your Escape Plan — swapped in automatically for your weight range and budget. No cooking, no tracking, just order and go.</p>
+        {/* "Your full day, for reference" removed 2026-10-29: it listed the old
+            estimated combos (many wrong or discontinued). Only verified picks show. */}
+        <p className="text-ivory/45 text-xs mt-6 text-center">Every number here is from the restaurant&apos;s own nutrition info. No cooking, no tracking, just order and go.</p>
       </div>
     </div>
   )
