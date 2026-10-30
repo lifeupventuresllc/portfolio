@@ -8,6 +8,7 @@ import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
 import { openChainsNear } from '@/lib/fos/nearby-food'
 import { verifiedChains } from '@/lib/chain-menu'
 import { partnerMealKeys } from '@/lib/partners'
+import { dailyFoodBudget, moneyLeft, fitToMoney } from '@/lib/food-budget'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,7 +35,7 @@ export default async function NutritionPage() {
   // Her calorie target comes from the plan she already has — never asked
   // again here. No plan yet → send her through the existing plan creation.
   if (!data || !data.calBudget || !data.intake) return <NoPlanYet />
-  const { enrollment, intake, foodRows, calBudget, weekPlan, mealIdx, todayIso, tz, mealTimes } = data
+  const { enrollment, intake, foodRows, calBudget, weekPlan, mealIdx, todayIso, tz, mealTimes, moneySpent } = data
 
   const loggedToday = foodRows.reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
   const remainingCal = Math.max(0, Math.round(calBudget - loggedToday))
@@ -52,6 +53,10 @@ export default async function NutritionPage() {
   const weekly = Number(intake.weekly_food_budget) || null
   const mealBudget = eatStyle ? (Number(formData.meal_budget) || defaultMealBudget(eatStyle, weekly)) : 0
   const orderApp: OrderApp = formData.order_app === 'ubereats' ? 'ubereats' : 'doordash'
+  // Today's food money (2026-10-30): her weekly budget ÷ 7, minus the meals
+  // she accepted today. A hard rule for every pick, like calories.
+  const moneyDaily = dailyFoodBudget(weekly)
+  const left = moneyDaily != null ? moneyLeft(moneyDaily, moneySpent) : null
 
   // Where she is (2026-10-23, Google Places): eating out + a known position
   // → only chains open near her right now (lib/fos/nearby-food). 2026-10-26
@@ -82,12 +87,15 @@ export default async function NutritionPage() {
     slotCalBudget: day.calBudget,
     nearby: near,
     partner,
+    moneyLeft: left,
   }) : null
   const result = pick(nearby)
   let options = result?.options || []
   // Fewer than two open spots fit her calories (late at night) → fill with
   // home picks, never a closed restaurant.
-  const fillHome = !mix && eatStyle === 'out' && !!nearby && options.length < 2
+  // Same when no eat-out meal fits the money left today: home picks cost less.
+  const fitsLeft = (o: (typeof options)[number]) => left == null || o.price == null || o.price <= left
+  const fillHome = !mix && eatStyle === 'out' && ((!!nearby && options.length < 2) || (left != null && !options.some(fitsLeft)))
   if ((mix || fillHome) && result) {
     const home = pickMeals({
       eatStyle: 'cook', mealBudget: defaultMealBudget('cook', weekly), remainingCal, slot,
@@ -99,6 +107,7 @@ export default async function NutritionPage() {
       todayIso,
       slotCalBudget: day.calBudget,
       partner,
+      moneyLeft: left,
     }).options
     // Interleave so the two cards on screen are one out, one home — and a
     // swap keeps that rhythm.
@@ -109,6 +118,10 @@ export default async function NutritionPage() {
     }
     options = both
   }
+  // Only what fits the money left today; nothing fits → the cheapest one,
+  // and the screen says so.
+  const money = fitToMoney(options, left)
+  options = money.options
   // At most one "<Name> had this" card on the whole screen.
   let friendShown = false
   options = options.map((o) => {
@@ -121,7 +134,7 @@ export default async function NutritionPage() {
   })
   const cards: PickCard[] = options.slice(0, 12).map(toCard)
   // Hit her number (2026-10-29): the lightest meals, behind "Still hungry?".
-  const lightCards: PickCard[] = cards.length ? [] : (result?.lightOptions || []).map(toCard)
+  const lightCards: PickCard[] = cards.length ? [] : fitToMoney(result?.lightOptions || [], left).options.map(toCard)
   const overNow = Math.max(0, Math.round(loggedToday - calBudget))
 
   const heading = day.current ? `Pick your ${day.current.label}.` : 'Still hungry? Pick a light one.'
@@ -134,7 +147,7 @@ export default async function NutritionPage() {
     <div className="px-4 pt-6 flex flex-col" style={{ background: '#021F16', minHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom))' }}>
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col min-h-0">
         {eatStyle && result ? (
-          <NutritionPicks key={`${day.current?.id ?? 'done'}:${cards.map((c) => c.key).join('|')}`} cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} nextUp={next} refreshInMin={day.refreshInMin} calBudget={Math.round(calBudget)} askLocation={eatStyle === 'out' && !locFresh} lightCards={lightCards} overNow={overNow} />
+          <NutritionPicks key={`${day.current?.id ?? 'done'}:${cards.map((c) => c.key).join('|')}`} cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} nextUp={next} refreshInMin={day.refreshInMin} calBudget={Math.round(calBudget)} askLocation={eatStyle === 'out' && !locFresh} lightCards={lightCards} overNow={overNow} moneyDaily={moneyDaily} moneySpent={moneySpent} moneyOver={money.over} />
         ) : (
           <EatStyleAsk />
         )}

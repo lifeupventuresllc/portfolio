@@ -1,0 +1,12 @@
+-- 049: the price of each meal she accepts (2026-10-30, "Budget display").
+-- The Nutrition tab shows "Today: $X left of $Y" — her weekly food budget
+-- (challenge_intake.weekly_food_budget) ÷ 7, minus the prices of the meals
+-- she accepted today. Each accepted pick saves its price on its own food-log
+-- row, so undoing the meal (deleting the row) gives the money back by
+-- itself. Nullable: manual entries, add-ons and every older row stay null
+-- and count $0.
+--
+-- No new policy: challenge_food_log already has its service policy (scoped
+-- to service_role by 045), and the app only writes here with the
+-- service-role client.
+alter table challenge_food_log add column if not exists price numeric(8,2);

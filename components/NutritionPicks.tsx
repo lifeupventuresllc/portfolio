@@ -9,6 +9,7 @@ import { hapticTap } from '@/lib/haptics'
 import { orderLink, openOrder, appFirstOn, APP_FIRST_KEY, ORDER_APP_LABEL, type OrderApp, type OrderLink } from '@/lib/order-link'
 import LocationOptIn from '@/components/LocationOptIn'
 import MealDrop from '@/components/MealDrop'
+import { moneyLeft, moneyTone, money, MONEY_COLOR } from '@/lib/food-budget'
 
 // The Nutrition tab's decision screen, v4 (2026-10-20, Asa's mockup
 // https://claude.ai/artifact/K8zUHkNNUFkipumXE3k6s5): two big photos, one
@@ -61,6 +62,9 @@ type Props = {
   askLocation?: boolean       // eating out with no fresh position → the "near you" ask, pick view only
   lightCards?: PickCard[]     // nothing fits today → her lightest meals, behind "Still hungry?"
   overNow?: number            // calories she's already over today (0 when she isn't)
+  moneyDaily?: number | null  // today's food money (weekly ÷ 7); null = no budget set
+  moneySpent?: number         // spent today on accepted picks, before this screen
+  moneyOver?: boolean         // nothing fits the money left → the one card is the cheapest
 }
 
 // "Still hungry?" (2026-10-29, Asa): after she hits her number she can still
@@ -69,12 +73,12 @@ export default function NutritionPicks(props: Props) {
   const [light, setLight] = useState(false)
   const lightCards = props.lightCards || []
   if (light && lightCards.length) {
-    return <Picks key="light" {...props} cards={lightCards} heading="Light picks." over onBack={() => setLight(false)} />
+    return <Picks key="light" {...props} cards={lightCards} heading="Light picks." moneyOver={false} over onBack={() => setLight(false)} />
   }
   return <Picks {...props} onLight={lightCards.length ? () => { hapticTap(); setLight(true) } : undefined} />
 }
 
-function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBudget, askLocation, overNow = 0, over = false, onLight, onBack }: Props & { over?: boolean; onLight?: () => void; onBack?: () => void }) {
+function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBudget, askLocation, overNow = 0, over = false, onLight, onBack, moneyDaily = null, moneySpent = 0, moneyOver = false }: Props & { over?: boolean; onLight?: () => void; onBack?: () => void }) {
   const router = useRouter()
   // Indexes into `cards` for the two on screen, plus where the next swap
   // starts looking. Starts on the engine's own top pair.
@@ -126,6 +130,11 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
   // first, so what she orders is what we count.
   const [ordering, setOrdering] = useState<PickCard | null>(null)
   const meal = slot.toLowerCase()
+  // Today's food money: what she spent before this screen, plus the meal she
+  // just accepted — so the number and the bar drop the moment she taps.
+  const spentNow = moneySpent + (done && !done.failed ? done.card.price || 0 : 0)
+  const moneyNow = moneyDaily != null ? moneyLeft(moneyDaily, moneySpent) : 0
+  const withBar = (node: ReactNode) => moneyDaily != null ? <><MoneyBar daily={moneyDaily} spent={spentNow} />{node}</> : node
   // How far over today a pick puts her (0 when it fits).
   const overBy = (cal: number) => overNow + Math.max(0, cal - Math.max(0, remainingCal))
 
@@ -209,7 +218,7 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
   const saveCard = (card: PickCard) => logFood({
     name: card.name, brand: card.place, meal, servings: 1,
     calories: card.cal, protein_g: card.protein, carbs_g: card.carbs, fats_g: card.fat,
-    source: 'meal_pick',
+    source: 'meal_pick', price: card.price ?? 0,
   })
 
   // Retry a pick whose save failed (2026-10-29 audit).
@@ -251,18 +260,18 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
   }
 
   // ---------- order exactly this ----------
-  if (ordering) return <OrderExact card={ordering} busy={busy} onBack={() => setOrdering(null)} onOpen={() => choose(ordering)} />
+  if (ordering) return withBar(<OrderExact card={ordering} busy={busy} onBack={() => setOrdering(null)} onOpen={() => choose(ordering)} />)
 
   // ---------- after she taps ----------
   if (done && done.card.kind === 'out' && done.card.dest.url) {
-    return <Logged done={done} slot={slot} meal={meal} remainingCal={remainingCal} calBudget={calBudget} nextUp={nextUp} banner={saveBanner} overNow={overNow} />
+    return withBar(<Logged done={done} slot={slot} meal={meal} remainingCal={remainingCal} calBudget={calBudget} nextUp={nextUp} banner={saveBanner} overNow={overNow} />)
   }
   if (done) {
     // A home or grab-and-go pick (2026-10-26: same new look as the order screens).
     const { card, left } = done
     const whole = calBudget && calBudget > 0 ? calBudget : remainingCal
     const pct = whole > 0 ? Math.min(100, Math.max(0, Math.round(((whole - left) / whole) * 100))) : 100
-    return (
+    return withBar(
       <div className="nf-screen flex-1 flex flex-col gap-4 pb-6 overflow-y-auto" style={{ color: C.ivory, fontFamily: BODY }}>
         <div className="flex-1 flex flex-col justify-center gap-3.5 px-1">
           {saveBanner}
@@ -301,7 +310,7 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
   // ---------- the two photos ----------
   const ask = askLocation ? <LocationOptIn prompt="Show meals open near you right now?" refreshOnPing large /> : null
   if (shown.length === 0) {
-    return (
+    return withBar(
       <div className="nf-screen flex-1 flex flex-col gap-3" style={{ color: C.ivory, fontFamily: BODY }}>
         {ask}
         <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
@@ -328,11 +337,14 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
   }
 
   const canSwap = cards.length > shown.length
-  return (
+  return withBar(
     <div className="nf-screen flex-1 flex flex-col min-h-0" style={{ color: C.ivory, fontFamily: BODY }}>
       <style>{`.np-out{animation:npOut .18s ease-in both}@keyframes npOut{to{transform:translateX(-36px);opacity:0}}.np-in{animation:npIn .32s cubic-bezier(.2,1,.3,1) both}@keyframes npIn{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}@media (prefers-reduced-motion: reduce){.np-out,.np-in{animation:none}}`}</style>
       {ask}
       <h1 className="nf-head mb-4" style={head(44)}>{heading}</h1>
+      {moneyOver && !over && (
+        <p className="-mt-2 mb-3" style={{ fontSize: 14, color: SOFT }}>Nothing fits {money(moneyNow)} left today. This is the cheapest.</p>
+      )}
       {over && (
         <div className="flex items-center justify-between gap-3 -mt-2 mb-3">
           <span style={{ fontSize: 14, color: SOFT }}>You hit your number. These go over, so it&apos;s your call.</span>
@@ -416,6 +428,27 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
           SHUFFLE
         </button>
       )}
+    </div>
+  )
+}
+
+// Today's food money (2026-10-30, Asa's "Budget display" spec): one number,
+// one bar. The bar is what's left, so it goes down as she eats. Emerald over
+// half, gold under half, coral under 20%.
+function MoneyBar({ daily, spent }: { daily: number; spent: number }) {
+  const left = moneyLeft(daily, spent)
+  const color = MONEY_COLOR[moneyTone(left, daily)]
+  const pct = daily > 0 ? Math.min(100, Math.max(0, (left / daily) * 100)) : 0
+  return (
+    <div className="mb-4 flex flex-col gap-2" role="status" aria-label={`Today: ${money(left)} left of ${money(daily)}`}>
+      <div className="flex items-baseline gap-2" aria-hidden>
+        <span style={{ ...mono(11), color: SOFT }}>TODAY:</span>
+        <span className="tabular-nums" style={{ ...head(30), lineHeight: 1, color, transition: 'color .3s ease' }}>{money(left)}</span>
+        <span style={{ ...mono(11), color: SOFT }}>LEFT OF {money(daily)}</span>
+      </div>
+      <div style={{ height: 8, borderRadius: 999, background: 'rgba(237,231,218,.12)', overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 999, transition: 'width .4s ease, background-color .3s ease' }} />
+      </div>
     </div>
   )
 }

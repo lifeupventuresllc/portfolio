@@ -94,14 +94,20 @@ export async function POST(request: NextRequest) {
   const meal: Meal = MEALS.includes(b.meal) ? b.meal : 'snack'
   const day = (b.logged_on || localDateISO()).toString().slice(0, 10)
   const servings = Math.max(0.1, num(b.servings, 1))
-  await svc.from('challenge_food_log').insert({
+  const row = {
     enrollment_id: enrollment.id, user_id: user.id, logged_on: day, meal, name,
     brand: b.brand ? b.brand.toString().slice(0, 120) : null,
     servings, serving_label: b.serving_label ? b.serving_label.toString().slice(0, 60) : null,
     calories: Math.round(num(b.calories)), protein_g: Math.round(num(b.protein_g)),
     carbs_g: Math.round(num(b.carbs_g)), fats_g: Math.round(num(b.fats_g)),
     source: b.source ? b.source.toString().slice(0, 40) : 'manual',
-  })
+  }
+  // The price of an accepted pick (2026-10-30, today's food money, migration
+  // 049). Before 049 runs the column isn't there — save the meal without it
+  // rather than lose it.
+  const price = Math.round(num(b.price) * 100) / 100
+  const { error } = price > 0 ? await svc.from('challenge_food_log').insert({ ...row, price: Math.min(price, 999) }) : { error: null }
+  if (price <= 0 || error) await svc.from('challenge_food_log').insert(row)
   return NextResponse.json(await loadDay(svc, enrollment.id as string, day))
 }
 

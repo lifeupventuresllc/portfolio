@@ -64,6 +64,7 @@ export interface PickContext {
   slotCalBudget?: number      // from planDay(): this meal's share of what's left today
   nearby?: Map<string, number> // chains open near her right now → miles (Google Places); absent = location unknown
   partner?: { name: string; keys: Set<string> } | null // her partner's picked meals, last 3 days (only when shared)
+  moneyLeft?: number | null   // $ left of today's food money (lib/food-budget) — hard rule; absent = no daily budget
 }
 
 export interface PickResult {
@@ -347,13 +348,18 @@ export function pickMeals(ctx: PickContext): PickResult {
   // has left for the whole day.
   const calCap = Math.min(remaining, Math.round(slotBudget * 1.15))
   const fitsCal = (o: MealOption) => o.cal <= calCap
-  const fitsMoney = (o: MealOption) => o.price == null || o.price <= ctx.mealBudget
+  // Money left today (2026-10-30) is a hard rule like calories: a meal over
+  // it only shows when nothing fits (the page then keeps the cheapest one,
+  // lib/food-budget fitToMoney). Her per-meal amount stays the softer rule.
+  const fitsLeft = (o: MealOption) => ctx.moneyLeft == null || o.price == null || o.price <= ctx.moneyLeft
+  const fitsMoney = (o: MealOption) => fitsLeft(o) && (o.price == null || o.price <= ctx.mealBudget)
+  const preferLeft = (list: MealOption[]) => { const f = list.filter(fitsLeft); return f.length ? f : list }
 
   let pool = all.filter((o) => fitsCal(o) && fitsMoney(o))
   let note: string | null = null
   if (pool.length < 2) {
     // Money is the soft rule — calories stay a must. Tell her plainly.
-    const calOnly = all.filter(fitsCal)
+    const calOnly = preferLeft(all.filter(fitsCal))
     if (calOnly.length >= 2) {
       pool = calOnly
       note = `Nothing came in under $${ctx.mealBudget} right now, so these are the closest.`
@@ -363,7 +369,7 @@ export function pickMeals(ctx: PickContext): PickResult {
       // used to fall back to the 6 lightest meals with no calorie check, so
       // 150 left showed 200 and 250 cal cards). Nothing under that → no
       // cards; the screen says she's hit her number.
-      const dayFit = all.filter((o) => o.cal <= remaining)
+      const dayFit = preferLeft(all.filter((o) => o.cal <= remaining))
       if (dayFit.length > calOnly.length) {
         pool = dayFit
         note = 'You’re close to your number today, so these are the lightest picks.'

@@ -347,7 +347,7 @@ export default function NewFlow(p: {
                   <input id="weekly" type="range" min={40} max={300} step={5} value={weekly} className="nf-range"
                     onChange={(e) => { hapticTap(4); set('weekly_food_budget', e.target.value) }} />
                   <span className="text-sm">{style ? pm.text : 'Pick how you eat to see it per meal.'}</span>
-                  <span className="text-xs -mt-1.5" style={{ color: 'rgba(237,231,218,.65)' }}>We stretch it across your week. You never do the math.</span>
+                  <span className="text-xs -mt-1.5" style={{ color: 'rgba(237,231,218,.65)' }}>That&apos;s ${Math.round((weekly / 7) * 100) / 100} a day. You never do the math.</span>
                 </div>
                 <div className="flex-1 min-h-5" />
                 {p.error && <p className="text-sm mb-3" style={{ color: '#FF8A70' }}>{p.error}</p>}
