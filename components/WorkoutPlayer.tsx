@@ -183,6 +183,14 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
           }
           if (askQuickstartGoal && !goalHidden) setShowGoal(true)
         }}
+        onSetDone={(names, setIndex) => {
+          for (const exerciseName of names) {
+            fetch('/api/plan/workout/set-effort', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ exerciseName, done: true, setIndex }),
+            }).catch(() => {})
+          }
+        }}
         onProgress={(doneEx, total) => {
           try { localStorage.setItem('luf_workout_progress', JSON.stringify({ date: localTodayISO(), i: doneEx, total, done: false })) } catch { /* ignore */ }
         }}

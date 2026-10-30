@@ -6,6 +6,7 @@
 import type { WorkoutProgram } from './workout'
 import { exerciseVideo } from './exercise-videos'
 import { NOT_EXACT_ON_SCREEN } from './exercise-images'
+import { DELOAD_CUE, deloadSets } from './double-progression'
 
 // Only a photo of the exact move reaches the screen.
 const exactImage = (name: string, url?: string) => (url && !NOT_EXACT_ON_SCREEN.has(name) ? url : undefined)
@@ -18,6 +19,7 @@ export interface Move {
   reps: number[]          // one number per set/round — never a range
   seconds?: number        // a timed move ("40 sec") instead of reps
   eachSide?: boolean
+  progressCue?: string    // double progression: "Go up a weight today." — small gold line under the reps
 }
 
 export interface Block {
@@ -59,15 +61,28 @@ const move = (name: string, scheme: string, cue?: string, imageUrl?: string, ext
 
 export function buildBlocks(program: WorkoutProgram, dayIdx: number): Block[] {
   const blocks: Block[] = []
+  // Double progression (2026-10-30): a tracked lift shows HER target number
+  // on every set, not the bottom of the printed range.
+  const withTarget = (m: Move): Move => {
+    const t = program.progression?.[m.name]
+    if (t && !m.seconds) return { ...m, reps: m.reps.map(() => t.reps), progressCue: t.cue }
+    return program.deload ? { ...m, progressCue: DELOAD_CUE } : m
+  }
 
   if (program.track === 'home' && program.home) {
     const day = program.home.days[dayIdx]
     if (!day) return blocks
     blocks.push({ kind: 'warmup', moves: [], rounds: 1, restSec: 0, lines: program.home.warmup })
     for (const e of day.exercises) {
+      // "2 × 8–15" = sets of reps (double progression); "30 sec" = one timed round.
+      if (/[x×]/i.test(e.duration)) {
+        const a = move(e.name, e.duration, undefined, e.imageUrl)
+        blocks.push({ kind: 'exercise', rounds: a.sets, restSec: 30, moves: [withTarget(a.m)] })
+        continue
+      }
       const sec = firstNum(e.duration)
       const isSec = /sec/i.test(e.duration)
-      blocks.push({ kind: 'exercise', rounds: 1, restSec: 20, moves: [{ name: e.name, imageUrl: exactImage(e.name, e.imageUrl), videoUrl: exerciseVideo(e.name), reps: [isSec ? 0 : sec || 10], seconds: isSec ? sec : undefined }] })
+      blocks.push({ kind: 'exercise', rounds: 1, restSec: 20, moves: [withTarget({ name: e.name, imageUrl: exactImage(e.name, e.imageUrl), videoUrl: exerciseVideo(e.name), reps: [isSec ? 0 : sec || 10], seconds: isSec ? sec : undefined })] })
     }
     blocks.push({ kind: 'cooldown', moves: [], rounds: 1, restSec: 0, lines: program.home.cooldown })
     return blocks
@@ -79,16 +94,16 @@ export function buildBlocks(program: WorkoutProgram, dayIdx: number): Block[] {
   for (const s of day.supersets) {
     const a = move(s.push.name, s.reps, s.push.cue, s.push.imageUrl)
     const b = move(s.pull.name, s.reps, s.pull.cue, s.pull.imageUrl)
-    blocks.push({ kind: 'exercise', moves: [a.m, b.m], rounds: a.sets, restSec: 60 })
+    blocks.push({ kind: 'exercise', moves: [withTarget(a.m), withTarget(b.m)], rounds: a.sets, restSec: 60 })
   }
   for (const x of day.accessory) {
     const a = move(x.name, x.reps, x.cue, x.imageUrl)
-    blocks.push({ kind: 'exercise', moves: [a.m], rounds: a.sets, restSec: 45 })
+    blocks.push({ kind: 'exercise', moves: [withTarget(a.m)], rounds: a.sets, restSec: 45 })
   }
   if (day.ab) {
     const list = [day.ab.upper, day.ab.lower, ...(day.ab.bonus ? [day.ab.bonus] : [])]
     const ms = list.map((e) => move(e.name, day.ab!.scheme, e.cue, e.imageUrl))
-    blocks.push({ kind: 'exercise', moves: ms.map((x) => x.m), rounds: ms[0].sets, restSec: 45 })
+    blocks.push({ kind: 'exercise', moves: ms.map((x) => withTarget(x.m)), rounds: program.deload ? deloadSets(ms[0].sets) : ms[0].sets, restSec: 45 })
   }
   if (day.cardio) {
     if (day.cardio.mode === 'compound' && day.cardio.moves?.length) {

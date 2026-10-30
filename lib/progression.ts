@@ -17,6 +17,7 @@
 // ============================================================
 import { createServiceClient } from '@/lib/supabase/server'
 import type { MovementPattern, SkillLevel, IntensityLevel, MuscleGroup } from './exercise-library'
+import { sessionsFromLogs, type ExerciseSession } from './double-progression'
 
 export type Effort = 'easy' | 'right' | 'hard'
 
@@ -130,4 +131,32 @@ export function immediateAdjustment(effort: Effort): { repCue: string; restBumpS
   if (effort === 'hard') return { repCue: 'Ease toward the lower end of your rep range next set — that’s the right call.', restBumpSec: 20 }
   if (effort === 'easy') return { repCue: 'Push toward the higher end of your rep range next set.', restBumpSec: -10 }
   return { repCue: 'Keep the same range next set.', restBumpSec: 0 }
+}
+
+// ---- Double progression (2026-10-30, lib/double-progression.ts) ----
+// Every set she taps Done on writes one 'right' row here — that's how a
+// finished session (every set done) is told apart from a skipped or cut-short
+// one. An Easy/Hard tap on the rest screen still goes through logSetEffort
+// and writes its own row for the same set_index; that row wins on replay.
+// Deliberately does NOT touch progression_state: an untapped set is not an
+// effort signal, and must not reset the Easy/Hard streaks there.
+export async function logSetDone(enrollmentId: string, userId: string, exerciseName: string,
+  movementPattern: MovementPattern, muscleGroups: string[], setIndex: number): Promise<void> {
+  const svc = createServiceClient()
+  await svc.from('workout_set_logs').insert({
+    enrollment_id: enrollmentId, user_id: userId, exercise_name: exerciseName,
+    movement_pattern: movementPattern, muscle_groups: muscleGroups, effort: 'right', set_index: setIndex,
+  })
+}
+
+// Her real sessions per exercise name, ready for generateWorkout's
+// exerciseHistory. No separate state table: target reps, misses and the last
+// outcome are replayed from these rows every load, so they can't drift. The
+// 6-week block itself is calendar weeks since she enrolled (enrollmentStartISO).
+export async function getExerciseSessions(enrollmentId: string, enrollmentStartISO: string, daysBack = 120): Promise<Record<string, ExerciseSession[]>> {
+  const svc = createServiceClient()
+  const since = new Date(Date.now() - daysBack * 86400000).toISOString()
+  const { data } = await svc.from('workout_set_logs').select('exercise_name, effort, set_index, created_at')
+    .eq('enrollment_id', enrollmentId).gte('created_at', since).order('created_at', { ascending: true }).limit(5000)
+  return sessionsFromLogs((data || []) as { exercise_name: string; effort: string; set_index: number; created_at: string }[], enrollmentStartISO)
 }

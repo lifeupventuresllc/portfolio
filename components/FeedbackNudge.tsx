@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import QuickFeedback from '@/components/QuickFeedback'
 import { FEEDBACK_LAST_SENT_KEY } from '@/lib/feedback-context'
 
@@ -14,6 +15,7 @@ const DAY = 24 * 60 * 60 * 1000
 // in), and backs off for a week after ANY feedback (inline or from /plan/feedback) or
 // 5 days after being dismissed — so it nudges toward feedback without nagging.
 export default function FeedbackNudge() {
+  const pathname = usePathname()
   const [show, setShow] = useState(false)
   const [open, setOpen] = useState(false)
 
@@ -32,7 +34,9 @@ export default function FeedbackNudge() {
     setShow(false)
   }
 
-  if (!show) return null
+  // Never over a workout, the intake or the picks (2026-10-30): it covered
+  // the big Done / Start button mid-workout.
+  if (!show || pathname === '/plan/workout' || pathname?.startsWith('/plan/intake') || pathname === '/plan/nutrition') return null
 
   return (
     <div className="fixed bottom-5 right-4 z-40 max-w-[280px]">

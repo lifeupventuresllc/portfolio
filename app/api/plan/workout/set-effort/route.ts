@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ATOMIC_LIBRARY } from '@/lib/exercise-library'
-import { logSetEffort, immediateAdjustment, type Effort } from '@/lib/progression'
+import { logSetEffort, logSetDone, immediateAdjustment, type Effort } from '@/lib/progression'
 
 // The one write path for the full-screen rest-timer effort tap (layer four
 // of the workout-engine rebuild). Two simultaneous effects of one input,
@@ -27,8 +27,14 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}))
     const exerciseName = String(body.exerciseName || '')
-    const effort = body.effort as Effort
-    const setIndex = Number(body.setIndex) || 1
+    // Double progression (2026-10-30): `done: true` = she tapped Done on a
+    // set (no Easy/Hard) — logged as 'right' so a finished session can be
+    // told apart from a cut-short one. 0-based set index (0 used to collapse
+    // into 1 here via `|| 1`, merging her first two sets).
+    const isDone = body.done === true
+    const effort = (isDone ? 'right' : body.effort) as Effort
+    const rawIndex = Number(body.setIndex)
+    const setIndex = Number.isFinite(rawIndex) && rawIndex >= 0 ? Math.floor(rawIndex) : 0
     if (!exerciseName || !['easy', 'right', 'hard'].includes(effort)) {
       return NextResponse.json({ error: 'exerciseName and a valid effort (easy|right|hard) are required.' }, { status: 400 })
     }
@@ -50,6 +56,10 @@ export async function POST(request: NextRequest) {
     const movementPattern = exerciseName === 'Incline Treadmill Walk' ? 'cardio' : entry?.movementPattern || 'compound'
     const muscleGroups = entry?.muscleGroups || []
 
+    if (isDone) {
+      await logSetDone(enrollment.id as string, user.id, exerciseName, movementPattern, muscleGroups, setIndex)
+      return NextResponse.json({ ok: true })
+    }
     const state = await logSetEffort(enrollment.id as string, user.id, exerciseName, movementPattern, muscleGroups, effort, setIndex)
     const immediate = immediateAdjustment(effort)
 

@@ -25,6 +25,7 @@ import type {
   WorkoutInputs, WorkoutProgram, GymDay, HomeDay, Superset, CardioFinisher, FocusArea, TrainingStyle,
 } from './workout.types'
 import { effectiveTrainingStyles } from './training-styles'
+import { repRange, schemeText, deloadSets, isDeloadWeek, blockStartWeek, targetFor, type RepRange } from './double-progression'
 
 const LEVEL_LABEL: Record<SkillLevel, string> = { 1: 'Beginner', 2: 'Intermediate', 3: 'Advanced' }
 // 'recomp' reads "Fat Loss + Tone" here, not the fitness-jargon term
@@ -81,11 +82,10 @@ function derivePushPull(e: AtomicExercise): 'push' | 'pull' {
 // pattern intensity yet) don't have to pass it. A real, visible surface
 // for layer three's intensity axis, not just an invisible filter effect —
 // she SEES why a set got scaled, not just experiences it.
-function toGymExerciseShim(e: AtomicExercise, overrides?: Constraints['progressionOverrides']) {
-  const intensity = overrides?.[e.movementPattern]?.intensityLevel
-  const intensityCue = intensity === 5 ? ' You’ve been crushing this movement lately — push the top of your range.'
-    : intensity === 1 ? ' Easing the intensity here based on your recent sets — controlled reps, no rush.'
-    : ''
+// 2026-10-30: the old intensity line ("push the top of your range") is gone —
+// double progression (lib/double-progression.ts) now owns how hard each lift
+// is, as one target number + one short cue on the exercise screen.
+function toGymExerciseShim(e: AtomicExercise) {
   return {
     // Casts are safe by construction, not by hope: this is only ever called
     // on picks drawn from a gym-superset-eligible pool (buildGymDay filters
@@ -94,7 +94,7 @@ function toGymExerciseShim(e: AtomicExercise, overrides?: Constraints['progressi
     // WIDER unions (kettlebell, bands, core, full_body) never reach here.
     name: e.name, equip: e.equipment[0] as Equip, free: e.freeWeight,
     movement: derivePushPull(e), muscle: e.muscleGroups[0] as Muscle, minLevel: e.skillLevel,
-    cue: e.cue + intensityCue, imageUrl: e.imageUrl,
+    cue: e.cue, imageUrl: e.imageUrl,
   }
 }
 function toAbExerciseShim(e: AtomicExercise) {
@@ -123,6 +123,11 @@ interface Constraints {
   // The nutrition -> workout half of the connection (see WorkoutInputs.
   // lowFuelToday) — nothing logged today, already past early afternoon.
   lowFuelToday?: boolean
+  // Double progression: a deload week (every 6th) halves every tracked
+  // lift's sets; `tracked` collects each rep-based lift's range as the days
+  // are built, so generateProgram can attach her target reps + cue.
+  deload?: boolean
+  tracked?: Map<string, RepRange>
 }
 
 // Shared rule for "she hasn't eaten today" — every caller computes its own
@@ -164,11 +169,16 @@ export function pickAb(zone: 'upper' | 'lower', level: SkillLevel, offset: numbe
 // pattern (no history yet, or a recent "hard" streak) stays gated at her
 // baseline. This is what "progressive overload happens automatically
 // within the attribute-matching logic itself" actually means in code.
+//
+// 2026-10-30 (double progression, Asa's pick): the per-pattern skill bump no
+// longer widens the pool mid-block. Same exercises for a whole 6-week block
+// is the point — that's what makes her progress measurable (the target reps
+// climb on the SAME move). Picks only change at block end, an injury, or a
+// different track/equipment.
 function filterLibrary(c: Constraints, muscles?: MuscleGroup[]): AtomicExercise[] {
   return ATOMIC_LIBRARY.filter((e) => {
-    const effectiveSkill = c.progressionOverrides?.[e.movementPattern]?.skillLevel ?? c.skillLevel
     return e.locations.includes(c.location) &&
-      e.skillLevel <= effectiveSkill &&
+      e.skillLevel <= c.skillLevel &&
       isExerciseSafe(e, c.injuries) &&
       (!c.equipment || e.equipment.some((eq) => c.equipment!.includes(eq))) &&
       (!muscles || muscles.length === 0 || e.muscleGroups.some((m) => muscles.includes(m)))
@@ -336,18 +346,12 @@ function cardioFinisherFor(c: Constraints, goal: string, styles: Set<TrainingSty
 }
 
 const AB_SCHEME: Record<SkillLevel, string> = { 1: '2 sets × 8–12', 2: '2–3 sets × 12–15', 3: '3–4 sets × 15+ (add weight)' }
-// 'recomp' (lose + gain both selected — see lib/goals.ts) sits deliberately
-// between the two: moderate-to-higher reps like a hypertrophy block (real
-// muscle-building stimulus), without lose's "short rest" metabolic-circuit
-// framing or gain's low-rep/heavy emphasis — the actual, real rep range
-// body-recomposition training uses (roughly 10-15 reps), not a blind
-// average of the other two rows.
-const REP_SCHEME: Record<SkillLevel, Record<WorkoutInputs['goal'], string>> = {
-  1: { lose: '3 × 12–15 (short rest)', gain: '3 × 8–10', maintain: '2 × 10–12', recomp: '3 × 10–12' },
-  2: { lose: '3 × 18 / 15 / 12 (short rest)', gain: '4 × 10 / 8 / 8', maintain: '3 × 15 / 12 / 10', recomp: '3 × 15 / 12 / 10' },
-  3: { lose: '4 × 20 / 15 / 12 / 12 (short rest)', gain: '4 × 10 / 8 / 6 / 6', maintain: '3 × 20 / 15 / 12', recomp: '4 × 15 / 12 / 10 / 10' },
-}
-const repScheme = (level: SkillLevel, goal: WorkoutInputs['goal']) => REP_SCHEME[level][goal] || REP_SCHEME[level].maintain
+// Lift rep ranges + sets: repRange() in lib/double-progression.ts (2026-10-30,
+// replaced the old fixed REP_SCHEME table).
+const isBodyweight = (e: AtomicExercise) => e.equipment.every((q) => q === 'bodyweight')
+// Home moves that are naturally held or done for time stay timed; every
+// other home move is counted in reps and progresses 8 → 15.
+const TIMED_MOVE = /hold|punch|jab|kickboxing|circles|plank|puls|explosive|skater|continuous|march/i
 
 // Time-aware count: how many exercises actually fit the minutes she has,
 // derived from each pick's own real durationSec tag (× ~2.3 for
@@ -378,9 +382,9 @@ const DAY_MUSCLES: Record<DayKind, MuscleGroup[]> = {
 function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string, c: Constraints, goal: WorkoutInputs['goal'], offset: number, minutesAvailable: number | undefined, coreFocus: boolean, styles: Set<TrainingStyle>, coreOnly = false): GymDay {
   // Asa's follow-up, 2026-09-02: low fuel benefits from touching the real
   // session, not just the cardio tail — but only how hard she's asked to
-  // push, never WHICH exercises she gets. One tier down on the rep/set
-  // prescription only; c.skillLevel itself (exercise selection, filtering,
-  // progression lookups) is untouched below.
+  // push, never WHICH exercises she gets. One tier down on the ab scheme;
+  // tracked lifts keep their sets (2026-10-30) so a low-fuel day never reads
+  // as a missed session in double progression.
   const repLevel = c.lowFuelToday ? (Math.max(1, c.skillLevel - 1) as SkillLevel) : c.skillLevel
   const isFullBody = targetMuscles.length === 0 && !coreOnly
   const bodyMuscles: MuscleGroup[] = isFullBody ? ['quads', 'hamstrings', 'glutes', 'chest', 'back', 'shoulders', 'biceps', 'triceps'] : targetMuscles
@@ -398,10 +402,19 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
   const count = countForMinutes(minutesAvailable, 45, baseCount)
   const picked = coreOnly ? [] : balancePairs(spreadPatterns(pick(supersetPool, bodyMuscles, supersetPool.length, offset, c.postpartum), count))
 
+  // Double progression (2026-10-30): each lift gets its own rep range by
+  // level, goal and role (multi-joint = compound, single-muscle = accessory;
+  // bodyweight moves 8–15). Two moves back to back share one set count.
+  const liftRange = (e: AtomicExercise) => repRange(c.skillLevel, goal, familyOf(e) === 'iso' ? 'accessory' : 'compound', isBodyweight(e))
+  const setsToday = (sets: number) => (c.deload ? deloadSets(sets) : sets)
   const supersets: Superset[] = []
   for (let i = 0; i + 1 < picked.length; i += 2) {
     const a = picked[i], b = picked[i + 1]
-    supersets.push({ title: `${a.name} + ${b.name}`, push: toGymExerciseShim(a, c.progressionOverrides), pull: toGymExerciseShim(b, c.progressionOverrides), reps: repScheme(repLevel, goal) })
+    const ra = liftRange(a), rb = liftRange(b)
+    const sets = Math.max(ra.sets, rb.sets)
+    c.tracked?.set(a.name, { ...ra, sets }); c.tracked?.set(b.name, { ...rb, sets })
+    const same = ra.lo === rb.lo && ra.hi === rb.hi
+    supersets.push({ title: `${a.name} + ${b.name}`, push: toGymExerciseShim(a), pull: toGymExerciseShim(b), reps: same ? schemeText(setsToday(sets), ra) : `${schemeText(setsToday(sets), ra)} / ${rb.lo}–${rb.hi}` })
   }
   const leftover = picked.length % 2 === 1 ? picked[picked.length - 1] : null
 
@@ -429,9 +442,10 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
     const extraLower = pickAbAtomic('lower', c.skillLevel, offset + 9, c.postpartum, c.injuries, [...usedAbNames, extraUpper.name])
     return [extraUpper, extraLower].map((e) => ({ name: e.name, reps: AB_SCHEME[repLevel], cue: e.cue, imageUrl: e.imageUrl, kind: 'core' as const }))
   })() : []
+  const trackedScheme = (e: AtomicExercise, r: RepRange) => { c.tracked?.set(e.name, r); return schemeText(setsToday(r.sets), r) }
   const accessory: GymDay['accessory'] = [
-    ...(wantsLegAccessory ? calfPool.slice(0, 2).map((e) => ({ name: e.name, reps: repLevel === 1 ? '2 × 15–20' : '3 × 15–20', cue: e.cue, imageUrl: e.imageUrl, kind: 'calves' as const })) : []),
-    ...(leftover ? [{ name: leftover.name, reps: repScheme(repLevel, goal), cue: `${leftover.cue} (bonus set from today's session).`, imageUrl: leftover.imageUrl, kind: 'bonus' as const }] : []),
+    ...(wantsLegAccessory ? calfPool.slice(0, 2).map((e) => ({ name: e.name, reps: trackedScheme(e, repRange(c.skillLevel, goal, 'accessory', isBodyweight(e))), cue: e.cue, imageUrl: e.imageUrl, kind: 'calves' as const })) : []),
+    ...(leftover ? [{ name: leftover.name, reps: trackedScheme(leftover, liftRange(leftover)), cue: `${leftover.cue} (bonus set from today's session).`, imageUrl: leftover.imageUrl, kind: 'bonus' as const }] : []),
     ...coreOnlyExtras,
   ]
 
@@ -510,7 +524,16 @@ function buildHomeDay(dayNum: number, targetMuscles: MuscleGroup[], title: strin
   const finisherCount = wantsCardio && styles.has('cardio') ? 2 : wantsCardio ? 1 : 0
   const finishers = finisherCount ? pick(cardioPool, [], finisherCount, offset + 8, c.postpartum) : []
 
-  const exercises = [...main, ...core].map((e) => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl }))
+  // Double progression, home (2026-10-30): no weights here — rep moves climb
+  // 8 → 15, then get slower (3 seconds down) and reset to 8. Beginner 2 sets,
+  // intermediate+ 3. Held/timed moves and core stay 30 seconds.
+  const homeReps = (e: AtomicExercise) => {
+    if (TIMED_MOVE.test(e.name)) return '30 sec'
+    const r = repRange(c.skillLevel, goal, 'accessory', true)
+    c.tracked?.set(e.name, r)
+    return schemeText(c.deload ? deloadSets(r.sets) : r.sets, r)
+  }
+  const exercises = [...main.map((e) => ({ name: e.name, duration: homeReps(e), imageUrl: e.imageUrl })), ...core.map((e) => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl }))]
   const finisherSec = goal === 'lose' ? 90 : goal === 'recomp' ? 75 : goal === 'gain' ? 45 : 60
   finishers.forEach((f) => exercises.push({ name: f.name, duration: `${finisherSec} sec`, imageUrl: f.imageUrl }))
 
@@ -522,7 +545,12 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
   const week = inp.weekNumber || 1
   const injuries = inp.injuries || []
   const location: Location = inp.track
-  const c: Constraints = { location, skillLevel: level, injuries, postpartum: !!inp.postpartum, progressionOverrides: inp.progressionOverrides, activityLevel: inp.activityLevel, lowFuelToday: inp.lowFuelToday }
+  // Double progression (2026-10-30): picks key off the FIRST week of her
+  // 6-week block, so the same moves hold all block; every 6th week deloads.
+  const pickWeek = blockStartWeek(week)
+  const deload = isDeloadWeek(week)
+  const tracked = new Map<string, RepRange>()
+  const c: Constraints = { location, skillLevel: level, injuries, postpartum: !!inp.postpartum, progressionOverrides: inp.progressionOverrides, activityLevel: inp.activityLevel, lowFuelToday: inp.lowFuelToday, deload, tracked }
   const days = Math.min(Math.max(Math.round(inp.daysPerWeek || 3), 1), 6)
   const coreFocus = inp.focusArea === 'core' || !!inp.overrideAreas?.includes('core')
   // Real bug found live, 2026-09-04: every caller used to pass just
@@ -591,7 +619,7 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
     const homeDays: HomeDay[] = Array.from({ length: days }, (_, i) => {
       const muscles = dayMuscles(i)
       const isCoreOnly = i === 0 && overrideMuscles !== undefined && overrideMuscles.length === 0 && inp.overrideAreas?.includes('core')
-      const day = buildHomeDay(i + 1, isCoreOnly ? [] : muscles, `Day ${i + 1}: ${dayTitle(i, muscles)}`, c, inp.goal, week + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, styles, isCoreOnly)
+      const day = buildHomeDay(i + 1, isCoreOnly ? [] : muscles, `Day ${i + 1}: ${dayTitle(i, muscles)}`, c, inp.goal, pickWeek + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, styles, isCoreOnly)
       return day
     })
     const minutes = level === 1 && week <= 1 ? '20 min' : '15 min'
@@ -607,8 +635,11 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
     base.gymDays = Array.from({ length: days }, (_, i) => {
       const muscles = dayMuscles(i)
       const isCoreOnly = i === 0 && overrideMuscles !== undefined && overrideMuscles.length === 0 && inp.overrideAreas?.includes('core')
-      return buildGymDay(i + 1, isCoreOnly ? [] : muscles, dayTitle(i, muscles), c, inp.goal, week + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, styles, isCoreOnly)
+      return buildGymDay(i + 1, isCoreOnly ? [] : muscles, dayTitle(i, muscles), c, inp.goal, pickWeek + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, styles, isCoreOnly)
     })
   }
+  // Her one target number + cue per lift, replayed from her real sessions.
+  base.progression = Object.fromEntries(Array.from(tracked.entries()).map(([name, r]) => [name, targetFor(r, inp.exerciseHistory?.[name] || [], week)]))
+  if (deload) base.deload = true
   return base
 }

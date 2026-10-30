@@ -9,7 +9,7 @@ import type { Level, Injury } from '@/lib/workout-exercises'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { localDateISO, addDaysISO, currentWeekNumber, getTimezone, localHourNumber } from '@/lib/localdate'
 import { computeLowFuelToday } from '@/lib/workout-assembly'
-import { getRecentlyTrainedMuscles } from '@/lib/progression'
+import { getRecentlyTrainedMuscles, getExerciseSessions } from '@/lib/progression'
 import { parseStoredGoal } from '@/lib/goals'
 import { parseStoredTrainingStyles } from '@/lib/training-styles'
 
@@ -143,9 +143,12 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
     // skill/intensity state reaches the assembly engine for her real,
     // displayed session (as opposed to a preview/PDF render elsewhere that
     // doesn't need to reflect live progression).
-    const [progressionOverrides, recentlyTrainedMuscles] = await Promise.all([
+    // Double progression (lib/double-progression.ts): her real finished
+    // sessions per exercise → each lift's target reps + cue for today.
+    const [progressionOverrides, recentlyTrainedMuscles, exerciseHistory] = await Promise.all([
       getProgressionOverrides(enrollment.id as string),
       getRecentlyTrainedMuscles(enrollment.id as string),
+      getExerciseSessions(enrollment.id as string, (enrollment.created_at as string) || new Date().toISOString()),
     ])
     program = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex,
@@ -157,6 +160,7 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
       activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
       lowFuelToday,
       recentlyTrainedMuscles,
+      exerciseHistory,
     })
   }
 

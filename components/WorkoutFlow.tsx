@@ -64,10 +64,13 @@ function Circles({ total, done, active }: { total: number; done: number; active:
   )
 }
 
-export default function WorkoutFlow({ blocks, onFinish, onEffort, onProgress, onClose, menu }: {
+export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onProgress, onClose, menu }: {
   blocks: Block[]
   onFinish: () => void
   onEffort: (names: string[], effort: Effort, setIndex: number) => void
+  // Double progression: every Done on a rep set is logged (0-based set index),
+  // so a finished session can be told apart from a cut-short one.
+  onSetDone?: (names: string[], setIndex: number) => void
   onProgress?: (doneExercises: number, totalExercises: number) => void
   onClose: () => void
   menu?: ReactNode            // day switch / music / trained elsewhere, tucked behind "⋯"
@@ -131,6 +134,8 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onProgress, on
     hapticTap(30)
     window.dispatchEvent(new Event('luf-music-start'))
     if (block.kind !== 'exercise') { next(); return }
+    const counted = block.moves.filter((m) => !m.seconds).map((m) => m.name)
+    if (counted.length) onSetDone?.(counted, round)
     const filled = round + 1
     setRound(filled)
     setTimer(null)
@@ -270,7 +275,10 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onProgress, on
                   <span className="min-w-0" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: block.moves.length > 2 ? 22 : 28, lineHeight: 0.95, textTransform: 'uppercase' }}>
                     <span style={{ color: GOLD }}>{k + 1}.</span> {m.name}
                   </span>
-                  <span className="shrink-0" style={{ ...pill, fontSize: 13, color: INK }}>{repText(m, round).toUpperCase()}</span>
+                  <span className="shrink-0 flex flex-col items-end gap-0.5">
+                    <span style={{ ...pill, fontSize: 13, color: INK }}>{repText(m, round).toUpperCase()}</span>
+                    {m.progressCue && <span className="text-[12px] font-semibold text-right" style={{ color: GOLD }}>{m.progressCue}</span>}
+                  </span>
                 </div>
               </div>
             ))}
@@ -294,6 +302,8 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onProgress, on
               {timed && timer != null ? clock(timer) : pair ? (block.rounds > 1 ? `Round ${round + 1} of ${block.rounds}` : 'One round') : repText(single, round)}
             </span>
           </div>
+          {/* Double progression: one short gold line under the reps ("Go up a weight today."). */}
+          {!pair && single.progressCue && <p className="text-[14px] font-semibold leading-snug" style={{ color: GOLD, margin: '-6px 0 0' }}>{single.progressCue}</p>}
           {!pair && single.cue && <p className="text-[15px] leading-snug" style={{ color: MUTE, margin: 0 }}>{single.cue}</p>}
           {pair && <p className="text-[15px]" style={{ color: MUTE, margin: 0 }}>{block.restSec > 0 ? `Then rest ${block.restSec} seconds.` : 'Then you’re done.'}</p>}
         </div>

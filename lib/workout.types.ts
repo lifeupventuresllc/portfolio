@@ -9,6 +9,7 @@
 // ============================================================
 import type { GymExercise, AbExercise, Level, Injury, Muscle } from './workout-exercises'
 import type { MovementPattern, SkillLevel, IntensityLevel, MuscleGroup } from './exercise-library'
+import type { ExerciseSession, ExerciseTarget } from './double-progression'
 
 export type TrainingStyle = 'compound' | 'split' | 'cardio' | 'none'
 export type FocusArea = 'core' | 'legs' | 'arms' | 'chest' | 'back' | 'shoulders' | 'overall'
@@ -73,6 +74,10 @@ export interface WorkoutInputs {
   // back to `level` exactly as before this system existed — cold start is
   // identical to the pre-progression engine by construction.
   progressionOverrides?: Partial<Record<MovementPattern, { skillLevel: SkillLevel; intensityLevel: IntensityLevel }>>
+  // Double progression (lib/double-progression.ts): her real finished
+  // sessions per exercise name, replayed into each lift's target reps + cue.
+  // Absent → every lift starts at the bottom of its range.
+  exerciseHistory?: Record<string, ExerciseSession[]>
 }
 
 export interface Superset { title: string; push: GymExercise; pull: GymExercise; reps: string }
@@ -107,4 +112,9 @@ export interface WorkoutProgram {
   targetNote?: string
   home?: { minutes: string; warmup: string[]; days: HomeDay[]; cooldown: string[]; walking: string; estCaloriesTotal?: number }
   progressionNote?: string
+  // Double progression: the one rep number + short cue per exercise name
+  // (lib/double-progression.ts). Read by lib/workout-blocks.ts.
+  progression?: Record<string, ExerciseTarget>
+  // Every 6th week: same moves, half the sets.
+  deload?: boolean
 }

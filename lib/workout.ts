@@ -76,13 +76,12 @@ const PROGRESSION_THRESHOLD_WEEKS = 3
 export function applyProgressiveOverload(program: WorkoutProgram, consistencyWeeks: number): WorkoutProgram {
   if (consistencyWeeks < PROGRESSION_THRESHOLD_WEEKS) return program
   const note = `${consistencyWeeks} weeks consistent at this level — time to push a little harder.`
+  // Gym lifts: double progression (lib/double-progression.ts) already moves
+  // each lift's target reps and says when to add weight, so only the note
+  // is added here (2026-10-30). Home: only timed moves ("30 sec") stretch —
+  // rep moves are on double progression too.
   if (program.track === 'gym' && program.gymDays?.length) {
-    const cue = ' — go up in weight or reps from last time'
-    const gymDays = program.gymDays.map((day) => ({
-      ...day,
-      supersets: day.supersets.map((s) => (s.reps.includes(cue) ? s : { ...s, reps: `${s.reps}${cue}` })),
-    }))
-    return { ...program, gymDays, progressionNote: note }
+    return { ...program, progressionNote: note }
   }
   if (program.track === 'home' && program.home) {
     const bump = (d: string): string => {

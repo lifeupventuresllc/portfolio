@@ -53,8 +53,9 @@ export async function assessEarlyStruggle(enrollmentId: string, todayISO: string
 
   // Signal 2: real hard effort, twice, in her first sets ever — she's
   // trying, but the plan itself is landing too heavy right out of the gate.
+  // Easy/Hard taps only — plain Done rows ('right', double progression) aren't an effort signal.
   const { data: sets } = await svc.from('workout_set_logs').select('effort')
-    .eq('enrollment_id', enrollmentId).gte('logged_on', enrolledOnISO).order('created_at', { ascending: true }).limit(6)
+    .eq('enrollment_id', enrollmentId).in('effort', ['easy', 'hard']).gte('logged_on', enrolledOnISO).order('created_at', { ascending: true }).limit(6)
   const hardCount = (sets || []).filter((s) => s.effort === 'hard').length
   if (hardCount >= EARLY_HARD_EFFORT_MIN_COUNT) return { struggling: true, reason: 'early_hard_effort' }
 
