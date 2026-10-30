@@ -6,6 +6,7 @@ import Link from 'next/link'
 import type { MealOption, EatStyle, OrderDestination } from '@/lib/meal-pick'
 import { orderParts, skipLine, chainAddOns, GENERIC_ADDONS, pasteText, copyText, type AddOn } from '@/lib/order-exact'
 import { hapticTap } from '@/lib/haptics'
+import { orderLink, openOrder, appFirstOn, APP_FIRST_KEY, ORDER_APP_LABEL, type OrderApp, type OrderLink } from '@/lib/order-link'
 import LocationOptIn from '@/components/LocationOptIn'
 import MealDrop from '@/components/MealDrop'
 
@@ -120,7 +121,7 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
   // her best fit. SHUFFLE never touches it.
   const [kept, setKept] = useState(0)
   const [busy, setBusy] = useState(false)
-  const [done, setDone] = useState<{ card: PickCard; left: number; entryId: string | null; failed?: boolean } | null>(null)
+  const [done, setDone] = useState<{ card: PickCard; left: number; entryId: string | null; failed?: boolean; app?: OrderApp; link?: OrderLink; blocked?: boolean } | null>(null)
   // 2026-10-26 (Asa's mockup): an eat-out tap shows "Order exactly this"
   // first, so what she orders is what we count.
   const [ordering, setOrdering] = useState<PickCard | null>(null)
@@ -179,12 +180,20 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
     }, 180)
   }
 
-  async function choose(card: PickCard) {
+  async function choose(card: PickCard, app?: OrderApp) {
     if (busy) return
     setBusy(true)
-    // Open her delivery app inside the tap itself — browsers block a new
-    // window opened after an await.
-    if (card.dest.url) window.open(card.dest.url, '_blank', 'noopener,noreferrer')
+    // Open the delivery app inside the tap itself — browsers block a new
+    // window opened after an await. One function builds the link
+    // (lib/order-link.ts): exact item → store page → search with the
+    // restaurant + meal typed in.
+    let link: OrderLink | undefined, blocked = false
+    const useApp: OrderApp = app || card.dest.app || 'doordash'
+    if (card.kind === 'out' && card.dest.url) {
+      link = orderLink({ place: card.place, name: card.name, key: card.key }, useApp)
+      copyText(link.copy)
+      blocked = !openOrder(link, appFirstOn())
+    }
     let entryId: string | null = null
     let failed = false
     try {
@@ -192,7 +201,7 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
       post({ action: 'picked', key: card.key })
     } catch { failed = true /* still show done — the order app is already open */ }
     // Not saved → the number doesn't move, and the screen says so with a retry.
-    setDone({ card, left: failed ? Math.max(0, remainingCal) : Math.max(0, remainingCal - card.cal), entryId, failed })
+    setDone({ card, left: failed ? Math.max(0, remainingCal) : Math.max(0, remainingCal - card.cal), entryId, failed, app: useApp, link, blocked })
     setOrdering(null)
     setBusy(false)
   }
@@ -237,7 +246,8 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
     // One tap (2026-10-29, Asa: "still so many steps"): copy her meal, open
     // the delivery site on that restaurant, and count it — all in this tap.
     // What to order shows on the next screen instead of a screen before.
-    if (card.kind === 'out' && card.dest.url) { hapticTap(); copyText(pasteText(card.place, card.name)); choose(card) } else choose(card)
+    if (card.kind === 'out' && card.dest.url) hapticTap()
+    choose(card)
   }
 
   // ---------- order exactly this ----------
@@ -340,7 +350,7 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={c.photo} alt="" className="absolute inset-0 w-full h-full object-cover rw-photo" />
                 <span className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,0) 30%, rgba(2,31,22,0.94) 100%)' }} />
-                <span className="absolute left-4 right-4 bottom-3.5 flex items-end justify-between gap-3">
+                <span className="absolute left-4 right-4 flex items-end justify-between gap-3" style={{ bottom: c.kind === 'out' && c.dest.url ? 60 : 14 }}>
                   <span className="min-w-0">
                     <span className="block" style={{ ...head(26), lineHeight: 0.95, color: C.ivory }}>{c.short}</span>
                     <span className="block mt-1" style={{ ...mono(11), color: SOFT }}>
@@ -363,6 +373,18 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
                   </span>
                 </span>
               </button>
+              {c.kind === 'out' && c.dest.url && (
+                // Order buttons (2026-10-30, Asa's spec): one tap on the app she wants.
+                <span className="absolute left-3 right-3 bottom-3 grid grid-cols-2 gap-2">
+                  {(['doordash', 'ubereats'] as const).map((a) => (
+                    <button key={a} type="button" disabled={busy} onClick={() => { hapticTap(); choose(c, a) }}
+                      className="nf-press rounded-full disabled:opacity-60"
+                      style={{ height: 40, background: (c.dest.app || 'doordash') === a ? C.gold : 'rgba(2,31,22,.78)', color: (c.dest.app || 'doordash') === a ? C.bg : C.ivory, border: `1px solid ${(c.dest.app || 'doordash') === a ? C.gold : 'rgba(237,231,218,.3)'}`, backdropFilter: 'blur(6px)', ...mono(10) }}>
+                      ORDER ON {ORDER_APP_LABEL[a].toUpperCase()}
+                    </button>
+                  ))}
+                </span>
+              )}
               {c.friend && (
                 // "<Name> had this" (Friends, 2026-10-26): her partner picked
                 // this lately, and it passed every one of her own checks.
@@ -383,6 +405,7 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
           )
         })}
       </div>
+      <OrderDebug card={shown.map((i) => cards[i]).find((c) => c?.kind === 'out' && c.dest.url)} />
       {canSwap && (
         <button type="button" onClick={shuffle} disabled={busy || fading != null} aria-label="Shuffle: keep one, swap the other"
           className="nf-press w-full rounded-full mt-3 mb-4 flex items-center justify-center gap-2 disabled:opacity-60"
@@ -470,7 +493,7 @@ function OrderExact({ card, busy, onBack, onOpen }: { card: PickCard; busy: bool
 // counted already. "Got something different?" fixes the count in one tap —
 // an add-on goes on top, a different meal goes to her food log instead.
 function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner, overNow = 0 }: {
-  done: { card: PickCard; left: number; entryId: string | null; failed?: boolean }
+  done: { card: PickCard; left: number; entryId: string | null; failed?: boolean; app?: OrderApp; link?: OrderLink; blocked?: boolean }
   slot: string; meal: string; remainingCal: number; calBudget?: number; nextUp: string | null; banner?: ReactNode; overNow?: number
 }) {
   const router = useRouter()
@@ -485,7 +508,9 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner, ove
   const overAll = done.failed ? overNow : overNow + Math.max(0, done.card.cal + extra - Math.max(0, remainingCal))
   const whole = calBudget && calBudget > 0 ? calBudget : remainingCal
   const pct = whole > 0 ? Math.min(100, Math.max(0, Math.round(((whole - left) / whole) * 100))) : 100
-  const appName = card.dest.app === 'ubereats' ? 'Uber Eats' : 'DoorDash'
+  const app: OrderApp = done.app || card.dest.app || 'doordash'
+  const appName = ORDER_APP_LABEL[app]
+  const link = done.link || orderLink({ place: card.place, name: card.name, key: card.key }, app)
   const official = chainAddOns(card.place)
 
   async function toggle(a: AddOn) {
@@ -553,8 +578,10 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner, ove
           <span style={{ fontSize: 13, color: SOFT }}>Skip {skipLine(card.place)}. Already copied, paste it in search.</span>
         </div>
         {nextUp && <span style={{ fontSize: 14, color: SOFT }}>{nextUp}</span>}
-        {card.dest.url && (
-          <a href={card.dest.url} target="_blank" rel="noopener noreferrer" onClick={() => { copyText(pasteText(card.place, card.name)) }} className="self-start text-[13px] underline underline-offset-2" style={{ color: SOFT }}>
+        {/* Nothing opened (browser blocked it): the meal, a Copy button, and how to finish. */}
+        {done.blocked && <CopyFallback text={link.copy} appName={appName} />}
+        {card.dest.url && !done.blocked && (
+          <a href={link.web} target="_blank" rel="noopener noreferrer" onClick={() => { copyText(link.copy) }} className="self-start text-[13px] underline underline-offset-2" style={{ color: SOFT }}>
             Didn&apos;t open? Copy + open {appName}
           </a>
         )}
@@ -663,6 +690,48 @@ export function FoodSettings({ eatStyle, mealBudget, orderApp }: { eatStyle: Eat
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// "Open DoorDash, tap Search, paste." — when the browser blocked opening it.
+function CopyFallback({ text, appName }: { text: string; appName: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <div className="flex flex-col gap-2" style={{ borderRadius: 16, padding: '12px 14px', background: 'rgba(229,169,60,.1)', border: '1px solid rgba(229,169,60,.45)' }}>
+      <span style={{ fontSize: 14, fontWeight: 600 }}>Open {appName}, tap Search, paste.</span>
+      <div className="flex items-center gap-2" style={{ borderRadius: 12, padding: 5, paddingLeft: 12, background: C.ivory }}>
+        <span className="flex-1 min-w-0 truncate" style={{ color: C.bg, fontSize: 16, fontWeight: 700 }}>{text}</span>
+        <button type="button" onClick={() => { hapticTap(); copyText(text); setCopied(true) }} className="nf-press shrink-0 rounded-lg px-4" style={{ height: 40, background: C.gold, color: C.bg, ...mono(12) }}>{copied ? 'COPIED ✓' : 'COPY'}</button>
+      </div>
+    </div>
+  )
+}
+
+// Debug note for Asa (2026-10-30 spec item 7): open Nutrition with ?debug=1
+// once (remembered on this phone). Shows taps from "suggested meal" to the
+// delivery app's order screen, which link type was used, and an app-first switch.
+function OrderDebug({ card }: { card?: PickCard }) {
+  const [on, setOn] = useState(false)
+  const [appFirst, setAppFirst] = useState(false)
+  useEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get('debug') === '1') localStorage.setItem('luf_debug', '1')
+      setOn(localStorage.getItem('luf_debug') === '1')
+      setAppFirst(appFirstOn())
+    } catch { /* ignore */ }
+  }, [])
+  if (!on || !card) return null
+  const link = orderLink({ place: card.place, name: card.name, key: card.key }, card.dest.app || 'doordash')
+  const there = link.method === 'item' ? 0 : link.method === 'store' ? 1 : 2
+  const how = link.method === 'item' ? 'opens on the meal' : link.method === 'store' ? 'opens on the restaurant: tap the meal' : 'opens search: tap the restaurant, tap the meal'
+  return (
+    <div className="mt-3 rounded-xl px-3 py-2 flex flex-col gap-1" style={{ border: '1px dashed rgba(237,231,218,.35)', ...mono(10), color: SOFT }}>
+      <span>DEBUG · TAPS TO ORDER SCREEN: {1 + there} (1 HERE + {there} IN {ORDER_APP_LABEL[card.dest.app || 'doordash'].toUpperCase()})</span>
+      <span style={{ textTransform: 'none', letterSpacing: 0, fontFamily: 'inherit' }}>Link: {link.method} · {how} · &ldquo;{link.copy}&rdquo;</span>
+      <button type="button" className="self-start underline" onClick={() => { const v = !appFirst; setAppFirst(v); try { localStorage.setItem(APP_FIRST_KEY, v ? '1' : '0') } catch { /* ignore */ } }}>
+        APP FIRST: {appFirst ? 'ON' : 'OFF'} (TAP TO SWITCH)
+      </button>
     </div>
   )
 }
