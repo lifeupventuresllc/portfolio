@@ -727,6 +727,64 @@ export function FoodSettings({ eatStyle, mealBudget, orderApp }: { eatStyle: Eat
   )
 }
 
+// When she usually eats (habit memory, 2026-10-30): one row per meal —
+// "Lunch · usually 12:30–1:30pm" — learned from her own meals, or a normal
+// time until she has 3 days of one. Tap a row to set it herself; her time
+// wins until she taps "Use my habits again". Lives on /plan/nutrition/log.
+export type MealTimeRow = { meal: 'breakfast' | 'lunch' | 'dinner' | 'snack'; minute: number; window: string; source: 'learned' | 'default' | 'set' }
+const HABIT_GOLD = '#E5A93C'
+const SOURCE_WORDS: Record<MealTimeRow['source'], string> = { learned: 'From your meals', default: 'Normal time', set: 'You set this' }
+const MEAL_WORDS: Record<MealTimeRow['meal'], string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' }
+const clock = (min: number) => {
+  const m = ((min % 1440) + 1440) % 1440, h = Math.floor(m / 60)
+  return `${h % 12 || 12}:${String(m % 60).padStart(2, '0')}${h < 12 ? 'am' : 'pm'}`
+}
+
+export function MealTimesSettings({ rows }: { rows: MealTimeRow[] }) {
+  const router = useRouter()
+  const [open, setOpen] = useState<MealTimeRow['meal'] | null>(null)
+  const [draft, setDraft] = useState(0)
+  const [busy, setBusy] = useState(false)
+  async function save(meal: MealTimeRow['meal'], minute: number | null) {
+    setBusy(true)
+    await fetch('/api/plan/meal-pick', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'meal_time', meal, minute }) }).catch(() => null)
+    setOpen(null)
+    router.refresh()
+    setBusy(false)
+  }
+  return (
+    <div className="rounded-2xl p-4 flex flex-col gap-2" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+      <p className="mb-1" style={{ ...mono(11), color: C.faint, textTransform: 'uppercase' }}>When you usually eat</p>
+      {rows.map((r) => {
+        const isOpen = open === r.meal
+        return (
+          <div key={r.meal} className="rounded-xl" style={{ border: `1px solid ${isOpen ? HABIT_GOLD : C.line}` }}>
+            <button type="button" onClick={() => { hapticTap(); setOpen(isOpen ? null : r.meal); setDraft(r.minute) }}
+              className="nf-press w-full flex items-center gap-3 px-3 py-3 text-left">
+              <span style={{ ...head(22), color: C.ivory, lineHeight: 1 }}>{MEAL_WORDS[r.meal]}</span>
+              <span className="flex-1 text-sm" style={{ color: C.muted }}>· usually {r.window}</span>
+              <span style={{ ...mono(9), color: r.source === 'set' ? HABIT_GOLD : C.faint, textTransform: 'uppercase' }}>{SOURCE_WORDS[r.source]}</span>
+            </button>
+            {isOpen && (
+              <div className="px-3 pb-3 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <button type="button" aria-label="15 minutes earlier" onClick={() => setDraft((d) => Math.max(0, d - 15))} className="w-10 h-10 rounded-full text-xl font-bold" style={{ border: `1px solid ${C.line}`, color: C.ivory }}>−</button>
+                  <p className="flex-1 text-center text-3xl font-bold tabular-nums" style={{ color: HABIT_GOLD }}>{clock(draft)}</p>
+                  <button type="button" aria-label="15 minutes later" onClick={() => setDraft((d) => Math.min(1425, d + 15))} className="w-10 h-10 rounded-full text-xl font-bold" style={{ border: `1px solid ${C.line}`, color: C.ivory }}>+</button>
+                  <button type="button" onClick={() => save(r.meal, draft)} disabled={busy || (draft === r.minute && r.source === 'set')} className="rounded-xl px-4 py-2.5 font-bold text-sm disabled:opacity-40" style={{ background: HABIT_GOLD, color: '#0A0A0F' }}>Save</button>
+                </div>
+                {r.source === 'set' && (
+                  <button type="button" onClick={() => save(r.meal, null)} disabled={busy} style={{ ...ghostBtn, height: 40 }}>Use my habits again</button>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // "Open DoorDash, tap Search, paste." — when the browser blocked opening it.
 function CopyFallback({ text, appName }: { text: string; appName: string }) {
   const [copied, setCopied] = useState(false)

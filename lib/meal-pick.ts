@@ -106,46 +106,139 @@ const H = (h: number, m = 0) => h * 60 + m
 
 // HER meal times beat the clock (Asa, 2026-10-20: "what ranks over that is
 // actually user data — late lunches because of work, early dinners"). Each
-// main meal has an anchor: the time she usually eats it, learned from her
-// own food log (mealTimesFrom below), or a normal default until she's
-// logged enough. The windows hang off those anchors.
-export interface MealTimes { breakfast: number; lunch: number; dinner: number; learned: StopId[] }
-export const DEFAULT_MEAL_TIMES: MealTimes = { breakfast: H(7, 30), lunch: H(12, 30), dinner: H(18, 30), learned: [] }
+// meal has an anchor: the time she usually eats it, learned from her own
+// food log (habitTimes below), a time she set herself in Today's food
+// settings, or a normal default until she's logged enough. The windows hang
+// off those anchors.
+export interface MealTimes {
+  breakfast: number; lunch: number; dinner: number; snack: number
+  learned: StopId[]                       // meals whose anchor came from her log
+  usual: Record<HabitMeal, UsualTime>     // the full story per meal (window + source)
+}
+
+// ---- habit memory (Prompt 2, 2026-10-30) --------------------------------
+// Asa: "make the app learn when each user usually eats." Every pick she
+// takes or orders is already a challenge_food_log row (meal + created_at),
+// so that log IS the memory — nothing new is saved. Rules:
+//   - 3+ days with that meal in the last 28 days → her usual time is the
+//     middle (median) of those days' first log of it, shown as a 1-hour
+//     window around it ("lunch, usually 12:30–1:30pm").
+//   - fewer than 3 → defaults: breakfast 8am, lunch 12pm, dinner 6pm,
+//     afternoon snack 3pm.
+//   - only the last 28 days count, so as each new week comes in the oldest
+//     week drops out and the habit keeps up with her life.
+//   - a time she sets herself wins until she taps "Use my habits again".
+export type HabitMeal = 'breakfast' | 'lunch' | 'dinner' | 'snack'
+export type HabitSource = 'learned' | 'default' | 'set'
+export interface UsualTime {
+  meal: HabitMeal
+  minute: number      // local minute of the day (0–1439)
+  start: number       // the 1-hour window: minute − 30 …
+  end: number         // … minute + 30
+  source: HabitSource
+  days: number        // how many days in the last 28 she logged this meal
+}
+export type MealTimeOverrides = Partial<Record<HabitMeal, number>>  // form_data.meal_times_set
+export const HABIT_MEALS: HabitMeal[] = ['breakfast', 'lunch', 'dinner', 'snack']
+export const HABIT_DEFAULTS: Record<HabitMeal, number> = { breakfast: H(8), lunch: H(12), dinner: H(18), snack: H(15) }
+export const HABIT_LOOKBACK_DAYS = 28
+export const HABIT_MIN_DAYS = 3
+
+export interface HabitEntry { meal: string; minute: number; day: string }   // day = her local YYYY-MM-DD
+
+const round5 = (m: number) => Math.round(m / 5) * 5
+const median = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b), mid = Math.floor(s.length / 2)
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2
+}
+const minusDays = (iso: string, n: number) => {
+  const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10)
+}
+
+/** Clean up a stored override: whole minutes inside the day, or nothing. */
+export function cleanOverrides(raw: unknown): MealTimeOverrides {
+  const out: MealTimeOverrides = {}
+  if (!raw || typeof raw !== 'object') return out
+  const r = raw as Record<string, unknown>
+  for (const m of HABIT_MEALS) {
+    const v = Number(r[m])
+    if (r[m] != null && Number.isFinite(v) && v >= 0 && v < H(24)) out[m] = Math.round(v)
+  }
+  return out
+}
+
+/** Her usual time for each meal (see the rules above). `todayIso` keeps it
+ * to the 28 days before today; leave it out only when the caller already
+ * fetched exactly that window. */
+export function habitTimes(history: HabitEntry[], opts: { todayIso?: string; overrides?: MealTimeOverrides } = {}): Record<HabitMeal, UsualTime> {
+  const today = opts.todayIso
+  const since = today ? minusDays(today, HABIT_LOOKBACK_DAYS) : null
+  const recent = history.filter((h) => h.minute >= H(3) && (!since || !today || (h.day >= since && h.day < today)))
+  // First log of a meal each day = when she sat down to eat it (one lunch
+  // logged as burger + fries + drink is still one lunch).
+  const firstPerDay = (meal: HabitMeal, keep: (min: number) => boolean = () => true) => {
+    const perDay = new Map<string, number>()
+    for (const h of recent) if (h.meal === meal && keep(h.minute)) perDay.set(h.day, Math.min(perDay.get(h.day) ?? Infinity, h.minute))
+    return Array.from(perDay.values())
+  }
+  const overrides = opts.overrides || {}
+  const build = (meal: HabitMeal, times: number[]): UsualTime => {
+    const set = overrides[meal]
+    const learned = times.length >= HABIT_MIN_DAYS
+    const minute = set != null ? set : learned ? round5(median(times)) : HABIT_DEFAULTS[meal]
+    return { meal, minute, start: minute - 30, end: minute + 30, source: set != null ? 'set' : learned ? 'learned' : 'default', days: times.length }
+  }
+  const breakfast = build('breakfast', firstPerDay('breakfast'))
+  const lunch = build('lunch', firstPerDay('lunch'))
+  const dinner = build('dinner', firstPerDay('dinner'))
+  // The snack worth learning is the afternoon one — between her lunch and
+  // her dinner — so a late-night bowl of cereal doesn't drag it around.
+  const snack = build('snack', firstPerDay('snack', (m) => m > lunch.minute && m < dinner.minute))
+  return { breakfast, lunch, dinner, snack }
+}
 
 // A meal's window opens 2h before her usual time (dinner: 1.5h) and stays
 // open until the next meal's window opens — a late lunch is still lunch. The
-// afternoon snack sits 2h after lunch, the evening snack 1h after dinner;
-// a snack only shows once the meal before it is done.
+// afternoon snack opens an hour before her usual snack time (never sooner
+// than an hour after lunch), the evening snack 1h after dinner; a snack only
+// shows once the meal before it is done.
 export function dayStops(t: MealTimes = DEFAULT_MEAL_TIMES): DayStop[] {
   const lunchOpen = t.lunch - 120
   const dinnerOpen = t.dinner - 90
   return [
     { id: 'breakfast', slot: 'Breakfast', label: 'breakfast', start: Math.min(H(4), t.breakfast - 120), end: lunchOpen, share: 0.25 },
     { id: 'lunch', slot: 'Lunch', label: 'lunch', start: lunchOpen, end: dinnerOpen, share: 0.33 },
-    { id: 'snack_pm', slot: 'Snack', label: 'afternoon snack', start: Math.min(t.lunch + 120, dinnerOpen), end: dinnerOpen, share: 0.07 },
+    { id: 'snack_pm', slot: 'Snack', label: 'afternoon snack', start: Math.min(Math.max(t.snack - 60, t.lunch + 60), dinnerOpen), end: dinnerOpen, share: 0.07 },
     { id: 'dinner', slot: 'Dinner', label: 'dinner', start: dinnerOpen, end: H(24), share: 0.30 },
     { id: 'snack_eve', slot: 'Snack', label: 'evening snack', start: Math.min(t.dinner + 60, H(23)), end: H(24), share: 0.05 },
   ]
 }
+
+/** The anchors planDay runs on, from her habit (habitTimes). Kept in order
+ * with room between meals, so the windows always make sense even when a
+ * learned or set time is odd. */
+export function mealTimesFrom(history: HabitEntry[], opts: { todayIso?: string; overrides?: MealTimeOverrides } = {}): MealTimes {
+  const usual = habitTimes(history, opts)
+  const breakfast = clamp(usual.breakfast.minute, H(4), H(14))
+  const lunch = clamp(Math.max(usual.lunch.minute, breakfast + 150), H(9), H(19))
+  const dinner = clamp(Math.max(usual.dinner.minute, lunch + 150), H(14), H(23))
+  const snack = clamp(usual.snack.minute, lunch + 60, dinner - 60)
+  const learned: StopId[] = (['breakfast', 'lunch', 'dinner'] as const).filter((m) => usual[m].source === 'learned')
+  if (usual.snack.source === 'learned') learned.push('snack_pm')
+  return { breakfast, lunch, dinner, snack, learned, usual }
+}
+
+export const DEFAULT_MEAL_TIMES: MealTimes = mealTimesFrom([])
 export const DAY_STOPS = dayStops()
 
-/** Her usual time for each meal — the middle of the times she's logged it
- * over the past few weeks (needs 3+ days so one odd day doesn't move it).
- * Kept in order with room between meals, so the windows always make sense. */
-export function mealTimesFrom(history: { meal: string; minute: number; day: string }[]): MealTimes {
-  const out: MealTimes = { ...DEFAULT_MEAL_TIMES, learned: [] }
-  for (const meal of ['breakfast', 'lunch', 'dinner'] as const) {
-    // first log of that meal each day = when she sat down to eat it
-    const perDay = new Map<string, number>()
-    for (const h of history) if (h.meal === meal && h.minute >= H(3)) perDay.set(h.day, Math.min(perDay.get(h.day) ?? Infinity, h.minute))
-    const times = Array.from(perDay.values()).sort((x, y) => x - y)
-    if (times.length >= 3) { out[meal] = times[Math.floor(times.length / 2)]; out.learned.push(meal) }
+/** "12:30–1:30pm" — her usual window, plain words. */
+export function windowLabel(u: Pick<UsualTime, 'start' | 'end'>): string {
+  const part = (min: number) => {
+    const m = ((min % H(24)) + H(24)) % H(24), h = Math.floor(m / 60)
+    return { t: `${h % 12 || 12}:${String(m % 60).padStart(2, '0')}`, ap: h >= 12 ? 'pm' : 'am' }
   }
-  // Keep breakfast < lunch < dinner with at least 2.5h between them.
-  out.breakfast = clamp(out.breakfast, H(4), H(14))
-  out.lunch = clamp(Math.max(out.lunch, out.breakfast + 150), H(9), H(19))
-  out.dinner = clamp(Math.max(out.dinner, out.lunch + 150), H(14), H(23))
-  return out
+  const a = part(u.start), b = part(u.end)
+  return a.ap === b.ap ? `${a.t}–${b.t}${b.ap}` : `${a.t}${a.ap}–${b.t}${b.ap}`
 }
 
 export interface LoggedMeal { meal: string; minute: number }   // food-log meal + local minute it was logged

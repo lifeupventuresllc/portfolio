@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { updateMemory, type MealMemory } from '@/lib/meal-pick'
+import { updateMemory, cleanOverrides, HABIT_MEALS, type MealMemory, type HabitMeal } from '@/lib/meal-pick'
 import { localDateISO } from '@/lib/localdate'
 
 // The Nutrition tab's write side (2026-10-19). Everything lives on her own
@@ -9,10 +9,13 @@ import { localDateISO } from '@/lib/localdate'
 //   meal_budget  $ for one meal   — same
 //   meal_memory  per-meal picked/skipped counts (the learning loop)
 //   order_app    'doordash' | 'ubereats' — which delivery app a pick opens
+//   meal_times_set  { lunch: 780, … } — usual meal times she set herself
+//                   (minutes of her day); learned ones come from her food log
 // Calorie logging itself goes through the existing /api/plan/food-log.
 type Body = {
-  action?: 'picked' | 'skipped' | 'style' | 'budget' | 'report' | 'order_app'
+  action?: 'picked' | 'skipped' | 'style' | 'budget' | 'report' | 'order_app' | 'meal_time'
   key?: string; keys?: string[]
+  meal?: string; minute?: number | null
   eatStyle?: string; mealBudget?: number
   message?: string
   orderApp?: string
@@ -61,6 +64,19 @@ export async function POST(request: NextRequest) {
   } else if (body.action === 'order_app') {
     if (body.orderApp !== 'doordash' && body.orderApp !== 'ubereats') return NextResponse.json({ error: 'Bad app.' }, { status: 400 })
     formData.order_app = body.orderApp
+  } else if (body.action === 'meal_time') {
+    // Her own usual time for one meal (Today's food settings) — wins over the
+    // learned one until she taps "Use my habits again" (minute: null).
+    if (!HABIT_MEALS.includes(body.meal as HabitMeal)) return NextResponse.json({ error: 'Bad meal.' }, { status: 400 })
+    const set = cleanOverrides(formData.meal_times_set)
+    if (body.minute == null) delete set[body.meal as HabitMeal]
+    else {
+      const n = Math.round(Number(body.minute))
+      if (!Number.isFinite(n) || n < 0 || n >= 24 * 60) return NextResponse.json({ error: 'Bad time.' }, { status: 400 })
+      set[body.meal as HabitMeal] = n
+    }
+    if (Object.keys(set).length) formData.meal_times_set = set
+    else delete formData.meal_times_set
   } else if (body.action === 'picked' || body.action === 'skipped') {
     let memory = (formData.meal_memory || {}) as MealMemory
     const keys = body.action === 'picked' ? [body.key] : (body.keys || [])

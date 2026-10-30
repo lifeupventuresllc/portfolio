@@ -4,9 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import FoodLog from '@/components/FoodLog'
 import MealPhotoButton from '@/components/MealPhotoButton'
 import KrogerCart from '@/components/KrogerCart'
-import { FoodSettings } from '@/components/NutritionPicks'
+import { FoodSettings, MealTimesSettings } from '@/components/NutritionPicks'
 import { loadNutritionDay } from '@/lib/nutrition-day'
-import { defaultMealBudget, type EatStyle } from '@/lib/meal-pick'
+import { defaultMealBudget, windowLabel, HABIT_MEALS, type EatStyle } from '@/lib/meal-pick'
 import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
 
 export const dynamic = 'force-dynamic'
@@ -23,7 +23,7 @@ export default async function FoodLogPage() {
 
   const day = await loadNutritionDay(user)
   if (!day || !day.calBudget || !day.intake) redirect('/plan/nutrition')
-  const { intake, planned, calBudget, todaysDayType, eatingOutToday, todayMeals, mealIdx } = day
+  const { intake, planned, calBudget, todaysDayType, eatingOutToday, todayMeals, mealIdx, mealTimes } = day
 
   const formData = (intake.form_data || {}) as Record<string, unknown>
   // 'mix' (new intake) shows here as eating out — that's the side her money number is for.
@@ -46,6 +46,7 @@ export default async function FoodLogPage() {
         />
         <KrogerCart />
         <FoodSettings key={`${eatStyle}-${mealBudget}`} eatStyle={eatStyle} mealBudget={mealBudget} orderApp={formData.order_app === 'ubereats' ? 'ubereats' : 'doordash'} />
+        <MealTimesSettings rows={HABIT_MEALS.map((m) => { const u = mealTimes.usual[m]; return { meal: m, minute: u.minute, window: windowLabel(u), source: u.source } })} />
         <Link href="/photo-credits" className="self-center text-[11px] underline underline-offset-2 py-2" style={{ color: 'rgba(237,231,218,0.35)' }}>Meal photo credits</Link>
       </div>
     </div>
