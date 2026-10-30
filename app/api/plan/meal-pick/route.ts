@@ -11,9 +11,12 @@ import { localDateISO } from '@/lib/localdate'
 //   order_app    'doordash' | 'ubereats' — which delivery app a pick opens
 //   meal_times_set  { lunch: 780, … } — usual meal times she set herself
 //                   (minutes of her day); learned ones come from her food log
+//   meal_offers_off true — she turned meal-time picks (the Yes / No
+//                   notification, app/api/cron/meal-offer) off
 // Calorie logging itself goes through the existing /api/plan/food-log.
 type Body = {
-  action?: 'picked' | 'skipped' | 'style' | 'budget' | 'report' | 'order_app' | 'meal_time'
+  action?: 'picked' | 'skipped' | 'style' | 'budget' | 'report' | 'order_app' | 'meal_time' | 'offers'
+  on?: boolean
   key?: string; keys?: string[]
   meal?: string; minute?: number | null
   eatStyle?: string; mealBudget?: number
@@ -77,6 +80,11 @@ export async function POST(request: NextRequest) {
     }
     if (Object.keys(set).length) formData.meal_times_set = set
     else delete formData.meal_times_set
+  } else if (body.action === 'offers') {
+    // Meal-time picks on/off — off is saved, on is the default.
+    if (typeof body.on !== 'boolean') return NextResponse.json({ error: 'Bad value.' }, { status: 400 })
+    if (body.on) delete formData.meal_offers_off
+    else formData.meal_offers_off = true
   } else if (body.action === 'picked' || body.action === 'skipped') {
     let memory = (formData.meal_memory || {}) as MealMemory
     const keys = body.action === 'picked' ? [body.key] : (body.keys || [])

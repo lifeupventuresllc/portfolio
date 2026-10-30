@@ -10,7 +10,13 @@ export const pushConfigured = !!(PUBLIC && PRIVATE)
 if (pushConfigured) webpush.setVapidDetails(SUBJECT, PUBLIC, PRIVATE)
 
 export type StoredSub = { endpoint: string; p256dh: string; auth: string }
-export type PushPayload = { title: string; body: string; url?: string }
+// actions/tag/offerId: the meal-time offer's Yes / No buttons (public/sw.js).
+// Android + desktop Chrome show the buttons; iPhone web push ignores them and
+// a tap opens `url` instead.
+export type PushPayload = {
+  title: string; body: string; url?: string
+  tag?: string; actions?: { action: string; title: string }[]; offerId?: string
+}
 
 // Returns 'gone' when the subscription is dead (404/410) so the caller can prune it.
 export async function sendPush(sub: StoredSub, payload: PushPayload): Promise<'ok' | 'gone' | 'error'> {

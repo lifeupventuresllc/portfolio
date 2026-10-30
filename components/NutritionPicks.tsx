@@ -785,6 +785,35 @@ export function MealTimesSettings({ rows }: { rows: MealTimeRow[] }) {
   )
 }
 
+// Meal-time picks on/off (Prompt 3, 2026-10-30): at her usual meal times one
+// meal arrives as a notification with Yes / No. One tap turns it off (or
+// back on). Lives on /plan/nutrition/log, above "When you usually eat".
+export function MealOffersToggle({ on: initial }: { on: boolean }) {
+  const [on, setOn] = useState(initial)
+  const [busy, setBusy] = useState(false)
+  async function flip() {
+    hapticTap()
+    const next = !on
+    setOn(next)
+    setBusy(true)
+    const res = await fetch('/api/plan/meal-pick', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'offers', on: next }) }).catch(() => null)
+    if (!res || !res.ok) setOn(!next)
+    setBusy(false)
+  }
+  return (
+    <button type="button" role="switch" aria-checked={on} disabled={busy} onClick={flip}
+      className="nf-press rounded-2xl p-4 flex items-center gap-3 text-left" style={{ background: C.card, border: `1px solid ${on ? HABIT_GOLD : C.line}` }}>
+      <span className="flex-1 flex flex-col gap-1">
+        <span style={{ ...mono(11), color: C.faint, textTransform: 'uppercase' }}>Meal-time picks: {on ? 'On' : 'Off'}</span>
+        <span className="text-sm" style={{ color: C.muted }}>{on ? 'At your usual meal times we send one meal ready to go. Yes or no.' : 'Off. No meal notifications.'}</span>
+      </span>
+      <span aria-hidden className="shrink-0 rounded-full relative" style={{ width: 52, height: 30, background: on ? HABIT_GOLD : 'rgba(237,231,218,.18)', transition: 'background .15s' }}>
+        <span className="absolute rounded-full" style={{ top: 3, left: on ? 25 : 3, width: 24, height: 24, background: on ? C.bg : C.ivory, transition: 'left .15s' }} />
+      </span>
+    </button>
+  )
+}
+
 // "Open DoorDash, tap Search, paste." — when the browser blocked opening it.
 function CopyFallback({ text, appName }: { text: string; appName: string }) {
   const [copied, setCopied] = useState(false)

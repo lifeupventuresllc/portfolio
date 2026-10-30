@@ -10,16 +10,20 @@ import { spentToday } from '@/lib/food-budget'
 // Everything the Nutrition tab (the two picks) and its food-log page
 // (/plan/nutrition/log) both need for today — one loader so the two
 // screens can never disagree on her calorie number.
-export async function loadNutritionDay(user: { id: string; email?: string | null }) {
+// `opts` is for callers outside a page request (the meal-offer cron): her
+// own timezone (no cookie there) and her enrollment by id.
+export async function loadNutritionDay(user: { id: string; email?: string | null }, opts: { tz?: string; enrollmentId?: string } = {}) {
   const svc = createServiceClient()
-  let { data: enrollment } = await svc.from('challenge_enrollments').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).maybeSingle()
-  if (!enrollment && user.email) {
+  let { data: enrollment } = opts.enrollmentId
+    ? await svc.from('challenge_enrollments').select('*').eq('id', opts.enrollmentId).maybeSingle()
+    : await svc.from('challenge_enrollments').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).maybeSingle()
+  if (!enrollment && user.email && !opts.enrollmentId) {
     const { data: byEmail } = await svc.from('challenge_enrollments').select('*').eq('email', user.email).order('created_at', { ascending: false }).maybeSingle()
     enrollment = byEmail || null
   }
   if (!enrollment) return null
 
-  const tz = getTimezone()
+  const tz = opts.tz || getTimezone()
   const todayIso = localDateISO(tz)
   const mealIdx = localMondayIndex(tz)
   const pricesQ = Promise.resolve(svc.from('challenge_food_log').select('price').eq('enrollment_id', enrollment.id).eq('logged_on', todayIso))

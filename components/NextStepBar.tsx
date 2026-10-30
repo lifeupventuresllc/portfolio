@@ -22,7 +22,7 @@ type Bar = { kind: string; instruction: string; restaurant?: string; mealSlot?: 
 // '/plan/nutrition' (2026-10-19): the Nutrition tab's two meal cards are
 // the only thing on that screen — nothing floats over them.
 // /plan/today added 2026-10-25: My Day's own "Let's go" card already is this step.
-const HIDE_ON = ['/plan/intake', '/plan/next', '/plan/coach', '/plan/nutrition', '/plan/today']
+const HIDE_ON = ['/plan/intake', '/plan/next', '/plan/coach', '/plan/nutrition', '/plan/today', '/plan/offer']
 
 export default function NextStepBar() {
   const pathname = usePathname() || ''

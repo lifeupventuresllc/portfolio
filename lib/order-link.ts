@@ -63,6 +63,29 @@ export function orderLink(meal: OrderMeal, app: OrderApp): OrderLink {
   }
 }
 
+// ---- "Yes" on a meal-time offer (Prompt 3, 2026-10-30) -------------------
+// THE one swap point for "if we get full ordering access later, Yes places
+// the order instead". Today ORDERING_LIVE is false, so Yes always opens her
+// delivery app on that meal (the link above). When MealMe's full ordering is
+// connected: fill ITEM_LINKS, implement placeOrder() below, flip
+// ORDERING_LIVE — the offer page, the notification and the API all follow.
+// Never called without her Yes: the only callers are the Yes paths of
+// /api/plan/offer/[id] and the offer page.
+export const ORDERING_LIVE = false
+
+export type YesAction = { kind: 'open'; link: OrderLink } | { kind: 'place'; link: OrderLink }
+export function yesAction(meal: OrderMeal, app: OrderApp): YesAction {
+  const link = orderLink(meal, app)
+  return ORDERING_LIVE && link.method === 'item' ? { kind: 'place', link } : { kind: 'open', link }
+}
+
+/** Places the order through the ordering partner. Not connected yet: it
+ *  never orders and never charges, and says so (placed: false). */
+export async function placeOrder(meal: OrderMeal, app: OrderApp): Promise<{ placed: boolean; note: string }> {
+  void meal; void app
+  return { placed: false, note: 'Ordering is not connected yet.' }
+}
+
 /** Debug switch (Asa testing on his phone): try the installed app first. */
 export const APP_FIRST_KEY = 'luf_order_app_first'
 export function appFirstOn(): boolean {
