@@ -608,7 +608,7 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner, ove
         <div className="flex flex-col gap-1.5" style={{ borderRadius: 16, padding: '12px 14px', background: 'rgba(237,231,218,.06)' }}>
           <span style={{ ...mono(11), color: C.gold }}>ORDER EXACTLY THIS AT {card.place.toUpperCase()}</span>
           <span style={{ fontSize: 15, fontWeight: 600 }}>{orderParts(card.name).join(' · ')}</span>
-          <span style={{ fontSize: 13, color: SOFT }}>Skip {skipLine(card.place)}. Already copied, paste it in search.</span>
+          <span style={{ fontSize: 13, color: SOFT }}>In {card.place}, tap the search box on its menu and paste. It&apos;s already copied. Skip {skipLine(card.place)}.</span>
         </div>
         {nextUp && <span style={{ fontSize: 14, color: SOFT }}>{nextUp}</span>}
         {/* Nothing opened (browser blocked it): the meal, a Copy button, and how to finish. */}
@@ -790,7 +790,7 @@ function CopyFallback({ text, appName }: { text: string; appName: string }) {
   const [copied, setCopied] = useState(false)
   return (
     <div className="flex flex-col gap-2" style={{ borderRadius: 16, padding: '12px 14px', background: 'rgba(229,169,60,.1)', border: '1px solid rgba(229,169,60,.45)' }}>
-      <span style={{ fontSize: 14, fontWeight: 600 }}>Open {appName}, tap Search, paste.</span>
+      <span style={{ fontSize: 14, fontWeight: 600 }}>Open {appName}, find the restaurant, tap its menu search, paste.</span>
       <div className="flex items-center gap-2" style={{ borderRadius: 12, padding: 5, paddingLeft: 12, background: C.ivory }}>
         <span className="flex-1 min-w-0 truncate" style={{ color: C.bg, fontSize: 16, fontWeight: 700 }}>{text}</span>
         <button type="button" onClick={() => { hapticTap(); copyText(text); setCopied(true) }} className="nf-press shrink-0 rounded-lg px-4" style={{ height: 40, background: C.gold, color: C.bg, ...mono(12) }}>{copied ? 'COPIED ✓' : 'COPY'}</button>

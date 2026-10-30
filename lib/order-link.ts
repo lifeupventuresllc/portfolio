@@ -32,20 +32,29 @@ const ITEM_LINKS: Partial<Record<OrderApp, Record<string, string>>> = {}
 // b. Store pages by restaurant name — needs each chain's store link near her (none yet).
 const STORE_LINKS: Partial<Record<OrderApp, Record<string, string>>> = {}
 
-/** "Wendy's" + "Cobb Salad: no croutons" → "Wendy's Cobb Salad" — the
- *  restaurant plus the main item, what lands that restaurant first in search. */
-export function searchText(meal: OrderMeal): string {
+/** The meal on its own: "Cobb Salad: no croutons" → "Cobb Salad". What she
+ *  pastes into the restaurant's own menu search box in DoorDash. */
+export function mealText(meal: OrderMeal): string {
   const main = meal.name.split(/[:(]|,| \+ /)[0].trim()
-  return main.toLowerCase().startsWith(meal.place.toLowerCase()) ? main : `${meal.place} ${main}`
+  return main.toLowerCase().startsWith(meal.place.toLowerCase()) ? main.slice(meal.place.length).trim() || main : main
+}
+/** Kept for the "nothing opened" fallback: restaurant + meal. */
+export function searchText(meal: OrderMeal): string {
+  const main = mealText(meal)
+  return `${meal.place} ${main}`
 }
 
 export function orderLink(meal: OrderMeal, app: OrderApp): OrderLink {
-  const copy = searchText(meal)
+  // Tested live 2026-10-30: searching "<restaurant> <meal>" can push another
+  // place above hers ("Simply Salad" over Wendy's), and her restaurant's page
+  // doesn't remember the meal anyway. So the link searches the RESTAURANT
+  // (hers lands on top), and the MEAL is copied for its menu search box.
+  const copy = mealText(meal)
   const item = meal.key ? ITEM_LINKS[app]?.[meal.key] : undefined
   if (item) return { method: 'item', web: item, app: null, copy }
   const store = STORE_LINKS[app]?.[meal.place]
   if (store) return { method: 'store', web: store, app: null, copy }
-  const q = encodeURIComponent(copy)
+  const q = encodeURIComponent(meal.place)
   return {
     method: 'search',
     web: `/api/go?app=${app}&q=${q}`,
