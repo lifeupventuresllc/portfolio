@@ -17,6 +17,7 @@
 // that. Exercise selection itself is 100% attribute-matched, every time.
 // ============================================================
 import { ATOMIC_LIBRARY, isExerciseSafe, type AtomicExercise, type Location, type EquipmentTag, type MuscleGroup, type SkillLevel, type MovementPattern, type IntensityLevel } from './exercise-library'
+import { weekTemplate, trainStyleFrom, DAY_TITLE, type DayKind } from './week-template'
 import type { Injury, Equip, Muscle } from './workout-exercises'
 import { injuryNotes } from './workout-exercises'
 import { compoundExercisesForLevel } from './compound-exercises'
@@ -203,8 +204,11 @@ export function spreadPatterns(ranked: AtomicExercise[], count: number): AtomicE
   const out: AtomicExercise[] = []
   const used = new Map<string, number>()
   const key = (e: AtomicExercise) => (familyOf(e) === 'knee' ? 'knee' : e.movementPattern === 'isolation' ? `iso:${e.muscleGroups[0]}` : e.movementPattern)
+  // Multi-joint (compound) moves first, single-muscle moves after — the
+  // standard order (ACSM), and the moves her audience loves.
+  const ordered = [...ranked.filter((e) => familyOf(e) !== 'iso'), ...ranked.filter((e) => familyOf(e) === 'iso')]
   for (let round = 1; out.length < count && round <= 3; round++) {
-    for (const e of ranked) {
+    for (const e of ordered) {
       if (out.length >= count) break
       if (out.some((o) => o.name === e.name)) continue
       if ((used.get(key(e)) || 0) >= round) continue
@@ -365,6 +369,12 @@ function countForMinutes(minutesAvailable: number | undefined, avgDurationSec: n
   return Math.max(2, Math.min(fallback * 2, Math.round(minutesAvailable / perExerciseMin)))
 }
 
+// ---- the week: lib/week-template.ts ----
+const DAY_MUSCLES: Record<DayKind, MuscleGroup[]> = {
+  full: [], upper: ['chest', 'back', 'shoulders', 'biceps', 'triceps'], lower: ['quads', 'hamstrings', 'glutes'],
+  push: ['chest', 'shoulders', 'triceps'], pull: ['back', 'biceps'], legs: ['quads', 'hamstrings', 'glutes'],
+}
+
 function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string, c: Constraints, goal: WorkoutInputs['goal'], offset: number, minutesAvailable: number | undefined, coreFocus: boolean, styles: Set<TrainingStyle>, coreOnly = false): GymDay {
   // Asa's follow-up, 2026-09-02: low fuel benefits from touching the real
   // session, not just the cardio tail — but only how hard she's asked to
@@ -381,10 +391,10 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
   // regardless of the isFullBody fallback above, so nothing gets picked.
   // At the gym she has real equipment — no "Chair / Couch Squats" or "Lunges in Place" (2026-10-29).
   const legDay = bodyMuscles.some((m) => m === 'quads' || m === 'hamstrings' || m === 'glutes' || m === 'calves')
-  const supersetPool = coreOnly ? [] : filterLibrary(c, bodyMuscles).filter((e) => !/chair|couch|in place|stairs/i.test(e.name))
+  const supersetPool = coreOnly ? [] : filterLibrary(c, bodyMuscles).filter((e) => !/chair|couch|in place|stairs|air punch|jab|superman|snow angel/i.test(e.name))
     // An upper-body day never sneaks in a leg-driven combo ("Reverse Lunge + Arm Raise").
     .filter((e) => legDay || (familyOf(e) !== 'knee' && familyOf(e) !== 'hip')).filter((e) => e.movementPattern !== 'core_flexion' && e.movementPattern !== 'core_rotation' && e.movementPattern !== 'core_stability' && e.movementPattern !== 'cardio')
-  const baseCount = isFullBody ? 6 : Math.min(8, bodyMuscles.length * 2)
+  const baseCount = isFullBody ? 6 : Math.min(6, bodyMuscles.length * 2)
   const count = countForMinutes(minutesAvailable, 45, baseCount)
   const picked = coreOnly ? [] : balancePairs(spreadPatterns(pick(supersetPool, bodyMuscles, supersetPool.length, offset, c.postpartum), count))
 
@@ -552,14 +562,21 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
   if (inp.targets && inp.targets.length) base.targetNote = inp.targets.map((m) => m[0].toUpperCase() + m.slice(1)).join(' · ')
   else if (inp.focusArea && inp.focusArea !== 'overall') base.targetNote = FOCUS_LABEL[inp.focusArea]
 
+  // 2026-10-29 (Asa: "how do you like to train" should set the week): a
+  // standard week by days available and her style — full body every day,
+  // one area a day (upper/lower, push/pull/legs), or the proven default
+  // (full body for 2–3 days, upper/lower for 4, push/pull/legs for 5–6).
+  const template = weekTemplate(days, trainStyleFrom(styles))
+  void priorityMuscles; void MUSCLES_PER_DAY
   const dayMuscles = (i: number): MuscleGroup[] =>
-    (i === 0 && overrideMuscles !== undefined) ? overrideMuscles : rotate(priorityMuscles, i * MUSCLES_PER_DAY).slice(0, MUSCLES_PER_DAY)
+    (i === 0 && overrideMuscles !== undefined) ? overrideMuscles : [...DAY_MUSCLES[template[i % template.length]]]
   const dayTitle = (i: number, muscles: MuscleGroup[]): string => {
     if (i === 0 && inp.overrideAreas !== undefined) {
       const areas = inp.overrideAreas
       const label = areas.map((a) => a === 'core' ? 'Core' : a === 'overall' ? 'Full Body' : a[0].toUpperCase() + a.slice(1)).join(' + ')
       return label || 'Full Body'
     }
+    if (i !== 0 || inp.overrideAreas === undefined) return DAY_TITLE[template[i % template.length]]
     if (!muscles.length) return 'Full Body'
     // Real gap fixed 2026-09-02: this used to guess a fixed push/pull/legs
     // label off whichever muscle happened to be present — correct only

@@ -377,6 +377,7 @@ function ConversationalIntakeInner() {
         injuries={injuries} setInjuries={setInjuries}
         lifeStage={lifeStage} setLifeStage={setLifeStage} whyOwn={whyOwn} setWhyOwn={setWhyOwn}
         never={never} setNever={setNever} neverOther={neverOther} setNeverOther={setNeverOther}
+        trainingStyles={trainingStyles} setTrainingStyles={setTrainingStyles}
         error={error} editMode={editMode}
         onBuild={() => build(false)}
         onEditDone={() => { setTier('optional'); setStep(0) }}

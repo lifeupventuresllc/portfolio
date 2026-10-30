@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { weekTemplate, DAY_SHORT, type TrainStyle } from '@/lib/week-template'
 import { hapticTap } from '@/lib/haptics'
 import LiveMap from '@/components/LiveMap'
 import { buildBlueprint, averageDayTargets, type Activity } from '@/lib/nutrition'
@@ -50,7 +51,12 @@ const DAYS = [
   { v: 'active', l: 'Very active', d: 'Hard, physical work', icon: 'bolt' },
 ]
 const SPOTS = [{ v: 'home', l: 'Home' }, { v: 'both', l: 'Both' }, { v: 'gym', l: 'Gym' }]
-const DAY_NOTES: Record<string, string> = { '2': '2 days still works. Full body each time.', '3': '3 days: the sweet spot to start.', '4': '4 days: upper and lower split.', '5': '5 days: one focus each day.', '6': '6 days: for the all-in.' }
+// How she likes to train (2026-10-30) — sets her whole week (lib/week-template.ts).
+const STYLES: { v: string; l: string; d: string; t: TrainStyle }[] = [
+  { v: 'compound', l: 'Full body', d: 'Big moves, every day', t: 'full' },
+  { v: 'split', l: 'One area', d: 'Legs day, arms day', t: 'split' },
+  { v: 'none', l: 'You pick', d: 'Best for my days', t: 'auto' },
+]
 const HURTS = [
   { v: 'knee', l: 'Knee' }, { v: 'lower_back', l: 'Lower back' }, { v: 'shoulder', l: 'Shoulder' }, { v: 'hip', l: 'Hip' },
   { v: 'wrist', l: 'Wrist' }, { v: 'elbow', l: 'Elbow' }, { v: 'ankle', l: 'Ankle' },
@@ -84,6 +90,7 @@ export default function NewFlow(p: {
   whyOwn: string; setWhyOwn: (s: string) => void
   never: string[]; setNever: (n: string[]) => void
   neverOther: string; setNeverOther: (s: string) => void
+  trainingStyles: string[]; setTrainingStyles: (s: string[]) => void
   error: string
   editMode: boolean
   onBuild: () => void
@@ -206,13 +213,15 @@ export default function NewFlow(p: {
         {step === 'train' && (() => {
           const spot = Math.max(0, SPOTS.findIndex((s) => s.v === (f.training_location || 'both')))
           const days = f.days_per_week || '3'
+          const style = STYLES.find((o) => p.trainingStyles.includes(o.v)) || STYLES[2]
+          const week = weekTemplate(Number(days), style.t)
           return (
             <div className="min-h-[100dvh] relative flex flex-col">
               <div className="absolute inset-x-0 top-0 h-[54vh]" style={{ backgroundImage: img('/images/onboarding/goal-gain.jpg'), backgroundSize: 'cover', backgroundPosition: 'center 15%' }} />
               <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,.35) 0%, rgba(2,31,22,0) 18%, rgba(2,31,22,.75) 40%, #021F16 54%)' }} />
               <div className="relative max-w-md w-full mx-auto px-4 flex-1 flex flex-col" style={{ paddingTop: 'calc(16px + env(safe-area-inset-top))', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}>
                 <TopBar left={LEFT.train} cal={cal} onBack={back} onPhoto />
-                <div className="flex-1 min-h-[30vh]" />
+                <div className="flex-1 min-h-[16vh]" />
                 <H1>Where do you train?</H1>
                 <div className="relative h-[72px] rounded-full mt-4" style={{ border: '2px solid rgba(237,231,218,.5)' }}>
                   <span className="absolute top-[5px] rounded-full transition-all duration-300" style={{ left: `calc(${spot} * (100% - 8px) / 3 + 4px)`, width: 'calc((100% - 8px) / 3)', height: 58, background: C.gold, transitionTimingFunction: 'cubic-bezier(.3,1.4,.5,1)' }} />
@@ -229,9 +238,25 @@ export default function NewFlow(p: {
                     <Choice key={d} on={days === d} onClick={() => { hapticTap(); set('days_per_week', d) }} className="h-16" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 32 }}>{d}</Choice>
                   ))}
                 </div>
-                <p className="text-[13px] mt-2" style={{ color: C.mute }}>{DAY_NOTES[days]}</p>
+                <Label className="mt-5 mb-2">HOW YOU LIKE TO TRAIN</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {STYLES.map((o) => (
+                    <Choice key={o.v} on={style.v === o.v} onClick={() => { hapticTap(); p.setTrainingStyles([o.v]) }} className="h-[84px] flex flex-col items-start justify-center gap-1 px-3 text-left">
+                      <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 22, lineHeight: 1, textTransform: 'uppercase' }}>{o.l}</span>
+                      <span className="text-[12px] leading-tight" style={{ opacity: 0.8 }}>{o.d}</span>
+                    </Choice>
+                  ))}
+                </div>
+                {/* Her week, live: changes as she taps days or style. */}
+                <div className="flex flex-wrap gap-1.5 mt-3" aria-label="Your week">
+                  {week.map((k, n) => (
+                    <span key={`${days}-${style.v}-${n}`} className="nf-pop-in rounded-full px-2.5 py-1.5" style={{ background: 'rgba(229,169,60,.14)', border: '1px solid rgba(229,169,60,.45)', color: C.gold, fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.08em', animationDelay: `${n * 40}ms` }}>
+                      DAY {n + 1} · {DAY_SHORT[k]}
+                    </span>
+                  ))}
+                </div>
                 <div className="h-5" />
-                <Btn onClick={() => { setF((s) => ({ ...s, training_location: s.training_location || 'both', days_per_week: s.days_per_week || '3' })); next() }}>Next</Btn>
+                <Btn onClick={() => { setF((s) => ({ ...s, training_location: s.training_location || 'both', days_per_week: s.days_per_week || '3' })); if (!p.trainingStyles.length) p.setTrainingStyles(['none']); next() }}>Next</Btn>
               </div>
             </div>
           )
@@ -737,6 +762,7 @@ function WhyIcon({ k }: { k: string }) {
 }
 
 export const CSS = `
+.nf-pop-in{animation:nfPopIn .35s cubic-bezier(.3,1.4,.5,1) both}@keyframes nfPopIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:none}}@media (prefers-reduced-motion: reduce){.nf-pop-in{animation:none}}
 .nf-in{animation:nfIn .45s cubic-bezier(.2,1,.3,1) both}
 .nf-in-back{animation:nfInBack .45s cubic-bezier(.2,1,.3,1) both}
 @keyframes nfIn{from{transform:translateX(48px);opacity:0}to{transform:none;opacity:1}}
