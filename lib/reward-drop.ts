@@ -18,7 +18,7 @@ import { computeBadges } from '@/lib/achievements'
 //  - she never sees odds, points or countdowns — none of it leaves here
 // ============================================================
 
-export type DropTrigger = 'workout' | 'meal'
+export type DropTrigger = 'workout' | 'meal' | 'nutrition'
 export type DropTier = 'every' | 'bonus' | 'rare'
 export type DropKind = 'kind' | 'selftalk' | 'badge' | 'shield' | 'recipe' | 'milestone' | 'check' | 'note'
 
@@ -122,6 +122,7 @@ export type RollInput = {
   recipe?: () => Promise<RecipeBonus | null>
   firstName?: string
   mealsHandled?: number          // meals she picked/logged from her picks, all time
+  foodStreak?: number            // nutrition: days in a row on her food target, ending on the drop's day
 }
 
 function kindLine(inp: RollInput, rng: () => number, recent: Set<string>): { key: string; payload: DropPayload } {
@@ -130,8 +131,15 @@ function kindLine(inp: RollInput, rng: () => number, recent: Set<string>): { key
   const own = (inp.whyOwn || '').trim().replace(/[.!]+$/, '')
   const payoff = (inp.payoffs || []).find((p) => WHY_FOR[p])
   const why = own ? `“${own}.” This one counts toward it.` : payoff ? `${WHY_FOR[payoff]} Every one of these is for that.` : 'You did this one for you.'
+  const fs = inp.foodStreak || 1
   const lines: [string, string][] = inp.trigger === 'meal'
     ? [['Fed and on track.', why], ['That meal counts.', 'You picked one that fits. That is the whole skill.']]
+    : inp.trigger === 'nutrition'
+    ? [
+      [fs > 1 ? `${fs} days on target.` : 'Yesterday: on target.', why],
+      ['Right on your number.', 'You ate for your goal yesterday. That is the hardest part, and you did it.'],
+      ['Food handled.', 'Nobody counted for you. You just did it. That is a habit forming.'],
+    ]
     : [
       [thisWeek > 1 ? `${thisWeek} this week.` : 'You showed up.', why],
       ['You kept your word.', "You said you'd do it. You did it. That's who you are now."],
@@ -184,6 +192,27 @@ export async function rollDrop(inp: RollInput): Promise<Omit<Drop, 'id' | 'creat
   const base = { trigger: inp.trigger, day: inp.todayIso }
   const every = () => { const k = kindLine(inp, rng, recent); return { ...base, tier: 'every' as const, kind: 'kind' as const, itemKey: k.key, payload: k.payload } }
   const r = rng()
+
+  // ---- nutrition: a day she ended on her food target (given next morning) ----
+  if (inp.trigger === 'nutrition') {
+    const fs = inp.foodStreak || 1
+    const FOOD_MARKS = [3, 7, 14, 30, 60, 100]
+    if (FOOD_MARKS.includes(fs) && !everGot.has(`milestone:food:${fs}`)) {
+      return { ...base, tier: 'rare', kind: 'milestone', itemKey: `milestone:food:${fs}`, payload: { tag: 'MILESTONE', big: `${fs} days\non target.`, title: `${fs} days on target`, body: `${fs} days in a row you ate for your goal. That is how it changes for good.` } }
+    }
+    if (r < (inp.daysEnrolled < 7 ? 0.3 : 0.2)) {
+      const rec = inp.recipe ? await inp.recipe().catch(() => null) : null
+      if (rec && !recent.has(`recipe:${rec.key}`)) {
+        return { ...base, tier: 'bonus', kind: 'recipe', itemKey: `recipe:${rec.key}`, payload: {
+          tag: 'NEW RECIPE', title: rec.name, photo: rec.photo,
+          body: `${rec.cal} cal${rec.price != null ? ` · about $${rec.price} a serving` : ''}. Fits your calories and your budget.`,
+        } }
+      }
+      const t = selfTalk(rng, recent)
+      return { ...base, tier: 'bonus', kind: 'selftalk', itemKey: t.key, payload: t.payload }
+    }
+    return every()
+  }
 
   // ---- meal: most times just the check ----
   if (inp.trigger === 'meal') {

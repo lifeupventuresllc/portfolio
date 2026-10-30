@@ -180,6 +180,65 @@ function filterLibrary(c: Constraints, muscles?: MuscleGroup[]): AtomicExercise[
 // postpartum-flagged entries surfaced first when relevant. One function,
 // attribute-driven, works for gym or home, any muscle set, any movement
 // pattern — no per-location/per-type special-casing anywhere else.
+// ---- session shape (2026-10-29, Asa: "way too many squatting motions") ----
+// The standard way coaches build a session: cover the main movement
+// patterns once each (squat, hinge, lunge, push, pull) before repeating
+// any, then superset moves that don't compete — push with pull (antagonist
+// pairs), or lower body with upper body — so one muscle rests while the
+// other works. Two leg-dominant moves are never paired.
+type Family = 'push' | 'pull' | 'knee' | 'hip' | 'iso'
+const familyOf = (e: AtomicExercise): Family =>
+  e.movementPattern === 'horizontal_push' || e.movementPattern === 'vertical_push' ? 'push'
+    : e.movementPattern === 'horizontal_pull' || e.movementPattern === 'vertical_pull' ? 'pull'
+      : e.movementPattern === 'squat' || e.movementPattern === 'lunge' ? 'knee'
+        : e.movementPattern === 'hinge' ? 'hip'
+          // Combo moves ("Squat Pulses", "Reverse Lunge + Bicep Curl") load the legs like a squat/lunge.
+          : e.movementPattern === 'compound' && /squat|lunge|step/i.test(e.name) ? 'knee'
+            : e.movementPattern === 'compound' && /deadlift|bridge|thrust|swing/i.test(e.name) ? 'hip' : 'iso'
+const isLower = (e: AtomicExercise) => familyOf(e) === 'knee' || familyOf(e) === 'hip' || e.muscleGroups.some((m) => m === 'quads' || m === 'glutes' || m === 'hamstrings' || m === 'calves')
+
+/** From a ranked list, take `count` moves with each movement pattern used
+ *  once before any repeats (isolation: once per muscle). Order of rank kept. */
+export function spreadPatterns(ranked: AtomicExercise[], count: number): AtomicExercise[] {
+  const out: AtomicExercise[] = []
+  const used = new Map<string, number>()
+  const key = (e: AtomicExercise) => (familyOf(e) === 'knee' ? 'knee' : e.movementPattern === 'isolation' ? `iso:${e.muscleGroups[0]}` : e.movementPattern)
+  for (let round = 1; out.length < count && round <= 3; round++) {
+    for (const e of ranked) {
+      if (out.length >= count) break
+      if (out.some((o) => o.name === e.name)) continue
+      if ((used.get(key(e)) || 0) >= round) continue
+      // Never more than two knee-dominant (squat/lunge) moves in a session.
+      if (familyOf(e) === 'knee' && out.filter((o) => familyOf(o) === 'knee').length >= 2) continue
+      out.push(e); used.set(key(e), (used.get(key(e)) || 0) + 1)
+    }
+  }
+  return out
+}
+
+/** Order moves so each consecutive pair is a good superset: push+pull best,
+ *  then lower+upper; two leg-dominant moves or two of the same family last. */
+export function balancePairs(moves: AtomicExercise[]): AtomicExercise[] {
+  const rest = [...moves]
+  const out: AtomicExercise[] = []
+  const score = (a: AtomicExercise, b: AtomicExercise) => {
+    const fa = familyOf(a), fb = familyOf(b)
+    if ((fa === 'push' && fb === 'pull') || (fa === 'pull' && fb === 'push')) return 4
+    if (isLower(a) !== isLower(b)) return 3
+    if (isLower(a) && isLower(b)) return (fa === 'knee' && fb === 'knee') || (fa === 'hip' && fb === 'hip') ? 0 : 1
+    return fa === fb ? 1 : 2
+  }
+  while (rest.length) {
+    const a = rest.shift()!
+    out.push(a)
+    if (!rest.length) break
+    let best = 0
+    for (let i = 1; i < rest.length; i++) if (score(a, rest[i]) > score(a, rest[best])) best = i
+    out.push(rest.splice(best, 1)[0])
+  }
+  return out
+}
+
 function pick(pool: AtomicExercise[], targetMuscles: MuscleGroup[], count: number, offset: number, postpartum: boolean, excludeNames: string[] = []): AtomicExercise[] {
   const fresh = pool.filter((e) => !excludeNames.includes(e.name))
   // Real bug caught in testing: a plain non-postpartum request was still
@@ -320,10 +379,14 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
   // only" came back titled "Core · Full Body" with full-body supersets
   // still riding along underneath): coreOnly forces bodyMuscles to [] here
   // regardless of the isFullBody fallback above, so nothing gets picked.
-  const supersetPool = coreOnly ? [] : filterLibrary(c, bodyMuscles).filter((e) => e.movementPattern !== 'core_flexion' && e.movementPattern !== 'core_rotation' && e.movementPattern !== 'core_stability' && e.movementPattern !== 'cardio')
+  // At the gym she has real equipment — no "Chair / Couch Squats" or "Lunges in Place" (2026-10-29).
+  const legDay = bodyMuscles.some((m) => m === 'quads' || m === 'hamstrings' || m === 'glutes' || m === 'calves')
+  const supersetPool = coreOnly ? [] : filterLibrary(c, bodyMuscles).filter((e) => !/chair|couch|in place|stairs/i.test(e.name))
+    // An upper-body day never sneaks in a leg-driven combo ("Reverse Lunge + Arm Raise").
+    .filter((e) => legDay || (familyOf(e) !== 'knee' && familyOf(e) !== 'hip')).filter((e) => e.movementPattern !== 'core_flexion' && e.movementPattern !== 'core_rotation' && e.movementPattern !== 'core_stability' && e.movementPattern !== 'cardio')
   const baseCount = isFullBody ? 6 : Math.min(8, bodyMuscles.length * 2)
   const count = countForMinutes(minutesAvailable, 45, baseCount)
-  const picked = coreOnly ? [] : pick(supersetPool, bodyMuscles, count, offset, c.postpartum)
+  const picked = coreOnly ? [] : balancePairs(spreadPatterns(pick(supersetPool, bodyMuscles, supersetPool.length, offset, c.postpartum), count))
 
   const supersets: Superset[] = []
   for (let i = 0; i + 1 < picked.length; i += 2) {

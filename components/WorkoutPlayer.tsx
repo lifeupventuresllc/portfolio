@@ -155,7 +155,6 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
             style={{ background: d === dayIdx ? 'rgba(229,169,60,.15)' : 'transparent', color: d === dayIdx ? GOLD : 'rgba(237,231,218,.8)' }}>{l}</button>
         ))}
       </div>
-      <WorkoutMusicPlayer duck={musicDucked} />
       <div className="flex items-center justify-center gap-3 text-xs pt-1" style={{ color: 'rgba(237,231,218,.6)' }}>
         <button onClick={() => router.push('/plan/workout/week')} className="underline underline-offset-4">My week</button>
         <span>·</span>
@@ -190,6 +189,11 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
         onClose={() => { savedRef.current.finally(() => router.push('/plan')) }}
         menu={elsewhere}
       />
+      {/* Music: one small pill, top right under the menu button, through
+          every screen of the workout (stays mounted, so songs don't restart). */}
+      <div className="fixed z-30" style={{ top: 'calc(66px + env(safe-area-inset-top))', right: 16 }}>
+        <WorkoutMusicPlayer duck={musicDucked} compact />
+      </div>
       {showGoal && !goalHidden && (
         <div className="fixed inset-x-4 z-40" style={{ bottom: 'calc(24px + env(safe-area-inset-bottom))' }}>
           <QuickstartGoalAsk onDone={() => setGoalHidden(true)} onSkip={() => setGoalHidden(true)} />

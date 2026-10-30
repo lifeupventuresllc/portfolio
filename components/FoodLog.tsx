@@ -391,6 +391,21 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
   const calPct = hasCalBudget ? Math.round((t.calories / calBudget) * 100) : 0
   const remaining = calBudget - t.calories
   const calOver = hasCalBudget && remaining < 0
+  // The moment an entry tips her over (2026-10-29, Asa: "how can we notify
+  // them"): a buzz and a short heads-up, once per crossing — not on load.
+  const wasOver = useRef<boolean | null>(null)
+  const [justWentOver, setJustWentOver] = useState(false)
+  useEffect(() => {
+    if (loading || !hasCalBudget) return
+    if (wasOver.current === false && calOver) {
+      try { navigator.vibrate?.([40, 60, 40]) } catch { /* ignore */ }
+      setJustWentOver(true)
+      const id = setTimeout(() => setJustWentOver(false), 6000)
+      wasOver.current = calOver
+      return () => clearTimeout(id)
+    }
+    wasOver.current = calOver
+  }, [calOver, loading, hasCalBudget])
 
   return (
     <div className="rounded-3xl p-5" style={{ background: CARD_BG, border: CARD_BORDER, boxShadow: CARD_GLOW, position: 'relative', overflow: 'hidden' }}>
@@ -462,6 +477,12 @@ export default function FoodLog({ planned = [], budget = null, dayType = null, m
           asked to cut. Only the states with NEW information (loading, no
           goal set yet, over budget) still get a line; a plain on-track day
           with something logged gets no banner at all now. */}
+      {justWentOver && (
+        <div role="status" className="mb-3 rounded-2xl px-4 py-3 text-center" style={{ background: OVER_BG, color: '#fff', boxShadow: `0 8px 24px ${OVER_BG}55` }}>
+          <p className="text-sm font-bold">Heads up: that puts you {Math.abs(Math.round(remaining)).toLocaleString()} cal over today.</p>
+          <p className="text-xs mt-0.5" style={{ opacity: 0.85 }}>Still your call. Water, tea or veggies if you&apos;re still hungry.</p>
+        </div>
+      )}
       {(loading || !hasCalBudget || calOver) && (
         <div className="mb-4 rounded-2xl border px-4 py-3 text-center" style={{ borderColor: calOver ? `${OVER_BG}66` : `${ACCENT}66`, background: calOver ? `${OVER_BG}1A` : `${ACCENT}1A` }}>
           <p className="text-base font-bold" style={{ color: calOver ? OVER_TEXT : ACCENT }}>

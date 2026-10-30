@@ -35,7 +35,10 @@ function MusicNoteIcon() {
 // Background music for the workout screen — Peloton/Nike Training-style
 // persistent mini-player. Rotation loops continuously through the whole
 // library (see lib/workout-music.ts for the track list + license source).
-export default function WorkoutMusicPlayer({ duck = false }: {
+export default function WorkoutMusicPlayer({ duck = false, compact = false }: {
+  // Small play/next pill for the full-screen workout (2026-10-29, Asa: music
+  // back in, "not taking up too much of the screen", playing automatically).
+  compact?: boolean
   // True during the last 10 seconds of any timed step (exercise hold or
   // rest, set by WorkoutPlayer) — ducks the music down so the countdown
   // beep (lib/countdown-beep.ts) reads clearly over it without cutting the
@@ -83,6 +86,18 @@ export default function WorkoutMusicPlayer({ duck = false }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Her first tap in the workout ("I'm warm. Start") starts the music if the
+  // phone blocked autoplay — play() runs inside that tap, so it's allowed.
+  useEffect(() => {
+    const start = () => {
+      const a = audioRef.current
+      if (!a || !a.paused) return
+      a.play().then(() => { setPlaying(true); setBlocked(false) }).catch(() => setBlocked(true))
+    }
+    window.addEventListener('luf-music-start', start)
+    return () => window.removeEventListener('luf-music-start', start)
+  }, [])
+
   // Whenever the track changes because she tapped next/back WHILE music was
   // already playing, keep playing — resume on the new src instead of going
   // silent. `playing` is still false at mount (the effect above hasn't
@@ -123,6 +138,23 @@ export default function WorkoutMusicPlayer({ duck = false }: {
   }
   const next = () => setIdx((i) => (i + 1) % WORKOUT_TRACKS.length)
   const back = () => setIdx((i) => (i - 1 + WORKOUT_TRACKS.length) % WORKOUT_TRACKS.length)
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-1 rounded-full pl-1 pr-1.5 py-1" style={{ background: 'rgba(2,31,22,.72)', border: '1px solid rgba(237,231,218,.14)' }}>
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+        <audio ref={audioRef} src={track.src} onEnded={next} />
+        <button onClick={toggle} aria-label={playing ? 'Pause music' : 'Play music'} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-all" style={{ background: playing ? '#E5A93C' : 'transparent', color: playing ? '#021F16' : '#E5A93C' }}>
+          {playing ? <PauseIcon /> : <MusicNoteIcon />}
+        </button>
+        {playing && (
+          <button onClick={next} aria-label="Next song" className="w-8 h-8 flex items-center justify-center active:scale-90 transition-all" style={{ color: 'rgba(237,231,218,.8)' }}>
+            <SkipForwardIcon />
+          </button>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="flex items-center gap-3 bg-charcoal border border-smoke rounded-2xl px-3 py-2 mb-4">

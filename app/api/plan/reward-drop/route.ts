@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { localDateISO, localHourNumber, getTimezone } from '@/lib/localdate'
+import { localDateISO, localHourNumber, getTimezone, addDaysISO } from '@/lib/localdate'
 import { assessLifePattern } from '@/lib/fos/pattern'
 import { loadNutritionDay } from '@/lib/nutrition-day'
 import { pickMeals, defaultMealBudget, mealPhoto, shortName, type MealMemory } from '@/lib/meal-pick'
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const trigger: DropTrigger | null = body.trigger === 'workout' || body.trigger === 'meal' ? body.trigger : null
+  const trigger: DropTrigger | null = body.trigger === 'workout' || body.trigger === 'meal' || body.trigger === 'nutrition' ? body.trigger : null
   if (!trigger) return NextResponse.json({ drop: null }, { status: 400 })
 
   const tz = getTimezone()
@@ -87,14 +87,36 @@ export async function POST(request: NextRequest) {
     assessLifePattern(enrollmentId, todayIso).catch(() => null),
   ])
 
+  // The nutrition reward is for YESTERDAY (a day she ended on target),
+  // handed over the next time she opens the app (2026-10-29).
+  const dropDay = trigger === 'nutrition' ? addDaysISO(todayIso, -1) : todayIso
+
   // Already got today's for this action → the same one back (can't farm it).
-  const already = store.drops.find((d) => d.trigger === trigger && d.day === todayIso)
+  const already = store.drops.find((d) => d.trigger === trigger && d.day === dropDay)
   const dates = new Set((progress || []).map((r) => r.logged_on as string))
   const shieldDates = shieldDatesFrom(store.drops)
   const streakNow = () => streakDetail(dates, todayIso, shieldDates)
   if (already) {
     const s = streakNow()
     return NextResponse.json({ drop: already, fresh: false, saved: true, streak: s.streak, shields: s.shieldsLeft, partnerName, shared: !!already.sharedAt })
+  }
+
+  // Nutrition: yesterday within 80–110% of her calorie target (the same
+  // "on target" rule as the Progress week strip), plus how many days in a row.
+  let foodStreak = 0
+  if (trigger === 'nutrition') {
+    const since = addDaysISO(todayIso, -61)
+    const [{ data: rows }, { data: plan }] = await Promise.all([
+      svc.from('challenge_food_log').select('logged_on, calories').eq('enrollment_id', enrollmentId).gte('logged_on', since).lt('logged_on', todayIso),
+      svc.from('challenge_nutrition_plans').select('calories').eq('enrollment_id', enrollmentId).eq('week_number', 1).maybeSingle(),
+    ])
+    const target = Number(plan?.calories) || 0
+    if (!target) return NextResponse.json({ drop: null })
+    const byDay = new Map<string, number>()
+    for (const r of rows || []) byDay.set(r.logged_on as string, (byDay.get(r.logged_on as string) || 0) + (Number(r.calories) || 0))
+    const onTarget = (d: string) => { const c = byDay.get(d) || 0; return c >= target * 0.8 && c <= target * 1.1 }
+    for (let d = dropDay; onTarget(d) && foodStreak < 60; d = addDaysISO(d, -1)) foodStreak++
+    if (!foodStreak) return NextResponse.json({ drop: null })
   }
 
   // Meal drops only after a real meal is logged today.
@@ -135,7 +157,7 @@ export async function POST(request: NextRequest) {
   }
 
   const rolled = await rollDrop({
-    trigger, enrollmentId, todayIso, dates, workoutDates, daysEnrolled,
+    trigger, enrollmentId, todayIso: dropDay, dates, workoutDates, daysEnrolled, foodStreak,
     dipHigh: pattern?.riskBand === 'high',
     whyOwn: fd.why_own, payoffs: fd.payoffs,
     history: store.drops, recipe,

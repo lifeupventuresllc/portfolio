@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { hapticTap } from '@/lib/haptics'
 import type { Drop } from '@/lib/reward-drop'
 import WinsShelf from '@/components/WinsShelf'
@@ -24,7 +24,7 @@ const HOT = '#FFB21E', EMERALD = '#1EE38A', CARD = '#0A3124'
 export default function ProgressNew({ days, workoutsDone, workoutsGoal, weightChange, startWeight, foodDays, streak, why, wins = [], shields = 0 }: {
   days: DayDot[]; workoutsDone: number; workoutsGoal: number
   weightChange: number | null; startWeight: number | null
-  foodDays: number; streak: number; why: { title: string; line: string } | null
+  foodDays: number; streak: number; why: { title: string; line: string; lines?: { why: string; talk: string }[] } | null
   wins?: Drop[]; shields?: number
 }) {
   const todayIdx = Math.max(0, days.findIndex((d) => d.isToday))
@@ -98,14 +98,41 @@ export default function ProgressNew({ days, workoutsDone, workoutsGoal, weightCh
 
       <WinsShelf wins={wins} />
 
-      {why && (
-        <div className="rounded-[22px] px-4 py-3.5 flex flex-col gap-0.5" style={{ background: GOLD, color: '#021F16' }}>
-          <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.12em' }}>WHY YOU&apos;RE DOING THIS</span>
-          <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 28, lineHeight: 1, textTransform: 'uppercase' }}>{why.title}</span>
-          <span className="text-[13px]">{why.line}</span>
-        </div>
-      )}
+      {why && <WhyCard why={why} />}
       <style>{`.pg-draw{stroke-dasharray:400;stroke-dashoffset:400;animation:pgDraw 1.2s .3s ease forwards}@keyframes pgDraw{to{stroke-dashoffset:0}}`}</style>
     </div>
+  )
+}
+
+// "Why you're doing this" (2026-10-29, Asa: "more illuminated", "should
+// rotate", "paired with the self talk"): glows, steps through each reason
+// she picked every few seconds, and shows the self-talk line made from that
+// reason. A tap moves to the next one.
+function WhyCard({ why }: { why: { title: string; line: string; lines?: { why: string; talk: string }[] } }) {
+  const lines = why.lines && why.lines.length ? why.lines : [{ why: why.title, talk: '' }]
+  const [k, setK] = useState(0)
+  useEffect(() => {
+    if (lines.length < 2) return
+    const id = setInterval(() => setK((x) => (x + 1) % lines.length), 6000)
+    return () => clearInterval(id)
+  }, [lines.length])
+  const cur = lines[k % lines.length]
+  return (
+    <button type="button" onClick={() => { hapticTap(); setK((x) => (x + 1) % lines.length) }}
+      className="why-glow nf-press relative overflow-hidden rounded-[22px] px-4 py-4 flex flex-col gap-1.5 text-left"
+      style={{ background: 'radial-gradient(120% 140% at 0% 0%, #FFD27A 0%, #E5A93C 45%, #C98A1E 100%)', color: '#021F16' }}>
+      <style>{`.why-glow{box-shadow:0 0 0 1px rgba(255,210,122,.6),0 10px 34px rgba(229,169,60,.45);animation:whyGlow 3.2s ease-in-out infinite}@keyframes whyGlow{0%,100%{box-shadow:0 0 0 1px rgba(255,210,122,.6),0 10px 30px rgba(229,169,60,.35)}50%{box-shadow:0 0 0 1px rgba(255,230,170,.9),0 12px 44px rgba(255,178,30,.6)}}.why-in{animation:whyIn .5s ease both}@keyframes whyIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@media (prefers-reduced-motion: reduce){.why-glow,.why-in{animation:none}}`}</style>
+      <span className="flex items-center justify-between" style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.12em' }}>
+        <span>WHY YOU&apos;RE DOING THIS</span>
+        {lines.length > 1 && (
+          <span className="flex gap-1" aria-hidden>{lines.map((_, i) => <span key={i} style={{ width: 6, height: 6, borderRadius: 9, background: i === k % lines.length ? '#021F16' : 'rgba(2,31,22,.3)' }} />)}</span>
+        )}
+      </span>
+      <span key={k} className="why-in flex flex-col gap-1.5">
+        <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 30, lineHeight: 0.95, textTransform: 'uppercase' }}>{cur.why}</span>
+        {cur.talk && <span className="text-[16px] font-semibold" style={{ lineHeight: 1.3 }}>&ldquo;{cur.talk}&rdquo;</span>}
+      </span>
+      <span className="text-[13px]" style={{ opacity: 0.8 }}>{why.line}</span>
+    </button>
   )
 }

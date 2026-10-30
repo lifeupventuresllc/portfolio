@@ -1,3 +1,5 @@
+import { whyLines, selfTalkForDay } from '@/lib/payoff'
+import NutritionDrop from '@/components/NutritionDrop'
 import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
 import { createServiceClient } from '@/lib/supabase/server'
@@ -105,7 +107,8 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   // hero ring's second half — what she's actually logged today, not what
   // the plan merely intends. foodLoggedToday also feeds the ring below.
   const loggedCalories = (foodRows || []).reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
-  const calRemaining = calBudget != null ? Math.max(0, calBudget - loggedCalories) : null
+  const calRemaining = calBudget != null ? Math.max(0, Math.round(calBudget - loggedCalories)) : null
+  const calOverBy = calBudget != null ? Math.max(0, Math.round(loggedCalories - calBudget)) : 0
   // Real bug fixed 2026-08-28 (Asa's live report): this used to mean "logged
   // ANY food today" — so one small snack lit up the ring's second half and
   // the circle's "done for today" message even with most of her real budget
@@ -245,7 +248,9 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   const WHY_TITLE: Record<string, string> = { energy: 'For your energy.', kids: 'For your kids.', mood: 'For your peace of mind.', family: 'For your family.', look: 'For you, feeling good in your skin.', health: 'For your health.', confidence: 'For your confidence.' }
   const firstPayoff = (fd.payoffs || []).find((p) => WHY_TITLE[p])
   const showUps = workoutsDone ? `${workoutsDone} workout${workoutsDone === 1 ? '' : 's'} this week is ${workoutsDone} time${workoutsDone === 1 ? '' : 's'} you showed up.` : 'Every workout this week is you showing up for it.'
-  const why = fd.why_own ? { title: `“${fd.why_own}”`, line: showUps } : firstPayoff ? { title: WHY_TITLE[firstPayoff], line: showUps } : null
+  const dayNo = localDayNumber(tz)
+  const whyList = whyLines(fd.payoffs, fd.why_own, dayNo)
+  const why = fd.why_own ? { title: `“${fd.why_own}”`, line: showUps, lines: whyList } : firstPayoff ? { title: WHY_TITLE[firstPayoff], line: showUps, lines: whyList } : null
 
   // ---- Today tab look ----
   const INK = '#EDE7DA', GOLD = '#E5A93C', BG = '#021F16', MUTE = 'rgba(237,231,218,.72)'
@@ -258,7 +263,8 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   const workoutName = (todayWorkout?.title || '').replace(/^Day \d+:\s*/, '')
   const onTrack = workoutDoneToday || showedUpToday || (calBudget != null && loggedCalories > 0 && loggedCalories <= calBudget * 1.1)
 
-  const selfTalk = affirmationForDay(localDayNumber(tz))
+  // Her self-talk comes from her own why (2026-10-29); general lines only if she gave none.
+  const selfTalk = selfTalkForDay(fd.payoffs, fd.why_own, localDayNumber(tz)) || affirmationForDay(localDayNumber(tz))
   return (
     <div className="px-4 flex flex-col"
       style={{
@@ -319,10 +325,13 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
                     <span className="w-[7px] h-[7px] rounded-full" style={{ background: '#9FDCC4' }} />{workoutDoneToday ? 'YOU SHOWED UP TODAY' : "YOU'RE ON TRACK"}
                   </span>
                 )}
-                <h1 className="nf-head" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 62, lineHeight: 0.86, textTransform: 'uppercase' }}>Today&apos;s<br />handled.</h1>
+                {/* 2026-10-29 (Asa): "Your win for today", with FITNESS / NUTRITION labels and a calories-left ring. */}
+                <h1 className="nf-head" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 58, lineHeight: 0.86, textTransform: 'uppercase' }}>Your win<br />for today.</h1>
                 <p className="text-[15px]" style={{ color: 'rgba(237,231,218,.78)' }}>We planned it. You just show up.</p>
               </div>
 
+              <NutritionDrop />
+              <span className="px-1 -mb-1.5">{label('FITNESS')}</span>
               {todayWorkout ? (
                 <div className="nf-rise rounded-[22px] overflow-hidden" style={{ background: 'rgba(237,231,218,.06)', border: `2px solid ${workoutDoneToday ? EMERALD : 'transparent'}`, animationDelay: '.1s' }}>
                   <div className="h-[130px] relative rw-photo" style={{ backgroundImage: 'url(/_next/image?url=%2Fimages%2Fapp%2Fpexels-8402239.jpg&w=828&q=70)', backgroundSize: 'cover', backgroundPosition: 'center 35%' }}>
@@ -354,18 +363,23 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
                 </div>
               )}
 
-              <Link href={eatingOutToday ? '/plan/eating-out' : '/plan/nutrition'} className="nf-press nf-rise rounded-[22px] overflow-hidden flex" style={{ background: 'rgba(237,231,218,.06)', animationDelay: '.2s', color: INK }}>
-                <div className="w-[104px] shrink-0 rw-photo" style={{ backgroundImage: 'url(/images/meals/food/bowl.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                <div className="px-3.5 pt-3 pb-3.5 flex flex-col gap-1.5 flex-1 min-w-0">
-                  {label("YOUR FOOD'S HANDLED")}
-                  <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 26, lineHeight: 1, textTransform: 'uppercase' }}>{eatingOutToday ? 'Eating out? Covered.' : 'Your picks are ready'}</span>
-                  {calBudget != null && calRemaining != null && (<>
-                    <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(237,231,218,.12)' }}>
-                      <div className="h-2 rounded-full" style={{ width: `${Math.max(0, Math.min(100, (loggedCalories / calBudget) * 100))}%`, background: GOLD }} />
-                    </div>
-                    <span className="text-[13px]" style={{ color: MUTE }}>{calRemaining.toLocaleString('en-US')} cal left, and we&apos;re counting so you don&apos;t.</span>
-                  </>)}
-                  {calBudget == null && <span className="text-[13px]" style={{ color: MUTE }}>{mealIdx > 5 ? 'Sunday. Eat easy, we picked a few.' : 'Tap to see what we picked.'}</span>}
+              <span className="px-1 -mb-1.5">{label('NUTRITION')}</span>
+              <Link href={eatingOutToday ? '/plan/eating-out' : '/plan/nutrition'} className="nf-press nf-rise rounded-[22px] overflow-hidden flex items-center gap-4 px-4 py-4" style={{ background: 'rgba(237,231,218,.06)', border: `2px solid ${calOverBy > 0 ? 'rgba(255,90,78,.55)' : 'rgba(229,169,60,.35)'}`, animationDelay: '.2s', color: INK }}>
+                {calBudget != null && calRemaining != null ? (
+                  <CalRing left={calRemaining} over={calOverBy} pct={calBudget > 0 ? loggedCalories / calBudget : 0} />
+                ) : (
+                  <div className="w-[96px] h-[96px] shrink-0 rounded-full rw-photo" style={{ backgroundImage: 'url(/images/meals/food/bowl.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                )}
+                <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                  <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 26, lineHeight: 1, textTransform: 'uppercase' }}>
+                    {calOverBy > 0 ? 'Over for today' : calRemaining === 0 ? 'You hit your number' : eatingOutToday ? 'Eating out? Covered.' : 'Your picks are ready'}
+                  </span>
+                  <span className="text-[13px]" style={{ color: MUTE }}>
+                    {calBudget == null ? (mealIdx > 5 ? 'Sunday. Eat easy, we picked a few.' : 'Tap to see what we picked.')
+                      : calOverBy > 0 ? `${calOverBy.toLocaleString('en-US')} cal over. No stress. Tomorrow's a fresh start.`
+                        : calRemaining === 0 ? 'Right on target. Nice work.'
+                          : `${loggedCalories.toLocaleString('en-US')} of ${Math.round(calBudget).toLocaleString('en-US')} eaten. Tap for your next meal.`}
+                  </span>
                 </div>
               </Link>
               <Link href="/plan/nutrition/log" className="self-center text-[13px] py-1" style={{ color: 'rgba(237,231,218,.6)' }}>Ate something else? Log it →</Link>
@@ -379,6 +393,26 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
             </div>
           }
         />
+      </div>
+    </div>
+  )
+}
+
+// Calories left today, as a ring (2026-10-29, Asa: "make that highlighted on
+// the Today page like a ring"). Gold fills as she eats; coral once she's over.
+function CalRing({ left, over, pct }: { left: number; over: number; pct: number }) {
+  const r = 42, c = 2 * Math.PI * r
+  const fill = Math.max(0, Math.min(1, pct))
+  const color = over > 0 ? '#FF5A4E' : '#E5A93C'
+  return (
+    <div className="relative w-[104px] h-[104px] shrink-0" aria-label={over > 0 ? `${over} calories over today` : `${left} calories left today`}>
+      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90" aria-hidden>
+        <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(237,231,218,.12)" strokeWidth="9" />
+        <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="9" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - fill)} style={{ filter: `drop-shadow(0 0 6px ${color}88)`, transition: 'stroke-dashoffset .8s ease' }} />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+        <span style={{ fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontStyle: 'italic', fontWeight: 800, fontSize: 28, color: over > 0 ? '#FF8A7A' : '#EDE7DA' }}>{over > 0 ? `+${over.toLocaleString('en-US')}` : left.toLocaleString('en-US')}</span>
+        <span style={{ fontFamily: "var(--font-jbmono), monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.12em', color: 'rgba(237,231,218,.7)', marginTop: 3 }}>{over > 0 ? 'CAL OVER' : 'CAL LEFT'}</span>
       </div>
     </div>
   )

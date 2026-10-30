@@ -129,6 +129,7 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onProgress, on
   function done() {
     if (!block) return
     hapticTap(30)
+    window.dispatchEvent(new Event('luf-music-start'))
     if (block.kind !== 'exercise') { next(); return }
     const filled = round + 1
     setRound(filled)
@@ -280,7 +281,10 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onProgress, on
 
         <div className="shrink-0 flex flex-col gap-3.5 px-5 pt-4">
           {pair ? (
-            <h1 className="nf-head" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 40, lineHeight: 0.92, textTransform: 'uppercase' }}>Do these back to back.</h1>
+            <div className="flex flex-col gap-1">
+              <span style={{ ...pill, fontSize: 12, letterSpacing: '.16em', color: GOLD }}>SUPERSET</span>
+              <h1 className="nf-head" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 40, lineHeight: 0.92, textTransform: 'uppercase' }}>Do these back to back.</h1>
+            </div>
           ) : (
             <h1 className="nf-head text-balance" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: single.name.length > 24 ? 40 : 50, lineHeight: 0.9, textTransform: 'uppercase' }}>{single.name}</h1>
           )}
