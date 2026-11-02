@@ -87,6 +87,7 @@ export async function buildPicks(data: NutritionDay, calBudget: number, now: Dat
     slotCalBudget: day.calBudget,
     partner,
     moneyLeft: left,
+    priceFactors: (formData.price_factors || {}) as Record<string, number>,
   }
   const result = eatStyle ? pickMeals({ ...base, eatStyle, mealBudget, nearby }) : null
   let options = result?.options || []

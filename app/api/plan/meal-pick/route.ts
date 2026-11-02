@@ -15,8 +15,9 @@ import { localDateISO } from '@/lib/localdate'
 //                   notification, app/api/cron/meal-offer) off
 // Calorie logging itself goes through the existing /api/plan/food-log.
 type Body = {
-  action?: 'picked' | 'skipped' | 'style' | 'budget' | 'report' | 'order_app' | 'meal_time' | 'offers'
+  action?: 'picked' | 'skipped' | 'style' | 'budget' | 'report' | 'order_app' | 'meal_time' | 'offers' | 'paid'
   on?: boolean
+  place?: string; paid?: number; shown?: number; entryId?: string
   key?: string; keys?: string[]
   meal?: string; minute?: number | null
   eatStyle?: string; mealBudget?: number
@@ -85,6 +86,23 @@ export async function POST(request: NextRequest) {
     if (typeof body.on !== 'boolean') return NextResponse.json({ error: 'Bad value.' }, { status: 400 })
     if (body.on) delete formData.meal_offers_off
     else formData.meal_offers_off = true
+  } else if (body.action === 'paid') {
+    // "What did it cost?" (2026-11-02): she tells us what she really paid at
+    // this restaurant; her prices there learn from it (half old, half new) and
+    // today's money uses the real amount.
+    const place = String(body.place || '').slice(0, 60)
+    const paid = Number(body.paid), shown = Number(body.shown)
+    if (!place || !(paid > 0 && paid < 200) || !(shown > 0)) return NextResponse.json({ error: 'Bad amount.' }, { status: 400 })
+    const factors = { ...((formData.price_factors || {}) as Record<string, number>) }
+    const old = factors[place] || 1
+    const base = shown / old
+    const next = Math.min(2, Math.max(0.6, old * 0.5 + (paid / base) * 0.5))
+    factors[place] = Math.round(next * 100) / 100
+    formData.price_factors = factors
+    if (typeof body.entryId === 'string' && body.entryId) {
+      // Best effort: the price column exists once migration 049 has run.
+      await svc.from('challenge_food_log').update({ price: Math.round(paid * 100) / 100 }).eq('id', body.entryId).eq('enrollment_id', enrollment.id as string).then(() => null, () => null)
+    }
   } else if (body.action === 'picked' || body.action === 'skipped') {
     let memory = (formData.meal_memory || {}) as MealMemory
     const keys = body.action === 'picked' ? [body.key] : (body.keys || [])

@@ -66,6 +66,7 @@ export interface PickContext {
   nearby?: Map<string, number> // chains open near her right now → miles (Google Places); absent = location unknown
   partner?: { name: string; keys: Set<string> } | null // her partner's picked meals, last 3 days (only when shared)
   moneyLeft?: number | null   // $ left of today's food money (lib/food-budget) — hard rule; absent = no daily budget
+  priceFactors?: Record<string, number> // what she really pays at each chain vs our estimate (learned from "What did it cost?")
 }
 
 export interface PickResult {
@@ -350,7 +351,7 @@ function eatOutCandidates(ctx: PickContext): MealOption[] {
     out.push({
       key, kind: 'out', slot: ctx.slot, name: m.order, place: m.restaurant,
       cal: m.cal, protein: m.protein, carbs: m.carbs, fat: m.fat, calSource: 'published',
-      price: ('price' in m && typeof m.price === 'number') ? Math.round(m.price) : chainPrice(m), why: '',
+      price: Math.round((('price' in m && typeof m.price === 'number') ? m.price : chainPrice(m)) * (ctx.priceFactors?.[m.restaurant] ?? 1)), why: '',
     })
   }
   return out

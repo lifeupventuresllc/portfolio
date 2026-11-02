@@ -668,6 +668,7 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner, ove
         )}
         <span style={{ fontSize: 12, color: 'rgba(237,231,218,.6)' }}>One tap and we fix your calories.</span>
       </div>
+      {card.price != null && <PaidPrice place={card.place} shown={card.price} entryId={done.entryId} />}
 
       <Link href="/plan/today" onClick={() => hapticTap()} className="nf-press rounded-full flex items-center justify-center"
         style={{ height: 56, background: C.ivory, color: C.bg, ...mono(14) }}>BACK TO MY DAY</Link>
@@ -913,6 +914,39 @@ function CountedToday({ items }: { items: { id: string; name: string; cal: numbe
             className="nf-press shrink-0 w-8 h-8 rounded-full grid place-items-center disabled:opacity-50" style={{ background: 'rgba(255,90,78,.16)', color: '#FF8A7A', fontSize: 14 }}>✕</button>
         </div>
       ))}
+    </div>
+  )
+}
+
+// "What did it cost?" (2026-11-02, Asa: prices on the cards were off). She
+// types what she really paid; her prices at that restaurant learn from it
+// and today's money uses the real amount.
+function PaidPrice({ place, shown, entryId }: { place: string; shown: number; entryId: string | null }) {
+  const [open, setOpen] = useState(false)
+  const [val, setVal] = useState('')
+  const [saved, setSaved] = useState(false)
+  const n = Number(val)
+  async function save() {
+    if (!(n > 0)) return
+    hapticTap()
+    setSaved(true)
+    await fetch('/api/plan/meal-pick', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'paid', place, paid: n, shown, entryId }) }).catch(() => null)
+  }
+  if (saved) return <span className="self-center text-[13px]" style={{ color: MINT }}>Got it. Your {place} prices are updated.</span>
+  if (!open) {
+    return (
+      <button type="button" onClick={() => { hapticTap(); setOpen(true) }} className="self-center text-[13px] underline underline-offset-2" style={{ color: SOFT }}>
+        Paid more or less than ${shown}? Tell us
+      </button>
+    )
+  }
+  return (
+    <div className="flex items-center gap-2" style={{ borderRadius: 16, padding: '8px 8px 8px 14px', background: 'rgba(237,231,218,.06)', border: '1px solid rgba(237,231,218,.16)' }}>
+      <span className="flex-1 text-[14px] font-semibold">What did it cost?</span>
+      <span style={{ ...head(26), color: C.gold }}>$</span>
+      <input inputMode="decimal" autoFocus value={val} onChange={(e) => setVal(e.target.value.replace(/[^0-9.]/g, '').slice(0, 6))} placeholder={String(shown)} aria-label="What you paid"
+        className="w-20 h-11 rounded-xl px-2 text-[18px] outline-none" style={{ background: 'rgba(237,231,218,.08)', border: '1px solid rgba(237,231,218,.2)', color: C.ivory }} />
+      <button type="button" onClick={save} disabled={!(n > 0)} className="nf-press h-11 px-4 rounded-full disabled:opacity-50" style={{ background: C.gold, color: C.bg, ...mono(12) }}>SAVE</button>
     </div>
   )
 }
