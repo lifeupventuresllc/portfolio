@@ -340,7 +340,7 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
   const canSwap = cards.length > shown.length
   return withBar(
     <div className="nf-screen flex-1 flex flex-col min-h-0" style={{ color: C.ivory, fontFamily: BODY }}>
-      <style>{`.np-out{animation:npOut .18s ease-in both}@keyframes npOut{to{transform:translateX(-36px);opacity:0}}.np-in{animation:npIn .32s cubic-bezier(.2,1,.3,1) both}@keyframes npIn{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}@media (prefers-reduced-motion: reduce){.np-out,.np-in{animation:none}}`}</style>
+      <style>{`.np-float{animation:npFloat 2.6s ease-in-out infinite}@keyframes npFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}.np-out{animation:npOut .18s ease-in both}@keyframes npOut{to{transform:translateX(-36px);opacity:0}}.np-in{animation:npIn .32s cubic-bezier(.2,1,.3,1) both}@keyframes npIn{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}@media (prefers-reduced-motion: reduce){.np-out,.np-in,.np-float{animation:none}}`}</style>
       {ask}
       <h1 className="nf-head mb-4" style={head(44)}>{heading}</h1>
       {counted && counted.length > 0 && <CountedToday items={counted} />}
@@ -419,6 +419,20 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
           )
         })}
       </div>
+      {/* How to finish in the delivery app (2026-11-02, Asa's Option A): a
+          few words, floating gently so she notices it. The meal is copied. */}
+      {shown.some((i) => cards[i]?.kind === 'out' && cards[i]?.dest.url) && (
+        // Three picture steps, simple enough for a five-year-old (Asa).
+        <div className="np-float self-center flex items-center gap-2 mt-3 rounded-full pl-2 pr-4" style={{ height: 48, background: 'rgba(229,169,60,.14)', border: '1px solid rgba(229,169,60,.5)', color: C.gold, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 19, textTransform: 'uppercase' }}>
+          {[['1', 'Tap the place'], ['2', 'Tap 🔍'], ['3', 'Paste']].map(([n, t], k) => (
+            <span key={n} className="flex items-center gap-1.5">
+              {k > 0 && <span aria-hidden style={{ opacity: 0.5, fontStyle: 'normal' }}>›</span>}
+              <span className="grid place-items-center rounded-full" style={{ width: 26, height: 26, background: C.gold, color: C.bg, fontSize: 15, fontStyle: 'normal' }}>{n}</span>
+              <span>{t}</span>
+            </span>
+          ))}
+        </div>
+      )}
       <OrderDebug card={shown.map((i) => cards[i]).find((c) => c?.kind === 'out' && c.dest.url)} />
       {canSwap && (
         <button type="button" onClick={shuffle} disabled={busy || fading != null} aria-label="Shuffle: keep one, swap the other"
