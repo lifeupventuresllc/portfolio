@@ -58,7 +58,8 @@ export function orderLink(meal: OrderMeal, app: OrderApp): OrderLink {
   return {
     method: 'search',
     web: `/api/go?app=${app}&q=${q}`,
-    app: app === 'doordash' ? `doordash://search/store/${q}` : `ubereats://search?q=${q}`,
+    // Uber Eats' app link isn't tested yet — it keeps the website until it is.
+    app: app === 'doordash' ? `doordash://search/store/${q}` : null,
     copy,
   }
 }
@@ -88,8 +89,11 @@ export async function placeOrder(meal: OrderMeal, app: OrderApp): Promise<{ plac
 
 /** Debug switch (Asa testing on his phone): try the installed app first. */
 export const APP_FIRST_KEY = 'luf_order_app_first'
+// ON by default since 2026-11-02: Asa's iPhone test opened the DoorDash app
+// right on the search ("Panera"), where she's already signed in. The debug
+// switch can still turn it off on one phone ('0').
 export function appFirstOn(): boolean {
-  try { return localStorage.getItem(APP_FIRST_KEY) === '1' } catch { return false }
+  try { return localStorage.getItem(APP_FIRST_KEY) !== '0' } catch { return true }
 }
 
 /**
