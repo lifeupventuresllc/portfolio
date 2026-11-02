@@ -16,6 +16,8 @@
 // screen tries them only when "app first" is switched on (debug panel).
 // ============================================================
 
+import { orderParts } from '@/lib/order-exact'
+
 export type OrderApp = 'doordash' | 'ubereats'
 export const ORDER_APP_LABEL: Record<OrderApp, string> = { doordash: 'DoorDash', ubereats: 'Uber Eats' }
 
@@ -34,9 +36,33 @@ const STORE_LINKS: Partial<Record<OrderApp, Record<string, string>>> = {}
 
 /** The meal on its own: "Cobb Salad: no croutons" → "Cobb Salad". What she
  *  pastes into the restaurant's own menu search box in DoorDash. */
+// Where a chain's delivery menu names the item differently from the order
+// (Chipotle sells "Burrito Bowl"; the protein is picked inside it).
+const MENU_NAME: [RegExp, RegExp, string][] = [
+  [/^chipotle$/i, /bowl/i, 'Burrito Bowl'],
+  [/^chipotle$/i, /burrito/i, 'Burrito'],
+]
+
 export function mealText(meal: OrderMeal): string {
-  const main = meal.name.split(/[:(]|,| \+ /)[0].trim()
-  return main.toLowerCase().startsWith(meal.place.toLowerCase()) ? main.slice(meal.place.length).trim() || main : main
+  for (const [place, order, name] of MENU_NAME) if (place.test(meal.place) && order.test(meal.name)) return name
+  // The main menu item, kept whole ("Spinach, Feta & Egg White Wrap"), without
+  // "+ Fruit Cup" or how-to-order notes.
+  let main = (orderParts(meal.name)[0] || meal.name).trim()
+  if (main.toLowerCase().startsWith(meal.place.toLowerCase())) main = main.slice(meal.place.length).trim() || main
+  // What she pastes must match the delivery app's menu NAME (2026-11-02, Asa:
+  // "Half Smokehouse BBQ Chicken" found nothing; Panera's item is "Smokehouse
+  // BBQ Chicken" and Half is picked after). Sizes, counts, bread and dressing
+  // are chosen on the item, so they come off the search words.
+  main = main
+    .replace(/\s*\(\d+\s*(ct|pc|piece|count)\)/gi, '')
+    .replace(/^(half|whole|cup of|bowl of|cup|small|medium|large|kids'?|footlong|6"|6-inch|12"|1\/2)\s+/i, '')
+    .replace(/^\d+\s*(pc\.?|piece)?\s+(?=[A-Za-z])/i, '')
+    .replace(/\s+on\s+(multigrain|wheat|italian|white|flatbread|artisan|hearty)\b.*$/i, '')
+    .replace(/\s+(without|no)\s+(dressing|sauce|cheese|rice)\b.*$/i, '')
+    .replace(/\s*\+\s*(apple slices|fruit cup|side salad|coleslaw|[a-z ]*side)$/i, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+  return main || meal.name
 }
 /** Kept for the "nothing opened" fallback: restaurant + meal. */
 export function searchText(meal: OrderMeal): string {
