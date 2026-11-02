@@ -62,6 +62,7 @@ type Props = {
   askLocation?: boolean       // eating out with no fresh position → the "near you" ask, pick view only
   lightCards?: PickCard[]     // nothing fits today → her lightest meals, behind "Still hungry?"
   overNow?: number            // calories she's already over today (0 when she isn't)
+  counted?: { id: string; name: string; cal: number; meal: string }[]  // picks she accepted today (removable)
   moneyDaily?: number | null  // today's food money (weekly ÷ 7); null = no budget set
   moneySpent?: number         // spent today on accepted picks, before this screen
   moneyOver?: boolean         // nothing fits the money left → the one card is the cheapest
@@ -78,7 +79,7 @@ export default function NutritionPicks(props: Props) {
   return <Picks {...props} onLight={lightCards.length ? () => { hapticTap(); setLight(true) } : undefined} />
 }
 
-function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBudget, askLocation, overNow = 0, over = false, onLight, onBack, moneyDaily = null, moneySpent = 0, moneyOver = false }: Props & { over?: boolean; onLight?: () => void; onBack?: () => void }) {
+function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBudget, askLocation, counted, overNow = 0, over = false, onLight, onBack, moneyDaily = null, moneySpent = 0, moneyOver = false }: Props & { over?: boolean; onLight?: () => void; onBack?: () => void }) {
   const router = useRouter()
   // Indexes into `cards` for the two on screen, plus where the next swap
   // starts looking. Starts on the engine's own top pair.
@@ -264,7 +265,7 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
 
   // ---------- after she taps ----------
   if (done && done.card.kind === 'out' && done.card.dest.url) {
-    return withBar(<Logged done={done} slot={slot} meal={meal} remainingCal={remainingCal} calBudget={calBudget} nextUp={nextUp} banner={saveBanner} overNow={overNow} />)
+    return withBar(<Logged done={done} slot={slot} meal={meal} remainingCal={remainingCal} calBudget={calBudget} nextUp={nextUp} banner={saveBanner} overNow={overNow} onTakeOff={() => { setDone(null); router.refresh() }} />)
   }
   if (done) {
     // A home or grab-and-go pick (2026-10-26: same new look as the order screens).
@@ -342,6 +343,7 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
       <style>{`.np-out{animation:npOut .18s ease-in both}@keyframes npOut{to{transform:translateX(-36px);opacity:0}}.np-in{animation:npIn .32s cubic-bezier(.2,1,.3,1) both}@keyframes npIn{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}@media (prefers-reduced-motion: reduce){.np-out,.np-in{animation:none}}`}</style>
       {ask}
       <h1 className="nf-head mb-4" style={head(44)}>{heading}</h1>
+      {counted && counted.length > 0 && <CountedToday items={counted} />}
       {moneyOver && !over && (
         <p className="-mt-2 mb-3" style={{ fontSize: 14, color: SOFT }}>Nothing fits {money(moneyNow)} left today. This is the cheapest.</p>
       )}
@@ -525,9 +527,10 @@ function OrderExact({ card, busy, onBack, onOpen }: { card: PickCard; busy: bool
 // After the order button (2026-10-26, Asa's approved mockup OrderDone): it's
 // counted already. "Got something different?" fixes the count in one tap —
 // an add-on goes on top, a different meal goes to her food log instead.
-function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner, overNow = 0 }: {
+function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner, overNow = 0, onTakeOff }: {
   done: { card: PickCard; left: number; entryId: string | null; failed?: boolean; app?: OrderApp; link?: OrderLink; blocked?: boolean }
   slot: string; meal: string; remainingCal: number; calBudget?: number; nextUp: string | null; banner?: ReactNode; overNow?: number
+  onTakeOff?: () => void
 }) {
   const router = useRouter()
   const { card } = done
@@ -570,6 +573,16 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner, ove
   }
 
   // She got something else: take our count back out, log the real thing.
+  // Didn't order it after all (2026-11-02): take the meal and any add-ons
+  // back off, then straight back to her picks.
+  async function takeOff() {
+    hapticTap()
+    setLeaving(true)
+    const ids = [done.entryId, ...Object.values(addedRef.current).map((a) => a.id)].filter((x): x is string => !!x)
+    await Promise.all(ids.map(unlog))
+    onTakeOff?.()
+  }
+
   async function differentMeal() {
     hapticTap()
     setLeaving(true)
@@ -644,6 +657,10 @@ function Logged({ done, slot, meal, remainingCal, calBudget, nextUp, banner, ove
 
       <Link href="/plan/today" onClick={() => hapticTap()} className="nf-press rounded-full flex items-center justify-center"
         style={{ height: 56, background: C.ivory, color: C.bg, ...mono(14) }}>BACK TO MY DAY</Link>
+      <button type="button" onClick={takeOff} disabled={leaving} className="nf-press self-center rounded-full px-5 disabled:opacity-60"
+        style={{ height: 44, border: '1px solid rgba(255,90,78,.55)', color: '#FF8A7A', ...mono(12) }}>
+        {leaving ? 'TAKING IT OFF…' : "DIDN'T ORDER IT? TAKE IT OFF"}
+      </button>
     </div>
   )
 }
@@ -852,6 +869,36 @@ function OrderDebug({ card }: { card?: PickCard }) {
       <button type="button" className="self-start underline" onClick={() => { const v = !appFirst; setAppFirst(v); try { localStorage.setItem(APP_FIRST_KEY, v ? '1' : '0') } catch { /* ignore */ } }}>
         APP FIRST: {appFirst ? 'ON' : 'OFF'} (TAP TO SWITCH)
       </button>
+    </div>
+  )
+}
+
+// Picks she accepted today, each removable (2026-11-02, Asa: once she taps a
+// meal it counts, and there was no way to take it back off).
+function CountedToday({ items }: { items: { id: string; name: string; cal: number; meal: string }[] }) {
+  const router = useRouter()
+  const [gone, setGone] = useState<string[]>([])
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const shown = items.filter((i) => !gone.includes(i.id))
+  if (!shown.length) return null
+  async function remove(id: string) {
+    hapticTap()
+    setBusyId(id)
+    await unlog(id)
+    setGone((g) => [...g, id])
+    setBusyId(null)
+    router.refresh()
+  }
+  return (
+    <div className="flex flex-col gap-1.5 -mt-1 mb-3">
+      <span style={{ ...mono(10), color: SOFT }}>COUNTED TODAY</span>
+      {shown.map((i) => (
+        <div key={i.id} className="flex items-center gap-2 rounded-full pl-3.5 pr-1" style={{ height: 40, background: 'rgba(237,231,218,.06)', border: '1px solid rgba(237,231,218,.14)' }}>
+          <span className="flex-1 min-w-0 truncate text-[14px]"><b style={{ textTransform: 'capitalize' }}>{i.meal}</b> · {i.name.split(':')[0]} · {i.cal} cal</span>
+          <button type="button" onClick={() => remove(i.id)} disabled={busyId === i.id} aria-label={`Take ${i.name} off today`}
+            className="nf-press shrink-0 w-8 h-8 rounded-full grid place-items-center disabled:opacity-50" style={{ background: 'rgba(255,90,78,.16)', color: '#FF8A7A', fontSize: 14 }}>✕</button>
+        </div>
+      ))}
     </div>
   )
 }

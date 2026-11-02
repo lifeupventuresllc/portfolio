@@ -36,6 +36,11 @@ export default async function NutritionPage() {
   // One builder for the picks (lib/nutrition-picks) — the meal-time offer
   // notification uses the exact same one.
   const { eatStyle, result, options, lightOptions, moneyOver, moneyDaily, day, slot, nowMin, loggedToday, remainingCal, orderApp, locFresh } = await buildPicks(data, calBudget)
+  // Meals she accepted from her picks today, so she can take one back off
+  // (2026-11-02, Asa: "no way to remove it" after tapping a meal).
+  const counted = data.foodRows
+    .filter((r) => r.source === 'meal_pick')
+    .map((r) => ({ id: r.id as string, name: String(r.name || ''), cal: Math.round(Number(r.calories) || 0), meal: String(r.meal || '') }))
   const toCard = (o: (typeof options)[number]): PickCard => ({
     ...o, dest: orderDestination(o, orderApp), photo: mealPhoto(o), short: shortName(o),
   })
@@ -54,7 +59,7 @@ export default async function NutritionPage() {
     <div className="px-4 pt-6 flex flex-col" style={{ background: '#021F16', minHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom))' }}>
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col min-h-0">
         {eatStyle && result ? (
-          <NutritionPicks key={`${day.current?.id ?? 'done'}:${cards.map((c) => c.key).join('|')}`} cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} nextUp={next} refreshInMin={day.refreshInMin} calBudget={Math.round(calBudget)} askLocation={eatStyle === 'out' && !locFresh} lightCards={lightCards} overNow={overNow} moneyDaily={moneyDaily} moneySpent={moneySpent} moneyOver={moneyOver} />
+          <NutritionPicks counted={counted} key={`${day.current?.id ?? 'done'}:${cards.map((c) => c.key).join('|')}`} cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} nextUp={next} refreshInMin={day.refreshInMin} calBudget={Math.round(calBudget)} askLocation={eatStyle === 'out' && !locFresh} lightCards={lightCards} overNow={overNow} moneyDaily={moneyDaily} moneySpent={moneySpent} moneyOver={moneyOver} />
         ) : (
           <EatStyleAsk />
         )}
