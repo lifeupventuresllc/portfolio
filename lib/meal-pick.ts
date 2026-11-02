@@ -3,6 +3,7 @@ import { RECIPES, type Recipe } from '@/lib/recipes'
 import { CHAIN_MENU } from '@/lib/chain-menu'
 import { estimateWeeklyCost, portionIngredients } from '@/lib/ingredients'
 import type { WeekPlan } from '@/lib/meal-plan'
+import { orderParts } from '@/lib/order-exact'
 
 // ============================================================
 // The Nutrition tab's one-tap meal decision (2026-10-19, Asa's builder
@@ -480,6 +481,11 @@ export function pickMeals(ctx: PickContext): PickResult {
     if (o.price != null) score += o.price <= ctx.mealBudget ? 10 + Math.min(8, (ctx.mealBudget - o.price) * 1.5) : -10
     // her own plan's meal for today
     if (o.place === 'Your meal plan') score += 18
+    // Fewer taps in DoorDash (2026-11-02, Asa: "pick meals with no sides"):
+    // a meal that's one menu item ("Cobb Salad") beats one she has to build
+    // ("Chicken Bowl: no rice, black beans, fajita veggies, cheese") or pair
+    // ("+ Fruit Cup"). Every extra part is a tap or a choice over there.
+    if (o.kind === 'out') score -= Math.min(4, orderParts(o.name).length - 1) * 7
     // tastes she told us
     const text = `${o.name} ${o.place}`.toLowerCase()
     const loved = loveWords.find((w) => text.includes(w))
