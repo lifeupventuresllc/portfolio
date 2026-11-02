@@ -4,6 +4,7 @@ import { CHAIN_MENU } from '@/lib/chain-menu'
 import { estimateWeeklyCost, portionIngredients } from '@/lib/ingredients'
 import type { WeekPlan } from '@/lib/meal-plan'
 import { orderParts } from '@/lib/order-exact'
+import { doordashPrice } from '@/lib/chain-prices'
 
 // ============================================================
 // The Nutrition tab's one-tap meal decision (2026-10-19, Asa's builder
@@ -351,7 +352,9 @@ function eatOutCandidates(ctx: PickContext): MealOption[] {
     out.push({
       key, kind: 'out', slot: ctx.slot, name: m.order, place: m.restaurant,
       cal: m.cal, protein: m.protein, carbs: m.carbs, fat: m.fat, calSource: 'published',
-      price: Math.round((('price' in m && typeof m.price === 'number') ? m.price : chainPrice(m)) * (ctx.priceFactors?.[m.restaurant] ?? 1)), why: '',
+      // The real DoorDash price for this exact meal (lib/chain-prices, 2026-11-02);
+      // else the chain's price + DoorDash's usual ~30% markup. Grab & go is a store price.
+      price: Math.round((doordashPrice(m.restaurant, m.order) ?? (m.restaurant === 'Grab & go' ? chainPrice(m) : ((('price' in m && typeof m.price === 'number') ? m.price : chainPrice(m)) * 1.3))) * (ctx.priceFactors?.[m.restaurant] ?? 1)), why: '',
     })
   }
   return out
