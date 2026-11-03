@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import type { MealOption, EatStyle, OrderDestination } from '@/lib/meal-pick'
 import { orderParts, skipLine, chainAddOns, GENERIC_ADDONS, pasteText, copyText, type AddOn } from '@/lib/order-exact'
 import { hapticTap } from '@/lib/haptics'
-import { orderLink, openOrder, appFirstOn, APP_FIRST_KEY, ORDER_APP_LABEL, type OrderApp, type OrderLink } from '@/lib/order-link'
+import { orderLink, openOrder, appFirstOn, mealText, APP_FIRST_KEY, ORDER_APP_LABEL, type OrderApp, type OrderLink } from '@/lib/order-link'
 import LocationOptIn from '@/components/LocationOptIn'
 import MealDrop from '@/components/MealDrop'
 import { moneyLeft, moneyTone, money, MONEY_COLOR } from '@/lib/food-budget'
@@ -130,6 +131,8 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
   // 2026-10-26 (Asa's mockup): an eat-out tap shows "Order exactly this"
   // first, so what she orders is what we count.
   const [ordering, setOrdering] = useState<PickCard | null>(null)
+  // First-time "how to order" sheet (2026-11-03, Asa's mockup B, animated).
+  const [howto, setHowto] = useState<{ card: PickCard; app: OrderApp } | null>(null)
   const meal = slot.toLowerCase()
   // Today's food money: what she spent before this screen, plus the meal she
   // just accepted — so the number and the bar drop the moment she taps.
@@ -252,13 +255,28 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
 
   // A delivery pick goes through "Order exactly this"; home + grab-and-go
   // picks keep the one-tap flow.
-  const tapCard = (card: PickCard) => {
-    // One tap (2026-10-29, Asa: "still so many steps"): copy her meal, open
-    // the delivery site on that restaurant, and count it — all in this tap.
-    // What to order shows on the next screen instead of a screen before.
+  // Order tap. The very first time she orders out, a sheet shows the 3 taps
+  // in DoorDash (a little finger acts them out) and opens it on "Got it".
+  // Every time after: straight to the delivery app.
+  const startOrder = (card: PickCard, app?: OrderApp) => {
+    const useApp: OrderApp = app || card.dest.app || 'doordash'
+    if (card.kind === 'out' && card.dest.url && !howtoSeen()) {
+      hapticTap()
+      copyText(mealText({ place: card.place, name: card.name }))
+      setHowto({ card, app: useApp })
+      return
+    }
     if (card.kind === 'out' && card.dest.url) hapticTap()
-    choose(card)
+    choose(card, app)
   }
+  const tapCard = (card: PickCard) => startOrder(card)
+
+  const howtoSheet = howto && typeof document !== 'undefined' ? createPortal(
+    <OrderHowTo place={howto.card.place} meal={mealText({ place: howto.card.place, name: howto.card.name })} appName={ORDER_APP_LABEL[howto.app]}
+      onClose={() => setHowto(null)}
+      onGo={() => { markHowtoSeen(); const h = howto; setHowto(null); hapticTap(); choose(h.card, h.app) }} />,
+    document.body,
+  ) : null
 
   // ---------- order exactly this ----------
   if (ordering) return withBar(<OrderExact card={ordering} busy={busy} onBack={() => setOrdering(null)} onOpen={() => choose(ordering)} />)
@@ -342,6 +360,7 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
     <div className="nf-screen flex-1 flex flex-col min-h-0" style={{ color: C.ivory, fontFamily: BODY }}>
       <style>{`.np-float{animation:npFloat 2.6s ease-in-out infinite}@keyframes npFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}.np-out{animation:npOut .18s ease-in both}@keyframes npOut{to{transform:translateX(-36px);opacity:0}}.np-in{animation:npIn .32s cubic-bezier(.2,1,.3,1) both}@keyframes npIn{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}@media (prefers-reduced-motion: reduce){.np-out,.np-in,.np-float{animation:none}}`}</style>
       {ask}
+      {howtoSheet}
       <h1 className="nf-head mb-4" style={head(44)}>{heading}</h1>
       {counted && counted.length > 0 && <CountedToday items={counted} />}
       {moneyOver && !over && (
@@ -391,7 +410,7 @@ function Picks({ cards, slot, heading, remainingCal, nextUp, refreshInMin, calBu
                 // Order buttons (2026-10-30, Asa's spec): one tap on the app she wants.
                 <span className="absolute left-3 right-3 bottom-3 grid grid-cols-2 gap-2">
                   {(['doordash', 'ubereats'] as const).map((a) => (
-                    <button key={a} type="button" disabled={busy} onClick={() => { hapticTap(); choose(c, a) }}
+                    <button key={a} type="button" disabled={busy} onClick={() => startOrder(c, a)}
                       className="nf-press rounded-full disabled:opacity-60"
                       style={{ height: 40, background: (c.dest.app || 'doordash') === a ? C.gold : 'rgba(2,31,22,.78)', color: (c.dest.app || 'doordash') === a ? C.bg : C.ivory, border: `1px solid ${(c.dest.app || 'doordash') === a ? C.gold : 'rgba(237,231,218,.3)'}`, backdropFilter: 'blur(6px)', ...mono(10) }}>
                       ORDER ON {ORDER_APP_LABEL[a].toUpperCase()}
@@ -916,3 +935,65 @@ function CountedToday({ items }: { items: { id: string; name: string; cal: numbe
     </div>
   )
 }
+
+const HOWTO_KEY = 'luf_order_howto_seen'
+function howtoSeen(): boolean { try { return localStorage.getItem(HOWTO_KEY) === '1' } catch { return true } }
+function markHowtoSeen() { try { localStorage.setItem(HOWTO_KEY, '1') } catch { /* ignore */ } }
+
+// The first-time "3 taps in DoorDash" sheet (2026-11-03, Asa's mockup B):
+// slides up over her meals (~80% of the screen), a little finger acts out
+// tap the restaurant → tap search → paste on a tiny DoorDash screen, and the
+// matching step lights up. Stays until she taps "Got it · Open DoorDash".
+function OrderHowTo({ place, meal, appName, onGo, onClose }: { place: string; meal: string; appName: string; onGo: () => void; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[80]" role="dialog" aria-label={`How to order in ${appName}`}>
+      <style>{OH_CSS}</style>
+      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 w-full h-full" style={{ background: 'rgba(0,0,0,.6)' }} />
+      <div className="oh-sheet absolute inset-x-0 bottom-0 max-w-md mx-auto flex flex-col gap-3 overflow-y-auto" style={{ height: '82%', minHeight: 560, maxHeight: '100%', background: C.bg, borderRadius: '28px 28px 0 0', boxShadow: '0 -10px 40px rgba(0,0,0,.6)', padding: '14px 16px calc(16px + env(safe-area-inset-bottom))', color: C.ivory, fontFamily: BODY }}>
+        <span className="self-center" style={{ width: 40, height: 5, borderRadius: 9, background: 'rgba(237,231,218,.25)' }} />
+        <span className="self-start flex items-center gap-1.5 rounded-full px-3 py-1.5" style={{ background: 'rgba(30,227,138,.14)', border: '1px solid rgba(30,227,138,.5)', color: MINT, ...mono(10) }}>✓ {meal.toUpperCase()} IS COPIED</span>
+        <h2 style={{ ...head(36), lineHeight: 0.9, margin: 0 }}>3 taps in {appName}.</h2>
+        <div className="oh-demo" aria-hidden>
+          <div className="oh-scene oh-s1"><div className="oh-bar">🔍 {place}</div><div className="oh-row"><b>{place}</b><small>0.7 mi</small></div><div className="oh-row" style={{ color: '#999' }}>Another place</div></div>
+          <div className="oh-scene oh-s2"><b style={{ fontSize: 14 }}>{place}</b><div className="oh-search">🔍 Search store menu</div><div className="oh-row" style={{ color: '#999' }}>More of the menu</div></div>
+          <div className="oh-scene oh-s3"><b style={{ fontSize: 14 }}>{place}</b><div className="oh-search">🔍 <span className="oh-typed">{meal}</span></div><div className="oh-row"><b>{meal}</b></div><span className="oh-paste">Paste</span></div>
+          <span className="oh-ring oh-r1" /><span className="oh-finger oh-f1">👆</span>
+          <span className="oh-ring oh-r2" /><span className="oh-finger oh-f2">👆</span>
+          <span className="oh-ring oh-r3" /><span className="oh-finger oh-f3">👆</span>
+        </div>
+        {[`Tap ${place}`, 'Tap 🔍', 'Tap Paste'].map((t, k) => (
+          <div key={k} className="oh-step flex items-center gap-3 rounded-2xl" style={{ padding: '10px 12px', border: '2px solid transparent', background: 'rgba(237,231,218,.06)', animationDelay: `${k * 2}s` }}>
+            <span className="grid place-items-center rounded-full shrink-0" style={{ width: 34, height: 34, background: C.gold, color: C.bg, ...head(20) }}>{k + 1}</span>
+            <span style={{ ...head(21), lineHeight: 1 }}>{t}</span>
+          </div>
+        ))}
+        <button type="button" onClick={onGo} className="nf-press mt-auto rounded-full shrink-0" style={{ height: 58, background: C.gold, color: C.bg, ...mono(14) }}>GOT IT · OPEN {appName.toUpperCase()}</button>
+        <span className="text-center" style={{ fontSize: 12, color: SOFT }}>You&apos;ll only see this once.</span>
+      </div>
+    </div>
+  )
+}
+
+const OH_CSS = `
+.oh-sheet{animation:ohUp .45s cubic-bezier(.2,1,.3,1) both}@keyframes ohUp{from{transform:translateY(100%)}to{transform:none}}
+.oh-demo{height:150px;border-radius:16px;background:#fff;color:#191919;position:relative;overflow:hidden;font-size:11px;flex-shrink:0}
+.oh-scene{position:absolute;inset:0;padding:10px;display:flex;flex-direction:column;gap:6px;opacity:0;animation:ohShow 6s infinite}
+.oh-s2{animation-delay:2s}.oh-s3{animation-delay:4s}
+@keyframes ohShow{0%{opacity:0}3%{opacity:1}30%{opacity:1}33.3%{opacity:0}100%{opacity:0}}
+.oh-bar{height:22px;border-radius:999px;background:#eee;display:flex;align-items:center;padding-left:9px;color:#555}
+.oh-row{border-radius:10px;background:#f3f3f3;padding:7px 9px;display:flex;justify-content:space-between}
+.oh-row small{color:#777}
+.oh-search{height:26px;border-radius:10px;background:#f3f3f3;display:flex;align-items:center;gap:6px;padding-left:9px;font-weight:600;color:#555}
+.oh-paste{position:absolute;left:22px;top:52px;background:#333;color:#fff;border-radius:8px;padding:5px 10px;font-weight:700}
+.oh-typed{color:#191919;overflow:hidden;white-space:nowrap;display:inline-block;max-width:0;vertical-align:bottom;animation:ohType 6s infinite;animation-delay:4s}
+@keyframes ohType{0%,12%{max-width:0}16%,30%{max-width:160px}33.3%,100%{max-width:0}}
+.oh-finger{position:absolute;font-size:26px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));opacity:0;animation:ohTap 6s infinite}
+.oh-f1{right:26px;top:40px}.oh-f2{right:30px;top:34px;animation-delay:2s}.oh-f3{left:34px;top:64px;animation-delay:4s}
+@keyframes ohTap{0%{transform:translate(18px,22px);opacity:0}8%{opacity:1}15%{transform:none}19%{transform:scale(.85)}23%{transform:none}30%{opacity:1}33.3%,100%{opacity:0}}
+.oh-ring{position:absolute;width:30px;height:30px;border-radius:999px;border:3px solid #EB1700;opacity:0;animation:ohRing 6s infinite}
+.oh-r1{right:22px;top:34px}.oh-r2{right:26px;top:28px;animation-delay:2s}.oh-r3{left:26px;top:54px;animation-delay:4s}
+@keyframes ohRing{0%,17%{opacity:0;transform:scale(.4)}19%{opacity:1}28%{opacity:0;transform:scale(1.6)}100%{opacity:0}}
+.oh-step{animation:ohLit 6s infinite}
+@keyframes ohLit{0%,30%{border-color:#E5A93C;background:rgba(229,169,60,.14)}33.3%,100%{border-color:transparent;background:rgba(237,231,218,.06)}}
+@media (prefers-reduced-motion: reduce){.oh-sheet,.oh-scene,.oh-finger,.oh-ring,.oh-typed,.oh-step{animation:none}.oh-s1{opacity:1}.oh-typed{max-width:none}}
+`
