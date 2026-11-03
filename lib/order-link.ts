@@ -60,6 +60,8 @@ export function mealText(meal: OrderMeal): string {
     .replace(/\s+on\s+(multigrain|wheat|italian|white|flatbread|artisan|hearty)\b.*$/i, '')
     .replace(/\s+(without|no)\s+(dressing|sauce|cheese|rice)\b.*$/i, '')
     .replace(/\s*\+\s*(apple slices|fruit cup|side salad|coleslaw|[a-z ]*side)$/i, '')
+    // " - Steak" / " - Sausage" is the filling she picks inside the item.
+    .replace(/\s+-\s+[A-Za-z]+$/, '')
     .replace(/\s{2,}/g, ' ')
     .trim()
   return main || meal.name
