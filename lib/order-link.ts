@@ -41,6 +41,13 @@ const STORE_LINKS: Partial<Record<OrderApp, Record<string, string>>> = {}
 const MENU_NAME: [RegExp, RegExp, string][] = [
   [/^chipotle$/i, /bowl/i, 'Burrito Bowl'],
   [/^chipotle$/i, /burrito/i, 'Burrito'],
+  // Cava: build-your-own greens bowls are its "Salad Bowl" (checked on DoorDash 2026-11-03).
+  [/^cava$/i, /build your own/i, 'Salad Bowl'],
+  // Panda: you order a "Bowl" or "Plate" and pick Super Greens + entree inside.
+  [/^panda express$/i, /plate/i, 'Plate'],
+  [/^panda express$/i, /bowl/i, 'Bowl'],
+  // Cane's sells single fingers as "Chicken Finger".
+  [/^raising cane's$/i, /finger/i, 'Chicken Finger'],
 ]
 
 export function mealText(meal: OrderMeal): string {
@@ -60,6 +67,10 @@ export function mealText(meal: OrderMeal): string {
     .replace(/\s+on\s+(multigrain|wheat|italian|white|flatbread|artisan|hearty)\b.*$/i, '')
     .replace(/\s+(without|no)\s+(dressing|sauce|cheese|rice)\b.*$/i, '')
     .replace(/\s*\+\s*(apple slices|fruit cup|side salad|coleslaw|[a-z ]*side)$/i, '')
+    // Subway lists bowls and wraps under the protein ("Grilled Chicken").
+    .replace(/\s+(protein bowl|wrap)$/i, (m) => (/^subway$/i.test(meal.place) ? '' : m))
+    // Cava's menu drops "Bowl" / "Pita" ("Chicken + Rice", "Greek Chicken").
+    .replace(/\s+(bowl|pita)$/i, (m) => (/^cava$/i.test(meal.place) ? '' : m))
     // " - Steak" / " - Sausage" is the filling she picks inside the item.
     .replace(/\s+-\s+[A-Za-z]+$/, '')
     .replace(/\s{2,}/g, ' ')
