@@ -96,11 +96,8 @@ function ConversationalIntakeInner() {
   const [auth, setAuth] = useState<'checking' | 'anon' | 'real'>('checking')
   const linkParam = searchParams.get('link')
   const [linkNotice, setLinkNotice] = useState<'taken' | 'failed' | null>(linkParam === 'taken' || linkParam === 'failed' ? linkParam : null)
-  const [gateSkipped, setGateSkipped] = useState(() => {
-    try { return sessionStorage.getItem('luf-save-gate-skipped') === '1' } catch { return false }
-  })
   function skipGate() {
-    setGateSkipped(true); setLinkNotice(null)
+    setLinkNotice(null)
     try { sessionStorage.setItem('luf-save-gate-skipped', '1') } catch { /* ignore */ }
     if (linkParam) window.history.replaceState(null, '', window.location.pathname)
     window.scrollTo(0, 0)
@@ -348,7 +345,10 @@ function ConversationalIntakeInner() {
         name={f.name.trim().split(' ')[0]} targets={targets} firstWorkout={firstWorkout} track={track} isAnonymous={isAnonymous}
         // Real gap found live: router.push alone could serve Next's cached
         // pre-intake /plan — router.refresh() first so it's fresh.
-        onGo={() => { router.refresh(); router.push('/plan') }}
+        // A full load, not a client push: the client cache could still serve
+        // the pre-plan Home ("Start your plan") right after the build
+        // (live test 2026-11-04).
+        onGo={() => { window.location.assign('/plan') }}
         onSave={() => router.push('/plan/save')}
         onFineTune={startOptionalTier}
       />
@@ -360,7 +360,10 @@ function ConversationalIntakeInner() {
     if (!noGate && auth === 'checking') {
       return <div className="min-h-[100dvh]" style={{ background: '#021F16', marginBottom: 'calc(-4.5rem - env(safe-area-inset-bottom))' }} />
     }
-    if (!noGate && auth === 'anon' && (!gateSkipped || linkNotice)) {
+    // 2026-11-04 (Asa: do it like the top apps): questions first, saving
+    // comes AFTER her plan is shown (NewReveal). The gate now only appears to
+    // finish a Google link that came back refused or failed.
+    if (!noGate && auth === 'anon' && linkNotice) {
       return (
         <SaveGate
           notice={linkNotice}
