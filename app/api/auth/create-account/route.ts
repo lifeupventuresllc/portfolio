@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { mapAuthError } from '@/lib/auth-errors'
+import { GUEST_COOKIE, guestToken } from '@/lib/adopt-guest'
 
 // Real bug found live, 2026-09-05: the project's Resend account/API key is
 // suspended (confirmed via a direct call to api.resend.com/domains: 403
@@ -55,6 +56,38 @@ export async function POST(request: Request) {
     ? await service.auth.admin.updateUserById(currentUser.id, { email, password, email_confirm: true })
     : await service.auth.admin.createUser({ email, password, email_confirm: true })
 
-  if (error) return NextResponse.json({ error: mapAuthError(error) }, { status: 400 })
+  if (error) {
+    // 2026-11-04 (live call: "Error updating user"): the email already
+    // belonged to an older account, and Supabase only says "Error updating
+    // user". Say what's really going on and how to get in.
+    const taken = await accountForEmail(service, email)
+    if (taken) {
+      const google = taken.providers.includes('google') && !taken.providers.includes('email')
+      const res = NextResponse.json({
+        code: 'email_taken', provider: google ? 'google' : 'email',
+        error: google
+          ? 'This email already has an account that signs in with Google. Tap "Continue with Google" to open it.'
+          : 'This email already has an account. Log in with it instead, or use a different email.',
+      }, { status: 409 })
+      // Remember this guest so her answers move into that account once she's in.
+      if (currentUser?.is_anonymous) res.cookies.set({ name: GUEST_COOKIE, value: guestToken(currentUser.id), httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 3600 })
+      return res
+    }
+    return NextResponse.json({ error: mapAuthError(error) }, { status: 400 })
+  }
   return NextResponse.json({ ok: true })
+}
+
+// Finds an existing (non-guest) account by email. Pages through the admin
+// list; fine at this app's size. Returns its sign-in providers.
+async function accountForEmail(service: ReturnType<typeof createServiceClient>, email: string): Promise<{ providers: string[] } | null> {
+  const want = email.trim().toLowerCase()
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await service.auth.admin.listUsers({ page, perPage: 1000 })
+    if (error || !data?.users.length) return null
+    const u = data.users.find((x) => (x.email || '').toLowerCase() === want && !x.is_anonymous)
+    if (u) return { providers: ((u.app_metadata?.providers as string[] | undefined) || [u.app_metadata?.provider as string]).filter(Boolean) }
+    if (data.users.length < 1000) return null
+  }
+  return null
 }

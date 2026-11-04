@@ -124,6 +124,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, targets, firstWorkout, track: program?.track || null })
   } catch (error) {
     console.error('Challenge intake error:', error)
-    return NextResponse.json({ error: 'Failed to submit intake' }, { status: 500 })
+    return NextResponse.json({ error: "We couldn't save your answers. Please tap Build my plan again. If it keeps happening, tap Feedback and we'll fix it fast." }, { status: 500 })
   }
 }

@@ -8,7 +8,7 @@ export function mapAuthError(err: unknown): string {
   const code = e?.code || ''
 
   if (code === 'invalid_credentials' || /invalid login credentials/i.test(msg))
-    return "That email or password doesn't look right — want to try again, or reset your password?"
+    return "That email or password doesn't match. Try again, tap \"Forgot password\", or if you joined with Google, tap \"Continue with Google\"."
   if (code === 'user_already_exists' || /user already registered/i.test(msg))
     return 'Looks like you already have an account with that email — try logging in instead.'
   if (code === 'over_email_send_rate_limit' || /rate limit/i.test(msg))
@@ -18,5 +18,7 @@ export function mapAuthError(err: unknown): string {
   if (/failed to fetch|network/i.test(msg))
     return 'Having trouble connecting — check your connection and try again.'
 
+  if (/error updating user|database error/i.test(msg))
+    return "We couldn't finish that just now. Please try again in a moment."
   return msg || 'Something went wrong. Please try again.'
 }

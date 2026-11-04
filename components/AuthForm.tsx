@@ -34,7 +34,8 @@ export default function AuthForm({ mode, embedded = false }: AuthFormProps) {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(callbackReason)
-  const [message, setMessage] = useState<string | null>(null)
+  // Sent here because her email already had an account (2026-11-04).
+  const [message, setMessage] = useState<string | null>(searchParams.get('back') === '1' ? 'Welcome back! Enter the password for this account and your answers come with you.' : null)
   const [accepted, setAccepted] = useState(false)
 
   // Fresh non-singleton client to avoid any cached state — but built ONCE per
@@ -65,6 +66,8 @@ export default function AuthForm({ mode, embedded = false }: AuthFormProps) {
       if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
+        // A guest's answers move into this account if she came from "Save your progress".
+        await fetch('/api/auth/adopt-guest', { method: 'POST' }).catch(() => null)
 
         // Default members straight to their dashboard (honor an explicit ?redirect= first)
         const params = new URLSearchParams(window.location.search)
@@ -103,6 +106,28 @@ export default function AuthForm({ mode, embedded = false }: AuthFormProps) {
           body: JSON.stringify({ email, password }),
         })
         const createBody = await createRes.json().catch(() => ({}))
+        // Her email already has an account (2026-11-04 live call). She's never
+        // wrong: sign her into it and bring her answers along.
+        if (createRes.status === 409 && createBody.code === 'email_taken') {
+          if (createBody.provider === 'google') {
+            setMessage('Welcome back! Opening Google so you can get into your account…')
+            const { error: gErr } = await supabase.auth.signInWithOAuth({
+              provider: 'google',
+              options: { redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(redirect)}`, queryParams: { login_hint: email } },
+            })
+            if (gErr) throw gErr
+            return
+          }
+          // Maybe the password she just typed is that account's password.
+          const { error: pwErr } = await supabase.auth.signInWithPassword({ email, password })
+          if (!pwErr) {
+            await fetch('/api/auth/adopt-guest', { method: 'POST' }).catch(() => null)
+            window.location.href = redirect
+            return
+          }
+          window.location.href = `/login?back=1&email=${encodeURIComponent(email)}&redirect=${encodeURIComponent(redirect)}`
+          return
+        }
         if (!createRes.ok) throw new Error(createBody.error || 'Something went wrong. Please try again.')
 
         const { error } = await supabase.auth.signInWithPassword({ email, password })

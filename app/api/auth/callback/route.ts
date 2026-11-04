@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { ensureEnrollmentAndWelcome } from '@/lib/auth-onboarding'
 import { createServiceClient } from '@/lib/supabase/server'
+import { GUEST_COOKIE, readGuestToken, adoptGuest } from '@/lib/adopt-guest'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -52,6 +53,12 @@ export async function GET(request: NextRequest) {
 
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
+      // Her guest answers come with her into the account she really has.
+      const guestId = readGuestToken(request.cookies.get(GUEST_COOKIE)?.value)
+      if (guestId && !user.is_anonymous) {
+        await adoptGuest(createServiceClient(), guestId, user).catch(() => null)
+        response.cookies.set({ name: GUEST_COOKIE, value: '', maxAge: 0, path: '/' })
+      }
       await ensureEnrollmentAndWelcome(user)
 
       // Real gap found live (Asa's report, 2026-09-07): a brand-new Google
@@ -65,7 +72,7 @@ export async function GET(request: NextRequest) {
       // onboarded user lands on the dashboard as normal.
       if (next === '/plan' || next === '/') {
         const svc = createServiceClient()
-        const { data: enrollment } = await svc.from('challenge_enrollments').select('intake_completed').eq('user_id', user.id).maybeSingle()
+        const { data: enrollment } = await svc.from('challenge_enrollments').select('intake_completed').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
         if (enrollment && !enrollment.intake_completed) {
           response.headers.set('Location', `${origin}/plan/intake`)
         }

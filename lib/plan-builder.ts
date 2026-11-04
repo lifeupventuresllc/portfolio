@@ -190,15 +190,16 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     },
   }
 
-  if (existingIntake) {
-    const levelChanged = existingIntake.experience_level !== inp.experience_level
-    await svc
-      .from('challenge_intake')
-      .update({ ...intakePayload, updated_at: new Date().toISOString(), ...(levelChanged ? { level_started_at: new Date().toISOString() } : {}) })
-      .eq('id', existingIntake.id)
-  } else {
-    await svc.from('challenge_intake').insert(intakePayload)
-  }
+  // 2026-11-04 (live-call bug: "nothing was saved"): these writes used to
+  // ignore their errors, so a rejected save looked like success and the app
+  // kept asking her to build a plan. A failed save now stops here with the
+  // real reason, so the intake can tell her and nothing half-saves.
+  // (level_started_at was removed: that column doesn't exist, so every
+  // level-change update failed silently.)
+  const { error: intakeErr } = existingIntake
+    ? await svc.from('challenge_intake').update({ ...intakePayload, updated_at: new Date().toISOString() }).eq('id', existingIntake.id)
+    : await svc.from('challenge_intake').insert(intakePayload)
+  if (intakeErr) throw new Error(`intake save failed: ${intakeErr.code || ''} ${intakeErr.message}`)
 
   // Protein anchors to current weight on a cut, goal weight otherwise — same rule
   // calcNutritionTargets used to apply; replicated here via buildBlueprint directly
@@ -369,13 +370,14 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
   // caller falls back to the literal placeholder 'Your' when it has no real
   // name (cold-start chat, Quickstart), so only write it when it's a genuine
   // one, never overwriting a real saved name with that placeholder.
-  await svc
+  const { error: enrErr } = await svc
     .from('challenge_enrollments')
     .update({
       intake_completed: true, goal: inp.goal, updated_at: new Date().toISOString(),
       ...(inp.name && inp.name !== 'Your' ? { name: inp.name } : {}),
     })
     .eq('id', inp.enrollmentId)
+  if (enrErr) throw new Error(`enrollment save failed: ${enrErr.code || ''} ${enrErr.message}`)
 
   return { targets, program, weekPlan }
 }
