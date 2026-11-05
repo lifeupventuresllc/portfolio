@@ -278,3 +278,19 @@ export const RECIPE_INSTRUCTIONS: Record<string, string[]> = {
     'Top with strawberries and a crushed vanilla wafer before eating.',
   ],
 }
+// No-cook snacks (2026-11-05, Nutrition "How to make it"): the cookbook has
+// no directions for these, so she gets the plain assembly steps. Nothing
+// here changes what's in them.
+export const NO_COOK_STEPS: Record<string, string[]> = {
+  'Yoplait Protein + Mixed Berries': ['Open the yogurt.', 'Put the berries on top. Eat it with a spoon.'],
+  'Banana + Nut Butter (Regular)': ['Peel the banana.', 'Spread the nut butter on it, or dip the banana in it.'],
+  'Banana + Nut Butter (Large)': ['Peel the banana.', 'Spread the nut butter on it, or dip the banana in it.'],
+  'Rice Cakes + PB (Regular)': ['Spread the peanut butter on the rice cakes.'],
+  'Rice Cakes + PB (Large)': ['Spread the peanut butter on the rice cakes.'],
+  'Pepperoni Protein Box': ['Boil the eggs ahead of time (10 min), or buy them already boiled.', 'Put the pepperoni, cheese, eggs, olives and fruit in a container.'],
+}
+
+/** Steps for a cook-it meal: the cookbook's, else the no-cook ones. */
+export function stepsFor(name: string): string[] {
+  return RECIPE_INSTRUCTIONS[name] || NO_COOK_STEPS[name] || []
+}

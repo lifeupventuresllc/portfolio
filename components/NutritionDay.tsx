@@ -8,6 +8,7 @@ import { orderLink, openOrder, appFirstOn, mealText, ORDER_APP_LABEL, type Order
 import { copyText } from '@/lib/order-exact'
 import { PLAN_STOPS, EXTRA_SNACKS, type PlanStopId, type PlannedPick, type SavedDayPlan } from '@/lib/day-plan'
 import LocationOptIn from '@/components/LocationOptIn'
+import { stepsFor, NO_COOK_STEPS } from '@/lib/recipe-instructions'
 import { OrderHowTo, OrderExact, MoneyBar, CopyFallback, howtoSeen, markHowtoSeen, type PickCard } from '@/components/NutritionPicks'
 
 // The Nutrition tab, v5 (2026-11-05, Asa's first real user test): she plans
@@ -241,6 +242,7 @@ export default function NutritionDay(p: {
   if (view.v === 'cook') {
     const pick = picks[view.id]
     if (!pick) { setView({ v: 'plan' }); return null }
+    const steps = stepsFor(pick.name)
     return (
       <Shell>
         {errorBar}
@@ -258,6 +260,21 @@ export default function NutritionDay(p: {
             </ul>
           ) : <p style={{ margin: 0, fontSize: 16, color: C.soft }}>Everything is in the name. Make it your way.</p>}
         </Section>
+        {steps.length > 0 && (
+          <Section title={NO_COOK_STEPS[pick.name] ? 'HOW TO MAKE IT · NO COOKING' : 'HOW TO MAKE IT'}>
+            <ol className="flex flex-col gap-3" style={{ margin: 0, padding: 0, listStyle: 'none', fontSize: 17, lineHeight: 1.4 }}>
+              {steps.map((t, i) => (
+                <li key={i} className="flex gap-3">
+                  <span className="shrink-0 grid place-items-center rounded-full" style={{ width: 28, height: 28, background: C.gold, color: C.bg, ...mono(13) }}>{i + 1}</span>
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ol>
+            {steps.some((t) => /portion|containers|divide by/i.test(t)) && (
+              <p style={{ margin: 0, fontSize: 14, color: C.soft }}>These steps make a big batch for the week. The list above is for one meal.</p>
+            )}
+          </Section>
+        )}
         <div className="h-4" />
         <EatButton eaten={!!pick.eatenId} busy={busy === view.id} onEat={() => markEaten(view.id)} onUndo={() => unEat(view.id)} />
       </Shell>
@@ -267,6 +284,7 @@ export default function NutritionDay(p: {
   // ---------- her day (review before confirming, and the confirmed plan) ----------
   const rows = active.map((s) => ({ s, pick: picks[s.id], title: TITLE[DEFS.find((d) => d.id === s.id)!.label] }))
   const total = planned()
+  const cost = active.reduce((t, s) => t + (picks[s.id]?.price || 0), 0)
   return (
     <Shell>
       {sheet}
@@ -278,6 +296,11 @@ export default function NutritionDay(p: {
           ? (eatenCal > 0 ? `Eaten ${eatenCal.toLocaleString()} of ${total.toLocaleString()} calories so far.` : 'When you eat a meal, tap “I ate it”.')
           : `${total.toLocaleString()} calories in all. Tap Change to swap a meal.`}
       </p>
+      {p.moneyDaily != null && cost > p.moneyDaily + 0.5 && (
+        <p className="mb-4 rounded-2xl px-4 py-3" style={{ margin: 0, fontSize: 15, lineHeight: 1.4, background: 'rgba(255,178,30,.1)', border: '1px solid rgba(255,178,30,.45)' }}>
+          This day costs about ${Math.round(cost)}. Your food money is ${Math.round(p.moneyDaily)} a day. Tap Change and pick a Cook it meal to spend less.
+        </p>
+      )}
       {confirmed && p.moneyDaily != null && <MoneyBar daily={p.moneyDaily} spent={p.moneySpent} />}
       {blocked && <div className="mb-3"><CopyFallback text={blocked.text} appName={ORDER_APP_LABEL[blocked.app]} /></div>}
       <div className="flex flex-col gap-3">
@@ -330,7 +353,7 @@ export default function NutritionDay(p: {
               </div>
             )}
             {i >= PLAN_STOPS.length && !pick?.eatenId && (
-              <button type="button" onClick={() => removeSnack(s.id)} className="block w-full pb-3 underline underline-offset-2" style={{ fontSize: 14, color: C.faint }}>Remove this snack</button>
+              <button type="button" onClick={() => removeSnack(s.id)} className="block w-full pb-3 underline underline-offset-2" style={{ fontSize: 15, color: C.soft, minHeight: 44 }}>Remove this snack</button>
             )}
           </div>
         ))}
@@ -357,7 +380,7 @@ export default function NutritionDay(p: {
 // ---- pieces ----
 
 function Shell({ children }: { children: ReactNode }) {
-  return <div className="nf-screen flex-1 flex flex-col pb-6" style={{ color: C.ivory, fontFamily: BODY }}>{children}</div>
+  return <div className="nf-screen flex-1 flex flex-col pb-28" style={{ color: C.ivory, fontFamily: BODY }}>{children}</div>
 }
 function TopBack({ label, onClick }: { label: string; onClick: () => void }) {
   return (
@@ -449,7 +472,7 @@ function PickStep({ stop, step, total, picked, defaultMode, room, askLocation, o
       </div>
       {total > 0 && <span style={{ ...mono(12), color: C.soft }}>MEAL {step} OF {total}</span>}
       <h1 className="mt-1 mb-1" style={head(46)}>Pick your {title.toLowerCase()}.</h1>
-      <p className="mb-3" style={{ margin: 0, fontSize: 16, color: C.soft }}>{over ? `Your day is full. These go a little over.` : 'Tap the one you want.'}</p>
+      <p className="mb-3" style={{ margin: 0, fontSize: 16, color: C.soft }}>{over ? `You're close to your calories for today. These go a little over.` : 'Tap the one you want.'}</p>
 
       {kinds.length > 1 && (
         <div className="flex gap-2 mb-3" role="tablist" aria-label="Kind of meal">
@@ -476,7 +499,7 @@ function PickStep({ stop, step, total, picked, defaultMode, room, askLocation, o
                   <span className="min-w-0">
                     <span className="block" style={{ ...head(26), lineHeight: 0.95 }}>{c.short}</span>
                     <span className="block mt-1" style={{ ...mono(11), color: C.soft }}>
-                      {c.kind === 'cook' ? 'COOK IT' : c.place.toUpperCase()}{c.price != null && <> · <span style={{ color: C.gold }}>${c.price}</span></>}
+                      {c.kind === 'cook' ? (stepsFor(c.name).length && !NO_COOK_STEPS[c.name] ? 'COOK IT' : 'AT HOME') : c.place.toUpperCase()}{c.price != null && <> · <span style={{ color: C.gold }}>${c.price}</span></>}
                     </span>
                   </span>
                   <span className="shrink-0 text-right leading-none">
