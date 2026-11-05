@@ -1,4 +1,5 @@
 import { whyLines, selfTalkForDay } from '@/lib/payoff'
+import StartFresh from '@/components/StartFresh'
 import NutritionDrop from '@/components/NutritionDrop'
 import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
@@ -314,7 +315,7 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
 
         <ProgressViewToggle
           {...(home ? { initialTab: 'garden' as const, remember: false } : {})}
-          garden={<ProgressNew days={days} workoutsDone={workoutsDone} workoutsGoal={workoutsGoal} weightChange={weightChange} startWeight={startWeight} foodDays={foodDays} streak={streak} why={why} wins={wins} shields={shields} />}
+          garden={<div className="flex flex-col"><ProgressNew days={days} workoutsDone={workoutsDone} workoutsGoal={workoutsGoal} weightChange={weightChange} startWeight={startWeight} foodDays={foodDays} streak={streak} why={why} wins={wins} shields={shields} /><StartFresh /></div>}
           plan={
             // Today (2026-10-25, Asa: "two things today" felt like effort and
             // work) — not a to-do list: everything is already handled for her.
