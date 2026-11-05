@@ -159,7 +159,7 @@ export default function NutritionDay(p: {
     const link = orderLink({ place: pick.place, name: pick.name, key: pick.key }, app)
     copyText(link.copy)
     setBlocked(openOrder(link, appFirstOn()) ? null : { text: link.copy, app })
-    if (!pick.eatenId) markEaten(id)
+    // Opening the app isn't eating it: she taps I ATE IT herself.
   }
   async function addSnack() {
     if (extras >= EXTRA_SNACKS.length) return
@@ -208,7 +208,7 @@ export default function NutritionDay(p: {
       <Shell>
         {errorBar}
         <PickStep key={stop.id} stop={stop} step={idx + 1} total={view.from === 'flow' ? PLAN_STOPS.length + extras : 0}
-          picked={picks[stop.id]} defaultMode={lastMode ?? (p.mix ? 'mix' : p.eatStyle)} onMode={setLastMode}
+          picked={picks[stop.id]} defaultMode={lastMode ?? (p.mix ? 'mix' : p.eatStyle)} onMode={setLastMode} mixer={!!p.mix}
           moneyRoom={p.moneyDaily == null ? null : Math.max(0, p.moneyDaily - p.moneySpent - active.reduce((t, s) => t + (s.id !== stop.id && !picks[s.id]?.eatenId ? picks[s.id]?.price || 0 : 0), 0))}
           taken={new Set(active.filter((s) => s.id !== stop.id).map((s) => picks[s.id]?.key).filter((k): k is string => !!k))} room={isExtra ? room : null} askLocation={p.askLocation}
           onPick={async (c) => {
@@ -405,14 +405,15 @@ function EatButton({ eaten, busy, onEat, onUndo, small = false }: { eaten: boole
 // Two cards for one meal, the same look as before: tap one to pick it,
 // "Not this one" swaps a card, Shuffle swaps the other. Order out / Cook it
 // switches the kind of meal for just this one.
-function PickStep({ stop, step, total, picked, defaultMode, onMode, taken, moneyRoom, room, askLocation, onPick, onSkip, onBack, backLabel, onNext, nextLabel }: {
-  stop: DayStop; step: number; total: number; picked: PlannedPick | null | undefined; defaultMode: Mode; room: number | null; askLocation: boolean
+function PickStep({ stop, step, total, picked, defaultMode, onMode, mixer, taken, moneyRoom, room, askLocation, onPick, onSkip, onBack, backLabel, onNext, nextLabel }: {
+  stop: DayStop; step: number; total: number; picked: PlannedPick | null | undefined; defaultMode: Mode; mixer: boolean; room: number | null; askLocation: boolean
   onMode: (m: Mode) => void; taken: Set<string>; moneyRoom: number | null
   onPick: (c: DayCard) => void; onSkip: () => void; onBack: () => void; backLabel: string; onNext: () => void; nextLabel: string
 }) {
   const kinds: Mode[] = [...(stop.out.length ? ['out' as const] : []), ...(stop.cook.length ? ['cook' as const] : [])]
   const startMode: Mode = picked ? picked.kind : defaultMode === 'mix' && kinds.length < 2 ? (kinds[0] || 'cook') : kinds.includes(defaultMode as 'out') || defaultMode === 'mix' ? defaultMode : (kinds[0] || 'cook')
   const [mode, setMode] = useState<Mode>(startMode)
+  let pricey = false   // nothing fits her money left, so we show the cheapest
   const list = (() => {
     let l: DayCard[]
     if (mode === 'mix') {
@@ -426,6 +427,7 @@ function PickStep({ stop, step, total, picked, defaultMode, onMode, taken, money
     // the two cheapest.
     if (moneyRoom != null) {
       const fit = l.filter((c) => c.price == null || c.price <= moneyRoom + 0.5)
+      pricey = fit.length < 2 && l.length > fit.length
       l = fit.length >= 2 ? fit : [...l].sort((a, b) => (a.price ?? 0) - (b.price ?? 0)).slice(0, Math.max(2, fit.length))
     }
     // An extra snack only shows what still fits her day (or the lightest).
@@ -481,10 +483,11 @@ function PickStep({ stop, step, total, picked, defaultMode, onMode, taken, money
       </div>
       <h1 className="mt-1 mb-1" style={head(46)}>Pick your {title.toLowerCase()}.</h1>
       <p className="mb-3" style={{ margin: 0, fontSize: 16, color: C.soft }}>{over ? 'These go a little over your day.' : 'Tap the one you want.'}</p>
+      {pricey && moneyRoom != null && <p className="mb-3" style={{ margin: 0, fontSize: 15, color: C.gold }}>Not much fits your ${Math.round(moneyRoom)} left. These are the cheapest.</p>}
 
       {kinds.length > 1 && (
         <div className="flex gap-2 mb-3" role="tablist" aria-label="Kind of meal">
-          {([...(defaultMode === 'mix' ? [['mix', 'All']] : []), ['out', 'Order out'], ['cook', 'Make it']] as [Mode, string][]).map(([m, l]) => (
+          {([...(mixer || defaultMode === 'mix' ? [['mix', 'All']] : []), ['out', 'Order out'], ['cook', 'Make it']] as [Mode, string][]).map(([m, l]) => (
             <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => switchMode(m)} className="nf-press flex-1 rounded-full"
               style={{ height: 46, fontSize: 15, fontWeight: 700, background: mode === m ? C.ivory : 'transparent', color: mode === m ? C.bg : C.ivory, border: `2px solid ${mode === m ? C.ivory : 'rgba(237,231,218,.25)'}` }}>{l}</button>
           ))}

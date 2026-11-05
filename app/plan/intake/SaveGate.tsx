@@ -63,7 +63,7 @@ export default function SaveGate({ notice, onSkip, onExit, onEmail }: {
   }
 
   return (
-    <div className="min-h-[100dvh] relative overflow-x-hidden" style={{ background: C.bg, color: C.ink, fontFamily: BODY, ...FULL }}>
+    <div className="min-h-[100dvh] relative overflow-x-clip" style={{ background: C.bg, color: C.ink, fontFamily: BODY, ...FULL }}>
       <style>{CSS}</style>
       <div className="nf-in min-h-[100dvh] relative flex flex-col">
         <div className="absolute inset-x-0 top-0 h-[46vh]" style={{ backgroundImage: img('/images/onboarding/name-step.jpg'), backgroundSize: 'cover', backgroundPosition: 'center 18%' }} />

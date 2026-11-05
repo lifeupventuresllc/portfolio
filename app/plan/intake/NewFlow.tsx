@@ -144,7 +144,7 @@ export default function NewFlow(p: {
   }, [age, heightIn, weight, goals, lifeStage, f.activity_level, f.target_lbs])
 
   return (
-    <div className="min-h-[100dvh] relative overflow-x-hidden" style={{ background: C.bg, color: C.ink, fontFamily: BODY, ...FULL }}>
+    <div className="min-h-[100dvh] relative overflow-x-clip" style={{ background: C.bg, color: C.ink, fontFamily: BODY, ...FULL }}>
       <style>{CSS}</style>
       <div key={step} className={dir === 'fwd' ? 'nf-in' : 'nf-in-back'}>
         {step === 'name' && <NameWhy {...p} next={next} />}
@@ -618,7 +618,7 @@ function Location({ onBack, onDone, editMode }: { onBack: () => void; onDone: ()
           <div className="h-4" />
           {state === 'ask' || state === 'finding' ? (
             <div className="flex items-center gap-4 w-full">
-              <button onClick={onDone} className="px-2.5 py-3 underline underline-offset-[6px]" style={{ fontFamily: MONO, fontWeight: 700, fontSize: 14, letterSpacing: '.08em' }}>SKIP</button>
+              <button onClick={() => { try { localStorage.setItem('luf_location_prompt_dismissed', '1') } catch { /* fine */ } onDone() }} className="px-2.5 py-3 underline underline-offset-[6px]" style={{ fontFamily: MONO, fontWeight: 700, fontSize: 14, letterSpacing: '.08em' }}>SKIP</button>
               <button onClick={turnOn} disabled={state === 'finding'} className="nf-press flex-1 h-[60px] rounded-full" style={{ background: C.bg, color: C.gold, fontFamily: MONO, fontWeight: 700, fontSize: 15, letterSpacing: '.1em' }}>
                 {state === 'finding' ? 'FINDING SPOTS…' : 'TURN ON LOCATION'}
               </button>
