@@ -64,8 +64,9 @@ function Circles({ total, done, active }: { total: number; done: number; active:
   )
 }
 
-export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onProgress, onClose, menu }: {
+export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onProgress, onClose, menu, levelLabel }: {
   blocks: Block[]
+  levelLabel?: string         // 'Beginner' — a small label on each exercise (2026-11-05), never in the move's name
   onFinish: () => void
   onEffort: (names: string[], effort: Effort, setIndex: number) => void
   // Double progression: every Done on a rep set is logged (0-based set index),
@@ -274,6 +275,7 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
                 <div className="absolute left-4 right-4 bottom-2.5 flex items-end justify-between gap-3">
                   <span className="min-w-0" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: block.moves.length > 2 ? 22 : 28, lineHeight: 0.95, textTransform: 'uppercase' }}>
                     <span style={{ color: GOLD }}>{k + 1}.</span> {m.name}
+                    {m.cue && <span className="block mt-1 normal-case" style={{ fontFamily: 'var(--font-inter), Inter, system-ui, sans-serif', fontStyle: 'normal', fontWeight: 500, fontSize: 13, lineHeight: 1.3, color: INK, textShadow: '0 1px 3px rgba(0,0,0,.6)' }}>{m.cue}</span>}
                   </span>
                   <span className="shrink-0 flex flex-col items-end gap-0.5">
                     <span style={{ ...pill, fontSize: 13, color: INK }}>{repText(m, round).toUpperCase()}</span>
@@ -290,17 +292,25 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
         <div className="shrink-0 flex flex-col gap-3.5 px-5 pt-4">
           {pair ? (
             <div className="flex flex-col gap-1">
-              <span style={{ ...pill, fontSize: 12, letterSpacing: '.16em', color: GOLD }}>SUPERSET</span>
+              <span style={{ ...pill, fontSize: 12, letterSpacing: '.16em', color: GOLD }}>SUPERSET{levelLabel ? <span style={{ color: MUTE }}> · {levelLabel.toUpperCase()}</span> : null}</span>
               <h1 className="nf-head" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 40, lineHeight: 0.92, textTransform: 'uppercase' }}>Do these back to back.</h1>
             </div>
           ) : (
-            <h1 className="nf-head text-balance" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: single.name.length > 24 ? 40 : 50, lineHeight: 0.9, textTransform: 'uppercase' }}>{single.name}</h1>
+            <div className="flex flex-col gap-1">
+              {levelLabel && block.kind === 'exercise' && <span style={{ ...pill, fontSize: 11, letterSpacing: '.16em', color: MUTE }}>{levelLabel.toUpperCase()}</span>}
+              <h1 className="nf-head text-balance" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: single.name.length > 24 ? 40 : 50, lineHeight: 0.9, textTransform: 'uppercase' }}>{single.name}</h1>
+            </div>
           )}
           <div className="flex items-center gap-4 flex-wrap">
             <Circles total={block.rounds} done={round} active />
+            {/* 2026-11-05 (Asa): the set in words beside the circles, same
+                style as a superset's "Round 1 of 2", so every screen matches. */}
             <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 30, lineHeight: 1, color: GOLD, textTransform: 'uppercase' }}>
-              {timed && timer != null ? clock(timer) : pair ? (block.rounds > 1 ? `Round ${round + 1} of ${block.rounds}` : 'One round') : repText(single, round)}
+              {timed && timer != null ? clock(timer) : pair ? (block.rounds > 1 ? `Round ${Math.min(round + 1, block.rounds)} of ${block.rounds}` : 'One round') : block.rounds > 1 ? `Set ${Math.min(round + 1, block.rounds)} of ${block.rounds}` : 'One set'}
             </span>
+            {!pair && !(timed && timer != null) && (
+              <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 30, lineHeight: 1, color: INK, textTransform: 'uppercase' }}>{repText(single, round)}</span>
+            )}
           </div>
           {/* Double progression: one short gold line under the reps ("Go up a weight today."). */}
           {!pair && single.progressCue && <p className="text-[14px] font-semibold leading-snug" style={{ color: GOLD, margin: '-6px 0 0' }}>{single.progressCue}</p>}

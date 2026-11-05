@@ -196,4 +196,7 @@ export const NOT_EXACT_ON_SCREEN = new Set<string>([
   'Leg Press (single/seated)', 'Seated Leg Curl', 'Lying Leg Curl', 'Straight-Arm Cable Pulldown',
   'Thrusters', 'Skull Crusher', 'Dumbbell Snatch', 'KB Around the Worlds', 'Seated Cable Row',
   'Reverse Crunch', 'DB Tricep Kickback', 'Standing Calf Raise', 'Cable Bicep Curl', 'Cable Lateral Raise',
+  // 2026-11-05 audit (Asa: picture must match the how-to): these photos show
+  // a different move — a one-arm row, a floor bridge, a chest machine.
+  'Romanian Deadlift (DB)', 'Romanian Deadlift (Barbell)', 'Barbell Hip Thrust', 'Barbell Bench Press', 'Barbell Bent-Over Row',
 ])

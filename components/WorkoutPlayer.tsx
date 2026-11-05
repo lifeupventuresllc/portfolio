@@ -196,6 +196,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
         }}
         onClose={() => { savedRef.current.finally(() => router.push('/plan')) }}
         menu={elsewhere}
+        levelLabel={program.levelLabel}
       />
       {/* Music: one small pill, top right under the menu button, through
           every screen of the workout (stays mounted, so songs don't restart). */}
