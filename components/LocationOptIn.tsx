@@ -22,8 +22,13 @@ async function sendPing(lat: number, lng: number) {
 // prompt / refreshOnPing (2026-10-23): the Nutrition tab reuses this same
 // ask, in its own words, and re-renders the two picks once her position
 // lands so they come from places open near her.
+// 2026-11-05 (Asa's problem #4): once she said "Not now", the Nutrition tab
+// never asked again and she had no way back. Now the large ask leaves a small
+// "Restaurants near me" button behind; one tap asks the phone right then.
 export default function LocationOptIn({ prompt, refreshOnPing = false, large = false }: { prompt?: string; refreshOnPing?: boolean; large?: boolean } = {}) {
   const [show, setShow] = useState(false)
+  const [later, setLater] = useState(false)   // she said "Not now" (large only): the small button
+  const [blocked, setBlocked] = useState(false) // the phone said no: tell her where to switch it on
   const router = useRouter()
 
   useEffect(() => {
@@ -45,8 +50,8 @@ export default function LocationOptIn({ prompt, refreshOnPing = false, large = f
           }
           return
         }
-        if (perm?.state === 'denied') return
-        try { if (localStorage.getItem(KEY)) return } catch { /* storage blocked: still fine to ask once per visit */ }
+        if (perm?.state === 'denied') { if (!cancelled) setLater(true); return }
+        try { if (localStorage.getItem(KEY)) { if (!cancelled) setLater(true); return } } catch { /* storage blocked: still fine to ask once per visit */ }
         if (!cancelled) setShow(true)
       } catch { /* never block Home over this */ }
     })()
@@ -56,19 +61,30 @@ export default function LocationOptIn({ prompt, refreshOnPing = false, large = f
   const dismiss = () => {
     try { localStorage.setItem(KEY, '1') } catch { /* ignore */ }
     setShow(false)
+    setLater(true)
   }
 
   const allow = () => {
     navigator.geolocation.getCurrentPosition(
-      async (pos) => { await sendPing(pos.coords.latitude, pos.coords.longitude); try { localStorage.setItem('luf_last_ping_at', String(Date.now())) } catch { /* fine */ } setShow(false); if (refreshOnPing) router.refresh() },
-      () => setShow(false), // denied or failed — never ask again this visit; permission state itself remembers her real answer
+      async (pos) => { await sendPing(pos.coords.latitude, pos.coords.longitude); try { localStorage.setItem('luf_last_ping_at', String(Date.now())); localStorage.removeItem(KEY) } catch { /* fine */ } setShow(false); setLater(false); setBlocked(false); if (refreshOnPing) router.refresh() },
+      () => { setShow(false); setLater(true); setBlocked(true) }, // denied or failed — the permission state itself remembers her real answer
       { maximumAge: 10 * 60000, timeout: 8000 },
     )
   }
 
+  if (!show && large && later) return (
+    <div className="max-w-md mx-auto w-full mb-3 flex flex-col gap-2" style={{ fontFamily: 'var(--font-inter), Inter, system-ui, sans-serif' }}>
+      <button type="button" onClick={allow} className="nf-press self-start flex items-center gap-2 rounded-full pl-3 pr-4" style={{ height: 44, border: '2px solid rgba(229,169,60,.5)', color: '#EDE7DA', background: 'transparent', fontSize: 15, fontWeight: 600 }}>
+        <span aria-hidden>📍</span> Show restaurants near me
+      </button>
+      {blocked && (
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.4, color: 'rgba(237,231,218,.72)' }}>
+          Your phone said no. On iPhone: open Settings, tap Privacy, then Location Services, then Safari Websites, and pick While Using. Then tap the button again.
+        </p>
+      )}
+    </div>
+  )
   if (!show) return null
-  // large (Nutrition tab, 2026-10-23 — Asa: "make the banner larger"): same
-  // ask, easy to read and easy to tap with a thumb.
   // large (Nutrition tab, 2026-10-23 — Asa: "make the banner larger"): same
   // ask, easy to read and easy to tap with a thumb. 2026-10-26: the new look
   // (cream on deep green, gold, JetBrains Mono buttons).
