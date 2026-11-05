@@ -601,22 +601,28 @@ export function orderDestination(o: MealOption, app: OrderApp = 'doordash'): Ord
 // Her own cookbook photos first (public/images/meals), then a photo of that
 // KIND of food (public/images/meals/food, credits in lib/meal-photo-credits).
 const RECIPE_PHOTOS = new Set(['buffalo-chicken-bowls', 'crispy-honey-garlic-chicken', 'garlic-butter-chicken-meatballs', 'marry-me-chicken-pasta', 'protein-overnight-oats', 'turkey-sausage-sweet-potato-hash'])
+// 2026-11-05 photo audit (Asa's Nutrition fix #8): burrito.jpg is a shop
+// front, not food, and protein-shake.jpg is mostly gym gear, so neither is
+// used; grilled items never get the fried photo; a few cookbook meals get the
+// closest real match instead of a wrong one.
 const FOOD_PHOTO: [RegExp, string][] = [
+  [/hash brown bake/i, 'egg-bites'], [/cane'?s sauce/i, 'tenders'], [/fried cabbage/i, 'stir-fry'], [/pizza pasta/i, 'pasta'],
+  [/grilled nuggets/i, 'grilled-chicken'], [/(crispy rice|harvest) bowl sweetgreen/i, 'bowl-2'],
   [/cheesecake/i, 'cheesecake'], [/cookie|brookie|skillet cookie/i, 'cookie'], [/tiramisu|shortcake|pumpkin pie|dough/i, 'cheesecake'],
-  [/egg bites/i, 'egg-bites'], [/core power|premier|fairlife|protein shake|muscle milk|ready.to.drink/i, 'protein-shake'], [/shake/i, 'shake'], [/protein bar|quest|bar\b/i, 'protein-bar'], [/parfait|yogurt|yoplait|clusters/i, 'parfait'],
+  [/egg bites/i, 'egg-bites'], [/core power|premier|fairlife|protein shake|muscle milk|ready.to.drink|shake/i, 'shake'], [/protein bar|quest|bar\b/i, 'protein-bar'], [/parfait|yogurt|yoplait|clusters/i, 'parfait'],
   [/oats|oatmeal/i, 'oats'], [/banana|rice cakes|nut butter|\bpb\b/i, 'banana-pb'], [/protein box/i, 'banana-pb'],
   [/breakfast burrito|crunchwrap/i, 'breakfast-burrito'], [/mcmuffin|egg white grill|egg.*sandwich|bagel|breakfast sandwich|steak & wake/i, 'breakfast-sandwich'],
   [/burger|whopper|big mac|shackburger|smokeshack|quarter pounder|mcdouble/i, 'burger'],
   [/egg.*wrap|wrap|pocket|pita/i, 'wrap'], [/wings?\b/i, 'wings'], [/tenders|nugget|strips|chicken fingers/i, 'tenders'],
   [/soup.*(sandwich|panini|grilled cheese|baguette)|(sandwich|panini|grilled cheese).*soup/i, 'soup-sandwich'], [/soup/i, 'soup'], [/\bsalad\b/i, 'salad'], [/bravo|dipper|\bblt\b|fiesta chicken|smokehouse/i, 'sub'], [/\bsub\b|6"|footlong|turkey sandwich|baguette/i, 'sub'],
-  [/chicken sandwich|mcchicken|^mccrispy$/i, 'chicken-sandwich'], [/gordita|chalupa/i, 'taco-bowl'],
+  [/spicy chicken sandwich|chick-fil-a chicken sandwich|mccrispy|mcchicken/i, 'chicken-sandwich-2'], [/chicken sandwich/i, 'chicken-sandwich'], [/gordita|chalupa/i, 'taco-bowl'],
   [/teriyaki/i, 'teriyaki'], [/fried rice/i, 'fried-rice'], [/stir fry/i, 'stir-fry'], [/noodle|gochujang/i, 'noodles'],
   [/mac (&|and) cheese/i, 'mac'], [/pizza/i, 'pizza'], [/pasta|orzo|bisque/i, 'pasta'],
-  [/taco/i, 'taco-bowl'], [/burrito/i, 'burrito'], [/greens|salad bowl|sweetgreen|cabbage/i, 'salad'],
+  [/taco/i, 'taco-bowl'], [/burrito/i, 'breakfast-burrito'], [/greens|salad bowl|sweetgreen|cabbage/i, 'salad'],
   [/bowl|rice/i, 'bowl'], [/grilled chicken|chicken breast|meatball|chicken/i, 'grilled-chicken'], [/salad/i, 'salad'],
 ]
 
-const PHOTO_ALT = new Set(['breakfast-sandwich', 'burger', 'chicken-sandwich', 'wrap', 'wings', 'sub', 'breakfast-burrito', 'bowl'])
+const PHOTO_ALT = new Set(['breakfast-sandwich', 'burger', 'wrap', 'wings', 'sub', 'breakfast-burrito', 'bowl'])
 
 function slug(s: string): string { return s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }
 
