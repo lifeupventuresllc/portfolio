@@ -1,26 +1,19 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import NutritionPicks, { EatStyleAsk, type PickCard } from '@/components/NutritionPicks'
+import { EatStyleAsk } from '@/components/NutritionPicks'
+import NutritionDay, { type DayCard, type DayStop } from '@/components/NutritionDay'
 import { loadNutritionDay } from '@/lib/nutrition-day'
-import { buildPicks } from '@/lib/nutrition-picks'
-import { clockLabel, orderDestination, mealPhoto, shortName } from '@/lib/meal-pick'
+import { buildDayPicks } from '@/lib/nutrition-picks'
+import { orderDestination, mealPhoto, shortName, type MealOption } from '@/lib/meal-pick'
 import { SHOW_CALORIE_COUNTER } from '@/lib/feature-flags'
 
 export const dynamic = 'force-dynamic'
 
-// The Nutrition tab, v4 (2026-10-20, Asa: "she just taps an option within 5
-// seconds, no thinking, everything else can go"). Two big photos for THIS
-// meal — already fit to her calories left (hard rule, never over), her money
-// for one meal, her "never" foods, and how she eats (cook vs eat out, two of
-// the same kind). Nothing else on the screen. Her food log, the camera, and
-// the cook/eat-out + money settings live on /plan/nutrition/log (My Day's
-// "+ Log food").
-// v4.1 (same day): the clock + her food log decide which meal is up
-// (lib/meal-pick planDay) — breakfast logged → lunch is waiting, then the
-// afternoon snack, dinner, the evening snack — and the screen moves on by
-// itself when that meal's time passes. Her own usual meal times (learned
-// from her log, lib/meal-pick mealTimesFrom) outrank the default clock.
+// The Nutrition tab, v5 (2026-11-05, Asa's first real user test): she plans
+// her whole day — breakfast, lunch, snack, dinner — one meal per screen with
+// Back / Next, taps "Confirm my day", and sees her day plan
+// (components/NutritionDay). Replaces v4's one-meal-at-a-time clock flow.
 
 export default async function NutritionPage() {
   if (!SHOW_CALORIE_COUNTER) redirect('/plan')
@@ -32,34 +25,15 @@ export default async function NutritionPage() {
   // Her calorie target comes from the plan she already has — never asked
   // again here. No plan yet → send her through the existing plan creation.
   if (!data || !data.calBudget || !data.intake) return <NoPlanYet />
-  const { calBudget, moneySpent } = data
-  // One builder for the picks (lib/nutrition-picks) — the meal-time offer
-  // notification uses the exact same one.
-  const { eatStyle, result, options, lightOptions, moneyOver, moneyDaily, day, slot, nowMin, loggedToday, remainingCal, orderApp, locFresh } = await buildPicks(data, calBudget)
-  // Meals she accepted from her picks today, so she can take one back off
-  // (2026-11-02, Asa: "no way to remove it" after tapping a meal).
-  const counted = data.foodRows
-    .filter((r) => r.source === 'meal_pick')
-    .map((r) => ({ id: r.id as string, name: String(r.name || ''), cal: Math.round(Number(r.calories) || 0), meal: String(r.meal || '') }))
-  const toCard = (o: (typeof options)[number]): PickCard => ({
-    ...o, dest: orderDestination(o, orderApp), photo: mealPhoto(o), short: shortName(o),
-  })
-  const cards: PickCard[] = options.slice(0, 12).map(toCard)
-  // Hit her number (2026-10-29): the lightest meals, behind "Still hungry?".
-  const lightCards: PickCard[] = lightOptions.map(toCard)
-  const overNow = Math.max(0, Math.round(loggedToday - calBudget))
+  const { eatStyle, mix, stops, avail, plan, orderApp, locFresh, hasPlaces, moneyDaily } = await buildDayPicks(data, data.calBudget)
+  const toCard = (o: MealOption): DayCard => ({ ...o, dest: orderDestination(o, orderApp), photo: mealPhoto(o), short: shortName(o) })
+  const dayStops: DayStop[] = stops.map((s) => ({ id: s.id, label: s.label, calBudget: s.calBudget, out: s.out.map(toCard), cook: s.cook.map(toCard) }))
 
-  const heading = day.current ? `Pick your ${day.current.label}.` : 'Still hungry? Pick a light one.'
-  // What's waiting after this one — said once she's picked.
-  const next = day.next ? `Next up: your ${day.next.label}${day.next.start > nowMin + 30 ? `, around ${clockLabel(day.next.start)}` : ''}.` : null
-
-  // The "near you" ask lives inside NutritionPicks now (2026-10-26, Asa): only
-  // on the two-pick view, never above the order or logged screens.
   return (
     <div className="px-4 pt-6 flex flex-col" style={{ background: '#021F16', minHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom))' }}>
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col min-h-0">
-        {eatStyle && result ? (
-          <NutritionPicks counted={counted} key={`${day.current?.id ?? 'done'}:${cards.map((c) => c.key).join('|')}`} cards={cards} slot={slot} heading={heading} remainingCal={remainingCal} nextUp={next} refreshInMin={day.refreshInMin} calBudget={Math.round(calBudget)} askLocation={eatStyle === 'out' && !locFresh} lightCards={lightCards} overNow={overNow} moneyDaily={moneyDaily} moneySpent={moneySpent} moneyOver={moneyOver} />
+        {eatStyle ? (
+          <NutritionDay stops={dayStops} plan={plan} avail={avail} eatStyle={eatStyle} mix={mix} orderApp={orderApp} askLocation={hasPlaces && !locFresh} moneyDaily={moneyDaily} moneySpent={data.moneySpent} />
         ) : (
           <EatStyleAsk />
         )}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { updateMemory, cleanOverrides, HABIT_MEALS, type MealMemory, type HabitMeal } from '@/lib/meal-pick'
 import { localDateISO } from '@/lib/localdate'
+import { readPlan, cleanPick, ALL_STOP_IDS, type PlanStopId } from '@/lib/day-plan'
 
 // The Nutrition tab's write side (2026-10-19). Everything lives on her own
 // intake row's form_data — no new table, nothing for Asa to run by hand:
@@ -13,9 +14,13 @@ import { localDateISO } from '@/lib/localdate'
 //                   (minutes of her day); learned ones come from her food log
 //   meal_offers_off true — she turned meal-time picks (the Yes / No
 //                   notification, app/api/cron/meal-offer) off
+//   day_plan     today's planned meals (lib/day-plan.ts) — plan_set /
+//                plan_confirm / plan_eaten / plan_extra, 2026-11-05
 // Calorie logging itself goes through the existing /api/plan/food-log.
 type Body = {
   action?: 'picked' | 'skipped' | 'style' | 'budget' | 'report' | 'order_app' | 'meal_time' | 'offers' | 'paid'
+    | 'plan_set' | 'plan_confirm' | 'plan_eaten' | 'plan_extra'
+  stop?: string; pick?: unknown; confirmed?: boolean; extras?: number
   on?: boolean
   place?: string; paid?: number; shown?: number; entryId?: string
   key?: string; keys?: string[]
@@ -103,6 +108,33 @@ export async function POST(request: NextRequest) {
       // Best effort: the price column exists once migration 049 has run.
       await svc.from('challenge_food_log').update({ price: Math.round(paid * 100) / 100 }).eq('id', body.entryId).eq('enrollment_id', enrollment.id as string).then(() => null, () => null)
     }
+  } else if (body.action === 'plan_set' || body.action === 'plan_confirm' || body.action === 'plan_eaten' || body.action === 'plan_extra') {
+    // Her day plan. Any change to a meal un-confirms the day until she taps
+    // "Confirm my day" again; eating a meal never does.
+    const plan = readPlan(formData.day_plan, todayIso)
+    const stop = body.stop as PlanStopId
+    if (body.action === 'plan_set') {
+      if (!ALL_STOP_IDS.includes(stop)) return NextResponse.json({ error: 'Bad meal.' }, { status: 400 })
+      if (plan.picks[stop]?.eatenId) return NextResponse.json({ error: 'Already eaten.' }, { status: 409 })
+      const pick = body.pick === null ? null : cleanPick(body.pick)
+      if (body.pick !== null && !pick) return NextResponse.json({ error: 'Bad pick.' }, { status: 400 })
+      if (body.pick === undefined) delete plan.picks[stop]
+      else plan.picks[stop] = pick
+      plan.confirmed = false
+      if (pick) formData.meal_memory = updateMemory((formData.meal_memory || {}) as MealMemory, pick.key, 'picked', todayIso)
+    } else if (body.action === 'plan_confirm') {
+      plan.confirmed = body.confirmed !== false
+    } else if (body.action === 'plan_eaten') {
+      const pick = plan.picks[stop]
+      if (!ALL_STOP_IDS.includes(stop) || !pick) return NextResponse.json({ error: 'Bad meal.' }, { status: 400 })
+      pick.eatenId = typeof body.entryId === 'string' && body.entryId ? body.entryId.slice(0, 64) : null
+    } else {
+      const n = Math.round(Number(body.extras))
+      if (!(n >= 0 && n <= 2)) return NextResponse.json({ error: 'Bad value.' }, { status: 400 })
+      for (const id of (['snack2', 'snack3'] as const).slice(n)) if (!plan.picks[id]?.eatenId) delete plan.picks[id]
+      plan.extras = n
+    }
+    formData.day_plan = plan
   } else if (body.action === 'picked' || body.action === 'skipped') {
     let memory = (formData.meal_memory || {}) as MealMemory
     const keys = body.action === 'picked' ? [body.key] : (body.keys || [])
@@ -114,5 +146,5 @@ export async function POST(request: NextRequest) {
 
   const { error } = await svc.from('challenge_intake').update({ form_data: formData }).eq('id', intake.id as string)
   if (error) return NextResponse.json({ error: 'Could not save.' }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, plan: formData.day_plan ?? null })
 }
