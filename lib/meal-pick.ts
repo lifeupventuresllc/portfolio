@@ -328,6 +328,20 @@ export function mealKeyFromLog(name: string, brand: string | null | undefined): 
   return !brand || COOK_PLACES.has(brand) ? `cook:${slugify(name)}` : `out:${slugify(brand)}:${slugify(name)}`
 }
 
+// Hidden for now (2026-11-05, Asa): meals whose photo doesn't match, cook
+// meals with no cook time in the cookbook, and snacks with no steps. Asa is
+// adding 15+ full recipes later; take a name off this list to bring it back.
+// (The no-cook snacks — rice cakes, banana, yogurt, protein box — stay: they
+// have steps and need no cook time.)
+export const HIDDEN_MEALS = new Set([
+  // photo doesn't match
+  'Apples & Cheese Trio Protein Box', 'Cheesy Gordita Crunch', 'Garden Avo & Egg White Sandwich', 'Chicken Nugget Hash Brown Bake',
+  // no cook time
+  'Protein Overnight Oats', "Chicken & Fries with Cane's Sauce", 'Macro Friendly Big Mac', 'BBQ Beef Burritos', 'Ground Turkey Taco Bowl',
+  // no steps
+  'Raspberry Chocolate Protein Bar', 'Matcha Strawberry Yogurt Protein Clusters',
+])
+
 function eatOutCandidates(ctx: PickContext): MealOption[] {
   const wc = weightClassFor(ctx.weightLbs)
   // Lunch and dinner portions are interchangeable; breakfast and snacks stay
@@ -342,7 +356,7 @@ function eatOutCandidates(ctx: PickContext): MealOption[] {
   // items, so only their packaged grab & go picks (bars, shakes) stay.
   const grabAndGo = [...wc.days.flatMap((d) => d.meals), ...wc.extraOptions].filter((m) => m.restaurant === 'Grab & go')
   for (const m of [...CHAIN_MENU, ...grabAndGo]) {
-    if (!want.includes(m.slot)) continue
+    if (!want.includes(m.slot) || HIDDEN_MEALS.has(m.order)) continue
     // Where she is (2026-10-23): once we know her location, only chains
     // that are open near her right now — grab & go works anywhere.
     if (ctx.nearby && m.restaurant !== 'Grab & go' && !ctx.nearby.has(m.restaurant)) continue
@@ -372,7 +386,7 @@ function cookCandidates(ctx: PickContext): MealOption[] {
   // to her calories, already on her grocery list.
   const today = ctx.weekPlan && ctx.todayIdx != null && ctx.todayIdx <= 5 ? ctx.weekPlan.days[ctx.todayIdx] : null
   const planned = today && !today.eatOut ? today.meals.find((m) => m.slot === PLAN_SLOT[ctx.slot]) : null
-  if (planned) {
+  if (planned && !HIDDEN_MEALS.has(planned.name)) {
     const base = RECIPES.find((r) => r.name === planned.name)
     const factor = base && base.cal > 0 ? planned.cal / base.cal : 1
     const key = `cook:${slugify(planned.name)}`
@@ -385,7 +399,7 @@ function cookCandidates(ctx: PickContext): MealOption[] {
     })
   }
   for (const r of RECIPES) {
-    if (!RECIPE_CATEGORY[ctx.slot].includes(r.category) || r.earlyAccess) continue
+    if (!RECIPE_CATEGORY[ctx.slot].includes(r.category) || r.earlyAccess || HIDDEN_MEALS.has(r.name)) continue
     const key = `cook:${slugify(r.name)}`
     if (seen.has(key)) continue
     seen.add(key)
