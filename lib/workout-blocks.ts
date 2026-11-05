@@ -98,7 +98,8 @@ export function buildBlocks(program: WorkoutProgram, dayIdx: number): Block[] {
   }
   for (const x of day.accessory) {
     const a = move(x.name, x.reps, x.cue, x.imageUrl)
-    blocks.push({ kind: 'exercise', moves: [withTarget(a.m)], rounds: a.sets, restSec: 45 })
+    // Heavy main lifts get a longer rest (Compound movements style).
+    blocks.push({ kind: 'exercise', moves: [withTarget(a.m)], rounds: a.sets, restSec: x.kind === 'main' ? 90 : x.kind === 'combo' || x.kind === 'lift' ? 60 : 45 })
   }
   if (day.ab) {
     const list = [day.ab.upper, day.ab.lower, ...(day.ab.bonus ? [day.ab.bonus] : [])]

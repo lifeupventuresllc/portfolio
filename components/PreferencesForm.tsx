@@ -28,12 +28,12 @@ const FOCUS_AREAS = [
   { v: 'arms', l: 'Arms & back' },
   { v: 'overall', l: 'All-over' },
 ]
+// Same two choices as the intake's "How do you like to lift?" (2026-11-04).
 const STYLES = [
-  { v: 'compound', l: '🔗 Full body / compound', d: 'Moves that work multiple muscles each rep' },
-  { v: 'split', l: '🎯 Split / one muscle group', d: 'Focused, isolated work per day' },
-  { v: 'cardio', l: '🏃🏽 Cardio-first', d: 'Heart rate up, calorie burn' },
-  { v: 'none', l: '🤷🏽 No strong preference', d: "I'll trust your programming" },
+  { v: 'compound', l: 'Compound movements (Recommended)', d: 'Big moves that work many muscles at once' },
+  { v: 'split', l: 'Classic strength', d: 'One muscle at a time — shape and tone each area' },
 ]
+const LEVELS = [{ v: 'beginner', l: 'Beginner' }, { v: 'intermediate', l: 'Intermediate' }, { v: 'advanced', l: 'Advanced' }]
 
 const opt = (active: boolean) =>
   `w-full text-left px-4 py-3 rounded-xl border transition-all ${active ? 'bg-gold/10 border-gold text-white' : 'bg-charcoal border-smoke text-ivory/70 hover:border-gold/40'}`
@@ -42,6 +42,7 @@ export default function PreferencesForm({ current }: { current: Current }) {
   const [goals, setGoals] = useState<string[]>(current.goals)
   const [focusArea, setFocusArea] = useState(current.focus_area)
   const [trainingStyles, setTrainingStyles] = useState<string[]>(current.training_styles)
+  const [level, setLevel] = useState(current.experience_level || 'beginner')
   const [payoffs, setPayoffs] = useState<string[]>(current.payoffs)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -53,7 +54,7 @@ export default function PreferencesForm({ current }: { current: Current }) {
   // of taps (multi-select goals/styles) is debounced ~400ms into ONE save of
   // the final selection, and a tap during an in-flight save queues one more
   // save instead of being lost. Same endpoint + payload as the old button.
-  const latest = useRef({ goals, focusArea, trainingStyles, payoffs })
+  const latest = useRef({ goals, focusArea, trainingStyles, payoffs, level })
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inFlight = useRef(false)
   const queued = useRef(false)
@@ -65,19 +66,18 @@ export default function PreferencesForm({ current }: { current: Current }) {
     if (next.focusArea !== undefined) setFocusArea(next.focusArea)
     if (next.trainingStyles) setTrainingStyles(next.trainingStyles)
     if (next.payoffs) setPayoffs(next.payoffs)
+    if (next.level) setLevel(next.level)
     setSaved(false); setError('')
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(save, 400)
   }
   const toggleGoal = (v: string) => { const a = latest.current.goals; change({ goals: a.includes(v) ? a.filter((x) => x !== v) : [...a, v] }) }
-  const toggleStyle = (v: string) => {
-    const a = latest.current.trainingStyles
-    change({ trainingStyles: v === 'none' ? ['none'] : (a.includes(v) ? a.filter((x) => x !== v) : [...a.filter((x) => x !== 'none'), v]) })
-  }
+  const toggleStyle = (v: string) => change({ trainingStyles: [v] })
+  const isClassic = trainingStyles.includes('split') && !trainingStyles.includes('compound')
   const togglePayoff = (v: string) => { const a = latest.current.payoffs; change({ payoffs: a.includes(v) ? a.filter((x) => x !== v) : [...a, v] }) }
 
   async function save() {
-    const { goals, focusArea, trainingStyles, payoffs } = latest.current
+    const { goals, focusArea, trainingStyles, payoffs, level } = latest.current
     if (!goals.length) { setError('Pick at least one goal.'); return }
     if (inFlight.current) { queued.current = true; return }
     inFlight.current = true
@@ -90,7 +90,7 @@ export default function PreferencesForm({ current }: { current: Current }) {
           // training_styles below are what this screen actually lets her edit.
           name: current.name, age: current.age, sex: current.sex, height_in: current.height_in,
           weight_lbs: current.weight_lbs, target_lbs: current.target_lbs,
-          activity_level: current.activity_level, experience_level: current.experience_level,
+          activity_level: current.activity_level, experience_level: level,
           training_location: current.training_location, days_per_week: current.days_per_week,
           cook_days_per_week: current.cook_days_per_week, weekly_food_budget: current.weekly_food_budget,
           food_preferences: current.food_preferences, dislikes_allergies: current.dislikes_allergies,
@@ -141,12 +141,21 @@ export default function PreferencesForm({ current }: { current: Current }) {
           ))}
         </div>
 
-        <p className="text-ivory/40 text-xs font-semibold uppercase tracking-wider mb-2">Workout style — pick all that apply</p>
-        <div className="space-y-2 mb-8">
+        <p className="text-ivory/40 text-xs font-semibold uppercase tracking-wider mb-2">How you like to lift</p>
+        <div className="space-y-2 mb-4">
           {STYLES.map((o) => (
-            <button key={o.v} onClick={() => toggleStyle(o.v)} className={opt(trainingStyles.includes(o.v))}>
+            <button key={o.v} onClick={() => toggleStyle(o.v)} className={opt(o.v === 'split' ? isClassic : !isClassic)}>
               <span className="block font-semibold">{o.l}</span>
               <span className="block text-xs opacity-60 mt-0.5">{o.d}</span>
+            </button>
+          ))}
+        </div>
+
+        <p className="text-ivory/40 text-xs font-semibold uppercase tracking-wider mb-2">Your level</p>
+        <div className="grid grid-cols-3 gap-2 mb-8">
+          {LEVELS.map((o) => (
+            <button key={o.v} onClick={() => change({ level: o.v })} className={opt(level === o.v)}>
+              <span className="text-sm font-semibold">{o.l}</span>
             </button>
           ))}
         </div>

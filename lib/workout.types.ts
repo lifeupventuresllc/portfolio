@@ -97,7 +97,7 @@ export interface GymDay {
   // calf pick, never assumed by array position (that assumption is exactly
   // what caused a real bug: core-only days had no calf work but the PDF
   // still labeled slots 0/1 "CALVES" regardless of what filled them).
-  accessory: { name: string; reps: string; cue: string; imageUrl?: string; kind: 'calves' | 'bonus' | 'core' }[]
+  accessory: { name: string; reps: string; cue: string; imageUrl?: string; kind: 'calves' | 'bonus' | 'core' | 'main' | 'combo' | 'lift' }[]
   // Goal-driven, not automatic: undefined when the day's goal/focus doesn't
   // call for it (see buildGymDay in lib/workout-assembly.ts).
   ab?: { upper: AbExercise; lower: AbExercise; scheme: string; bonus?: AbExercise }

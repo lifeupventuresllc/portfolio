@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { weekTemplate, DAY_SHORT, type TrainStyle } from '@/lib/week-template'
+import { weekTemplate, trainStyleFrom, DAY_SHORT } from '@/lib/week-template'
+import { CompoundFigure, ClassicFigure } from './LiftFigures'
 import { hapticTap } from '@/lib/haptics'
 import { createClient } from '@/lib/supabase/client'
 import LiveMap from '@/components/LiveMap'
@@ -31,10 +32,10 @@ const PHOTOS = ['/images/onboarding/name-step.jpg', '/images/onboarding/goal-los
 // pull that space back so the dark screen runs to the bottom edge.
 const FULL = { marginBottom: 'calc(-4.5rem - env(safe-area-inset-bottom))' }
 
-const STEPS = ['name', 'goal', 'body', 'days', 'train', 'hurts', 'foodintro', 'never', 'eat', 'location'] as const
+const STEPS = ['name', 'goal', 'body', 'days', 'train', 'lift', 'hurts', 'foodintro', 'never', 'eat', 'location'] as const
 type Step = typeof STEPS[number]
 // Questions left after this one, shown top right ("9 LEFT").
-const LEFT: Partial<Record<Step, number>> = { name: 9, goal: 8, body: 7, days: 6, train: 5, hurts: 4, never: 3, eat: 2, location: 1 }
+const LEFT: Partial<Record<Step, number>> = { name: 10, goal: 9, body: 8, days: 7, train: 6, lift: 5, hurts: 4, never: 3, eat: 2, location: 1 }
 
 const WHYS = [
   { v: 'energy', l: 'My energy' }, { v: 'kids', l: 'My kids' }, { v: 'mood', l: 'My mood' },
@@ -52,12 +53,22 @@ const DAYS = [
   { v: 'active', l: 'Very active', d: 'Hard, physical work', icon: 'bolt' },
 ]
 const SPOTS = [{ v: 'home', l: 'Home' }, { v: 'both', l: 'Both' }, { v: 'gym', l: 'Gym' }]
-// How she likes to train (2026-10-30) — sets her whole week (lib/week-template.ts).
-const STYLES: { v: string; l: string; d: string; t: TrainStyle }[] = [
-  { v: 'compound', l: 'Full body', d: 'Big moves, every day', t: 'full' },
-  { v: 'split', l: 'One area', d: 'Legs day, arms day', t: 'split' },
-  { v: 'none', l: 'You pick', d: 'Best for my days', t: 'auto' },
+// How she likes to lift (2026-11-04, Asa's mockup) — asked once, switchable
+// in settings. Style + level set her whole week (lib/week-template.ts) and
+// every workout (lib/workout-assembly.ts): Compound movements = main lift +
+// dumbbell combos; Classic strength = supersets, two body groups a day
+// (Intermediate/Advanced) or straight sets (Beginner). Core + cardio in all.
+const LIFT_STYLES = [
+  { v: 'compound', l: 'Compound movements', d: 'Big moves that work many muscles at once. Most results for your time.', moves: 'Squats · Deadlifts · Squat-to-press · Lunge-to-curl', tag: 'Squat to press', rec: true },
+  { v: 'split', l: 'Classic strength', d: 'One muscle at a time. Shape and tone each area.', moves: 'Curls · Flys · Shoulder raises · Hip thrusts', tag: 'Curls', rec: false },
 ]
+const LEVELS = [
+  { v: 'beginner', l: 'Beginner', n: 1 }, { v: 'intermediate', l: 'Intermediate', n: 2 }, { v: 'advanced', l: 'Advanced', n: 3 },
+]
+function liftWhat(style: string, level: number): string {
+  if (style === 'split') return level >= 2 ? 'Supersets, two body groups a day, then core and cardio.' : 'One move at a time, straight sets, then core and cardio.'
+  return level >= 2 ? '2 main lifts + 4 combo moves, then core and cardio.' : '1 main lift + 3 combo moves, then core and cardio.'
+}
 const HURTS = [
   { v: 'knee', l: 'Knee' }, { v: 'lower_back', l: 'Lower back' }, { v: 'shoulder', l: 'Shoulder' }, { v: 'hip', l: 'Hip' },
   { v: 'wrist', l: 'Wrist' }, { v: 'elbow', l: 'Elbow' }, { v: 'ankle', l: 'Ankle' },
@@ -214,8 +225,6 @@ export default function NewFlow(p: {
         {step === 'train' && (() => {
           const spot = Math.max(0, SPOTS.findIndex((s) => s.v === (f.training_location || 'both')))
           const days = f.days_per_week || '3'
-          const style = STYLES.find((o) => p.trainingStyles.includes(o.v)) || STYLES[2]
-          const week = weekTemplate(Number(days), style.t)
           return (
             <div className="min-h-[100dvh] relative flex flex-col">
               <div className="absolute inset-x-0 top-0 h-[54vh]" style={{ backgroundImage: img('/images/onboarding/goal-gain.jpg'), backgroundSize: 'cover', backgroundPosition: 'center 15%' }} />
@@ -239,27 +248,64 @@ export default function NewFlow(p: {
                     <Choice key={d} on={days === d} onClick={() => { hapticTap(); set('days_per_week', d) }} className="h-16" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 32 }}>{d}</Choice>
                   ))}
                 </div>
-                <Label className="mt-5 mb-2">HOW YOU LIKE TO TRAIN</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {STYLES.map((o) => (
-                    <Choice key={o.v} on={style.v === o.v} onClick={() => { hapticTap(); p.setTrainingStyles([o.v]) }} className="h-[84px] flex flex-col items-start justify-center gap-1 px-3 text-left">
-                      <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 22, lineHeight: 1, textTransform: 'uppercase' }}>{o.l}</span>
-                      <span className="text-[12px] leading-tight" style={{ opacity: 0.8 }}>{o.d}</span>
-                    </Choice>
-                  ))}
-                </div>
-                {/* Her week, live: changes as she taps days or style. */}
-                <div className="flex flex-wrap gap-1.5 mt-3" aria-label="Your week">
-                  {week.map((k, n) => (
-                    <span key={`${days}-${style.v}-${n}`} className="nf-pop-in rounded-full px-2.5 py-1.5" style={{ background: 'rgba(229,169,60,.14)', border: '1px solid rgba(229,169,60,.45)', color: C.gold, fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.08em', animationDelay: `${n * 40}ms` }}>
-                      DAY {n + 1} · {DAY_SHORT[k]}
-                    </span>
-                  ))}
-                </div>
                 <div className="h-5" />
-                <Btn onClick={() => { setF((s) => ({ ...s, training_location: s.training_location || 'both', days_per_week: s.days_per_week || '3' })); if (!p.trainingStyles.length) p.setTrainingStyles(['none']); next() }}>Next</Btn>
+                <Btn onClick={() => { setF((s) => ({ ...s, training_location: s.training_location || 'both', days_per_week: s.days_per_week || '3' })); next() }}>Next</Btn>
               </div>
             </div>
+          )
+        })()}
+        {step === 'lift' && (() => {
+          const style = p.trainingStyles.includes('split') && !p.trainingStyles.includes('compound') ? 'split' : 'compound'
+          const lvl = LEVELS.find((l) => l.v === f.experience_level)
+          const week = weekTemplate(Number(f.days_per_week) || 3, trainStyleFrom([style], lvl?.n ?? 1))
+          return (
+            <Shell left={LEFT.lift} cal={cal} onBack={back}>
+              <H1 size={46}>How do you like to lift?</H1>
+              <Sub>Pick the one that feels like you. You can switch anytime.</Sub>
+              <div className="flex flex-col gap-2.5 mt-4">
+                {LIFT_STYLES.map((o) => {
+                  const on = style === o.v
+                  return (
+                    <button key={o.v} onClick={() => { hapticTap(); p.setTrainingStyles([o.v]) }} aria-pressed={on}
+                      className="nf-press rounded-[20px] p-2.5 flex gap-3 items-stretch text-left"
+                      style={{ border: `3px solid ${on ? C.gold : C.line}`, background: on ? 'rgba(229,169,60,.12)' : C.card, color: C.ink }}>
+                      <span className="relative w-[92px] h-[112px] shrink-0 rounded-[14px] overflow-hidden" style={{ background: 'radial-gradient(120% 90% at 50% 20%, #164a39, #04261b)' }}>
+                        {o.v === 'compound' ? <CompoundFigure /> : <ClassicFigure />}
+                        <span className="absolute left-1.5 bottom-1.5 rounded-md px-1.5 py-0.5" style={{ background: 'rgba(0,0,0,.45)', fontFamily: MONO, fontSize: 9 }}>{o.tag}</span>
+                      </span>
+                      <span className="flex flex-col justify-center gap-1 py-1 pr-1">
+                        {o.rec && <span className="self-start rounded-md px-1.5 py-0.5" style={{ background: C.gold, color: C.bg, fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: '.08em' }}>RECOMMENDED</span>}
+                        <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 24, lineHeight: 1, textTransform: 'uppercase' }}>{o.l}</span>
+                        <span className="text-[13px] leading-snug" style={{ color: C.mute }}>{o.d}</span>
+                        <span style={{ fontFamily: MONO, fontSize: 10, color: C.gold, letterSpacing: '.04em' }}>{o.moves}</span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <Label className="mt-5 mb-2">YOUR LEVEL</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {LEVELS.map((l) => (
+                  <Choice key={l.v} on={f.experience_level === l.v} onClick={() => { hapticTap(); set('experience_level', l.v) }} className="h-14 text-[15px]">{l.l}</Choice>
+                ))}
+              </div>
+              {lvl && (
+                <>
+                  <Note>{liftWhat(style, lvl.n)}</Note>
+                  {/* Her week, live: changes as she taps style or level. */}
+                  <div className="flex flex-wrap gap-1.5 mt-3" aria-label="Your week">
+                    {week.map((k, n) => (
+                      <span key={`${style}-${lvl.v}-${n}`} className="nf-pop-in rounded-full px-2.5 py-1.5" style={{ background: 'rgba(229,169,60,.14)', border: '1px solid rgba(229,169,60,.45)', color: C.gold, fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.08em', animationDelay: `${n * 40}ms` }}>
+                        DAY {n + 1} · {DAY_SHORT[k]}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
+              <Spacer />
+              <div className="h-4" />
+              <Btn onClick={() => { if (!p.trainingStyles.length || p.trainingStyles.includes('none') || p.trainingStyles.includes('cardio')) p.setTrainingStyles([style]); next() }} disabled={!lvl}>Next</Btn>
+            </Shell>
           )
         })()}
         {step === 'hurts' && (

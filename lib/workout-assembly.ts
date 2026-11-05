@@ -17,10 +17,10 @@
 // that. Exercise selection itself is 100% attribute-matched, every time.
 // ============================================================
 import { ATOMIC_LIBRARY, isExerciseSafe, type AtomicExercise, type Location, type EquipmentTag, type MuscleGroup, type SkillLevel, type MovementPattern, type IntensityLevel } from './exercise-library'
-import { weekTemplate, trainStyleFrom, DAY_TITLE, type DayKind } from './week-template'
+import { weekTemplate, trainStyleFrom, isClassicStyle, DAY_TITLE, type DayKind } from './week-template'
+import { combosFor, MAIN_LIFTS, type ComboMove } from './combo-moves'
 import type { Injury, Equip, Muscle } from './workout-exercises'
-import { injuryNotes } from './workout-exercises'
-import { compoundExercisesForLevel } from './compound-exercises'
+import { injuryNotes, isContraindicated } from './workout-exercises'
 import type {
   WorkoutInputs, WorkoutProgram, GymDay, HomeDay, Superset, CardioFinisher, FocusArea, TrainingStyle,
 } from './workout.types'
@@ -325,7 +325,7 @@ function walkFinisher(level: SkillLevel, goal: string, activityLevel?: WorkoutIn
     : 'Steady-state to hold where you\'re at — walk tall, shoulders back, no handrails.'
   return { title: 'Incline Treadmill Walk', mode: 'walk', speed: CARDIO_SPEED[level], incline: base.incline, mins, note }
 }
-function cardioFinisherFor(c: Constraints, goal: string, styles: Set<TrainingStyle>, offset: number): CardioFinisher {
+function cardioFinisherFor(c: Constraints, goal: string, styles: Set<TrainingStyle>): CardioFinisher {
   // Same override lookup filterLibrary already uses for every other pattern
   // — real gap found live: the cardio finisher was the one place that read
   // her flat intake-level skillLevel even after months of logged cardio
@@ -333,15 +333,9 @@ function cardioFinisherFor(c: Constraints, goal: string, styles: Set<TrainingSty
   // alongside this in lib/workout-steps.ts). Falls back to c.skillLevel
   // exactly like filterLibrary until real cardio tap history exists.
   const effectiveLevel = c.progressionOverrides?.cardio?.skillLevel ?? c.skillLevel
-  // Both styles can be picked together (multi-select, see lib/training-styles.ts)
-  // — compound's structural move-swap takes priority since it's the bigger
-  // content difference; cardio-first still gets its longer-duration walk
-  // finisher on every OTHER day/track that isn't running the compound branch.
-  if (styles.has('compound')) {
-    const pool = compoundExercisesForLevel(effectiveLevel, c.injuries)
-    const moves = rotate(pool, offset).slice(0, 3).map((m) => ({ name: m.name, reps: m.reps, cue: m.cue, imageUrl: m.imageUrl }))
-    return { title: 'Compound Finisher', mode: 'compound', note: 'Full-body compound moves to close out your session — built in because that’s your training style.', moves }
-  }
+  // 2026-11-04: compound moves are now the main work of a Compound day
+  // (buildCompoundDay), so every gym day ends on the same real cardio — an
+  // incline walk scaled by her level, capacity and goal.
   return walkFinisher(effectiveLevel, goal, c.activityLevel, c.lowFuelToday, styles.has('cardio'))
 }
 
@@ -377,9 +371,12 @@ function countForMinutes(minutesAvailable: number | undefined, avgDurationSec: n
 const DAY_MUSCLES: Record<DayKind, MuscleGroup[]> = {
   full: [], upper: ['chest', 'back', 'shoulders', 'biceps', 'triceps'], lower: ['quads', 'hamstrings', 'glutes'],
   push: ['chest', 'shoulders', 'triceps'], pull: ['back', 'biceps'], legs: ['quads', 'hamstrings', 'glutes'],
+  compound: [], chest_tri: ['chest', 'triceps'], back_bi: ['back', 'biceps'], shoulders_glutes: ['shoulders', 'glutes'], chest_back: ['chest', 'back'],
 }
 
-function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string, c: Constraints, goal: WorkoutInputs['goal'], offset: number, minutesAvailable: number | undefined, coreFocus: boolean, styles: Set<TrainingStyle>, coreOnly = false): GymDay {
+// `straight` (2026-11-04): Classic strength for a Beginner — one move at a
+// time, straight sets, no supersets. Intermediate/Advanced keep supersets.
+function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string, c: Constraints, goal: WorkoutInputs['goal'], offset: number, minutesAvailable: number | undefined, coreFocus: boolean, styles: Set<TrainingStyle>, coreOnly = false, straight = false): GymDay {
   // Asa's follow-up, 2026-09-02: low fuel benefits from touching the real
   // session, not just the cardio tail — but only how hard she's asked to
   // push, never WHICH exercises she gets. One tier down on the ab scheme;
@@ -398,7 +395,9 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
   const supersetPool = coreOnly ? [] : filterLibrary(c, bodyMuscles).filter((e) => !/chair|couch|in place|stairs|air punch|jab|superman|snow angel/i.test(e.name))
     // An upper-body day never sneaks in a leg-driven combo ("Reverse Lunge + Arm Raise").
     .filter((e) => legDay || (familyOf(e) !== 'knee' && familyOf(e) !== 'hip')).filter((e) => e.movementPattern !== 'core_flexion' && e.movementPattern !== 'core_rotation' && e.movementPattern !== 'core_stability' && e.movementPattern !== 'cardio')
-  const baseCount = isFullBody ? 6 : Math.min(6, bodyMuscles.length * 2)
+    // Classic strength is classic: combo moves belong to the Compound style.
+    .filter((e) => e.movementPattern !== 'compound')
+  const baseCount = straight ? (isFullBody ? 5 : Math.min(5, bodyMuscles.length * 2)) : isFullBody ? 6 : Math.min(6, bodyMuscles.length * 3)
   const count = countForMinutes(minutesAvailable, 45, baseCount)
   const picked = coreOnly ? [] : balancePairs(spreadPatterns(pick(supersetPool, bodyMuscles, supersetPool.length, offset, c.postpartum), count))
 
@@ -408,7 +407,7 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
   const liftRange = (e: AtomicExercise) => repRange(c.skillLevel, goal, familyOf(e) === 'iso' ? 'accessory' : 'compound', isBodyweight(e))
   const setsToday = (sets: number) => (c.deload ? deloadSets(sets) : sets)
   const supersets: Superset[] = []
-  for (let i = 0; i + 1 < picked.length; i += 2) {
+  for (let i = 0; !straight && i + 1 < picked.length; i += 2) {
     const a = picked[i], b = picked[i + 1]
     const ra = liftRange(a), rb = liftRange(b)
     const sets = Math.max(ra.sets, rb.sets)
@@ -416,12 +415,12 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
     const same = ra.lo === rb.lo && ra.hi === rb.hi
     supersets.push({ title: `${a.name} + ${b.name}`, push: toGymExerciseShim(a), pull: toGymExerciseShim(b), reps: same ? schemeText(setsToday(sets), ra) : `${schemeText(setsToday(sets), ra)} / ${rb.lo}–${rb.hi}` })
   }
-  const leftover = picked.length % 2 === 1 ? picked[picked.length - 1] : null
+  const leftover = !straight && picked.length % 2 === 1 ? picked[picked.length - 1] : null
+  const straightLifts = straight ? picked.map((e) => ({ name: e.name, reps: '', cue: e.cue, imageUrl: e.imageUrl, kind: 'lift' as const, e })) : []
 
-  // Goal-driven, not a constant day structure: abs only when the day's
-  // focus actually calls for core work (core-focused, full-body, or a
-  // core-only request) — same gate buildHomeDay already used.
-  const wantsAb = coreFocus || isFullBody || coreOnly
+  // 2026-11-04 (Asa: "make sure core is involved in every training
+  // session"): core every day, every style.
+  const wantsAb = true
   const usedAbNames: string[] = []
   let upperAb: AtomicExercise | undefined, lowerAb: AtomicExercise | undefined, bonusAb: AtomicExercise | undefined
   if (wantsAb) {
@@ -444,25 +443,108 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
   })() : []
   const trackedScheme = (e: AtomicExercise, r: RepRange) => { c.tracked?.set(e.name, r); return schemeText(setsToday(r.sets), r) }
   const accessory: GymDay['accessory'] = [
+    ...straightLifts.map(({ e, ...x }) => ({ ...x, reps: trackedScheme(e, liftRange(e)) })),
     ...(wantsLegAccessory ? calfPool.slice(0, 2).map((e) => ({ name: e.name, reps: trackedScheme(e, repRange(c.skillLevel, goal, 'accessory', isBodyweight(e))), cue: e.cue, imageUrl: e.imageUrl, kind: 'calves' as const })) : []),
     ...(leftover ? [{ name: leftover.name, reps: trackedScheme(leftover, liftRange(leftover)), cue: `${leftover.cue} (bonus set from today's session).`, imageUrl: leftover.imageUrl, kind: 'bonus' as const }] : []),
     ...coreOnlyExtras,
   ]
 
-  // Goal-driven, not a constant day structure: a cardio finisher only rides
-  // along when the goal includes fat loss (straight 'lose', or 'recomp' —
-  // both lose+gain selected, see lib/goals.ts), or a picked training style
-  // explicitly wants one (compound finisher, or cardio-first — see
-  // lib/training-styles.ts; both can be true at once) — a pure muscle-gain
-  // or maintain day with neither style picked skips it entirely.
-  const wantsCardio = goal === 'lose' || goal === 'recomp' || styles.has('compound') || styles.has('cardio')
+  // 2026-11-04 (Asa: "we can still end with post cardio, best of their
+  // level and if they're at home or gym"): every session ends on cardio.
+  const wantsCardio = true
   return {
     dayNum, title, muscles: coreOnly ? ['Core'] : isFullBody ? ['Full Body'] : bodyMuscles.map((m) => m[0].toUpperCase() + m.slice(1)),
     warmup: bodyMuscles.includes('quads') || isFullBody ? ['15 bodyweight glute bridges', '10 hip circles each side', '10 arm circles', '10 leg swings each side'] : ['10 arm circles each direction', '10 shoulder rolls', '10 doorway chest stretches', '10 band pull-aparts'],
     supersets, accessory,
     ...(upperAb && lowerAb ? { ab: { upper: toAbExerciseShim(upperAb), lower: toAbExerciseShim(lowerAb), scheme: AB_SCHEME[repLevel], ...(bonusAb ? { bonus: toAbExerciseShim(bonusAb) } : {}) } } : {}),
-    ...(wantsCardio ? { cardio: cardioFinisherFor(c, goal, styles, offset) } : {}),
+    ...(wantsCardio ? { cardio: cardioFinisherFor(c, goal, styles) } : {}),
   }
+}
+
+// ---- Compound movements style (2026-11-04, Asa's pick, Alive-style) ----
+// Warm-up → heavy main lift(s) → 3–4 dumbbell combo moves → core → cardio.
+// Beginner: one main lift (legs/glutes), 3 combos. Intermediate/Advanced:
+// a lower AND an upper main lift, 4 combos. Every lift and combo is tracked,
+// so the weight goes up when she hits the top of her range on every set.
+const COMBO_ORDER: ComboMove['group'][] = ['back', 'shoulders', 'arms', 'full', 'chest', 'core']
+const LOWER_FOCUS = ['Squat', 'Deadlift', 'Glutes']
+// Main lifts never load what hurts (on top of the shared injury list).
+const MAIN_AVOID: Partial<Record<Injury, RegExp>> = { shoulder: /Shoulder Press|Overhead|Arnold/, knee: /Back Squat|Bulgarian/, wrist: /Push-Up/ }
+const mainSafe = (name: string, injuries: Injury[]) => !isContraindicated(name, injuries) && !injuries.some((i) => MAIN_AVOID[i]?.test(name))
+
+function pickCombos(level: SkillLevel, injuries: Injury[], count: number, offset: number): ComboMove[] {
+  const pool = combosFor(level, injuries)
+  const out: ComboMove[] = []
+  const groups = rotate(COMBO_ORDER, offset)
+  // One combo per group before any group repeats; never more than 2 knee-heavy.
+  for (let round = 0; out.length < count && round < 3; round++) {
+    for (const g of groups) {
+      if (out.length >= count) break
+      const options = rotate(pool.filter((m) => m.group === g && !out.includes(m)), offset + round)
+      const m = options.find((x) => x.legs !== 'knee' || out.filter((o) => o.legs === 'knee').length < 2)
+      if (m) out.push(m)
+    }
+  }
+  return out
+}
+
+function buildCompoundDay(dayNum: number, location: Location, c: Constraints, goal: WorkoutInputs['goal'], offset: number, coreFocus: boolean, styles: Set<TrainingStyle>): GymDay | HomeDay {
+  const level = c.skillLevel
+  const lifts = MAIN_LIFTS[location][level]
+  const lowerOk = lifts.lower.filter((n) => mainSafe(n, c.injuries))
+  const upperOk = lifts.upper.filter((n) => mainSafe(n, c.injuries))
+  const lowerIdx = (dayNum - 1) % lifts.lower.length
+  const lowerName = lowerOk.length ? (lowerOk.includes(lifts.lower[lowerIdx]) ? lifts.lower[lowerIdx] : lowerOk[(dayNum - 1) % lowerOk.length]) : undefined
+  const upperName = level >= 2 && upperOk.length ? upperOk[(dayNum - 1) % upperOk.length] : undefined
+  const mains = [lowerName, upperName].filter((n): n is string => !!n)
+    .map((n) => ATOMIC_LIBRARY.find((e) => e.name === n)).filter((e): e is AtomicExercise => !!e)
+  const combos = pickCombos(level, c.injuries, level === 1 ? 3 : 4, offset)
+  const setsToday = (sets: number) => (c.deload ? deloadSets(sets) : sets)
+  const mainScheme = (e: AtomicExercise) => { const r = repRange(level, goal, 'compound', isBodyweight(e)); c.tracked?.set(e.name, r); return schemeText(setsToday(r.sets), r) }
+  // Combos: moderate weight, 10–15 reps (12–15 for fat loss), 3 sets.
+  const comboScheme = (m: ComboMove) => { const r = { ...repRange(level, goal, 'accessory', false), sets: 3 }; c.tracked?.set(m.name, r); return schemeText(setsToday(r.sets), r) }
+  const focus = lowerName ? LOWER_FOCUS[lifts.lower.indexOf(lowerName)] : 'Upper'
+  const title = `Compound · ${focus} Focus`
+  const repLevel = c.lowFuelToday ? (Math.max(1, level - 1) as SkillLevel) : level
+
+  if (location === 'home') {
+    const corePool = filterLibrary(c, ['core'])
+    const core = pick(corePool, [], coreFocus ? 3 : 2, offset + 4, c.postpartum)
+    const finishers = homeCardio(c, goal, offset)
+    return {
+      dayNum, title: `Day ${dayNum}: ${title}`,
+      exercises: [
+        ...mains.map((e) => ({ name: e.name, duration: mainScheme(e), imageUrl: e.imageUrl })),
+        ...combos.map((m) => ({ name: m.name, duration: comboScheme(m) })),
+        ...core.map((e) => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl })),
+        ...finishers,
+      ],
+    }
+  }
+  const upperAb = pickAbAtomic('upper', level, offset, c.postpartum, c.injuries)
+  const lowerAb = pickAbAtomic('lower', level, offset + 2, c.postpartum, c.injuries, [upperAb.name])
+  const bonusAb = coreFocus ? pickAbAtomic('upper', level, offset + 5, c.postpartum, c.injuries, [upperAb.name, lowerAb.name]) : undefined
+  return {
+    dayNum, title, muscles: ['Compound'],
+    warmup: ['15 bodyweight glute bridges', '10 hip circles each side', '10 arm circles', '10 bodyweight squats'],
+    supersets: [],
+    accessory: [
+      ...mains.map((e) => ({ name: e.name, reps: mainScheme(e), cue: e.cue, imageUrl: e.imageUrl, kind: 'main' as const })),
+      ...combos.map((m) => ({ name: m.name, reps: comboScheme(m), cue: m.cue, kind: 'combo' as const })),
+    ],
+    ab: { upper: toAbExerciseShim(upperAb), lower: toAbExerciseShim(lowerAb), scheme: AB_SCHEME[repLevel], ...(bonusAb ? { bonus: toAbExerciseShim(bonusAb) } : {}) },
+    cardio: cardioFinisherFor(c, goal, styles),
+  }
+}
+
+// Home cardio to end every home session (no treadmill): more moves and
+// longer as her level goes up, a bit longer for fat loss, lighter on a
+// no-food-yet day.
+function homeCardio(c: Constraints, goal: WorkoutInputs['goal'], offset: number): { name: string; duration: string; imageUrl?: string }[] {
+  const cardioPool = filterLibrary(c).filter((e) => e.movementPattern === 'cardio')
+  const count = c.lowFuelToday ? 1 : c.skillLevel
+  const sec = (goal === 'lose' ? 60 : goal === 'recomp' ? 50 : 40) + (c.skillLevel - 1) * 10
+  return pick(cardioPool, [], Math.max(1, count + 1), offset + 8, c.postpartum).map((f) => ({ name: f.name, duration: `${sec} sec`, imageUrl: f.imageUrl }))
 }
 
 const HOME_MET: Record<SkillLevel, number> = { 1: 3.2, 2: 4.5, 3: 6.5 }
@@ -480,10 +562,10 @@ function estimateHomeCalories(inp: WorkoutInputs, level: SkillLevel, minutesLabe
 
 function buildHomeDay(dayNum: number, targetMuscles: MuscleGroup[], title: string, c: Constraints, goal: WorkoutInputs['goal'], offset: number, minutesAvailable: number | undefined, coreFocus: boolean, styles: Set<TrainingStyle>, coreOnly = false): HomeDay {
   const isFullBody = targetMuscles.length === 0 && !coreOnly
-  const wantsCore = coreFocus || isFullBody || coreOnly
-  const nonCorePool = coreOnly ? [] : filterLibrary(c, isFullBody ? undefined : targetMuscles).filter((e) => e.movementPattern !== 'cardio' && e.movementPattern !== 'core_flexion' && e.movementPattern !== 'core_rotation' && e.movementPattern !== 'core_stability')
+  // 2026-11-04: core in every session.
+  const wantsCore = true
+  const nonCorePool = coreOnly ? [] : filterLibrary(c, isFullBody ? undefined : targetMuscles).filter((e) => e.movementPattern !== 'cardio' && e.movementPattern !== 'core_flexion' && e.movementPattern !== 'core_rotation' && e.movementPattern !== 'core_stability' && e.movementPattern !== 'compound')
   const corePool = filterLibrary(c, ['core'])
-  const cardioPool = filterLibrary(c).filter((e) => e.movementPattern === 'cardio')
 
   const baseCount = 5
   const count = countForMinutes(minutesAvailable, 30, baseCount)
@@ -511,18 +593,7 @@ function buildHomeDay(dayNum: number, targetMuscles: MuscleGroup[], title: strin
       })()
     : pick(nonCorePool, targetMuscles, mainCount, offset, c.postpartum)
   const core = wantsCore ? pick(corePool, [], coreCount, offset + 4, c.postpartum) : []
-  // Goal-driven, not a constant day structure — same gate as the gym side:
-  // fat-loss goals ('lose' or 'recomp' — see lib/goals.ts), an explicit
-  // compound-finisher training style, or cardio-first (both can be picked
-  // together — see lib/training-styles.ts) get a cardio finisher tacked on.
-  const wantsCardio = goal === 'lose' || goal === 'recomp' || styles.has('compound') || styles.has('cardio')
-  // Real gap found live, 2026-09-04: 'cardio' training style did nothing on
-  // the home track either — same single random cardio pick regardless of
-  // whether she'd asked for cardio-first. A second real cardio move (not
-  // just a longer label on the same one) is the honest home-track
-  // equivalent of the gym side's longer walk finisher.
-  const finisherCount = wantsCardio && styles.has('cardio') ? 2 : wantsCardio ? 1 : 0
-  const finishers = finisherCount ? pick(cardioPool, [], finisherCount, offset + 8, c.postpartum) : []
+  void styles
 
   // Double progression, home (2026-10-30): no weights here — rep moves climb
   // 8 → 15, then get slower (3 seconds down) and reset to 8. Beginner 2 sets,
@@ -533,9 +604,8 @@ function buildHomeDay(dayNum: number, targetMuscles: MuscleGroup[], title: strin
     c.tracked?.set(e.name, r)
     return schemeText(c.deload ? deloadSets(r.sets) : r.sets, r)
   }
-  const exercises = [...main.map((e) => ({ name: e.name, duration: homeReps(e), imageUrl: e.imageUrl })), ...core.map((e) => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl }))]
-  const finisherSec = goal === 'lose' ? 90 : goal === 'recomp' ? 75 : goal === 'gain' ? 45 : 60
-  finishers.forEach((f) => exercises.push({ name: f.name, duration: `${finisherSec} sec`, imageUrl: f.imageUrl }))
+  // Every home session ends on cardio, scaled to her level (2026-11-04).
+  const exercises = [...main.map((e) => ({ name: e.name, duration: homeReps(e), imageUrl: e.imageUrl })), ...core.map((e) => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl })), ...homeCardio(c, goal, offset)]
 
   return { dayNum, title, exercises }
 }
@@ -594,7 +664,13 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
   // standard week by days available and her style — full body every day,
   // one area a day (upper/lower, push/pull/legs), or the proven default
   // (full body for 2–3 days, upper/lower for 4, push/pull/legs for 5–6).
-  const template = weekTemplate(days, trainStyleFrom(styles))
+  // 2026-11-04: + her lifting style and level — Compound movements every day,
+  // or Classic strength (two body groups a day in supersets for
+  // Intermediate/Advanced; straight sets for a Beginner).
+  const template = weekTemplate(days, trainStyleFrom(styles, level))
+  const classic = isClassicStyle(styles)
+  const straight = classic && level === 1
+  const isOverrideDay = (i: number) => i === 0 && inp.overrideAreas !== undefined
   void priorityMuscles; void MUSCLES_PER_DAY
   const dayMuscles = (i: number): MuscleGroup[] =>
     (i === 0 && overrideMuscles !== undefined) ? overrideMuscles : [...DAY_MUSCLES[template[i % template.length]]]
@@ -619,6 +695,7 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
     const homeDays: HomeDay[] = Array.from({ length: days }, (_, i) => {
       const muscles = dayMuscles(i)
       const isCoreOnly = i === 0 && overrideMuscles !== undefined && overrideMuscles.length === 0 && inp.overrideAreas?.includes('core')
+      if (!classic && !isOverrideDay(i)) return buildCompoundDay(i + 1, 'home', c, inp.goal, pickWeek + i, coreFocus && i === 0, styles) as HomeDay
       const day = buildHomeDay(i + 1, isCoreOnly ? [] : muscles, `Day ${i + 1}: ${dayTitle(i, muscles)}`, c, inp.goal, pickWeek + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, styles, isCoreOnly)
       return day
     })
@@ -635,7 +712,8 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
     base.gymDays = Array.from({ length: days }, (_, i) => {
       const muscles = dayMuscles(i)
       const isCoreOnly = i === 0 && overrideMuscles !== undefined && overrideMuscles.length === 0 && inp.overrideAreas?.includes('core')
-      return buildGymDay(i + 1, isCoreOnly ? [] : muscles, dayTitle(i, muscles), c, inp.goal, pickWeek + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, styles, isCoreOnly)
+      if (!classic && !isOverrideDay(i)) return buildCompoundDay(i + 1, 'gym', c, inp.goal, pickWeek + i, coreFocus && i === 0, styles) as GymDay
+      return buildGymDay(i + 1, isCoreOnly ? [] : muscles, dayTitle(i, muscles), c, inp.goal, pickWeek + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, styles, isCoreOnly, straight)
     })
   }
   // Her one target number + cue per lift, replayed from her real sessions.
