@@ -2,14 +2,13 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { createPortal } from 'react-dom'
 import { hapticTap } from '@/lib/haptics'
-import { orderLink, openOrder, appFirstOn, mealText, ORDER_APP_LABEL, type OrderApp } from '@/lib/order-link'
+import { orderLink, openOrder, appFirstOn, ORDER_APP_LABEL, type OrderApp } from '@/lib/order-link'
 import { copyText } from '@/lib/order-exact'
 import { PLAN_STOPS, EXTRA_SNACKS, type PlanStopId, type PlannedPick, type SavedDayPlan } from '@/lib/day-plan'
 import LocationOptIn from '@/components/LocationOptIn'
 import { stepsFor, NO_COOK_STEPS } from '@/lib/recipe-instructions'
-import { OrderHowTo, OrderExact, MoneyBar, CopyFallback, howtoSeen, markHowtoSeen, type PickCard } from '@/components/NutritionPicks'
+import { MoneyBar, CopyFallback, type PickCard } from '@/components/NutritionPicks'
 
 // The Nutrition tab, v5 (2026-11-05, Asa's first real user test): she plans
 // her WHOLE day up front, one meal per screen — breakfast → lunch → snack →
@@ -23,7 +22,7 @@ export type DayCard = PickCard
 export interface DayStop { id: PlanStopId; label: string; calBudget: number; out: DayCard[]; cook: DayCard[] }
 
 type Mode = 'out' | 'cook' | 'mix'
-type View = { v: 'pick'; id: PlanStopId; from: 'flow' | 'review' | 'plan' } | { v: 'review' } | { v: 'plan' } | { v: 'cook'; id: PlanStopId } | { v: 'order'; id: PlanStopId; app: OrderApp }
+type View = { v: 'pick'; id: PlanStopId; from: 'flow' | 'review' | 'plan' } | { v: 'review' } | { v: 'plan' } | { v: 'cook'; id: PlanStopId }
 
 const C = { bg: '#021F16', card: '#08281d', gold: '#FFB21E', ivory: '#EDE7DA', soft: 'rgba(237,231,218,.72)', faint: 'rgba(237,231,218,.45)', line: 'rgba(237,231,218,.14)', mint: '#9FDCC4', coral: '#FF8A7A' }
 const HEAD = "var(--font-barlow), 'Barlow Condensed', sans-serif"
@@ -70,7 +69,6 @@ export default function NutritionDay(p: {
   const [confirmed, setConfirmed] = useState(p.plan.confirmed)
   const [extras, setExtras] = useState(p.plan.extras)
   const [error, setError] = useState('')
-  const [howto, setHowto] = useState<{ id: PlanStopId; app: OrderApp } | null>(null)
   const [blocked, setBlocked] = useState<{ text: string; app: OrderApp } | null>(null)
   const [busy, setBusy] = useState<PlanStopId | null>(null)
   const active = p.stops.slice(0, PLAN_STOPS.length + extras)
@@ -100,7 +98,6 @@ export default function NutritionDay(p: {
   const fail = () => setError("Couldn't save that. Check your internet and tap again.")
 
   const planned = (id?: PlanStopId) => active.reduce((t, s) => t + (s.id !== id ? picks[s.id]?.cal || 0 : 0), 0)
-  const eatenCal = active.reduce((t, s) => t + (picks[s.id]?.eatenId ? picks[s.id]!.cal : 0), 0)
 
   // ---- saving ----
   async function setPick(id: PlanStopId, pick: PlannedPick | null | undefined) {
@@ -148,15 +145,13 @@ export default function NutritionDay(p: {
   }
   // Order: opens the delivery app inside the tap (browsers block it after an
   // await), then counts the meal. The very first time, the "3 taps" sheet.
-  // First "Order exactly this." (the parts to add, what to skip, copy), then
-  // the app; the very first time, the "3 taps" sheet before the app.
+  // One button opens the place in her delivery app straight away and counts
+  // the meal (2026-11-05, Asa's approved mockup: no copy/paste screen first).
+  // Opened inside the tap: browsers block it after an await.
   function order(id: PlanStopId, app: OrderApp) {
-    const pick = picks[id]
-    if (!pick) return
+    if (!picks[id]) return
     hapticTap()
-    if (!howtoSeen()) { copyText(mealText({ place: pick.place, name: pick.name })); setHowto({ id, app }); return }
     openAndCount(id, app)
-    go({ v: 'plan' })
   }
   function openAndCount(id: PlanStopId, app: OrderApp) {
     const pick = picks[id]
@@ -193,12 +188,6 @@ export default function NutritionDay(p: {
   const errorBar = error ? (
     <div role="alert" className="rounded-2xl px-4 py-3 mb-3" style={{ background: 'rgba(255,90,78,.14)', border: '1px solid rgba(255,90,78,.5)', color: C.ivory, fontSize: 15 }}>{error}</div>
   ) : null
-  const sheet = howto && typeof document !== 'undefined' && picks[howto.id] ? createPortal(
-    <OrderHowTo place={picks[howto.id]!.place} meal={mealText({ place: picks[howto.id]!.place, name: picks[howto.id]!.name })} appName={ORDER_APP_LABEL[howto.app]}
-      onClose={() => setHowto(null)} onGo={() => { markHowtoSeen(); const h = howto; setHowto(null); openAndCount(h.id, h.app); go({ v: 'plan' }) }} />,
-    document.body,
-  ) : null
-
   // ---------- one meal ----------
   if (view.v === 'pick') {
     const idx = active.findIndex((s) => s.id === view.id)
@@ -220,6 +209,7 @@ export default function NutritionDay(p: {
         {errorBar}
         <PickStep key={stop.id} stop={stop} step={idx + 1} total={view.from === 'flow' ? PLAN_STOPS.length + extras : 0}
           picked={picks[stop.id]} defaultMode={lastMode ?? (p.mix ? 'mix' : p.eatStyle)} onMode={setLastMode}
+          moneyRoom={p.moneyDaily == null ? null : Math.max(0, p.moneyDaily - p.moneySpent - active.reduce((t, s) => t + (s.id !== stop.id && !picks[s.id]?.eatenId ? picks[s.id]?.price || 0 : 0), 0))}
           taken={new Set(active.filter((s) => s.id !== stop.id).map((s) => picks[s.id]?.key).filter((k): k is string => !!k))} room={isExtra ? room : null} askLocation={p.askLocation}
           onPick={async (c) => {
             hapticTap()
@@ -240,22 +230,6 @@ export default function NutritionDay(p: {
     )
   }
 
-  // ---------- order exactly this ----------
-  if (view.v === 'order') {
-    const pick = picks[view.id]
-    if (!pick) { setView({ v: 'plan' }); return null }
-    const found = p.stops.flatMap((s) => s.out).find((c) => c.key === pick.key)
-    const base = found || ({ ...pick, slot: 'Lunch', calSource: 'estimated', why: '', dest: { url: null, label: '', kind: 'delivery', app: view.app } } as PickCard)
-    const card: PickCard = { ...base, dest: { ...base.dest, app: view.app } }
-    return (
-      <Shell>
-        {sheet}
-        {errorBar}
-        <OrderExact card={card} busy={busy === view.id} onBack={() => go({ v: 'plan' })} onOpen={() => order(view.id, view.app)} />
-      </Shell>
-    )
-  }
-
   // ---------- how to cook it ----------
   if (view.v === 'cook') {
     const pick = picks[view.id]
@@ -269,7 +243,7 @@ export default function NutritionDay(p: {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {pick.photo && <img src={pick.photo} alt="" className="absolute inset-0 w-full h-full object-cover" />}
         </div>
-        <span className="mt-4" style={{ ...mono(12), color: C.gold }}>{TITLE[DEFS.find((d) => d.id === view.id)!.label].toUpperCase()} · {pick.cal} CAL</span>
+        <span className="mt-4" style={{ ...mono(12), color: C.gold }}>{TITLE[DEFS.find((d) => d.id === view.id)!.label].toUpperCase()} · MAKE IT AT HOME</span>
         <h1 className="mt-1" style={head(40)}>{pick.short}</h1>
         <Section title="WHAT YOU NEED">
           {pick.ingredients?.length ? (
@@ -301,22 +275,24 @@ export default function NutritionDay(p: {
 
   // ---------- her day (review before confirming, and the confirmed plan) ----------
   const rows = active.map((s) => ({ s, pick: picks[s.id], title: TITLE[DEFS.find((d) => d.id === s.id)!.label] }))
-  const total = planned()
+  const mealCount = active.filter((s) => picks[s.id]).length
+  const eatenCount = active.filter((s) => picks[s.id]?.eatenId).length
+  // The first meal she hasn't eaten yet is "next up".
+  const nextUp = confirmed ? active.find((s) => picks[s.id] && !picks[s.id]!.eatenId)?.id : undefined
   const cost = active.reduce((t, s) => t + (picks[s.id]?.price || 0), 0)
   return (
     <Shell>
-      {sheet}
       {errorBar}
       <span style={{ ...mono(12), color: C.gold }}>{confirmed ? 'YOUR DAY IS SET' : 'ALMOST DONE'}</span>
       <h1 className="mt-1 mb-1" style={head(52)}>{confirmed ? 'Your day.' : 'Here’s your day.'}</h1>
       <p className="mb-4" style={{ margin: 0, fontSize: 16, color: C.soft }}>
         {confirmed
-          ? (eatenCal > 0 ? `Eaten ${eatenCal.toLocaleString()} of ${total.toLocaleString()} calories so far.` : 'When you eat a meal, tap “I ate it”.')
-          : `${total.toLocaleString()} calories in all. Tap Change to swap a meal.`}
+          ? (eatenCount > 0 ? `${eatenCount} of ${mealCount} meals eaten. Nice.` : 'When you eat a meal, tap “I ate it”.')
+          : 'Tap Change to swap a meal.'}
       </p>
       {p.moneyDaily != null && cost > p.moneyDaily + 0.5 && (
         <p className="mb-4 rounded-2xl px-4 py-3" style={{ margin: 0, fontSize: 15, lineHeight: 1.4, background: 'rgba(255,178,30,.1)', border: '1px solid rgba(255,178,30,.45)' }}>
-          This day costs about ${Math.round(cost)}. Your food money is ${Math.round(p.moneyDaily)} a day. Tap Change and pick a Cook it meal to spend less.
+          This day costs about ${Math.round(cost)}. Your food money is ${Math.round(p.moneyDaily)} a day. Tap Change and pick a Make it meal to spend less.
         </p>
       )}
       {confirmed && p.moneyDaily != null && <MoneyBar daily={p.moneyDaily} spent={p.moneySpent} />}
@@ -331,12 +307,12 @@ export default function NutritionDay(p: {
                 {pick?.eatenId && <span className="absolute inset-0 grid place-items-center" style={{ background: 'rgba(2,31,22,.55)', fontSize: 30 }}>✓</span>}
               </div>
               <div className="flex-1 min-w-0">
-                <span style={{ ...mono(11), color: C.gold }}>{title.toUpperCase()}</span>
+                <span style={{ ...mono(11), color: C.gold }}>{title.toUpperCase()}{nextUp === s.id ? ' · NEXT UP' : ''}</span>
                 {pick ? (
                   <>
                     <span className="block mt-0.5" style={{ ...head(22), lineHeight: 1 }}>{pick.short}</span>
                     <span className="block mt-1" style={{ fontSize: 14, color: C.soft }}>
-                      {pick.kind === 'cook' ? (stepsFor(pick.name).length && !NO_COOK_STEPS[pick.name] ? 'Cook it' : 'At home') : pick.place} · {pick.cal} cal{pick.price != null ? ` · about $${Math.round(pick.price)}` : ''}
+                      {pick.kind === 'cook' ? 'Make it' : pick.place}{pick.price != null ? ` · $${Math.round(pick.price)}` : ''}
                     </span>
                   </>
                 ) : (
@@ -352,22 +328,18 @@ export default function NutritionDay(p: {
             </div>
             {confirmed && pick && (
               <div className="flex flex-col gap-2 px-3 pb-3">
+                <EatButton eaten={!!pick.eatenId} busy={busy === s.id} onEat={() => { hapticTap(); markEaten(s.id) }} onUndo={() => unEat(s.id)} />
                 {canOrder(pick) && !pick.eatenId && (
-                  <div className="grid grid-cols-2 gap-2">
-                    {(['doordash', 'ubereats'] as const).map((a) => (
-                      <button key={a} type="button" onClick={() => go({ v: 'order', id: s.id, app: a })} disabled={busy === s.id}
-                        className="nf-press rounded-full disabled:opacity-60" style={{ height: 48, background: a === p.orderApp ? C.gold : 'transparent', color: a === p.orderApp ? C.bg : C.ivory, border: `2px solid ${a === p.orderApp ? C.gold : 'rgba(237,231,218,.3)'}`, ...mono(11) }}>
-                        ORDER ON {ORDER_APP_LABEL[a].toUpperCase()}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {pick.kind === 'cook' && (
-                  <button type="button" onClick={() => go({ v: 'cook', id: s.id })} className="nf-press rounded-full" style={{ height: 48, background: pick.eatenId ? 'transparent' : C.gold, color: pick.eatenId ? C.gold : C.bg, border: `2px solid ${C.gold}`, ...mono(12) }}>
-                    HOW TO MAKE IT
+                  <button type="button" onClick={() => order(s.id, p.orderApp)} disabled={busy === s.id}
+                    className="nf-press rounded-full disabled:opacity-60" style={{ height: 50, border: '2px solid rgba(237,231,218,.3)', background: 'transparent', color: C.ivory, fontSize: 15, fontWeight: 600 }}>
+                    Open {pick.place} on {ORDER_APP_LABEL[p.orderApp]}
                   </button>
                 )}
-                <EatButton eaten={!!pick.eatenId} busy={busy === s.id} onEat={() => { hapticTap(); markEaten(s.id) }} onUndo={() => unEat(s.id)} small />
+                {pick.kind === 'cook' && (
+                  <button type="button" onClick={() => go({ v: 'cook', id: s.id })} className="nf-press rounded-full" style={{ height: 50, border: '2px solid rgba(237,231,218,.3)', background: 'transparent', color: C.ivory, fontSize: 15, fontWeight: 600 }}>
+                    How to make it
+                  </button>
+                )}
               </div>
             )}
             {i >= PLAN_STOPS.length && !pick?.eatenId && (
@@ -424,7 +396,7 @@ function EatButton({ eaten, busy, onEat, onUndo, small = false }: { eaten: boole
   )
   return (
     <button type="button" onClick={onEat} disabled={busy} className="nf-press rounded-full w-full disabled:opacity-60"
-      style={{ height: small ? 48 : 58, background: 'transparent', color: C.mint, border: '2px solid rgba(159,220,196,.6)', ...mono(small ? 12 : 14) }}>
+      style={{ height: small ? 48 : 58, background: C.gold, color: C.bg, ...mono(small ? 13 : 15) }}>
       {busy ? 'SAVING…' : 'I ATE IT'}
     </button>
   )
@@ -433,9 +405,9 @@ function EatButton({ eaten, busy, onEat, onUndo, small = false }: { eaten: boole
 // Two cards for one meal, the same look as before: tap one to pick it,
 // "Not this one" swaps a card, Shuffle swaps the other. Order out / Cook it
 // switches the kind of meal for just this one.
-function PickStep({ stop, step, total, picked, defaultMode, onMode, taken, room, askLocation, onPick, onSkip, onBack, backLabel, onNext, nextLabel }: {
+function PickStep({ stop, step, total, picked, defaultMode, onMode, taken, moneyRoom, room, askLocation, onPick, onSkip, onBack, backLabel, onNext, nextLabel }: {
   stop: DayStop; step: number; total: number; picked: PlannedPick | null | undefined; defaultMode: Mode; room: number | null; askLocation: boolean
-  onMode: (m: Mode) => void; taken: Set<string>
+  onMode: (m: Mode) => void; taken: Set<string>; moneyRoom: number | null
   onPick: (c: DayCard) => void; onSkip: () => void; onBack: () => void; backLabel: string; onNext: () => void; nextLabel: string
 }) {
   const kinds: Mode[] = [...(stop.out.length ? ['out' as const] : []), ...(stop.cook.length ? ['cook' as const] : [])]
@@ -449,6 +421,13 @@ function PickStep({ stop, step, total, picked, defaultMode, onMode, taken, room,
     } else l = mode === 'out' ? stop.out : stop.cook
     // Never the same meal twice in one day.
     l = l.filter((c) => !taken.has(c.key))
+    // Only meals that fit the money she has left today (2026-11-05, Asa's
+    // approved mockup), so the day she builds can't go over. Nothing fits →
+    // the two cheapest.
+    if (moneyRoom != null) {
+      const fit = l.filter((c) => c.price == null || c.price <= moneyRoom + 0.5)
+      l = fit.length >= 2 ? fit : [...l].sort((a, b) => (a.price ?? 0) - (b.price ?? 0)).slice(0, Math.max(2, fit.length))
+    }
     // An extra snack only shows what still fits her day (or the lightest).
     if (room != null) {
       const fit = l.filter((c) => c.cal <= room)
@@ -496,13 +475,16 @@ function PickStep({ stop, step, total, picked, defaultMode, onMode, taken, room,
           </span>
         )}
       </div>
-      {total > 0 && <span style={{ ...mono(12), color: C.soft }}>MEAL {step} OF {total}</span>}
+      <div className="flex items-center justify-between gap-3">
+        {total > 0 ? <span style={{ ...mono(12), color: C.soft }}>MEAL {step} OF {total}</span> : <span />}
+        {moneyRoom != null && <span style={{ ...mono(12), color: C.mint }}>${Math.round(moneyRoom)} LEFT TODAY</span>}
+      </div>
       <h1 className="mt-1 mb-1" style={head(46)}>Pick your {title.toLowerCase()}.</h1>
-      <p className="mb-3" style={{ margin: 0, fontSize: 16, color: C.soft }}>{over ? `You're close to your calories for today. These go a little over.` : 'Tap the one you want.'}</p>
+      <p className="mb-3" style={{ margin: 0, fontSize: 16, color: C.soft }}>{over ? 'These go a little over your day.' : 'Tap the one you want.'}</p>
 
       {kinds.length > 1 && (
         <div className="flex gap-2 mb-3" role="tablist" aria-label="Kind of meal">
-          {([...(defaultMode === 'mix' ? [['mix', 'Both']] : []), ['out', '🛵 Order out'], ['cook', '🍳 Cook it']] as [Mode, string][]).map(([m, l]) => (
+          {([...(defaultMode === 'mix' ? [['mix', 'All']] : []), ['out', 'Order out'], ['cook', 'Make it']] as [Mode, string][]).map(([m, l]) => (
             <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => switchMode(m)} className="nf-press flex-1 rounded-full"
               style={{ height: 46, fontSize: 15, fontWeight: 700, background: mode === m ? C.ivory : 'transparent', color: mode === m ? C.bg : C.ivory, border: `2px solid ${mode === m ? C.ivory : 'rgba(237,231,218,.25)'}` }}>{l}</button>
           ))}
@@ -517,7 +499,7 @@ function PickStep({ stop, step, total, picked, defaultMode, onMode, taken, room,
           const on = picked?.key === c.key
           return (
             <div key={`${pos}-${c.key}`} className="relative rounded-3xl overflow-hidden np-in" style={{ height: 210, background: C.card, border: `3px solid ${on ? C.gold : 'rgba(237,231,218,.12)'}` }}>
-              <button type="button" onClick={() => onPick(c)} aria-label={`Pick ${c.short}, ${c.kind === 'cook' ? 'cook it' : c.place}, ${c.cal} calories`} className="nf-press absolute inset-0 w-full h-full text-left">
+              <button type="button" onClick={() => onPick(c)} aria-label={`Pick ${c.short}, ${c.kind === 'cook' ? 'make it at home' : c.place}${c.price != null ? `, $${Math.round(c.price)}` : ''}`} className="nf-press absolute inset-0 w-full h-full text-left">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={c.photo} alt="" className="absolute inset-0 w-full h-full object-cover" />
                 <span className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,0) 30%, rgba(2,31,22,0.94) 100%)' }} />
@@ -525,12 +507,11 @@ function PickStep({ stop, step, total, picked, defaultMode, onMode, taken, room,
                   <span className="min-w-0">
                     <span className="block" style={{ ...head(26), lineHeight: 0.95 }}>{c.short}</span>
                     <span className="block mt-1" style={{ ...mono(11), color: C.soft }}>
-                      {c.kind === 'cook' ? (stepsFor(c.name).length && !NO_COOK_STEPS[c.name] ? 'COOK IT' : 'AT HOME') : c.place.toUpperCase()}{c.price != null && <> · <span style={{ color: C.gold }}>${c.price}</span></>}
+                      {c.kind === 'cook' ? 'MAKE IT AT HOME' : c.place.toUpperCase()}
                     </span>
                   </span>
                   <span className="shrink-0 text-right leading-none">
-                    <span className="block tabular-nums" style={{ ...head(36), lineHeight: 1, color: C.gold }}>{c.cal}</span>
-                    <span className="block mt-0.5" style={{ ...mono(10), color: C.soft }}>CAL</span>
+                    {c.price != null && <span className="block tabular-nums" style={{ ...head(36), lineHeight: 1, color: C.gold }}>${Math.round(c.price)}</span>}
                   </span>
                 </span>
                 {on && <span className="absolute top-3 left-3 rounded-full px-3 py-1.5" style={{ background: C.gold, color: C.bg, ...mono(11) }}>✓ PICKED</span>}

@@ -207,7 +207,7 @@ export default function NewFlow(p: {
               {DAYS.map((d) => {
                 const on = f.activity_level === d.v
                 return (
-                  <button key={d.v} onClick={() => { hapticTap(); set('activity_level', d.v) }} className="nf-press h-[170px] rounded-[22px] p-4 flex flex-col justify-between items-start text-left"
+                  <button key={d.v} onClick={() => { hapticTap(); set('activity_level', d.v); setTimeout(next, 350) }} className="nf-press h-[170px] rounded-[22px] p-4 flex flex-col justify-between items-start text-left"
                     style={{ border: `3px solid ${on ? C.gold : C.line}`, background: on ? C.gold : C.card, color: on ? C.bg : C.ink }}>
                     <span className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: on ? 'rgba(2,31,22,.12)' : 'rgba(237,231,218,.08)' }}><DayIcon k={d.icon} /></span>
                     <span className="flex flex-col gap-1">
@@ -650,82 +650,47 @@ export function NewBuilding({ name }: { name: string }) {
   )
 }
 
-type Pick = { label: string; name: string; place: string; kind: string; cal: number; protein: number; price: number | null; photo: string }
-
-export function NewReveal({ name, targets, firstWorkout, track, isAnonymous, onSave, onGo, onFineTune }: {
+// The reveal, v2 (2026-11-05, Asa's approved first-time-user mockup): no
+// numbers to read (no calories, no grams), the "already picked" lunch is gone
+// (Nutrition starts her day at breakfast), and SEE MY PLAN is the big button.
+// Saving with Google is still offered, as a second, optional button.
+export function NewReveal({ name, firstWorkout, track, isAnonymous, onSave, onGo, onFineTune }: {
   name: string; targets: { calories: number; protein_g: number; carbs_g: number; fats_g: number }
   firstWorkout: string | null; track: string | null; isAnonymous: boolean
   onSave: () => void; onGo: () => void; onFineTune: () => void
 }) {
-  const [n, setN] = useState(0)
-  const [pick, setPick] = useState<Pick | null>(null)
-  useEffect(() => {
-    const start = Date.now()
-    const t = setInterval(() => {
-      const k = Math.min(1, (Date.now() - start) / 900)
-      setN(Math.round(targets.calories * (1 - Math.pow(1 - k, 3))))
-      if (k >= 1) { clearInterval(t); hapticTap(30) }
-    }, 30)
-    fetch('/api/plan/first-pick').then((r) => r.json()).then((d) => setPick(d?.pick || null)).catch(() => {})
-    return () => clearInterval(t)
-  }, [targets.calories])
-  const macro = (v: number, l: string) => (
-    <div className="rounded-2xl p-2.5 text-center" style={{ background: 'rgba(237,231,218,.07)' }}>
-      <div style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 28 }}>{v}g</div>
-      <div className="text-xs" style={{ color: C.mute }}>{l}</div>
+  useEffect(() => { hapticTap(30) }, [])
+  const card = (label: string, title: string, line: string, delay: string) => (
+    <div className="nf-rise rounded-[22px] px-4 py-4 flex flex-col gap-1" style={{ background: 'rgba(237,231,218,.07)', animationDelay: delay }}>
+      <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.12em', color: C.gold }}>{label}</span>
+      <span className="text-[19px] font-semibold">{title}</span>
+      <span className="text-[15px]" style={{ color: C.mute }}>{line}</span>
     </div>
   )
   return (
     <div className="min-h-[100dvh] relative overflow-hidden" style={{ background: C.bg, color: C.ink, fontFamily: BODY, ...FULL }}>
       <style>{CSS}</style>
-      <div className="absolute -left-24 -top-16 w-[150%] h-[520px]" style={{ background: 'radial-gradient(circle at 40% 40%, rgba(229,169,60,.28), rgba(229,169,60,0) 60%)' }} />
-      <div className="relative max-w-md mx-auto px-4 flex flex-col gap-3.5 min-h-[100dvh]" style={{ paddingTop: 'calc(28px + env(safe-area-inset-top))', paddingBottom: 'calc(28px + env(safe-area-inset-bottom))' }}>
-        <div className="flex flex-col items-center gap-1 text-center">
-          <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.2em', color: C.gold }}>YOUR PLAN IS READY</span>
-          <h1 className="mt-1" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 54, lineHeight: 0.9, textTransform: 'uppercase', margin: 0 }}>Let&apos;s go{name ? `, ${name}` : ''}.</h1>
-          <span className="mt-2.5" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 92, lineHeight: 0.9, color: C.gold }}>{n.toLocaleString('en-US')}</span>
-          <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.14em', color: C.mute }}>CALORIES A DAY · WE COUNT, YOU DON&apos;T</span>
-          <p className="mt-1.5 text-[15px]">No guessing what, when, or how much. We tell you.</p>
-        </div>
-        <div className="nf-rise grid grid-cols-3 gap-2" style={{ animationDelay: '.9s' }}>
-          {macro(targets.protein_g, 'Protein')}{macro(targets.carbs_g, 'Carbs')}{macro(targets.fats_g, 'Fat')}
-        </div>
-        {pick && (
-          <div className="nf-rise rounded-[22px] overflow-hidden" style={{ background: '#0B3326', animationDelay: '.3s' }}>
-            <div className="h-32 relative" style={{ backgroundImage: `url(${pick.photo})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-              <span className="absolute left-3 top-3 rounded-full px-2.5 py-1.5" style={{ background: C.ink, color: C.bg, fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.1em' }}>YOUR {pick.label.toUpperCase()} · ALREADY PICKED</span>
-            </div>
-            <div className="px-4 pt-3 pb-3.5 flex flex-col gap-1">
-              <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 25, lineHeight: 1, textTransform: 'uppercase' }}>{pick.kind === 'out' ? `${pick.place} · ` : ''}{pick.name}</span>
-              <span className="text-[13px]" style={{ color: C.mute }}>{pick.cal} cal · {pick.protein}g protein{pick.price != null ? ` · about $${pick.price}` : ''}</span>
-            </div>
-          </div>
-        )}
-        {firstWorkout && (
-          <div className="nf-rise flex items-center gap-3.5 rounded-[18px] px-4 py-3" style={{ background: 'rgba(237,231,218,.07)', animationDelay: '1.5s' }}>
-            <span className="w-11 h-11 rounded-[14px] flex items-center justify-center shrink-0" style={{ background: C.gold }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.bg} strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12" /></svg>
-            </span>
-            <span className="flex flex-col gap-0.5">
-              <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.1em', color: C.gold }}>YOUR FIRST WORKOUT</span>
-              <span className="font-semibold text-[15px]">{firstWorkout}{track === 'home' ? ', at home' : ''}</span>
-            </span>
-          </div>
-        )}
+      <div className="absolute -left-24 -top-16 w-[150%] h-[520px]" style={{ background: 'radial-gradient(circle at 40% 40%, rgba(229,169,60,.22), rgba(229,169,60,0) 60%)' }} />
+      <div className="relative max-w-md mx-auto px-4 flex flex-col gap-3.5 min-h-[100dvh]" style={{ paddingTop: 'calc(36px + env(safe-area-inset-top))', paddingBottom: 'calc(28px + env(safe-area-inset-bottom))' }}>
+        <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, letterSpacing: '.16em', color: C.gold }}>YOUR PLAN IS READY{name ? `, ${name.toUpperCase()}` : ''}</span>
+        <h1 style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 54, lineHeight: 0.9, textTransform: 'uppercase', margin: 0 }}>Here&apos;s what we made for you.</h1>
+        {card('FOOD', 'Every meal, picked for you', 'Order out or make it at home. We do the counting.', '.2s')}
+        {card('WORKOUTS', firstWorkout ? `First up: ${firstWorkout}${track === 'home' ? ', at home' : ''}` : 'Your workouts are ready', 'We show you every move.', '.5s')}
         <div className="flex-1" />
-        <div className="nf-rise flex flex-col gap-2" style={{ animationDelay: '1.8s' }}>
-          {/* Save AFTER she sees her plan (2026-11-04, like Noom / Flo): one tap
-              with Google keeps this same account (linkIdentity), so nothing is retyped. */}
-          {isAnonymous ? <SaveRow onEmail={onSave} onLater={onGo} /> : <Btn onClick={onGo}>Let&apos;s go</Btn>}
-          <button onClick={onFineTune} className="text-sm py-1" style={{ color: 'rgba(237,231,218,.5)' }}>Fine-tune it — 60 seconds →</button>
+        <div className="nf-rise flex flex-col gap-2.5" style={{ animationDelay: '.8s' }}>
+          <button onClick={() => { hapticTap(); onGo() }} className="nf-press w-full h-[64px] rounded-full uppercase"
+            style={{ background: C.gold, color: C.bg, fontFamily: MONO, fontWeight: 700, fontSize: 17, letterSpacing: '.12em' }}>See my plan</button>
+          {isAnonymous && <SaveRow onEmail={onSave} />}
+          <button onClick={onFineTune} className="text-sm py-1" style={{ color: 'rgba(237,231,218,.6)' }}>Fine-tune it — 60 seconds →</button>
         </div>
       </div>
     </div>
   )
 }
 
-// "Save your plan" on the reveal: Google (one tap), email, or later.
-function SaveRow({ onEmail, onLater }: { onEmail: () => void; onLater: () => void }) {
+// "Save your plan" on the reveal: optional, under SEE MY PLAN. Google keeps
+// this same account (linkIdentity), so nothing is retyped; or email.
+function SaveRow({ onEmail }: { onEmail: () => void }) {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   async function google() {
@@ -738,27 +703,19 @@ function SaveRow({ onEmail, onLater }: { onEmail: () => void; onLater: () => voi
     if (e2) { setBusy(false); setMsg("Google didn't connect. Try again, or use your email.") }
   }
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-center" style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.14em', color: C.gold }}>SAVE YOUR PLAN · ONE TAP</span>
+    <div className="flex flex-col gap-1.5">
       {msg && <p className="text-center text-sm" style={{ color: C.gold, margin: 0 }} role="status">{msg}</p>}
-      <button onClick={google} disabled={busy} className="nf-press w-full h-[60px] rounded-full shrink-0 uppercase flex items-center justify-center gap-3 disabled:opacity-60"
-        style={{ background: C.gold, color: C.bg, fontFamily: MONO, fontWeight: 700, fontSize: 15, letterSpacing: '.1em' }}>
-        <span className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: C.ink }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z" />
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z" />
-            <path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84z" />
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z" />
-          </svg>
-        </span>
-        {busy ? 'One sec…' : 'Save with Google'}
+      <button onClick={google} disabled={busy} className="nf-press w-full h-[52px] rounded-full flex items-center justify-center gap-2.5 disabled:opacity-60"
+        style={{ border: '2px solid rgba(237,231,218,.3)', background: 'transparent', color: C.ink, fontSize: 15, fontWeight: 600 }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z" />
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z" />
+          <path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84z" />
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z" />
+        </svg>
+        {busy ? 'One sec…' : 'Save my plan with Google (optional)'}
       </button>
-      <div className="flex items-center justify-between px-2">
-        <button onClick={() => { hapticTap(); onEmail() }} disabled={busy} className="nf-press h-11 px-2 text-[13px] uppercase disabled:opacity-50"
-          style={{ fontFamily: MONO, fontWeight: 700, letterSpacing: '.1em', color: C.mute }}>Use my email</button>
-        <button onClick={() => { hapticTap(); onLater() }} disabled={busy} className="nf-press h-11 px-2 text-[13px] uppercase disabled:opacity-50"
-          style={{ fontFamily: MONO, fontWeight: 700, letterSpacing: '.1em', color: C.mute }}>See my plan →</button>
-      </div>
+      <button onClick={() => { hapticTap(); onEmail() }} disabled={busy} className="self-center text-[14px] py-1 underline underline-offset-2 disabled:opacity-50" style={{ color: C.mute }}>Or save with my email</button>
     </div>
   )
 }
@@ -808,10 +765,16 @@ const Label = ({ children, className = '' }: { children: React.ReactNode; classN
   <span className={`block mx-1 ${className}`} style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.1em', color: C.mute }}>{children}</span>
 )
 const Spacer = () => <div className="flex-1 min-h-6" />
+// 2026-11-05 (Asa's approved first-time-user mockup): the main button is
+// stuck to the bottom of the screen on every question, so it never hides
+// below the fold after she taps an answer.
 function Btn({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
   return (
-    <button onClick={onClick} disabled={disabled} className="nf-press w-full h-[60px] rounded-full shrink-0 uppercase"
-      style={{ background: disabled ? 'rgba(229,169,60,.35)' : C.gold, color: C.bg, fontFamily: MONO, fontWeight: 700, fontSize: 16, letterSpacing: '.12em' }}>{children}</button>
+    <div className="sticky bottom-0 z-10 -mx-4 px-4 pt-3 shrink-0"
+      style={{ background: C.bg, borderTop: '1px solid rgba(237,231,218,.1)', paddingBottom: 'calc(12px + env(safe-area-inset-bottom))', marginBottom: 'calc(-24px - env(safe-area-inset-bottom))' }}>
+      <button onClick={onClick} disabled={disabled} className="nf-press w-full h-[60px] rounded-full uppercase"
+        style={{ background: disabled ? 'rgba(229,169,60,.35)' : C.gold, color: C.bg, fontFamily: MONO, fontWeight: 700, fontSize: 16, letterSpacing: '.12em' }}>{children}</button>
+    </div>
   )
 }
 function Choice({ on, onClick, children, className = '', style }: { on: boolean; onClick: () => void; children: React.ReactNode; className?: string; style?: React.CSSProperties }) {

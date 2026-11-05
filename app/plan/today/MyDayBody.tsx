@@ -1,3 +1,4 @@
+import { readPlan, PLAN_STOPS, EXTRA_SNACKS } from '@/lib/day-plan'
 import { whyLines, selfTalkForDay } from '@/lib/payoff'
 import StartFresh from '@/components/StartFresh'
 import NutritionDrop from '@/components/NutritionDrop'
@@ -245,7 +246,12 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   // Reward Drop (each covers one missed day after she earned it).
   const { streak, shieldsLeft: shields } = streakDetail(checkinDates, todayIso, shieldDatesFrom(rewardStore.drops))
   const wins = winsFrom(rewardStore.drops)
-  const fd = (intakeRow?.form_data || {}) as { payoffs?: string[]; why_own?: string }
+  const fd = (intakeRow?.form_data || {}) as { payoffs?: string[]; why_own?: string; day_plan?: unknown }
+  // Her next meal from today's confirmed day plan (2026-11-05, Asa's approved
+  // first-time-user mockup): Home names it, one tap to her food.
+  const dayPlan = readPlan(fd.day_plan, todayIso)
+  const nextStop = dayPlan.confirmed ? PLAN_STOPS.concat(EXTRA_SNACKS).slice(0, PLAN_STOPS.length + dayPlan.extras).find((st) => dayPlan.picks[st.id] && !dayPlan.picks[st.id]!.eatenId) : undefined
+  const nextMeal = nextStop ? { label: nextStop.slot, pick: dayPlan.picks[nextStop.id]! } : null
   const WHY_TITLE: Record<string, string> = { energy: 'For your energy.', kids: 'For your kids.', mood: 'For your peace of mind.', family: 'For your family.', look: 'For you, feeling good in your skin.', health: 'For your health.', confidence: 'For your confidence.' }
   const firstPayoff = (fd.payoffs || []).find((p) => WHY_TITLE[p])
   const showUps = workoutsDone ? `${workoutsDone} workout${workoutsDone === 1 ? '' : 's'} this week is ${workoutsDone} time${workoutsDone === 1 ? '' : 's'} you showed up.` : 'Every workout this week is you showing up for it.'
@@ -373,10 +379,12 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
                 )}
                 <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                   <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 26, lineHeight: 1, textTransform: 'uppercase' }}>
-                    {calOverBy > 0 ? 'Over for today' : calRemaining === 0 ? 'You hit your number' : eatingOutToday ? 'Eating out? Covered.' : 'Your picks are ready'}
+                    {nextMeal ? `Next: ${nextMeal.pick.short}` : calOverBy > 0 ? 'Over for today' : calRemaining === 0 ? 'You hit your number' : eatingOutToday ? 'Eating out? Covered.' : dayPlan.confirmed ? 'Your day is done' : 'Plan your meals'}
                   </span>
                   <span className="text-[13px]" style={{ color: MUTE }}>
-                    {calBudget == null ? (mealIdx > 5 ? 'Sunday. Eat easy, we picked a few.' : 'Tap to see what we picked.')
+                    {nextMeal ? `${nextMeal.label} · ${nextMeal.pick.kind === 'cook' ? 'Make it at home' : nextMeal.pick.place}. Tap to see your food.`
+                      : !dayPlan.confirmed && !eatingOutToday ? 'Pick today’s food in a few taps.'
+                      : calBudget == null ? (mealIdx > 5 ? 'Sunday. Eat easy, we picked a few.' : 'Tap to see what we picked.')
                       : calOverBy > 0 ? `${calOverBy.toLocaleString('en-US')} cal over. No stress. Tomorrow's a fresh start.`
                         : calRemaining === 0 ? 'Right on target. Nice work.'
                           : `${loggedCalories.toLocaleString('en-US')} of ${Math.round(calBudget).toLocaleString('en-US')} eaten. Tap for your next meal.`}

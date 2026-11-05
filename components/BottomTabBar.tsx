@@ -125,7 +125,7 @@ export default function BottomTabBar() {
             {/* Small gold pill on the open tab, sitting on the top edge. */}
             <span aria-hidden className="absolute rounded-full" style={{ top: -12, width: 18, height: 3, background: GOLD, opacity: t.active ? 1 : 0, transition: 'opacity .2s ease' }} />
             {t.icon}
-            <span style={{ fontFamily: "var(--font-jbmono), 'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', lineHeight: 1, color: tint(t.active) }}>{t.label}</span>
+            <span style={{ fontFamily: "var(--font-jbmono), 'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', lineHeight: 1, color: tint(t.active) }}>{t.label}</span>
           </Link>
         ))}
       </div>
