@@ -163,7 +163,7 @@ const HOME_POOL_BASE: HomeExercise[] = [
   { name: 'Chair / Couch Squats', level: 1, type: 'leg' }, { name: 'Bodyweight Squats', level: 1, type: 'leg' },
   { name: 'Pulsating Squats', level: 1, type: 'leg' }, { name: 'Lunges in Place', level: 1, type: 'leg' },
   { name: 'Air Punches / Jabs', level: 1, type: 'upper', sub: 'arms' }, { name: 'Standing Oblique Touches', level: 1, type: 'core' },
-  { name: 'Cross Toe Touches', level: 1, type: 'core' }, { name: 'Beginner Push-Ups (Knees)', level: 1, type: 'upper', sub: 'chest' },
+  { name: 'Cross Toe Touches', level: 1, type: 'core' }, { name: 'Knee Push-Ups', level: 1, type: 'upper', sub: 'chest' },
   { name: 'Sit-Ups', level: 1, type: 'core' }, { name: 'Plank Holds', level: 1, type: 'core' },
   { name: 'Leg Raises (Floor)', level: 1, type: 'core' }, { name: 'March in Place', level: 1, type: 'cardio' },
   // real distinct per-area bodyweight moves, 2026-08-31 — no equipment

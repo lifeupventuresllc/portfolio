@@ -5,7 +5,7 @@
 // never counted as exercises ("Exercise 2 of 5").
 import type { WorkoutProgram } from './workout'
 import { exerciseVideo } from './exercise-videos'
-import { howToFor } from './exercise-howto'
+import { howToFor, cueOrHowTo } from './exercise-howto'
 import { NOT_EXACT_ON_SCREEN } from './exercise-images'
 import { DELOAD_CUE, deloadSets } from './double-progression'
 
@@ -57,7 +57,7 @@ export function parseScheme(scheme: string): { sets: number; reps: number[]; sec
 
 const move = (name: string, scheme: string, cue?: string, imageUrl?: string, extra?: { videoUrl?: string }): { m: Move; sets: number } => {
   const p = parseScheme(scheme)
-  return { m: { name, cue: cue || howToFor(name), imageUrl: exactImage(name, imageUrl), videoUrl: extra?.videoUrl ?? exerciseVideo(name), reps: p.reps, seconds: p.seconds, eachSide: p.eachSide }, sets: p.sets }
+  return { m: { name, cue: cueOrHowTo(name, cue), imageUrl: exactImage(name, imageUrl), videoUrl: extra?.videoUrl ?? exerciseVideo(name), reps: p.reps, seconds: p.seconds, eachSide: p.eachSide }, sets: p.sets }
 }
 
 export function buildBlocks(program: WorkoutProgram, dayIdx: number): Block[] {
