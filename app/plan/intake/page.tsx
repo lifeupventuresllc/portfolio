@@ -52,7 +52,9 @@ const Hint = ({ children }: { children: React.ReactNode }) => <p className="text
 // Training days and the weekly food budget moved into it; focus area and
 // foods she loves stay as she last set them (fine-tune later).
 const OPTIONAL_STEPS = [
-  'target', 'experience', 'training_style', 'cook', 'postpartum', 'other',
+  // 2026-11-04: 'experience' + 'training_style' removed — the required
+  // flow's "How do you like to lift?" page now asks both, once.
+  'target', 'cook', 'postpartum', 'other',
 ]
 
 // One warm question per screen. Same data as before — just effortless, and
@@ -439,41 +441,6 @@ function ConversationalIntakeInner() {
               <button onClick={() => { set('target_lbs', ''); next() }} className="w-full text-center text-ivory/40 text-xs mt-4 hover:text-gold transition-colors">Not sure — you tell me →</button>
             </>)
           })()}
-
-          {s === 'experience' && (<>
-            <Q>Where are you at with training?</Q>
-            <Hint>No wrong answer — I meet you exactly where you are.</Hint>
-            <div className="space-y-3">
-              {[{ v: 'beginner', l: '🌱 Beginner', d: 'New or getting back into it' }, { v: 'intermediate', l: '💫 Intermediate', d: "I know my way around" }, { v: 'advanced', l: '🔥 Advanced', d: 'Been training a while' }].map((o) => (
-                <button key={o.v} onClick={() => pick('experience_level', o.v)} className={opt(f.experience_level === o.v)}>
-                  <span className="block">{o.l}</span><span className={`block text-xs font-normal mt-0.5 ${f.experience_level === o.v ? 'text-gold/70' : 'text-ivory/40'}`}>{o.d}</span>
-                </button>
-              ))}
-            </div>
-          </>)}
-
-          {s === 'training_style' && (<>
-            <Q>What&apos;s your training style?</Q>
-            {/* Multi-select (Priority 1, 2026-08-25 beta feedback) — same
-                pattern as the goal step. "No strong preference" is mutually
-                exclusive with real styles (picking it clears any real style
-                selected, and picking a real style clears it) since it isn't
-                a genuine additional preference. */}
-            <Hint>Tap all that apply — no wrong answer.</Hint>
-            <div className="space-y-3 mb-6">
-              {[
-                { v: 'compound', l: '🔗 Full body / compound movements', d: 'Moves that work multiple muscles each rep' },
-                { v: 'split', l: '🎯 Split / one muscle group at a time', d: 'Focused, isolated work per day' },
-                { v: 'cardio', l: '🏃🏽 Cardio-first', d: 'Heart rate up, calorie burn' },
-                { v: 'none', l: '🤷🏽 No strong preference', d: "I'll trust your programming" },
-              ].map((o) => (
-                <button key={o.v} onClick={() => { hapticTap(); setTrainingStyles((a) => o.v === 'none' ? ['none'] : (a.includes(o.v) ? a.filter((x) => x !== o.v) : [...a.filter((x) => x !== 'none'), o.v])) }} className={opt(trainingStyles.includes(o.v))}>
-                  <span className="block">{o.l}</span><span className={`block text-xs font-normal mt-0.5 ${trainingStyles.includes(o.v) ? 'text-gold/70' : 'text-ivory/40'}`}>{o.d}</span>
-                </button>
-              ))}
-            </div>
-            <button onClick={next} disabled={!trainingStyles.length} className={primaryBtn}>Continue →</button>
-          </>)}
 
           {s === 'cook' && (<>
             <Q>How many days do you want to cook?</Q>

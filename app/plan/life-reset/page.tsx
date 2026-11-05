@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 // Inner Circle exclusive: "life happened" one-tap reset. A dedicated confirm
 // page (not a native confirm() dialog) matching the app's existing pattern for
-// anything consequential — same shape as /plan/eating-out and /plan/compound.
+// anything consequential — same shape as /plan/eating-out.
 export default async function LifeResetPage() {
   const { user, enrollment } = await getMemberEnrollment()
   if (!user) redirect('/login?redirect=/plan/life-reset')
