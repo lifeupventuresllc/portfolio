@@ -604,7 +604,8 @@ const RECIPE_PHOTOS = new Set(['buffalo-chicken-bowls', 'crispy-honey-garlic-chi
 // 2026-11-05 photo audit (Asa's Nutrition fix #8): burrito.jpg is a shop
 // front, not food, and protein-shake.jpg is mostly gym gear, so neither is
 // used; grilled items never get the fried photo; a few cookbook meals get the
-// closest real match instead of a wrong one.
+// closest real match instead of a wrong one. breakfast-sandwich-2.jpg is
+// mostly a coffee mug, so it is not used either.
 const FOOD_PHOTO: [RegExp, string][] = [
   [/hash brown bake/i, 'egg-bites'], [/cane'?s sauce/i, 'tenders'], [/fried cabbage/i, 'stir-fry'], [/pizza pasta/i, 'pasta'],
   [/grilled nuggets/i, 'grilled-chicken'], [/(crispy rice|harvest) bowl sweetgreen/i, 'bowl-2'],
@@ -622,7 +623,7 @@ const FOOD_PHOTO: [RegExp, string][] = [
   [/bowl|rice/i, 'bowl'], [/grilled chicken|chicken breast|meatball|chicken/i, 'grilled-chicken'], [/salad/i, 'salad'],
 ]
 
-const PHOTO_ALT = new Set(['breakfast-sandwich', 'burger', 'wrap', 'wings', 'sub', 'breakfast-burrito', 'bowl'])
+const PHOTO_ALT = new Set(['burger', 'wrap', 'wings', 'sub', 'breakfast-burrito', 'bowl'])
 
 function slug(s: string): string { return s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }
 

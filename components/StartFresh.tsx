@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { hapticTap } from '@/lib/haptics'
 
@@ -14,6 +14,9 @@ export default function StartFresh() {
   const [ask, setAsk] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const box = useRef<HTMLDivElement>(null)
+  // The box opens near the bottom of Home's scroll area: bring it into view.
+  useEffect(() => { if (ask) box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, [ask])
   async function go() {
     hapticTap()
     setBusy(true)
@@ -32,7 +35,7 @@ export default function StartFresh() {
     </button>
   )
   return (
-    <div role="alertdialog" aria-label="Start fresh?" className="mt-6 mb-2 rounded-3xl p-4 flex flex-col gap-3" style={{ background: 'rgba(255,90,78,.08)', border: '2px solid rgba(255,138,122,.5)', color: '#EDE7DA' }}>
+    <div ref={box} role="alertdialog" aria-label="Start fresh?" className="mt-6 mb-2 rounded-3xl p-4 flex flex-col gap-3" style={{ background: 'rgba(255,90,78,.08)', border: '2px solid rgba(255,138,122,.5)', color: '#EDE7DA' }}>
       <span style={{ fontFamily: MONO, fontWeight: 700, fontSize: 13, letterSpacing: '.1em', color: '#FF8A7A' }}>START FRESH?</span>
       <p style={{ margin: 0, fontSize: 16, lineHeight: 1.4 }}>
         This clears your food, your meals for today, your workouts done, your weigh-ins and your streak. You can&apos;t undo it.

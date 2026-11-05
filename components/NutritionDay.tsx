@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { hapticTap } from '@/lib/haptics'
@@ -79,7 +79,24 @@ export default function NutritionDay(p: {
     const open = active.find((s) => !(s.id in p.plan.picks))
     return open ? { v: 'pick', id: open.id, from: 'flow' } : { v: 'review' }
   })
-  const go = (v: View) => { hapticTap(); setError(''); setView(v); if (typeof window !== 'undefined') window.scrollTo(0, 0) }
+  const [lastMode, setLastMode] = useState<Mode | null>(null)   // her last Order out / Cook it choice carries to the next meal
+  // The phone's own Back button steps back a screen here too (the tester's
+  // bug: it left the page). Each screen change is one history step.
+  const trail = useRef<View[]>([])
+  const viewRef = useRef(view)
+  viewRef.current = view
+  useEffect(() => {
+    const onPop = () => { const prev = trail.current.pop(); if (prev) { setError(''); setView(prev) } }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+  const go = (v: View) => {
+    hapticTap(); setError('')
+    trail.current.push(viewRef.current)
+    try { window.history.pushState({ nutritionDay: true }, '') } catch { /* fine */ }
+    setView(v)
+    window.scrollTo(0, 0)
+  }
   const fail = () => setError("Couldn't save that. Check your internet and tap again.")
 
   const planned = (id?: PlanStopId) => active.reduce((t, s) => t + (s.id !== id ? picks[s.id]?.cal || 0 : 0), 0)
@@ -202,7 +219,8 @@ export default function NutritionDay(p: {
       <Shell>
         {errorBar}
         <PickStep key={stop.id} stop={stop} step={idx + 1} total={view.from === 'flow' ? PLAN_STOPS.length + extras : 0}
-          picked={picks[stop.id]} defaultMode={p.mix ? 'mix' : p.eatStyle} room={isExtra ? room : null} askLocation={p.askLocation}
+          picked={picks[stop.id]} defaultMode={lastMode ?? (p.mix ? 'mix' : p.eatStyle)} onMode={setLastMode}
+          taken={new Set(active.filter((s) => s.id !== stop.id).map((s) => picks[s.id]?.key).filter((k): k is string => !!k))} room={isExtra ? room : null} askLocation={p.askLocation}
           onPick={async (c) => {
             hapticTap()
             const pick = toPick(c)
@@ -270,7 +288,7 @@ export default function NutritionDay(p: {
                 </li>
               ))}
             </ol>
-            {steps.some((t) => /portion|containers|divide by/i.test(t)) && (
+            {steps.some((t) => /portion|container|divide by/i.test(t)) && (
               <p style={{ margin: 0, fontSize: 14, color: C.soft }}>These steps make a big batch for the week. The list above is for one meal.</p>
             )}
           </Section>
@@ -318,7 +336,7 @@ export default function NutritionDay(p: {
                   <>
                     <span className="block mt-0.5" style={{ ...head(22), lineHeight: 1 }}>{pick.short}</span>
                     <span className="block mt-1" style={{ fontSize: 14, color: C.soft }}>
-                      {pick.kind === 'cook' ? 'Cook it' : pick.place} · {pick.cal} cal{pick.price != null ? ` · about $${Math.round(pick.price)}` : ''}
+                      {pick.kind === 'cook' ? (stepsFor(pick.name).length && !NO_COOK_STEPS[pick.name] ? 'Cook it' : 'At home') : pick.place} · {pick.cal} cal{pick.price != null ? ` · about $${Math.round(pick.price)}` : ''}
                     </span>
                   </>
                 ) : (
@@ -415,8 +433,9 @@ function EatButton({ eaten, busy, onEat, onUndo, small = false }: { eaten: boole
 // Two cards for one meal, the same look as before: tap one to pick it,
 // "Not this one" swaps a card, Shuffle swaps the other. Order out / Cook it
 // switches the kind of meal for just this one.
-function PickStep({ stop, step, total, picked, defaultMode, room, askLocation, onPick, onSkip, onBack, backLabel, onNext, nextLabel }: {
+function PickStep({ stop, step, total, picked, defaultMode, onMode, taken, room, askLocation, onPick, onSkip, onBack, backLabel, onNext, nextLabel }: {
   stop: DayStop; step: number; total: number; picked: PlannedPick | null | undefined; defaultMode: Mode; room: number | null; askLocation: boolean
+  onMode: (m: Mode) => void; taken: Set<string>
   onPick: (c: DayCard) => void; onSkip: () => void; onBack: () => void; backLabel: string; onNext: () => void; nextLabel: string
 }) {
   const kinds: Mode[] = [...(stop.out.length ? ['out' as const] : []), ...(stop.cook.length ? ['cook' as const] : [])]
@@ -428,6 +447,8 @@ function PickStep({ stop, step, total, picked, defaultMode, room, askLocation, o
       l = []
       for (let i = 0; i < Math.max(stop.out.length, stop.cook.length); i++) { if (stop.out[i]) l.push(stop.out[i]); if (stop.cook[i]) l.push(stop.cook[i]) }
     } else l = mode === 'out' ? stop.out : stop.cook
+    // Never the same meal twice in one day.
+    l = l.filter((c) => !taken.has(c.key))
     // An extra snack only shows what still fits her day (or the lightest).
     if (room != null) {
       const fit = l.filter((c) => c.cal <= room)
@@ -437,22 +458,27 @@ function PickStep({ stop, step, total, picked, defaultMode, room, askLocation, o
     const mine = picked && (l.find((c) => c.key === picked.key) || [...stop.out, ...stop.cook].find((c) => c.key === picked.key))
     return mine ? [mine, ...l.filter((c) => c.key !== mine.key)] : l
   })()
-  const [pair, setPair] = useState<[number, number]>([0, 1])
+  // Two cards never share a photo (the tester saw the same egg sandwich twice).
+  const firstPair = (): [number, number] => {
+    const j = list.findIndex((c, i) => i > 0 && c.photo !== list[0]?.photo)
+    return [0, j > 0 ? j : 1]
+  }
+  const [pair, setPair] = useState<[number, number]>(firstPair)
   const [cursor, setCursor] = useState(2)
   const shown = list.length < 2 ? (list.length ? [0] : []) : pair
   const canSwap = list.length > 2
   function swap(pos: number) {
     const keep = shown[1 - pos]
-    for (let k = 0; k < list.length; k++) {
-      const idx = (cursor + k) % list.length
-      if (idx === keep || idx === shown[pos]) continue
+    const ok = (idx: number, samePhotoOk: boolean) => idx !== keep && idx !== shown[pos] && (samePhotoOk || list[idx].photo !== list[keep]?.photo)
+    const order = Array.from({ length: list.length }, (_, k) => (cursor + k) % list.length)
+    for (const idx of [...order.filter((i) => ok(i, false)), ...order.filter((i) => ok(i, true))]) {
       hapticTap()
       setPair((pr) => (pos === 0 ? [idx, pr[1]] : [pr[0], idx]))
       setCursor(idx + 1)
       return
     }
   }
-  const switchMode = (m: Mode) => { hapticTap(); setMode(m); setPair([0, 1]); setCursor(2) }
+  const switchMode = (m: Mode) => { hapticTap(); setMode(m); onMode(m); setPair([0, 1]); setCursor(2) }
   const title = TITLE[stop.label]
   const over = room != null && list.every((c) => c.cal > room)
 

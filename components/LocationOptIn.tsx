@@ -79,7 +79,7 @@ export default function LocationOptIn({ prompt, refreshOnPing = false, large = f
       </button>
       {blocked && (
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.4, color: 'rgba(237,231,218,.72)' }}>
-          Your phone said no. On iPhone: open Settings, tap Privacy, then Location Services, then Safari Websites, and pick While Using. Then tap the button again.
+          {/iPhone|iPad/.test(navigator.userAgent) ? 'Your phone said no. On iPhone: open Settings, tap Privacy, then Location Services, then Safari Websites, and pick While Using. Then tap the button again.' : 'Your browser said no. Tap the lock or settings icon next to the web address, allow Location, then tap the button again.'}
         </p>
       )}
     </div>
