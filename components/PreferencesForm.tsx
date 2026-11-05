@@ -43,6 +43,8 @@ export default function PreferencesForm({ current }: { current: Current }) {
   const [focusArea, setFocusArea] = useState(current.focus_area)
   const [trainingStyles, setTrainingStyles] = useState<string[]>(current.training_styles)
   const [level, setLevel] = useState(current.experience_level || 'beginner')
+  // 2026-11-05 (Asa): switch Home ↔ Gym any time, without redoing the intake.
+  const [place, setPlace] = useState(current.training_location === 'home' ? 'home' : 'gym')
   const [payoffs, setPayoffs] = useState<string[]>(current.payoffs)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -54,7 +56,7 @@ export default function PreferencesForm({ current }: { current: Current }) {
   // of taps (multi-select goals/styles) is debounced ~400ms into ONE save of
   // the final selection, and a tap during an in-flight save queues one more
   // save instead of being lost. Same endpoint + payload as the old button.
-  const latest = useRef({ goals, focusArea, trainingStyles, payoffs, level })
+  const latest = useRef({ goals, focusArea, trainingStyles, payoffs, level, place })
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inFlight = useRef(false)
   const queued = useRef(false)
@@ -67,6 +69,7 @@ export default function PreferencesForm({ current }: { current: Current }) {
     if (next.trainingStyles) setTrainingStyles(next.trainingStyles)
     if (next.payoffs) setPayoffs(next.payoffs)
     if (next.level) setLevel(next.level)
+    if (next.place) setPlace(next.place)
     setSaved(false); setError('')
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(save, 400)
@@ -77,7 +80,7 @@ export default function PreferencesForm({ current }: { current: Current }) {
   const togglePayoff = (v: string) => { const a = latest.current.payoffs; change({ payoffs: a.includes(v) ? a.filter((x) => x !== v) : [...a, v] }) }
 
   async function save() {
-    const { goals, focusArea, trainingStyles, payoffs, level } = latest.current
+    const { goals, focusArea, trainingStyles, payoffs, level, place } = latest.current
     if (!goals.length) { setError('Pick at least one goal.'); return }
     if (inFlight.current) { queued.current = true; return }
     inFlight.current = true
@@ -91,7 +94,7 @@ export default function PreferencesForm({ current }: { current: Current }) {
           name: current.name, age: current.age, sex: current.sex, height_in: current.height_in,
           weight_lbs: current.weight_lbs, target_lbs: current.target_lbs,
           activity_level: current.activity_level, experience_level: level,
-          training_location: current.training_location, days_per_week: current.days_per_week,
+          training_location: place, days_per_week: current.days_per_week,
           cook_days_per_week: current.cook_days_per_week, weekly_food_budget: current.weekly_food_budget,
           food_preferences: current.food_preferences, dislikes_allergies: current.dislikes_allergies,
           injuries: current.injuries, postpartum: current.postpartum, other_info: current.other_info,
@@ -120,7 +123,16 @@ export default function PreferencesForm({ current }: { current: Current }) {
         <a href="/plan" className="inline-flex items-center gap-1.5 bg-charcoal border border-gold/40 text-gold text-sm font-semibold px-4 py-2.5 rounded-full hover:border-gold active:scale-95 transition-all mb-6">← Back to my plan</a>
         <p className="text-gold text-xs font-semibold tracking-[0.25em] uppercase mb-1">Update your plan</p>
         <h1 className="text-white text-2xl font-bold mb-2">What do you want to work on?</h1>
-        <p className="text-ivory/50 text-sm mb-8">Just your goals and workout style — everything else stays as it is. Every tap saves and rebuilds your plan right away.</p>
+        <p className="text-ivory/50 text-sm mb-8">Where you work out, your goals and workout style — everything else stays as it is. Every tap saves and rebuilds your plan right away.</p>
+
+        <p className="text-ivory/40 text-xs font-semibold uppercase tracking-wider mb-2">Where do you work out?</p>
+        <div className="grid grid-cols-2 gap-2 mb-8">
+          {([['home', '🏠 Home'], ['gym', '🏋️ Gym']] as const).map(([v, l]) => (
+            <button key={v} onClick={() => change({ place: v })} aria-pressed={place === v} className={opt(place === v)}>
+              <span className="text-base font-semibold">{l}</span>
+            </button>
+          ))}
+        </div>
 
         <p className="text-ivory/40 text-xs font-semibold uppercase tracking-wider mb-2">Goal — pick all that apply</p>
         <div className="space-y-2 mb-6">

@@ -158,6 +158,8 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
       <div className="flex items-center justify-center gap-3 text-xs pt-1" style={{ color: 'rgba(237,231,218,.6)' }}>
         <button onClick={() => router.push('/plan/workout/week')} className="underline underline-offset-4">My week</button>
         <span>·</span>
+        <a href="/plan/preferences" className="underline underline-offset-4">Switch Home / Gym</a>
+        <span>·</span>
         <a href="/plan/coach" className="underline underline-offset-4">Training somewhere different? Tell Coach</a>
         <span>·</span>
         <button onClick={tapElsewhere} className="underline underline-offset-4" style={{ color: confirmElsewhere ? GOLD : undefined }}>{confirmElsewhere ? 'Tap again to confirm' : 'Trained elsewhere?'}</button>
