@@ -1,4 +1,4 @@
-import { readPlan, PLAN_STOPS, EXTRA_SNACKS } from '@/lib/day-plan'
+import { planFromForm, PLAN_STOPS, EXTRA_SNACKS } from '@/lib/day-plan'
 import { whyLines, selfTalkForDay } from '@/lib/payoff'
 import StartFresh from '@/components/StartFresh'
 import NutritionDrop from '@/components/NutritionDrop'
@@ -247,10 +247,10 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   // Reward Drop (each covers one missed day after she earned it).
   const { streak, shieldsLeft: shields } = streakDetail(checkinDates, todayIso, shieldDatesFrom(rewardStore.drops))
   const wins = winsFrom(rewardStore.drops)
-  const fd = (intakeRow?.form_data || {}) as { payoffs?: string[]; why_own?: string; day_plan?: unknown }
+  const fd = (intakeRow?.form_data || {}) as { payoffs?: string[]; why_own?: string; day_plan?: unknown; day_plan_next?: unknown }
   // Her next meal from today's confirmed day plan (2026-11-05, Asa's approved
   // first-time-user mockup): Home names it, one tap to her food.
-  const dayPlan = readPlan(fd.day_plan, todayIso)
+  const dayPlan = planFromForm(fd, todayIso)
   const nextStop = dayPlan.confirmed ? PLAN_STOPS.concat(EXTRA_SNACKS).slice(0, PLAN_STOPS.length + dayPlan.extras).find((st) => dayPlan.picks[st.id] && !dayPlan.picks[st.id]!.eatenId) : undefined
   const nextMeal = nextStop ? { label: nextStop.slot, pick: dayPlan.picks[nextStop.id]! } : null
   const WHY_TITLE: Record<string, string> = { energy: 'For your energy.', kids: 'For your kids.', mood: 'For your peace of mind.', family: 'For your family.', look: 'For you, feeling good in your skin.', health: 'For your health.', confidence: 'For your confidence.' }

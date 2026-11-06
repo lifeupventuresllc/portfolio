@@ -11,7 +11,7 @@ const CLEAR = [
   'workout_set_logs', 'progression_state', 'reward_drops', 'meal_offers',
 ] as const
 // Nutrition memory on her intake row; the answers themselves stay.
-const FORM_KEYS = ['day_plan', 'meal_memory'] as const
+const FORM_KEYS = ['day_plan', 'day_plan_next', 'meal_memory'] as const
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({})) as { confirm?: string }

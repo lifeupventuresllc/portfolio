@@ -4,7 +4,7 @@ import { openChainsNear } from '@/lib/fos/nearby-food'
 import { verifiedChains } from '@/lib/chain-menu'
 import { partnerMealKeys } from '@/lib/partners'
 import { dailyFoodBudget, moneyLeft, fitToMoney } from '@/lib/food-budget'
-import { PLAN_STOPS, EXTRA_SNACKS, readPlan, type PlanStopId, type SavedDayPlan } from '@/lib/day-plan'
+import { PLAN_STOPS, EXTRA_SNACKS, readPlan, planFromForm, nextDayISO, type PlanStopId, type SavedDayPlan } from '@/lib/day-plan'
 
 // The meals for THIS meal, ranked best first — one builder for the Nutrition
 // tab (app/plan/nutrition) and the meal-time offer (app/api/cron/meal-offer),
@@ -150,10 +150,15 @@ export interface BuiltDay {
   hasPlaces: boolean             // the "near me" lookup is switched on for this app
 }
 
-export async function buildDayPicks(data: NutritionDay, calBudget: number, now: Date = new Date()): Promise<BuiltDay> {
-  const { enrollment, intake, foodRows, weekPlan, mealIdx, todayIso, moneySpent } = data
+export async function buildDayPicks(data: NutritionDay, calBudget: number, now: Date = new Date(), day: 'today' | 'tomorrow' = 'today'): Promise<BuiltDay> {
+  const { enrollment, intake, weekPlan, mealIdx, todayIso } = data
+  // Tomorrow ("Plan tomorrow" on the Day done screen): a full, fresh day —
+  // nothing logged or spent yet.
+  const ahead = day === 'tomorrow'
+  const foodRows = ahead ? [] : data.foodRows
+  const moneySpent = ahead ? 0 : data.moneySpent
   const formData = (intake?.form_data || {}) as Record<string, unknown>
-  const plan = readPlan(formData.day_plan, todayIso)
+  const plan = ahead ? readPlan(formData.day_plan_next, nextDayISO(todayIso)) : planFromForm(formData, todayIso)
   const mix = formData.eat_style === 'mix'
   const eatStyle: EatStyle | null = (formData.eat_style === 'cook' || formData.eat_style === 'out') ? formData.eat_style as EatStyle : mix ? 'out' : null
   const weekly = Number(intake?.weekly_food_budget) || null

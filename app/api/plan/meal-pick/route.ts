@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { updateMemory, cleanOverrides, HABIT_MEALS, type MealMemory, type HabitMeal } from '@/lib/meal-pick'
 import { localDateISO } from '@/lib/localdate'
-import { readPlan, cleanPick, ALL_STOP_IDS, type PlanStopId } from '@/lib/day-plan'
+import { readPlan, planFromForm, nextDayISO, cleanPick, ALL_STOP_IDS, type PlanStopId } from '@/lib/day-plan'
 
 // The Nutrition tab's write side (2026-10-19). Everything lives on her own
 // intake row's form_data — no new table, nothing for Asa to run by hand:
@@ -21,6 +21,7 @@ type Body = {
   action?: 'picked' | 'skipped' | 'style' | 'budget' | 'report' | 'order_app' | 'meal_time' | 'offers' | 'paid'
     | 'plan_set' | 'plan_confirm' | 'plan_eaten' | 'plan_extra'
   stop?: string; pick?: unknown; confirmed?: boolean; extras?: number
+  day?: 'tomorrow'                 // plan_* on tomorrow's plan ("Plan tomorrow")
   on?: boolean
   place?: string; paid?: number; shown?: number; entryId?: string
   key?: string; keys?: string[]
@@ -111,7 +112,11 @@ export async function POST(request: NextRequest) {
   } else if (body.action === 'plan_set' || body.action === 'plan_confirm' || body.action === 'plan_eaten' || body.action === 'plan_extra') {
     // Her day plan. Any change to a meal un-confirms the day until she taps
     // "Confirm my day" again; eating a meal never does.
-    const plan = readPlan(formData.day_plan, todayIso)
+    // "Plan tomorrow" works on form_data.day_plan_next; it becomes today's
+    // plan at midnight (lib/day-plan planFromForm). Nothing is eaten ahead.
+    const ahead = body.day === 'tomorrow'
+    if (ahead && body.action === 'plan_eaten') return NextResponse.json({ error: 'Not today yet.' }, { status: 400 })
+    const plan = ahead ? readPlan(formData.day_plan_next, nextDayISO(todayIso)) : planFromForm(formData, todayIso)
     const stop = body.stop as PlanStopId
     if (body.action === 'plan_set') {
       if (!ALL_STOP_IDS.includes(stop)) return NextResponse.json({ error: 'Bad meal.' }, { status: 400 })
@@ -134,7 +139,12 @@ export async function POST(request: NextRequest) {
       for (const id of (['snack2', 'snack3'] as const).slice(n)) if (!plan.picks[id]?.eatenId) delete plan.picks[id]
       plan.extras = n
     }
-    formData.day_plan = plan
+    if (ahead) formData.day_plan_next = plan
+    else {
+      formData.day_plan = plan
+      // Last night's "tomorrow" plan is today's now: drop the copy.
+      if ((formData.day_plan_next as { date?: string } | undefined)?.date && (formData.day_plan_next as { date: string }).date <= todayIso) delete formData.day_plan_next
+    }
   } else if (body.action === 'picked' || body.action === 'skipped') {
     let memory = (formData.meal_memory || {}) as MealMemory
     const keys = body.action === 'picked' ? [body.key] : (body.keys || [])

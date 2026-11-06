@@ -64,8 +64,11 @@ export default function NutritionDay(p: {
   moneyDaily: number | null    // today's food money; null = no budget set
   moneySpent: number           // spent today on food outside her plan
   allergies?: string[]         // foods she marked as an allergy in intake
+  tomorrow?: boolean           // planning tomorrow ("Plan tomorrow" on Day done)
+  tomorrowSet?: boolean        // tomorrow's plan is already confirmed
 }) {
   const router = useRouter()
+  const send = (b: Record<string, unknown>) => post(p.tomorrow ? { ...b, day: 'tomorrow' } : b)
   const [picks, setPicks] = useState(p.plan.picks)
   const [confirmed, setConfirmed] = useState(p.plan.confirmed)
   const [extras, setExtras] = useState(p.plan.extras)
@@ -112,12 +115,12 @@ export default function NutritionDay(p: {
     else next[id] = pick
     setPicks(next)
     setConfirmed(false)
-    if (!(await post({ action: 'plan_set', stop: id, pick }))) { setPicks(before); fail(); return false }
+    if (!(await send({ action: 'plan_set', stop: id, pick }))) { setPicks(before); fail(); return false }
     return true
   }
   async function confirm() {
     hapticTap()
-    if (!(await post({ action: 'plan_confirm' }))) return fail()
+    if (!(await send({ action: 'plan_confirm' }))) return fail()
     setConfirmed(true)
     // Her day is set: drop the pick screens from Back (2026-11-06 test: back
     // and forward walked through old picks). Back now leaves the Food tab.
@@ -138,7 +141,7 @@ export default function NutritionDay(p: {
         calories: pick.cal, protein_g: pick.protein, carbs_g: pick.carbs, fats_g: pick.fat,
         source: 'meal_pick', price: pick.price ?? 0,
       })
-      if (!entryId || !(await post({ action: 'plan_eaten', stop: id, entryId }))) throw new Error('save')
+      if (!entryId || !(await send({ action: 'plan_eaten', stop: id, entryId }))) throw new Error('save')
       setPicks((ps) => ({ ...ps, [id]: { ...pick, eatenId: entryId } }))
       router.refresh()
     } catch { fail() }
@@ -150,7 +153,7 @@ export default function NutritionDay(p: {
     hapticTap()
     setBusy(id)
     await unlog(pick.eatenId)
-    if (await post({ action: 'plan_eaten', stop: id, entryId: null })) setPicks((ps) => ({ ...ps, [id]: { ...pick, eatenId: null } }))
+    if (await send({ action: 'plan_eaten', stop: id, entryId: null })) setPicks((ps) => ({ ...ps, [id]: { ...pick, eatenId: null } }))
     else fail()
     setBusy(null)
     router.refresh()
@@ -176,7 +179,7 @@ export default function NutritionDay(p: {
   async function addSnack() {
     if (extras >= EXTRA_SNACKS.length) return
     const n = extras + 1
-    if (!(await post({ action: 'plan_extra', extras: n }))) return fail()
+    if (!(await send({ action: 'plan_extra', extras: n }))) return fail()
     setExtras(n)
     setConfirmed(false)
     go({ v: 'pick', id: EXTRA_SNACKS[n - 1].id, from: 'plan' })
@@ -186,8 +189,8 @@ export default function NutritionDay(p: {
     // Extra snacks come off from the last one.
     const n = Math.max(0, extras - 1)
     const last = EXTRA_SNACKS[n].id
-    if (id !== last) await post({ action: 'plan_set', stop: id, pick: picks[last] ?? undefined })
-    if (!(await post({ action: 'plan_extra', extras: n }))) return fail()
+    if (id !== last) await send({ action: 'plan_set', stop: id, pick: picks[last] ?? undefined })
+    if (!(await send({ action: 'plan_extra', extras: n }))) return fail()
     setPicks((ps) => {
       const next = { ...ps }
       if (id !== last) { if (ps[last] === undefined) delete next[id]; else next[id] = ps[last] }
@@ -219,7 +222,7 @@ export default function NutritionDay(p: {
     return (
       <Shell>
         {errorBar}
-        <PickStep key={stop.id} stop={stop} step={idx + 1} total={view.from === 'flow' ? PLAN_STOPS.length + extras : 0}
+        <PickStep key={stop.id} tomorrow={!!p.tomorrow} stop={stop} step={idx + 1} total={view.from === 'flow' ? PLAN_STOPS.length + extras : 0}
           picked={picks[stop.id]} defaultMode={lastMode ?? (p.mix ? 'mix' : p.eatStyle)} onMode={setLastMode} mixer={!!p.mix}
           moneyRoom={p.moneyDaily == null ? null : Math.max(0, p.moneyDaily - p.moneySpent - active.reduce((t, s) => t + (s.id !== stop.id && !picks[s.id]?.eatenId ? picks[s.id]?.price || 0 : 0), 0))}
           taken={new Set(active.filter((s) => s.id !== stop.id).map((s) => picks[s.id]?.key).filter((k): k is string => !!k))} room={isExtra ? room : null} askLocation={p.askLocation}
@@ -292,13 +295,27 @@ export default function NutritionDay(p: {
   // The first meal she hasn't eaten yet is "next up".
   const nextUp = confirmed ? active.find((s) => picks[s.id] && !picks[s.id]!.eatenId)?.id : undefined
   const cost = active.reduce((t, s) => t + (picks[s.id]?.price || 0), 0)
+  // Every planned meal eaten: the Day done screen (2026-11-06, Asa approved
+  // ~/Desktop/Day-Done-Mockup.html) instead of the full cards.
+  if (confirmed && !p.tomorrow && mealCount > 0 && eatenCount === mealCount) {
+    const lastEaten = [...rows].reverse().find((r) => r.pick?.eatenId)
+    return (
+      <DayDone rows={rows.filter((r) => r.pick)} moneyDaily={p.moneyDaily} spent={p.moneySpent} tomorrowSet={!!p.tomorrowSet}
+        onTomorrow={() => { hapticTap(); router.push('/plan/nutrition?day=tomorrow') }}
+        onSnack={extras < EXTRA_SNACKS.length ? addSnack : null}
+        onUndo={lastEaten ? () => unEat(lastEaten.s.id) : null} error={errorBar} />
+    )
+  }
   return (
     <Shell>
       {errorBar}
-      <span style={{ ...mono(12), color: C.gold }}>{confirmed ? 'YOUR DAY IS SET' : 'ALMOST DONE'}</span>
-      <h1 className="mt-1 mb-1" style={head(52)}>{confirmed ? 'Your day.' : 'Here’s your day.'}</h1>
+      {p.tomorrow && <TopBack label="TODAY" onClick={() => { hapticTap(); router.push('/plan/nutrition') }} />}
+      <span className={p.tomorrow ? 'mt-3' : ''} style={{ ...mono(12), color: C.gold }}>{p.tomorrow ? (confirmed ? 'TOMORROW IS SET' : 'TOMORROW') : confirmed ? 'YOUR DAY IS SET' : 'ALMOST DONE'}</span>
+      <h1 className="mt-1 mb-1" style={head(52)}>{p.tomorrow ? 'Tomorrow.' : confirmed ? 'Your day.' : 'Here’s your day.'}</h1>
       <p className="mb-4" style={{ margin: 0, fontSize: 16, color: C.soft }}>
-        {confirmed
+        {p.tomorrow
+          ? (confirmed ? 'It’s ready when you wake up.' : 'Tap Change to swap a meal.')
+          : confirmed
           ? (eatenCount > 0 ? `${eatenCount} of ${mealCount} meals eaten. Nice.` : 'When you eat a meal, tap “I ate it”.')
           : 'Tap Change to swap a meal.'}
       </p>
@@ -307,7 +324,7 @@ export default function NutritionDay(p: {
           This day costs about ${Math.round(cost)}. Your food money is ${Math.round(p.moneyDaily)} a day. Tap Change and pick a Make it meal to spend less.
         </p>
       )}
-      {confirmed && p.moneyDaily != null && <MoneyBar daily={p.moneyDaily} spent={p.moneySpent} />}
+      {confirmed && !p.tomorrow && p.moneyDaily != null && <MoneyBar daily={p.moneyDaily} spent={p.moneySpent} />}
       {blocked && <div className="mb-3"><CopyFallback text={blocked.text} appName={ORDER_APP_LABEL[blocked.app]} /></div>}
       <div className="flex flex-col gap-3">
         {rows.map(({ s, pick, title }, i) => (
@@ -338,7 +355,7 @@ export default function NutritionDay(p: {
                 </button>
               )}
             </div>
-            {confirmed && pick && (
+            {confirmed && pick && !p.tomorrow && (
               <div className="flex flex-col gap-2 px-3 pb-3">
                 {pick.kind === 'out' && !pick.eatenId && !!p.allergies?.length && (
                   <div role="note" className="flex items-center gap-2 rounded-2xl px-3 py-2.5" style={{ background: 'rgba(200,69,45,.16)', border: '1.5px solid rgba(255,90,60,.6)', fontSize: 14, fontWeight: 700, color: '#FFD3C9' }}>
@@ -377,6 +394,8 @@ export default function NutritionDay(p: {
             go({ v: 'pick', id: last.id, from: 'flow' })
           }} className="self-center mt-3 underline underline-offset-2" style={{ fontSize: 15, color: C.soft }}>Back</button>
         </>
+      ) : p.tomorrow ? (
+        <button type="button" onClick={() => { hapticTap(); router.push('/plan/nutrition') }} className="nf-press rounded-full w-full" style={{ height: 58, border: '2px solid rgba(237,231,218,.3)', color: C.ivory, fontSize: 16, fontWeight: 700 }}>Back to today</button>
       ) : (
         <p className="text-center" style={{ margin: 0, fontSize: 14, color: C.faint }}>Want something different? Tap Change on any meal you haven&apos;t eaten.</p>
       )}
@@ -385,6 +404,61 @@ export default function NutritionDay(p: {
 }
 
 // ---- pieces ----
+
+// Every meal eaten: a win, one calm money line, and what's next.
+function DayDone({ rows, moneyDaily, spent, tomorrowSet, onTomorrow, onSnack, onUndo, error }: {
+  rows: { s: DayStop; pick: PlannedPick | null | undefined; title: string }[]
+  moneyDaily: number | null; spent: number; tomorrowSet: boolean
+  onTomorrow: () => void; onSnack: (() => void) | null; onUndo: (() => void) | null; error: ReactNode
+}) {
+  const left = moneyDaily == null ? null : Math.round(moneyDaily - spent)
+  const weekday = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase()
+  return (
+    <Shell>
+      {error}
+      <span style={{ ...mono(12), color: C.gold }}>{weekday} · ALL {rows.length} MEALS</span>
+      <div className="mt-3 flex flex-col items-center gap-2 text-center rounded-[26px] px-4 py-6 nd-done"
+        style={{ background: 'radial-gradient(circle at 50% 0%, rgba(255,178,30,.28), rgba(255,178,30,.06) 70%)', border: '2px solid rgba(255,178,30,.55)' }}>
+        <span aria-hidden className="grid place-items-center rounded-full" style={{ width: 96, height: 96, border: `6px solid ${C.gold}`, fontSize: 44, boxShadow: '0 0 28px rgba(255,178,30,.45)' }}>🎉</span>
+        <h1 style={{ ...head(52), margin: 0 }}>Day done.</h1>
+        <span style={{ fontSize: 17 }}>You ate all {rows.length} meals. That&apos;s how it&apos;s built.</span>
+        <style>{`@keyframes ndDone{0%{transform:scale(.94);opacity:0}100%{transform:scale(1);opacity:1}}.nd-done{animation:ndDone .5s ease-out}@media (prefers-reduced-motion:reduce){.nd-done{animation:none}}`}</style>
+      </div>
+      {left != null && (
+        left >= 0 ? (
+          <div className="mt-3 flex items-center gap-3 rounded-2xl px-4 py-3" style={{ background: 'rgba(30,227,138,.1)', border: '1.5px solid rgba(30,227,138,.45)', fontSize: 16, fontWeight: 700 }}>
+            <span aria-hidden style={{ fontSize: 22 }}>💰</span> You stayed in your food money.{left > 0 ? ` $${left} to spare.` : ''}
+          </div>
+        ) : (
+          <div className="mt-3 flex items-center gap-3 rounded-2xl px-4 py-3" style={{ background: 'rgba(237,231,218,.06)', border: '1.5px solid rgba(237,231,218,.2)', fontSize: 16, fontWeight: 600 }}>
+            <span aria-hidden style={{ fontSize: 22 }}>💵</span> ${-left} over your food money today. No big deal.
+          </div>
+        )
+      )}
+      <div className="mt-3 rounded-[20px] px-4 py-1.5" style={{ background: C.card, border: '1.5px solid rgba(237,231,218,.12)' }}>
+        {rows.map(({ s, pick, title }, i) => (
+          <div key={s.id} className="flex items-center gap-3 py-2.5" style={{ borderTop: i ? '1px solid rgba(237,231,218,.08)' : undefined }}>
+            <span aria-hidden className="shrink-0 grid place-items-center rounded-full" style={{ width: 26, height: 26, background: 'rgba(30,227,138,.18)', color: '#1EE38A', fontSize: 14 }}>✓</span>
+            <span className="min-w-0">
+              <span className="block" style={{ ...mono(11), color: C.gold }}>{title.toUpperCase()}</span>
+              <span className="block truncate" style={{ fontSize: 15, fontWeight: 700 }}>{pick!.short}{pick!.kind === 'out' && pick!.place ? ` · ${pick!.place}` : ''}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+      <button type="button" onClick={onTomorrow} className="nf-press mt-4 rounded-full w-full" style={{ height: 58, background: C.gold, color: C.bg, ...mono(15) }}>
+        {tomorrowSet ? 'SEE TOMORROW’S PLAN' : 'PLAN TOMORROW'}
+      </button>
+      {onSnack && (
+        <button type="button" onClick={onSnack} className="nf-press mt-3 rounded-full w-full" style={{ height: 58, border: '2px solid rgba(237,231,218,.3)', color: C.ivory, fontSize: 16, fontWeight: 700 }}>
+          Still hungry? Add a snack
+        </button>
+      )}
+      <p className="text-center mt-4" style={{ margin: 0, fontSize: 14, color: C.soft }}>New day starts at midnight.</p>
+      {onUndo && <button type="button" onClick={onUndo} className="self-center mt-2 underline underline-offset-2" style={{ fontSize: 14, color: C.faint }}>Didn&apos;t eat the last one? Undo</button>}
+    </Shell>
+  )
+}
 
 function Shell({ children }: { children: ReactNode }) {
   return <div className="nf-screen flex-1 flex flex-col pb-28" style={{ color: C.ivory, fontFamily: BODY }}>{children}</div>
@@ -422,8 +496,8 @@ function EatButton({ eaten, busy, onEat, onUndo, small = false }: { eaten: boole
 // Two cards for one meal, the same look as before: tap one to pick it,
 // "Not this one" swaps a card, Shuffle swaps the other. Order out / Cook it
 // switches the kind of meal for just this one.
-function PickStep({ stop, step, total, picked, defaultMode, onMode, mixer, taken, moneyRoom, room, askLocation, onPick, onSkip, onBack, backLabel, onNext, nextLabel }: {
-  stop: DayStop; step: number; total: number; picked: PlannedPick | null | undefined; defaultMode: Mode; mixer: boolean; room: number | null; askLocation: boolean
+function PickStep({ tomorrow, stop, step, total, picked, defaultMode, onMode, mixer, taken, moneyRoom, room, askLocation, onPick, onSkip, onBack, backLabel, onNext, nextLabel }: {
+  tomorrow: boolean; stop: DayStop; step: number; total: number; picked: PlannedPick | null | undefined; defaultMode: Mode; mixer: boolean; room: number | null; askLocation: boolean
   onMode: (m: Mode) => void; taken: Set<string>; moneyRoom: number | null
   onPick: (c: DayCard) => void; onSkip: () => void; onBack: () => void; backLabel: string; onNext: () => void; nextLabel: string
 }) {
@@ -497,9 +571,9 @@ function PickStep({ stop, step, total, picked, defaultMode, onMode, mixer, taken
       </div>
       <div className="flex items-center justify-between gap-3">
         {total > 0 ? <span style={{ ...mono(12), color: C.soft }}>MEAL {step} OF {total}</span> : <span />}
-        {moneyRoom != null && <span style={{ ...mono(12), color: C.mint }}>${Math.round(moneyRoom)} LEFT TODAY</span>}
+        {moneyRoom != null && <span style={{ ...mono(12), color: C.mint }}>${Math.round(moneyRoom)} LEFT {tomorrow ? 'TOMORROW' : 'TODAY'}</span>}
       </div>
-      <h1 className="mt-1 mb-1" style={head(46)}>Pick your {title.toLowerCase()}.</h1>
+      <h1 className="mt-1 mb-1" style={head(46)}>Pick {tomorrow ? 'tomorrow’s' : 'your'} {title.toLowerCase()}.</h1>
       <p className="mb-3" style={{ margin: 0, fontSize: 16, color: C.soft }}>{over ? 'These go a little over your day.' : 'Tap the one you want.'}</p>
       {pricey && moneyRoom != null && (
         <div role="status" className="mb-3 flex items-center gap-3 rounded-2xl px-4 py-3 nd-money-flag"

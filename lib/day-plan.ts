@@ -82,3 +82,20 @@ export function readPlan(raw: unknown, todayIso: string): SavedDayPlan {
   }
   return { date: todayIso, confirmed: p.confirmed === true, picks, extras: Math.min(2, num(p.extras)) }
 }
+
+/** The day after `iso` (YYYY-MM-DD), as YYYY-MM-DD. */
+export function nextDayISO(iso: string): string {
+  const d = new Date(`${iso}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + 1)
+  return d.toISOString().slice(0, 10)
+}
+
+/** Today's plan from her saved form data: today's own plan, or the one she
+ * made last night with "Plan tomorrow" (form_data.day_plan_next) once
+ * midnight has passed (2026-11-06, Day done screen). */
+export function planFromForm(fd: Record<string, unknown> | null | undefined, todayIso: string): SavedDayPlan {
+  const today = readPlan(fd?.day_plan, todayIso)
+  const saved = fd?.day_plan as { date?: unknown } | undefined
+  if (saved?.date === todayIso) return today
+  return readPlan(fd?.day_plan_next, todayIso)
+}
