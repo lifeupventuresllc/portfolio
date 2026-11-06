@@ -63,6 +63,7 @@ export default function NutritionDay(p: {
   askLocation: boolean
   moneyDaily: number | null    // today's food money; null = no budget set
   moneySpent: number           // spent today on food outside her plan
+  allergies?: string[]         // foods she marked as an allergy in intake
 }) {
   const router = useRouter()
   const [picks, setPicks] = useState(p.plan.picks)
@@ -339,6 +340,11 @@ export default function NutritionDay(p: {
             </div>
             {confirmed && pick && (
               <div className="flex flex-col gap-2 px-3 pb-3">
+                {pick.kind === 'out' && !pick.eatenId && !!p.allergies?.length && (
+                  <div role="note" className="flex items-center gap-2 rounded-2xl px-3 py-2.5" style={{ background: 'rgba(200,69,45,.16)', border: '1.5px solid rgba(255,90,60,.6)', fontSize: 14, fontWeight: 700, color: '#FFD3C9' }}>
+                    <span aria-hidden>⚠️</span> Tell them you&apos;re allergic to {andList(p.allergies)}.
+                  </div>
+                )}
                 <EatButton eaten={!!pick.eatenId} busy={busy === s.id} onEat={() => { hapticTap(); markEaten(s.id) }} onUndo={() => unEat(s.id)} />
                 {canOrder(pick) && !pick.eatenId && (
                   <button type="button" onClick={() => order(s.id, p.orderApp)} disabled={busy === s.id}
@@ -567,4 +573,9 @@ function PickStep({ stop, step, total, picked, defaultMode, onMode, mixer, taken
       )}
     </div>
   )
+}
+
+// ['peanuts', 'shellfish', 'eggs'] → "peanuts, shellfish and eggs"
+function andList(items: string[]): string {
+  return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
 }

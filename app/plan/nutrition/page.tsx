@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { allergiesFrom } from '@/lib/meal-pick'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { EatStyleAsk } from '@/components/NutritionPicks'
@@ -33,7 +34,7 @@ export default async function NutritionPage() {
     <div className="px-4 pt-6 flex flex-col" style={{ background: '#021F16', minHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom))' }}>
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col min-h-0">
         {eatStyle ? (
-          <NutritionDay stops={dayStops} plan={plan} avail={avail} eatStyle={eatStyle} mix={mix} orderApp={orderApp} askLocation={hasPlaces && !locFresh} moneyDaily={moneyDaily} moneySpent={data.moneySpent} />
+          <NutritionDay stops={dayStops} plan={plan} avail={avail} eatStyle={eatStyle} mix={mix} orderApp={orderApp} askLocation={hasPlaces && !locFresh} moneyDaily={moneyDaily} moneySpent={data.moneySpent} allergies={allergiesFrom(data.intake.dislikes_allergies as string | null)} />
         ) : (
           <EatStyleAsk />
         )}

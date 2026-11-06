@@ -434,7 +434,31 @@ function dislikeWordsFrom(text?: string | null): string[] {
   if (!text) return []
   const STOP = new Set(['no', 'not', 'dont', 'don', 't', 'like', 'hate', 'never', 'free', 'allergy', 'allergic', 'to', 'and', 'or', 'any', 'i', 'the', 'a', 'of', 'dairy', 'gluten', 'nuts', 'nut'])
   const words = text.toLowerCase().split(/[^a-z]+/).filter((w) => w.length >= 4 && !STOP.has(w)).map((w) => w.replace(/(es|s)$/, ''))
-  return [...words, ...words.flatMap((w) => ALSO_MEANS[w] || [])]
+  return [...words, ...words.flatMap((w) => ALSO_MEANS[w] || []), ...allergyWordsFrom(text)]
+}
+
+// Foods she marked as an allergy ("peanuts (allergy)") are blocked harder:
+// also the dishes that usually hide them (2026-11-06, Asa approved).
+const ALLERGY_ALSO: Record<string, string[]> = {
+  peanut: ['satay', 'thai peanut', 'pad thai', 'praline', 'trail mix', 'granola', 'reese', 'snickers', 'protein bar', 'quest'],
+  nut: ['satay', 'praline', 'trail mix', 'granola', 'nutella', 'almond', 'cashew', 'walnut', 'pecan', 'pistachio', 'pesto', 'protein bar', 'quest'],
+  shellfish: ['seafood', 'scampi', 'poke', 'calamari', 'scallop', 'clam', 'oyster', 'mussel', 'lobster', 'crawfish', 'shrimp', 'crab'],
+  fish: ['seafood', 'sushi', 'poke', 'anchov', 'caesar', 'worcestershire'],
+  egg: ['mayo', 'aioli', 'caesar', 'custard', 'brioche', 'frittata', 'quiche', 'omelet'],
+  dairy: ['whey', 'casein', 'protein shake', 'premier protein', 'fairlife'],
+  soy: ['soy sauce', 'teriyaki', 'tofu', 'edamame', 'miso'],
+  gluten: ['soy sauce', 'teriyaki', 'breaded', 'battered', 'fried chicken', 'tender', 'crouton'],
+}
+
+function allergyWordsFrom(text: string): string[] {
+  return Array.from(text.toLowerCase().matchAll(/([a-z]+)\s*\(allergy\)/g))
+    .flatMap((m) => ALLERGY_ALSO[m[1].replace(/(es|s)$/, '')] || [])
+}
+
+/** Her allergy foods, for the "tell the restaurant" line ("Peanuts", "Shellfish"). */
+export function allergiesFrom(text?: string | null): string[] {
+  if (!text) return []
+  return Array.from(text.matchAll(/([A-Za-z]+)\s*\(allergy\)/gi)).map((m) => m[1].toLowerCase())
 }
 
 // A "never" chip also blocks the menu words that mean the same food

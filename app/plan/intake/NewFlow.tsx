@@ -101,6 +101,7 @@ export default function NewFlow(p: {
   lifeStage: LifeStage; setLifeStage: (l: LifeStage) => void
   whyOwn: string; setWhyOwn: (s: string) => void
   never: string[]; setNever: (n: string[]) => void
+  allergy: string[]; setAllergy: (n: string[]) => void
   neverOther: string; setNeverOther: (s: string) => void
   trainingStyles: string[]; setTrainingStyles: (s: string[]) => void
   error: string
@@ -335,16 +336,29 @@ export default function NewFlow(p: {
           <Shell left={LEFT.never} cal={cal} onBack={() => go(STEPS.indexOf('hurts'))}>
             <H1 size={46}>Any food you never eat?</H1>
             <Sub>Tap it. We flick it off your plate for good.</Sub>
+            {/* 2026-11-06 (Asa approved mockup): tap once = never eat, twice =
+                allergy, again = off. No extra screen. */}
+            <span className="self-start inline-flex items-center gap-2 mt-2 rounded-full px-3.5 py-2 text-[15px] font-bold"
+              style={{ background: 'rgba(255,178,30,.12)', border: '1.5px solid rgba(255,178,30,.5)', color: C.ink }}>
+              <span aria-hidden>⚠️</span> Allergic? Tap it twice.
+            </span>
             <NeverPlate never={p.never} />
             <div className="flex flex-wrap justify-center gap-2 mt-3">
               {NEVER.map((n) => {
                 const on = p.never.includes(n)
+                const allergic = p.allergy.includes(n)
+                const tap = () => {
+                  if (!on) { hapticTap(18); p.setNever([...p.never, n]) }
+                  else if (!allergic) { hapticTap(28); p.setAllergy([...p.allergy, n]) }
+                  else { hapticTap(8); p.setNever(p.never.filter((x) => x !== n)); p.setAllergy(p.allergy.filter((x) => x !== n)) }
+                }
                 return (
-                  <button key={n} onClick={() => { hapticTap(on ? 8 : 18); p.setNever(on ? p.never.filter((x) => x !== n) : [...p.never, n]) }}
+                  <button key={n} onClick={tap} aria-label={allergic ? `${n}: allergy` : on ? `${n}: never eat` : n}
                     className="nf-press h-10 rounded-full px-3 text-[14px] font-semibold flex items-center gap-1.5"
-                    style={{ border: `2px solid ${on ? '#C8452D' : 'rgba(237,231,218,.22)'}`, background: on ? 'rgba(200,69,45,.18)' : 'transparent', color: on ? '#F0B3A6' : C.ink }}>
+                    style={{ border: `2px solid ${allergic ? '#FF5A3C' : on ? '#C8452D' : 'rgba(237,231,218,.22)'}`, background: allergic ? '#C8452D' : on ? 'rgba(200,69,45,.18)' : 'transparent', color: allergic ? '#fff' : on ? '#F0B3A6' : C.ink }}>
                     <span className="text-[17px] leading-none" aria-hidden>{FOOD_ICON[n]}</span>
                     {n}
+                    {allergic && <span className="rounded-full px-1.5 py-0.5" style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', background: '#fff', color: '#C8452D' }}>ALLERGY</span>}
                   </button>
                 )
               })}

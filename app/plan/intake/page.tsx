@@ -156,6 +156,8 @@ function ConversationalIntakeInner() {
   const [whyOwn, setWhyOwn] = useState('')
   const [never, setNever] = useState<string[]>([])
   const [neverOther, setNeverOther] = useState('')
+  // Never foods she tapped twice = allergies (always also in `never`).
+  const [allergy, setAllergy] = useState<string[]>([])
   const [firstWorkout, setFirstWorkout] = useState<string | null>(null)
   const [track, setTrack] = useState<string | null>(null)
   const [phase, setPhase] = useState<'quiz' | 'building' | 'done'>('quiz')
@@ -235,12 +237,13 @@ function ConversationalIntakeInner() {
       // the taps stays in the "anything else" box, never dropped.
       if (i.dislikes_allergies) {
         const parts = String(i.dislikes_allergies).split(/[,;]+/).map((x: string) => x.trim()).filter(Boolean)
-        const chips: string[] = [], rest: string[] = []
+        const chips: string[] = [], allergic: string[] = [], rest: string[] = []
         for (const part of parts) {
-          const hit = NEVER.find((n) => part.toLowerCase().replace(/^no\s+/, '') === n.toLowerCase())
-          if (hit) chips.push(hit); else rest.push(part)
+          const isAllergy = /\(allergy\)/i.test(part)
+          const hit = NEVER.find((n) => part.toLowerCase().replace(/\s*\(allergy\)/, '').replace(/^no\s+/, '') === n.toLowerCase())
+          if (hit) { chips.push(hit); if (isAllergy) allergic.push(hit) } else rest.push(part)
         }
-        setNever(chips); setNeverOther(rest.join(', '))
+        setNever(chips); setAllergy(allergic); setNeverOther(rest.join(', '))
       }
     }).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -278,7 +281,7 @@ function ConversationalIntakeInner() {
 
   async function build(refining: boolean) {
     if (!f.age || !f.weight_lbs) { setError('I just need your age and weight to get your numbers right.'); return }
-    const dislikes = [...never.map((n) => n.toLowerCase()), neverOther.trim()].filter(Boolean).join(', ')
+    const dislikes = [...never.map((n) => (allergy.includes(n) ? `${n.toLowerCase()} (allergy)` : n.toLowerCase())), neverOther.trim()].filter(Boolean).join(', ')
     setPhase('building')
     setError('')
     try {
@@ -381,7 +384,7 @@ function ConversationalIntakeInner() {
         goals={goals} setGoals={setGoals} payoffs={payoffs} setPayoffs={setPayoffs}
         injuries={injuries} setInjuries={setInjuries}
         lifeStage={lifeStage} setLifeStage={setLifeStage} whyOwn={whyOwn} setWhyOwn={setWhyOwn}
-        never={never} setNever={setNever} neverOther={neverOther} setNeverOther={setNeverOther}
+        never={never} setNever={setNever} allergy={allergy} setAllergy={setAllergy} neverOther={neverOther} setNeverOther={setNeverOther}
         trainingStyles={trainingStyles} setTrainingStyles={setTrainingStyles}
         error={error} editMode={editMode}
         onBuild={() => build(false)}
