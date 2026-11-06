@@ -391,7 +391,7 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
                       : calBudget == null ? (mealIdx > 5 ? 'Sunday. Eat easy, we picked a few.' : 'Tap to see what we picked.')
                       : calOverBy > 0 ? `${calOverBy.toLocaleString('en-US')} cal over. No stress. Tomorrow's a fresh start.`
                         : calRemaining === 0 ? 'Right on target. Nice work.'
-                          : `${loggedCalories.toLocaleString('en-US')} of ${Math.round(calBudget).toLocaleString('en-US')} eaten. Tap for your next meal.`}
+                          : `${loggedCalories.toLocaleString('en-US')} of ${Math.round(calBudget).toLocaleString('en-US')} eaten.${dayPlan.confirmed ? ' Nice work today.' : ' Tap for your next meal.'}`}
                   </span>
                 </div>
               </Link>

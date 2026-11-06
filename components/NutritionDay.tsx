@@ -293,7 +293,7 @@ export default function NutritionDay(p: {
   const mealCount = active.filter((s) => picks[s.id]).length
   const eatenCount = active.filter((s) => picks[s.id]?.eatenId).length
   // The first meal she hasn't eaten yet is "next up".
-  const nextUp = confirmed ? active.find((s) => picks[s.id] && !picks[s.id]!.eatenId)?.id : undefined
+  const nextUp = confirmed && !p.tomorrow ? active.find((s) => picks[s.id] && !picks[s.id]!.eatenId)?.id : undefined
   const cost = active.reduce((t, s) => t + (picks[s.id]?.price || 0), 0)
   // Every planned meal eaten: the Day done screen (2026-11-06, Asa approved
   // ~/Desktop/Day-Done-Mockup.html) instead of the full cards.
