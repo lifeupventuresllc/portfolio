@@ -196,8 +196,8 @@ export default function AuthForm({ mode, embedded = false }: AuthFormProps) {
   // app for the identical symptom (ClientMenu.tsx's drawer): 100dvh instead
   // of a plain viewport unit, which DOES track the real visible area.
   return (
-    <div className={embedded ? '' : 'min-h-[100dvh] flex justify-center pt-20 px-6'}>
-      {!embedded && <BackButton />}
+    <div className={embedded ? '' : 'min-h-[100dvh] flex flex-col items-center pt-20 px-6'}>
+      {!embedded && <div className="w-full max-w-md mb-3"><BackButton /></div>}
       <div className="w-full max-w-md p-8 bg-charcoal rounded-2xl border border-smoke">
         <h1 className="text-2xl font-bold text-center text-white mb-6">{titles[mode]}</h1>
 
@@ -350,14 +350,19 @@ export default function AuthForm({ mode, embedded = false }: AuthFormProps) {
 }
 
 // Top-left way out (2026-11-06, Asa: "There's no back button on this screen").
+// Sits above the card, in the page (a fixed one hid under the site header).
 // Goes back if she came from inside the app, otherwise to the app's home.
 function BackButton() {
   const router = useRouter()
   return (
     <button type="button" aria-label="Go back"
-      onClick={() => (window.history.length > 1 ? router.back() : router.push('/plan'))}
-      className="fixed left-4 z-20 flex items-center gap-2 rounded-full pl-3 pr-4 text-white"
-      style={{ top: 'calc(16px + env(safe-area-inset-top))', height: 44, background: 'rgba(255,255,255,.08)', fontWeight: 700, fontSize: 15 }}>
+      onClick={() => {
+        let fromApp = false
+        try { fromApp = !!document.referrer && new URL(document.referrer).origin === window.location.origin } catch { /* treat as outside */ }
+        if (fromApp) router.back(); else router.push('/plan')
+      }}
+      className="flex items-center gap-2 rounded-full pl-3 pr-4 text-white"
+      style={{ height: 44, background: 'rgba(255,255,255,.08)', fontWeight: 700, fontSize: 15 }}>
       <span aria-hidden style={{ fontSize: 20, lineHeight: 1 }}>‹</span> Back
     </button>
   )
