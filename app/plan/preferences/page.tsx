@@ -63,6 +63,7 @@ export default async function PreferencesPage() {
         goals: Array.isArray(formData.goals) && formData.goals.length ? (formData.goals as string[]) : [intake.goal as string].filter(Boolean),
         training_styles: Array.isArray(formData.training_styles) ? (formData.training_styles as string[]) : [],
         payoffs: Array.isArray(formData.payoffs) ? (formData.payoffs as string[]) : [],
+        eat_style: (formData.eat_style as string) || '',
       }}
     />
   )

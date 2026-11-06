@@ -480,7 +480,7 @@ function NameWhy(p: Parameters<typeof NewFlow>[0] & { next: () => void }) {
 // bubbles are fine, add one way the experience is better"). Every food sits
 // on her plate; tapping one flicks it off with a "NEVER." stamp. Tap again
 // and it lands back on.
-const FOOD_ICON: Record<string, string> = { Pork: '🥓', Beef: '🥩', Chicken: '🍗', Fish: '🐟', Shellfish: '🦐', Dairy: '🧀', Eggs: '🥚', Gluten: '🍞', Nuts: '🌰', Peanuts: '🥜', Soy: '🫘', Mushrooms: '🍄', Spicy: '🌶️', Onions: '🧅' }
+export const FOOD_ICON: Record<string, string> = { Pork: '🥓', Beef: '🥩', Chicken: '🍗', Fish: '🐟', Shellfish: '🦐', Dairy: '🧀', Eggs: '🥚', Gluten: '🍞', Nuts: '🌰', Peanuts: '🥜', Soy: '🫘', Mushrooms: '🍄', Spicy: '🌶️', Onions: '🧅' }
 function NeverPlate({ never }: { never: string[] }) {
   const [stamp, setStamp] = useState(0)
   const prev = useRef(never.length)

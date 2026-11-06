@@ -163,6 +163,10 @@ export async function buildInitialPlans(inp: PlanBuildInput) {
     dislikes_allergies: inp.dislikes_allergies,
     injuries_limitations: inp.injuries_limitations,
     form_data: {
+      // Everything else she has saved (today's and tomorrow's meal plan, meal
+      // times, price notes…) carries over: a Preferences tap used to wipe
+      // her picked day (2026-11-06). The fields below still win.
+      ...priorFormData,
       cook_days_per_week: inp.cook_days_per_week ?? 2,
       injuries: inp.injuries ?? [],
       postpartum: !!inp.postpartum,
