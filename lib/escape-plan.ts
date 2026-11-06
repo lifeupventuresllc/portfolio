@@ -159,13 +159,13 @@ const WC2: WeightClass = {
     { day: 4, total: 2100, meals: [
       m('Breakfast', 'Chick-fil-A', 'Egg White Grill + Greek Yogurt Parfait w/ Granola', 550, 32, 40, 18),
       m('Lunch', "McDonald's", 'Grilled Chicken Sandwich + Side Salad + Extra Grilled Patty + Apple Slices', 690, 50, 35, 20),
-      m('Snack', 'Grab & go', 'Quest Bar', 190, 21, 20, 8),
+      m('Snack', 'Grab & go', 'Quest Protein Bar', 190, 21, 20, 8),
       m('Dinner', 'Chipotle', 'Bowl: Double Chicken, full brown rice, pinto beans, fajita veggies, mild salsa, cheese', 710, 64, 42, 26),
     ] },
     { day: 5, total: 1990, meals: [
       m('Breakfast', 'Subway', 'Egg & Cheese Wrap, double turkey, add avocado & veggies', 460, 35, 30, 20),
       m('Lunch', 'Panda Express', 'Grilled Teriyaki Chicken (2 servings) + full Brown Rice + Super Greens', 606, 65, 45, 21),
-      m('Snack', 'Grab & go', 'Quest Bar', 190, 21, 20, 8),
+      m('Snack', 'Grab & go', 'Quest Protein Bar', 190, 21, 20, 8),
       m('Dinner', 'Taco Bell', 'Power Bowl, double chicken, full rice, no sour cream', 680, 56, 40, 22),
     ] },
   ],

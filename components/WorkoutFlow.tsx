@@ -193,7 +193,7 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
       </button>
       <span className="rounded-full px-3.5 py-2" style={{ ...pill, fontSize: 12, background: 'rgba(2,31,22,.7)', color: INK }}>
-        {block.kind === 'warmup' ? 'WARM-UP' : block.kind === 'cooldown' ? 'COOL-DOWN' : `EXERCISE ${exNo} OF ${exercises.length}`}
+        {block.kind === 'warmup' ? 'WARM-UP' : block.kind === 'cooldown' ? 'COOL-DOWN' : `STEP ${exNo} OF ${exercises.length}`}
       </span>
       {menu ? (
         <button onClick={() => setMenuOpen((x) => !x)} aria-label="More" aria-expanded={menuOpen} className="nf-press w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'rgba(2,31,22,.7)', color: INK, fontSize: 20, lineHeight: 1 }}>⋯</button>

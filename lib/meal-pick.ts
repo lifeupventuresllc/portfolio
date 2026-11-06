@@ -337,6 +337,7 @@ export function mealKeyFromLog(name: string, brand: string | null | undefined): 
 export const HIDDEN_MEALS = new Set([
   // photo doesn't match
   'Apples & Cheese Trio Protein Box', 'Cheesy Gordita Crunch', 'Garden Avo & Egg White Sandwich', 'Chicken Nugget Hash Brown Bake',
+  'BBQ Chicken Pizza', // only photo is pepperoni (2026-11-06 test)
   // no cook time
   'Protein Overnight Oats', "Chicken & Fries with Cane's Sauce", 'Macro Friendly Big Mac', 'BBQ Beef Burritos', 'Ground Turkey Taco Bowl',
   // no steps
