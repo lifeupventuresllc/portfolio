@@ -83,8 +83,12 @@ export default function NutritionDay(p: {
   const trail = useRef<View[]>([])
   const viewRef = useRef(view)
   viewRef.current = view
+  const skipPop = useRef(false)
   useEffect(() => {
-    const onPop = () => { const prev = trail.current.pop(); if (prev) { setError(''); setView(prev) } }
+    const onPop = () => {
+      if (skipPop.current) { skipPop.current = false; return }
+      const prev = trail.current.pop(); if (prev) { setError(''); setView(prev) }
+    }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
@@ -114,7 +118,14 @@ export default function NutritionDay(p: {
     hapticTap()
     if (!(await post({ action: 'plan_confirm' }))) return fail()
     setConfirmed(true)
-    go({ v: 'plan' })
+    // Her day is set: drop the pick screens from Back (2026-11-06 test: back
+    // and forward walked through old picks). Back now leaves the Food tab.
+    hapticTap(); setError('')
+    const steps = trail.current.length
+    trail.current = []
+    setView({ v: 'plan' })
+    window.scrollTo(0, 0)
+    if (steps > 0) { skipPop.current = true; try { window.history.go(-steps) } catch { skipPop.current = false } }
   }
   async function markEaten(id: PlanStopId) {
     const pick = picks[id]
@@ -427,7 +438,8 @@ function PickStep({ stop, step, total, picked, defaultMode, onMode, mixer, taken
     // the two cheapest.
     if (moneyRoom != null) {
       const fit = l.filter((c) => c.price == null || c.price <= moneyRoom + 0.5)
-      pricey = fit.length < 2 && l.length > fit.length
+      // Also when only unpriced Make it meals are left (2026-11-06 test).
+      pricey = (fit.length < 2 && l.length > fit.length) || moneyRoom < 3
       l = fit.length >= 2 ? fit : [...l].sort((a, b) => (a.price ?? 0) - (b.price ?? 0)).slice(0, Math.max(2, fit.length))
     }
     // An extra snack only shows what still fits her day (or the lightest).
@@ -483,7 +495,16 @@ function PickStep({ stop, step, total, picked, defaultMode, onMode, mixer, taken
       </div>
       <h1 className="mt-1 mb-1" style={head(46)}>Pick your {title.toLowerCase()}.</h1>
       <p className="mb-3" style={{ margin: 0, fontSize: 16, color: C.soft }}>{over ? 'These go a little over your day.' : 'Tap the one you want.'}</p>
-      {pricey && moneyRoom != null && <p className="mb-3" style={{ margin: 0, fontSize: 15, color: C.gold }}>Not much fits your ${Math.round(moneyRoom)} left. These are the cheapest.</p>}
+      {pricey && moneyRoom != null && (
+        <div role="status" className="mb-3 flex items-center gap-3 rounded-2xl px-4 py-3 nd-money-flag"
+          style={{ background: 'rgba(255,178,30,.16)', border: `2px solid ${C.gold}`, boxShadow: '0 0 18px rgba(255,178,30,.35)' }}>
+          <span aria-hidden style={{ fontSize: 24, lineHeight: 1 }}>💰</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: C.ivory, lineHeight: 1.3 }}>
+            Not much fits your <span style={{ color: C.gold }}>${Math.round(moneyRoom)} left</span>. These are the cheapest.
+          </span>
+          <style>{`@keyframes ndFlag{0%{transform:scale(.96);opacity:0}60%{transform:scale(1.02);opacity:1}100%{transform:scale(1)}}.nd-money-flag{animation:ndFlag .45s ease-out}@media (prefers-reduced-motion:reduce){.nd-money-flag{animation:none}}`}</style>
+        </div>
+      )}
 
       {kinds.length > 1 && (
         <div className="flex gap-2 mb-3" role="tablist" aria-label="Kind of meal">

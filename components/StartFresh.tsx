@@ -9,6 +9,10 @@ import { hapticTap } from '@/lib/haptics'
 // Clears her food, meals picked, workouts done and streak; keeps her plan.
 const MONO = "var(--font-jbmono), 'JetBrains Mono', monospace"
 
+// Her location answer isn't test data: keep it, so the ask doesn't come
+// back after Start fresh (2026-11-06 test).
+const KEEP = new Set(['luf_location_prompt_dismissed', 'luf_last_ping_at'])
+
 export default function StartFresh() {
   const router = useRouter()
   const [ask, setAsk] = useState(false)
@@ -24,7 +28,7 @@ export default function StartFresh() {
     const res = await fetch('/api/plan/start-fresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: 'start-fresh' }) }).catch(() => null)
     if (!res?.ok) { setBusy(false); setError("That didn't work. Check your internet and try again."); return }
     // Her phone's own memory of the old days (which meals, which tips she saw).
-    try { for (const k of Object.keys(localStorage)) if (k.startsWith('luf_')) localStorage.removeItem(k) } catch { /* fine */ }
+    try { for (const k of Object.keys(localStorage)) if (k.startsWith('luf_') && !KEEP.has(k)) localStorage.removeItem(k) } catch { /* fine */ }
     setAsk(false)
     setBusy(false)
     router.refresh()
