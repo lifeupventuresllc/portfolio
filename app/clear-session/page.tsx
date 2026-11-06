@@ -11,10 +11,13 @@ export default function ClearSessionPage() {
       // Clear Supabase auth from localStorage
       const keys = Object.keys(localStorage)
       for (const key of keys) {
-        if (key.includes('supabase') || key.includes('sb-')) {
+        // luf_* = her welcome-seen, location, plan and meal memory on this phone
+        if (key.includes('supabase') || key.includes('sb-') || key.startsWith('luf_')) {
           localStorage.removeItem(key)
         }
       }
+
+      try { sessionStorage.clear() } catch { /* fine */ }
 
       // Also sign out via the client
       const supabase = createClient()
@@ -30,10 +33,11 @@ export default function ClearSessionPage() {
 
       setDone(true)
 
-      // Redirect to login after 2 seconds
+      // Back to the start as a brand-new visitor (2026-11-06, Asa: testing as
+      // a fresh user; it used to dead-end on the log in screen).
       setTimeout(() => {
-        window.location.href = '/login'
-      }, 2000)
+        window.location.href = '/'
+      }, 1500)
     }
     clear()
   }, [])
@@ -42,10 +46,10 @@ export default function ClearSessionPage() {
     <div className="min-h-[100dvh] bg-obsidian flex items-center justify-center">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-white mb-4">
-          {done ? 'Session Cleared!' : 'Clearing session...'}
+          {done ? 'All cleared.' : 'Clearing…'}
         </h1>
         <p className="text-ivory/60">
-          {done ? 'Redirecting to login...' : 'Please wait...'}
+          {done ? 'Starting you over as a new visitor…' : 'One second.'}
         </p>
       </div>
     </div>
