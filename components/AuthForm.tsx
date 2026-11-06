@@ -357,8 +357,13 @@ function BackButton() {
   return (
     <button type="button" aria-label="Go back"
       onClick={() => {
+        // navigation.canGoBack knows about in-app (client) steps; the referrer
+        // only knows the first page load, so it's the fallback.
         let fromApp = false
-        try { fromApp = !!document.referrer && new URL(document.referrer).origin === window.location.origin } catch { /* treat as outside */ }
+        try {
+          const nav = (window as unknown as { navigation?: { canGoBack?: boolean } }).navigation
+          fromApp = typeof nav?.canGoBack === 'boolean' ? nav.canGoBack : !!document.referrer && new URL(document.referrer).origin === window.location.origin
+        } catch { /* treat as outside */ }
         if (fromApp) router.back(); else router.push('/plan')
       }}
       className="flex items-center gap-2 rounded-full pl-3 pr-4 text-white"
