@@ -418,12 +418,14 @@ export function parseDietaryRestrictions(dislikesAllergies: string | null | unde
 }
 
 const DISQUALIFYING_PATTERN: Record<Exclude<DietaryRestriction, 'pork'>, RegExp> = {
-  dairy: /cheese|yogurt|parfait/i,
-  gluten: /\b(bread|bun|tortilla|wrap|burrito|crust|toast|muffin|biscuit|bagel|crunchwrap|sandwich|hash brown)s?\b/i,
-  nut: /\b(almond|cashew|peanut|walnut)s?\b/i,
+  // 2026-11-06: menu names hide dairy in words like Parm, Ranch, Cheddar
+  // (Asa's check found 10 dairy meals getting through).
+  dairy: /cheese|yogurt|parfait|parm|ranch|queso|mozzarella|cheddar|feta|cream|milk|latte|butter|alfredo|frappuccino|caesar dressing/i,
+  gluten: /\b(bread|bun|tortilla|wrap|burrito|crust|toast|muffin|biscuit|bagel|crunchwrap|sandwich|hash brown|pasta|pizza|noodle|pretzel|waffle|pancake|pita|flatbread|crouton|chalupa|gordita|quesadilla|breaded)s?\b|(?<!grilled )\bnuggets?\b|crispy chicken/i,
+  nut: /\b(almond|cashew|peanut|walnut|pecan|pistachio|pesto)s?\b/i,
   shellfish: /\b(shrimp|crab|lobster)\b/i,
   egg: /\begg/i,
-  soy: /\bsoy\b|edamame/i,
+  soy: /\bsoy\b|edamame|tofu|teriyaki/i,
   mushroom: /mushroom/i,
 }
 

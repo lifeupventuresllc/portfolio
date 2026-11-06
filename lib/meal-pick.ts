@@ -433,7 +433,18 @@ function violates(o: MealOption, restrictions: Set<DietaryRestriction>, dislikeW
 function dislikeWordsFrom(text?: string | null): string[] {
   if (!text) return []
   const STOP = new Set(['no', 'not', 'dont', 'don', 't', 'like', 'hate', 'never', 'free', 'allergy', 'allergic', 'to', 'and', 'or', 'any', 'i', 'the', 'a', 'of', 'dairy', 'gluten', 'nuts', 'nut'])
-  return text.toLowerCase().split(/[^a-z]+/).filter((w) => w.length >= 4 && !STOP.has(w)).map((w) => w.replace(/(es|s)$/, ''))
+  const words = text.toLowerCase().split(/[^a-z]+/).filter((w) => w.length >= 4 && !STOP.has(w)).map((w) => w.replace(/(es|s)$/, ''))
+  return [...words, ...words.flatMap((w) => ALSO_MEANS[w] || [])]
+}
+
+// A "never" chip also blocks the menu words that mean the same food
+// (2026-11-06: Steak got past "beef", Salmon past "fish", Buffalo past "spicy").
+const ALSO_MEANS: Record<string, string[]> = {
+  beef: ['steak', 'burger', 'barbacoa', 'brisket', 'carne asada', 'whopper', 'big mac', 'quarter pounder', 'meatball', 'baconator', 'dave'],
+  fish: ['salmon', 'tuna', 'cod', 'tilapia', 'filet-o-fish', 'mahi'],
+  chicken: ['nugget', 'tender', 'strip', 'wing', 'chick-fil-a'],
+  spicy: ['buffalo', 'hot honey', 'hot sauce', 'jalape', 'sriracha', 'cajun', 'nashville', 'harissa', 'chili'],
+  onion: ['salsa', 'pico', 'fajita veg', 'sofrito'],
 }
 
 function loveWordsFrom(text?: string | null): string[] {
