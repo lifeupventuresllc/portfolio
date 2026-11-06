@@ -268,8 +268,8 @@ function Label({ children }: { children: ReactNode }) {
 function Tile({ on, center, small, onClick, children }: { on: boolean; center?: boolean; small?: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button type="button" onClick={() => { hapticTap(); onClick() }} aria-pressed={on}
-      className={`nf-press w-full rounded-[18px] px-3.5 py-3 ${center ? 'text-center' : 'text-left'}`}
-      style={{ minHeight: 56, fontSize: small ? 15 : 16, fontWeight: 700, color: C.ink, border: on ? '3px solid #FFB21E' : '2px solid rgba(237,231,218,.18)', background: on ? 'rgba(255,178,30,.12)' : 'transparent' }}>
+      className={`nf-press w-full rounded-[18px] py-3 ${small ? 'px-1.5' : 'px-3.5'} ${center ? 'text-center' : 'text-left'}`}
+      style={{ minHeight: 56, fontSize: small ? 14 : 16, fontWeight: 700, color: C.ink, border: on ? '3px solid #FFB21E' : '2px solid rgba(237,231,218,.18)', background: on ? 'rgba(255,178,30,.12)' : 'transparent' }}>
       {children}
     </button>
   )
