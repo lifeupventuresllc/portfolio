@@ -5,6 +5,7 @@ import { estimateWeeklyCost, portionIngredients } from '@/lib/ingredients'
 import type { WeekPlan } from '@/lib/meal-plan'
 import { orderParts } from '@/lib/order-exact'
 import { doordashPrice } from '@/lib/chain-prices'
+import { stepsFor } from '@/lib/recipe-instructions'
 
 // ============================================================
 // The Nutrition tab's one-tap meal decision (2026-10-19, Asa's builder
@@ -420,7 +421,9 @@ const RECIPE_DAIRY = /\b(milk|butter|cream|parmesan|mozzarella|cheddar|ricotta|w
 const NOT_DAIRY = /\b(peanut|nut|almond|cashew|sunflower|coconut|oat|soy|apple)\s+(milk|butter|cream)\b/gi
 
 function violates(o: MealOption, restrictions: Set<DietaryRestriction>, dislikeWords: string[]): boolean {
-  const text = `${o.name} ${(o.ingredients || []).join(' ')}`
+  // Home meals: the cook steps too, since some recipes list nothing but their
+  // name and the steps say "add green onions" (2026-11-06 test).
+  const text = `${o.name} ${(o.ingredients || []).join(' ')}${o.kind === 'cook' ? ' ' + stepsFor(o.name).join(' ') : ''}`
   if (restrictions.size > 0 && violatesRestrictions(text, restrictions)) return true
   if (o.kind === 'cook' && restrictions.has('dairy') && RECIPE_DAIRY.test(text.replace(NOT_DAIRY, ''))) return true
   const lower = text.toLowerCase()
@@ -440,7 +443,7 @@ function dislikeWordsFrom(text?: string | null): string[] {
 // Foods she marked as an allergy ("peanuts (allergy)") are blocked harder:
 // also the dishes that usually hide them (2026-11-06, Asa approved).
 const ALLERGY_ALSO: Record<string, string[]> = {
-  peanut: ['satay', 'thai peanut', 'pad thai', 'praline', 'trail mix', 'granola', 'reese', 'snickers', 'protein bar', 'quest'],
+  peanut: ['nut butter', 'satay', 'thai peanut', 'pad thai', 'praline', 'trail mix', 'granola', 'reese', 'snickers', 'protein bar', 'quest'],
   nut: ['satay', 'praline', 'trail mix', 'granola', 'nutella', 'almond', 'cashew', 'walnut', 'pecan', 'pistachio', 'pesto', 'protein bar', 'quest'],
   shellfish: ['seafood', 'scampi', 'poke', 'calamari', 'scallop', 'clam', 'oyster', 'mussel', 'lobster', 'crawfish', 'shrimp', 'crab'],
   fish: ['seafood', 'sushi', 'poke', 'anchov', 'caesar', 'worcestershire'],
