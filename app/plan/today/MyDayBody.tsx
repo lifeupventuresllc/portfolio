@@ -10,6 +10,7 @@ import LifePatternCard from '@/components/LifePatternCard'
 import PlanEvolutionCard from '@/components/PlanEvolutionCard'
 import ClientMenu from '@/components/ClientMenu'
 import RebuildPlanButton from '@/components/RebuildPlanButton'
+import { WinBarWorkout } from '@/components/WinBar'
 import ProgressNew, { type DayDot } from './ProgressNew'
 import { streakDetail } from '@/lib/streak'
 import { loadDrops, shieldDatesFrom, winsFrom } from '@/lib/reward-drop'
@@ -268,6 +269,8 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   const label = (t: string, c = GOLD) => <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.1em', color: c }}>{t}</span>
   const tomorrowWorkout = program ? getEffectiveTodayWorkout(program, completed + 1, null, undefined) : null
   const workoutName = (todayWorkout?.title || '').replace(/^Day \d+:\s*/, '')
+  // Home's feed bar shows this same workout (2026-11-06, Asa) — see WinBar.tsx.
+  const winMinutes = todayAdjustment?.workoutChange?.toMinutes || (program?.track === 'home' ? Number(program.home?.minutes.match(/\d+/)?.[0]) || null : null)
   const onTrack = workoutDoneToday || showedUpToday || (calBudget != null && loggedCalories > 0 && loggedCalories <= calBudget * 1.1)
 
   // Her self-talk comes from her own why (2026-10-29); general lines only if she gave none.
@@ -280,6 +283,7 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
         ...(home ? { paddingTop: 'calc(16px + env(safe-area-inset-top))' } : { paddingTop: 24, minHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom))' }),
         background: BG, color: INK, fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
       }}>
+      {home && todayWorkout && <WinBarWorkout name={workoutName || "Today's workout"} minutes={winMinutes} done={workoutDoneToday} />}
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between gap-3 mb-4" style={{ flex: '0 0 auto' }}>
           {home ? (

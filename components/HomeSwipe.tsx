@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import WinBar from '@/components/WinBar'
+import { useRouter } from 'next/navigation'
+import WinBar, { WinWorkoutProvider, type WinWorkout } from '@/components/WinBar'
 import { TODAY_EVENT } from '@/components/ProgressViewToggle'
 
 // Two-screen Home for someone who is signed in AND already has a plan (Asa's
@@ -33,6 +34,10 @@ export default function HomeSwipe({ hero, children }: { hero: ReactNode; childre
   const startY = useRef<number | null>(null)
   const movedRef = useRef(false)
   const wheelLock = useRef(false)
+
+  const router = useRouter()
+  // Today's workout, handed up by My Day (Screen 1) — see WinBar.tsx.
+  const [winWorkout, setWinWorkout] = useState<WinWorkout | null>(null)
 
   const go = (p: 0 | 1) => { setPane(p); setDragY(0); setDragging(false) }
 
@@ -110,8 +115,11 @@ export default function HomeSwipe({ hero, children }: { hero: ReactNode; childre
     if (movedRef.current) { e.stopPropagation(); e.preventDefault(); movedRef.current = false }
   }
 
-  // Feed's win bar: back to Screen 1, on Today (where her win is), at the top.
+  // Feed's win bar: straight into today's workout (2026-11-06, Asa). Once
+  // it's done (or there's no workout to show), back to Screen 1, on Today
+  // (where her win is), at the top.
   const backToWin = () => {
+    if (winWorkout && !winWorkout.done) { router.push('/plan/workout'); return }
     window.dispatchEvent(new Event(TODAY_EVENT))
     heroScrollRef.current?.scrollTo({ top: 0 })
     go(0)
@@ -149,6 +157,7 @@ export default function HomeSwipe({ hero, children }: { hero: ReactNode; childre
   const offset = `calc(${pane === 1 ? -50 : 0}% + ${dragY}px)`
 
   return (
+    <WinWorkoutProvider value={setWinWorkout}>
     <div ref={wrapRef} className="flex-1 min-h-0 relative overflow-hidden" onWheel={onWheel}>
       <div
         className="absolute left-0 right-0 top-0"
@@ -204,10 +213,11 @@ export default function HomeSwipe({ hero, children }: { hero: ReactNode; childre
           {/* Small "Your win for today" bar (Asa's two-core-screens spec,
               2026-09-28) — tap = back to Screen 1, now opened on Today. */}
           <div className="absolute left-3 right-3 bottom-3 z-[5]">
-            <WinBar onClick={backToWin} />
+            <WinBar onClick={backToWin} workout={winWorkout} />
           </div>
         </div>
       </div>
     </div>
+    </WinWorkoutProvider>
   )
 }
