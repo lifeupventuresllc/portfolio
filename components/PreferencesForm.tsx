@@ -168,7 +168,8 @@ export default function PreferencesForm({ current }: { current: Current }) {
         </div>
 
         <Label>Your level</Label>
-        <div className="grid grid-cols-3 gap-2">
+        {/* Wider middle so "Intermediate" fits a 360px phone (2026-11-06 test). */}
+        <div className="grid grid-cols-[1fr_1.35fr_1fr] gap-2">
           {LEVELS.map((o) => <Tile key={o.v} on={level === o.v} center small onClick={() => change({ level: o.v })}>{o.l}</Tile>)}
         </div>
 
