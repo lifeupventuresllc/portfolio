@@ -15,11 +15,23 @@ const KEY = 'luf_welcome_seen'
 // who already saw it is hidden as soon as the saved flag is read.
 export default function WelcomeVideo({ src }: { src: string }) {
   const [show, setShow] = useState(true)
+  const [starting, setStarting] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     try { if (localStorage.getItem(KEY)) setShow(false) } catch { /* storage blocked: show it, Skip still works */ }
-  }, [])
+    // Load the first question ahead, so START opens it right away.
+    router.prefetch('/plan/intake')
+  }, [router])
+
+  // 2026-11-06 (tests: START took 2-4s, with the feed flashing meanwhile):
+  // stay on this screen saying STARTING… until the first question is up.
+  const start = () => {
+    if (starting) return
+    try { localStorage.setItem(KEY, '1') } catch { /* fine */ }
+    setStarting(true)
+    router.push('/plan/intake')
+  }
 
   const close = () => {
     try { localStorage.setItem(KEY, '1') } catch { /* fine */ }
@@ -41,9 +53,9 @@ export default function WelcomeVideo({ src }: { src: string }) {
       <div className="shrink-0 flex flex-col gap-3.5 px-6 pt-2" style={{ background: '#021F16', color: '#EDE7DA', paddingBottom: 'calc(28px + env(safe-area-inset-bottom))' }}>
         <h1 style={{ margin: 0, fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontStyle: 'italic', fontWeight: 800, fontSize: 56, lineHeight: 0.9, textTransform: 'uppercase' }}>Welcome.</h1>
         <p style={{ margin: 0, fontSize: 18, lineHeight: 1.4, color: 'rgba(237,231,218,.85)' }}>We plan your food and workouts. You just show up.</p>
-        <button type="button" onClick={() => { close(); router.push('/plan/intake') }}
+        <button type="button" onClick={start} disabled={starting}
           className="nf-press w-full rounded-full" style={{ height: 64, background: '#FFB21E', color: '#021F16', fontFamily: MONO, fontWeight: 700, fontSize: 17, letterSpacing: '.12em' }}>
-          START
+          {starting ? 'STARTING…' : 'START'}
         </button>
         <button type="button" onClick={close} className="self-center underline underline-offset-2 py-1" style={{ fontSize: 15, color: 'rgba(237,231,218,.72)' }}>Just look around first</button>
       </div>
