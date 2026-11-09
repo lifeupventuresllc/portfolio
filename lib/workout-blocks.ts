@@ -8,6 +8,9 @@ import { exerciseVideo } from './exercise-videos'
 import { howToFor, cueOrHowTo } from './exercise-howto'
 import { NOT_EXACT_ON_SCREEN } from './exercise-images'
 import { DELOAD_CUE, deloadSets } from './double-progression'
+import { ATOMIC_LIBRARY } from './exercise-library'
+
+const isCore = (name: string) => !!ATOMIC_LIBRARY.find((e) => e.name === name && e.movementPattern.startsWith('core_'))
 
 // Only a photo of the exact move reaches the screen.
 const exactImage = (name: string, url?: string) => (url && !NOT_EXACT_ON_SCREEN.has(name) ? url : undefined)
@@ -29,6 +32,7 @@ export interface Block {
   rounds: number          // circles on screen
   restSec: number         // after each set (or after both moves of a round)
   lines?: string[]        // warm-up / cool-down list
+  abs?: boolean           // ab/core work: screen says "ABS" and "Set X of Y" (2026-11-09)
 }
 
 const firstNum = (s: string): number | undefined => {
@@ -78,7 +82,7 @@ export function buildBlocks(program: WorkoutProgram, dayIdx: number): Block[] {
       // "2 × 8–15" = sets of reps (double progression); "30 sec" = one timed round.
       if (/[x×]/i.test(e.duration)) {
         const a = move(e.name, e.duration, undefined, e.imageUrl)
-        blocks.push({ kind: 'exercise', rounds: a.sets, restSec: 30, moves: [withTarget(a.m)] })
+        blocks.push({ kind: 'exercise', rounds: a.sets, restSec: 30, moves: [withTarget(a.m)], ...(isCore(e.name) ? { abs: true } : {}) })
         continue
       }
       const sec = firstNum(e.duration)
@@ -105,7 +109,7 @@ export function buildBlocks(program: WorkoutProgram, dayIdx: number): Block[] {
   if (day.ab) {
     const list = [day.ab.upper, day.ab.lower, ...(day.ab.bonus ? [day.ab.bonus] : [])]
     const ms = list.map((e) => move(e.name, day.ab!.scheme, e.cue, e.imageUrl))
-    blocks.push({ kind: 'exercise', moves: ms.map((x) => withTarget(x.m)), rounds: program.deload ? deloadSets(ms[0].sets) : ms[0].sets, restSec: 45 })
+    blocks.push({ kind: 'exercise', abs: true, moves: ms.map((x) => withTarget(x.m)), rounds: program.deload ? deloadSets(ms[0].sets) : ms[0].sets, restSec: 45 })
   }
   if (day.cardio) {
     if (day.cardio.mode === 'compound' && day.cardio.moves?.length) {

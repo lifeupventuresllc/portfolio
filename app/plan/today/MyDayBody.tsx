@@ -1,4 +1,5 @@
 import { planFromForm, PLAN_STOPS, EXTRA_SNACKS } from '@/lib/day-plan'
+import { getRestPick } from '@/lib/rest-rule-server'
 import { whyLines, selfTalkForDay } from '@/lib/payoff'
 import StartFresh from '@/components/StartFresh'
 import NutritionDrop from '@/components/NutritionDrop'
@@ -177,7 +178,10 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   const startDay = program && effectiveFocusArea ? pickFocusDayIndex(program, effectiveFocusArea)
     : numDays > 0 ? completed % numDays : 0
   // Approved cardio swap already reflected in the title — see effective-plan.ts.
-  const todayWorkout = getEffectiveTodayWorkout(program, completed, todayAdjustment, effectiveFocusArea)
+  // Rest rule (lib/rest-rule.ts): same pick as /plan/workout.
+  const doneTodayForRest = (doneRows || []).some((r) => r.logged_on === todayIso && (r.measurements as { workout?: boolean } | null)?.workout)
+  const restPick = effectiveFocusArea ? undefined : await getRestPick(enrollment.id as string, program, startDay, program?.level || 1, doneTodayForRest)
+  const todayWorkout = getEffectiveTodayWorkout(program, completed, todayAdjustment, effectiveFocusArea, restPick)
 
   // Layer 1's primary feature, unified: reads across every behavioral signal
   // already being collected (workout, food logging, app-open silence,

@@ -1,4 +1,7 @@
 import Link from 'next/link'
+import { localDateISO } from '@/lib/localdate'
+import { getRestPick } from '@/lib/rest-rule-server'
+import { restDayLine } from '@/lib/rest-rule'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
@@ -71,7 +74,11 @@ export default async function WorkoutWeekPage() {
     : (program.gymDays || []).map((d) => ({ title: d.title, muscles: d.muscles?.join(', ') }))
   const numDays = days.length || 1
   const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
-  const todayIdx = completed % numDays
+  // Rest rule (lib/rest-rule.ts): same pick as /plan/workout (-1 = rest day today).
+  const todayISOForRest = localDateISO()
+  const doneTodayForRest = (doneRows || []).some((r) => r.logged_on === todayISOForRest && (r.measurements as { workout?: boolean } | null)?.workout)
+  const restPick = await getRestPick(enrollment.id as string, program, completed % numDays, program.level || 1, doneTodayForRest)
+  const todayIdx = restPick?.rest ? -1 : restPick ? restPick.index : completed % numDays
 
   return (
     <div className="min-h-[100dvh] bg-obsidian px-4 py-8">
@@ -84,6 +91,12 @@ export default async function WorkoutWeekPage() {
         <h1 className="text-white text-2xl font-bold mb-2">Your real plan, day by day</h1>
         <p className="text-ivory/50 text-sm mb-8">Exactly what you&apos;ll get, generated from your current goals and focus. Change your preferences and this list updates with it.</p>
 
+        {restPick?.rest && (
+          <div className="rounded-2xl px-4 py-3.5 mb-3 border bg-gold/10 border-gold">
+            <p className="text-gold text-xs font-semibold tracking-[0.2em] uppercase mb-1">Today: rest day</p>
+            <p className="text-ivory/80 text-sm">{restDayLine(restPick)}</p>
+          </div>
+        )}
         <div className="space-y-2">
           {days.map((d, i) => (
             <div key={i} className={`flex items-center justify-between gap-3 rounded-2xl px-4 py-3.5 border ${i === todayIdx ? 'bg-gold/10 border-gold' : 'bg-charcoal border-smoke'}`}>

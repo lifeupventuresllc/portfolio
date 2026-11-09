@@ -1,4 +1,6 @@
 import { redirect } from 'next/navigation'
+import { getRestPick } from '@/lib/rest-rule-server'
+import { restDayLine, REST_DAY_TITLE } from '@/lib/rest-rule'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import WorkoutPlayer from '@/components/WorkoutPlayer'
 import QuickstartWorkout from '@/components/QuickstartWorkout'
@@ -220,6 +222,30 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
   else if (completed === 0 || searchParams?.focusUpdated === '1') {
     const storedFocusArea = (intake?.form_data as { focus_area?: FocusArea } | null)?.focus_area
     if (storedFocusArea && storedFocusArea !== 'overall') startDay = pickFocusDayIndex(program, storedFocusArea)
+  }
+
+  // Rest rule (2026-11-09, lib/rest-rule.ts): a body group worked hard rests
+  // ~48h (by level) before it's worked hard again. Skip ahead to the next day
+  // whose groups have rested; if none has, today is a rest day (easy cardio +
+  // core). A focus she just asked for (chat or preferences) still wins.
+  if (!focusOverride?.length && searchParams?.focusUpdated !== '1' && todayAdjustment?.workoutChange?.contentSwap !== 'cardio') {
+    const doneToday = (doneRows || []).some((r) => r.logged_on === today && (r.measurements as { workout?: boolean } | null)?.workout)
+    const pick = await getRestPick(enrollment.id as string, program, startDay, level, doneToday)
+    if (pick?.rest) {
+      const offset = completed + startDay
+      const line = restDayLine(pick, getTimezone())
+      if (program.track === 'home' && program.home) {
+        const days = [...program.home.days]
+        days[startDay] = { ...generateCardioSession('home', 1, injuries, offset), title: REST_DAY_TITLE, dayNum: days[startDay]?.dayNum ?? startDay + 1 }
+        program = { ...program, home: { ...program.home, days } }
+      } else if (program.gymDays) {
+        const gymDays = [...program.gymDays]
+        // Easy on purpose: a rest day is easy cardio (beginner moves) + core, any level.
+        const easy = generateCardioSession('gym', 1, injuries, offset)
+        gymDays[startDay] = { ...easy, title: REST_DAY_TITLE, dayNum: gymDays[startDay]?.dayNum ?? startDay + 1, cardio: easy.cardio ? { ...easy.cardio, title: 'Easy Cardio', note: `${line} ${easy.cardio.note}` } : easy.cardio }
+        program = { ...program, gymDays }
+      }
+    } else if (pick) startDay = pick.index
   }
 
   // Coach Asa approved a real cardio/HIIT swap (not just a shorter version of

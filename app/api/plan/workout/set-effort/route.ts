@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { musclesWorked } from '@/lib/muscle-tags'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ATOMIC_LIBRARY } from '@/lib/exercise-library'
 import { logSetEffort, logSetDone, immediateAdjustment, type Effort } from '@/lib/progression'
@@ -54,7 +55,8 @@ export async function POST(request: NextRequest) {
     // history to read.
     const entry = ATOMIC_LIBRARY.find((e) => e.name === exerciseName)
     const movementPattern = exerciseName === 'Incline Treadmill Walk' ? 'cardio' : entry?.movementPattern || 'compound'
-    const muscleGroups = entry?.muscleGroups || []
+    // Every muscle the move works (combos too) — lib/muscle-tags.ts, 2026-11-09 rest rule.
+    const muscleGroups = musclesWorked(exerciseName)
 
     if (isDone) {
       await logSetDone(enrollment.id as string, user.id, exerciseName, movementPattern, muscleGroups, setIndex)

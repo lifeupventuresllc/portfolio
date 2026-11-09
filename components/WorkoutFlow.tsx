@@ -174,6 +174,25 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
     return () => clearInterval(id)
   }, [timer != null, phase, bi]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 2026-11-09 (Asa): Back, in case she tapped DONE by mistake — un-fills the
+  // last circle, or returns to the last set of the previous exercise.
+  const canBack = phase === 'rest' || round > 0 || bi > 0
+  function back() {
+    if (!canBack) return
+    hapticTap()
+    setTimer(null); setAsked(false)
+    if (phase === 'rest') { setPhase('work'); setRound(Math.max(0, round - 1)); return }
+    if (round > 0) { setRound(round - 1); return }
+    const prev = blocks[bi - 1]
+    setBi(bi - 1); setPhase('work')
+    setRound(prev && prev.kind === 'exercise' ? Math.max(0, prev.rounds - 1) : 0)
+  }
+  const backBtn = (
+    <button onClick={back} className="nf-press inline-flex items-center gap-1.5 text-[14px] font-semibold px-3 py-2 rounded-full" style={{ color: INK, border: '1.5px solid rgba(237,231,218,.25)' }} aria-label="Go back one set">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 5l-7 7 7 7" /></svg>Back
+    </button>
+  )
+
   function effort(e: Effort) {
     if (!block || asked) return
     hapticTap()
@@ -225,6 +244,7 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
           <button onClick={done} className="rw-cta nf-press w-full h-16 rounded-full uppercase" style={{ ...pill, fontSize: 17, background: GOLD, color: BG }}>
             {block.kind === 'warmup' ? "I'm warm. Start" : 'Finish workout'}
           </button>
+          {block.kind === 'cooldown' && bi > 0 && <div className="flex justify-center mt-3">{backBtn}</div>}
         </div>
       </div>
     )
@@ -255,8 +275,9 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
             <span className="text-[14px]" style={{ color: MUTE }}>Got it. Rest set for you.</span>
           )}
         </div>
-        <div className="pb-6 pt-4">
+        <div className="pb-6 pt-4 flex flex-col gap-3">
           <button onClick={() => { hapticTap(); afterRest.current() }} className="nf-press w-full h-14 rounded-full uppercase" style={{ ...pill, fontSize: 14, border: '2px solid rgba(237,231,218,.25)', color: INK }}>I&apos;m ready</button>
+          <div className="self-center">{backBtn}</div>
         </div>
       </div>
     )
@@ -292,12 +313,12 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
         <div className="shrink-0 flex flex-col gap-3.5 px-5 pt-4">
           {pair ? (
             <div className="flex flex-col gap-1">
-              <span style={{ ...pill, fontSize: 12, letterSpacing: '.16em', color: GOLD }}>SUPERSET{levelLabel ? <span style={{ color: MUTE }}> · {levelLabel.toUpperCase()}</span> : null}</span>
+              <span style={{ ...pill, fontSize: 12, letterSpacing: '.16em', color: GOLD }}>{block.abs ? 'ABS' : 'SUPERSET'}{levelLabel ? <span style={{ color: MUTE }}> · {levelLabel.toUpperCase()}</span> : null}</span>
               <h1 className="nf-head" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 40, lineHeight: 0.92, textTransform: 'uppercase' }}>Do these back to back.</h1>
             </div>
           ) : (
             <div className="flex flex-col gap-1">
-              {levelLabel && block.kind === 'exercise' && <span style={{ ...pill, fontSize: 11, letterSpacing: '.16em', color: MUTE }}>{levelLabel.toUpperCase()}</span>}
+              {(block.abs || levelLabel) && block.kind === 'exercise' && <span style={{ ...pill, fontSize: 11, letterSpacing: '.16em', color: MUTE }}>{block.abs && <span style={{ color: GOLD }}>ABS{levelLabel ? ' · ' : ''}</span>}{levelLabel?.toUpperCase()}</span>}
               <h1 className="nf-head text-balance" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: single.name.length > 24 ? 40 : 50, lineHeight: 0.9, textTransform: 'uppercase' }}>{single.name}</h1>
             </div>
           )}
@@ -306,7 +327,7 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
             {/* 2026-11-05 (Asa): the set in words beside the circles, same
                 style as a superset's "Round 1 of 2", so every screen matches. */}
             <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 30, lineHeight: 1, color: GOLD, textTransform: 'uppercase' }}>
-              {timed && timer != null ? clock(timer) : pair ? (block.rounds > 1 ? `Round ${Math.min(round + 1, block.rounds)} of ${block.rounds}` : 'One round') : block.rounds > 1 ? `Set ${Math.min(round + 1, block.rounds)} of ${block.rounds}` : 'One set'}
+              {timed && timer != null ? clock(timer) : pair && !block.abs ? (block.rounds > 1 ? `Round ${Math.min(round + 1, block.rounds)} of ${block.rounds}` : 'One round') : block.rounds > 1 ? `Set ${Math.min(round + 1, block.rounds)} of ${block.rounds}` : 'One set'}
             </span>
             {!pair && !(timed && timer != null) && (
               <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 30, lineHeight: 1, color: INK, textTransform: 'uppercase' }}>{repText(single, round)}</span>
@@ -326,10 +347,13 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
               {lastRound && bi + 1 >= blocks.length ? 'Done. Finish' : 'Done'}
             </button>
           )}
-          {/* Never the thing that finishes a workout (a skipped last step must not log "done"). */}
-          {bi + 1 < blocks.length && (
-            <button onClick={() => { hapticTap(); next() }} className="self-center text-[13px] underline underline-offset-4" style={{ color: 'rgba(237,231,218,.5)' }}>Skip this one</button>
-          )}
+          <div className="flex items-center justify-between min-h-[40px]">
+            {canBack ? backBtn : <span />}
+            {/* Never the thing that finishes a workout (a skipped last step must not log "done"). */}
+            {bi + 1 < blocks.length && (
+              <button onClick={() => { hapticTap(); next() }} className="text-[13px] underline underline-offset-4" style={{ color: 'rgba(237,231,218,.5)' }}>Skip this one</button>
+            )}
+          </div>
         </div>
       </div>
     </div>

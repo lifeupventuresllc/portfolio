@@ -1,4 +1,5 @@
 import { pickFocusDayIndex, type WorkoutProgram, type FocusArea } from '@/lib/workout'
+import { REST_DAY_TITLE, type RestPick } from '@/lib/rest-rule'
 import type { WorkoutChange, NutritionChange } from './types'
 import type { DayType } from '@/lib/meal-plan'
 
@@ -48,12 +49,15 @@ function focusLabel(areas: FocusArea[]): string {
 // `focusArea` mirrors the same resolved value the other two surfaces use —
 // an approved one-off override, or (only before she's completed anything,
 // same reasoning as /plan/workout) her freshly-stored focus preference.
-export function getEffectiveTodayWorkout(program: WorkoutProgram | null, completedCount: number, todayAdjustment: TodayAdjustment, focusArea?: FocusArea | FocusArea[]): EffectiveWorkout {
+// `restPick` (lib/rest-rule-server.ts getRestPick, 2026-11-09): the rest rule's
+// choice of today's day — or a rest day when nothing has rested enough.
+export function getEffectiveTodayWorkout(program: WorkoutProgram | null, completedCount: number, todayAdjustment: TodayAdjustment, focusArea?: FocusArea | FocusArea[], restPick?: RestPick): EffectiveWorkout {
   if (!program) return null
   const numDays = program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)
   const areas = Array.isArray(focusArea) ? focusArea : focusArea ? [focusArea] : []
   const hasFocus = areas.some((a) => a !== 'overall')
-  const startDay = hasFocus ? pickFocusDayIndex(program, focusArea) : (numDays > 0 ? completedCount % numDays : 0)
+  const startDay = hasFocus ? pickFocusDayIndex(program, focusArea) : restPick ? restPick.index : (numDays > 0 ? completedCount % numDays : 0)
+  if (!hasFocus && restPick?.rest && todayAdjustment?.workoutChange?.contentSwap !== 'cardio') return { title: REST_DAY_TITLE }
   let workout: EffectiveWorkout = null
   if (program.track === 'home') {
     const d = program.home?.days[startDay]

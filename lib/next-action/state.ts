@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/server'
+import { getRestPick } from '@/lib/rest-rule-server'
 import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import { computeLowFuelToday } from '@/lib/workout-assembly'
 import { getProgressionOverrides, getRecentlyTrainedMuscles } from '@/lib/progression'
@@ -193,7 +194,10 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
   const effectiveFocusArea = focusOverride?.length
     ? focusOverride
     : completed === 0 && storedFocusArea && storedFocusArea !== 'overall' ? storedFocusArea : undefined
-  const workoutCandidate = getEffectiveTodayWorkout(program, completed, effectiveTodayAdjustment, effectiveFocusArea)
+  // Rest rule (lib/rest-rule.ts): same pick as /plan/workout.
+  const numDaysForRest = program ? (program.track === 'home' ? program.home?.days.length || 1 : program.gymDays?.length || 1) : 1
+  const restPick = effectiveFocusArea ? undefined : await getRestPick(enrollmentId, program, completed % numDaysForRest, program?.level || 1, workoutDoneToday)
+  const workoutCandidate = getEffectiveTodayWorkout(program, completed, effectiveTodayAdjustment, effectiveFocusArea, restPick)
 
   const todaysWorkoutAction = (recentWorkoutActions || []).find((r) => localDateISO(tz, new Date(r.shown_at as string)) === todayISO)
   const workoutSkippedToday = !workoutDoneToday && !!(todaysWorkoutAction?.skipped_at || todaysWorkoutAction?.superseded_at)

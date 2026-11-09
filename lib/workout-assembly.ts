@@ -19,6 +19,8 @@
 import { ATOMIC_LIBRARY, isExerciseSafe, type AtomicExercise, type Location, type EquipmentTag, type MuscleGroup, type SkillLevel, type MovementPattern, type IntensityLevel } from './exercise-library'
 import { weekTemplate, trainStyleFrom, isClassicStyle, DAY_TITLE, type DayKind } from './week-template'
 import { combosFor, MAIN_LIFTS, type ComboMove } from './combo-moves'
+import { groupsWorked, type BodyGroup } from './muscle-tags'
+import { HARD_SETS } from './rest-rule'
 import type { Injury, Equip, Muscle } from './workout-exercises'
 import { injuryNotes, isContraindicated } from './workout-exercises'
 import type {
@@ -339,6 +341,8 @@ function cardioFinisherFor(c: Constraints, goal: string, styles: Set<TrainingSty
   return walkFinisher(effectiveLevel, goal, c.activityLevel, c.lowFuelToday, styles.has('cardio'))
 }
 
+// Home core (2026-11-09, Asa #5): real sets like gym abs, so the screen shows "Set 1 of 2".
+const coreSets = (c: Constraints) => `${(c.lowFuelToday ? Math.max(1, c.skillLevel - 1) : c.skillLevel) >= 3 ? 3 : 2} × 30 sec`
 const AB_SCHEME: Record<SkillLevel, string> = { 1: '2 sets × 8–12', 2: '2–3 sets × 12–15', 3: '3–4 sets × 15+ (add weight)' }
 // Lift rep ranges + sets: repRange() in lib/double-progression.ts (2026-10-30,
 // replaced the old fixed REP_SCHEME table).
@@ -371,7 +375,7 @@ function countForMinutes(minutesAvailable: number | undefined, avgDurationSec: n
 const DAY_MUSCLES: Record<DayKind, MuscleGroup[]> = {
   full: [], upper: ['chest', 'back', 'shoulders', 'biceps', 'triceps'], lower: ['quads', 'hamstrings', 'glutes'],
   push: ['chest', 'shoulders', 'triceps'], pull: ['back', 'biceps'], legs: ['quads', 'hamstrings', 'glutes'],
-  compound: [], chest_tri: ['chest', 'triceps'], back_bi: ['back', 'biceps'], shoulders_glutes: ['shoulders', 'glutes'], chest_back: ['chest', 'back'],
+  compound: [], compound_lower: ['quads', 'hamstrings', 'glutes'], compound_upper: ['chest', 'back', 'shoulders', 'biceps', 'triceps'], chest_tri: ['chest', 'triceps'], back_bi: ['back', 'biceps'], shoulders_glutes: ['shoulders', 'glutes'], chest_back: ['chest', 'back'],
 }
 
 // `straight` (2026-11-04): Classic strength for a Beginner — one move at a
@@ -463,48 +467,64 @@ function buildGymDay(dayNum: number, targetMuscles: MuscleGroup[], title: string
 
 // ---- Compound movements style (2026-11-04, Asa's pick, Alive-style) ----
 // Warm-up → heavy main lift(s) → 3–4 dumbbell combo moves → core → cardio.
-// Beginner: one main lift (legs/glutes), 3 combos. Intermediate/Advanced:
-// a lower AND an upper main lift, 4 combos. Every lift and combo is tracked,
-// so the weight goes up when she hits the top of her range on every set.
+// 2026-11-09 rest rule (lib/rest-rule.ts): days alternate LOWER (leg lifts +
+// leg combos) and UPPER (upper lifts + upper-only combos, no leg work at all),
+// so legs are never worked hard two sessions in a row. On a lower day the
+// combos' upper halves are spread out so no upper group is worked hard.
+// Beginner: 1 main lift + 3 combos. Intermediate/Advanced: 2 mains + 4 combos.
 const COMBO_ORDER: ComboMove['group'][] = ['back', 'shoulders', 'arms', 'full', 'chest', 'core']
+const UPPER_COMBO_ORDER: ComboMove['group'][] = ['chest', 'back', 'shoulders', 'arms', 'full']
 const LOWER_FOCUS = ['Squat', 'Deadlift', 'Glutes']
 // Main lifts never load what hurts (on top of the shared injury list).
 const MAIN_AVOID: Partial<Record<Injury, RegExp>> = { shoulder: /Shoulder Press|Overhead|Arnold/, knee: /Back Squat|Bulgarian/, wrist: /Push-Up/ }
 const mainSafe = (name: string, injuries: Injury[]) => !isContraindicated(name, injuries) && !injuries.some((i) => MAIN_AVOID[i]?.test(name))
 
-function pickCombos(level: SkillLevel, injuries: Injury[], count: number, offset: number): ComboMove[] {
-  const pool = combosFor(level, injuries)
+function pickCombos(level: SkillLevel, injuries: Injury[], count: number, offset: number, zone: 'lower' | 'upper', startSets: Map<BodyGroup, number>): ComboMove[] {
+  const pool = combosFor(level, injuries, zone)
   const out: ComboMove[] = []
-  const groups = rotate(COMBO_ORDER, offset)
+  const groups = rotate(zone === 'upper' ? UPPER_COMBO_ORDER : COMBO_ORDER, offset)
+  const sets = new Map(startSets)
+  // Lower day: keep every upper group under "hard" (rest rule), so tomorrow's upper day is fair.
+  const fits = (m: ComboMove) => zone === 'upper' || groupsWorked(m.name).every((g) => g === 'legs' || (sets.get(g) || 0) + 3 < HARD_SETS)
   // One combo per group before any group repeats; never more than 2 knee-heavy.
   for (let round = 0; out.length < count && round < 3; round++) {
     for (const g of groups) {
       if (out.length >= count) break
       const options = rotate(pool.filter((m) => m.group === g && !out.includes(m)), offset + round)
-      const m = options.find((x) => x.legs !== 'knee' || out.filter((o) => o.legs === 'knee').length < 2)
-      if (m) out.push(m)
+      const m = options.find((x) => fits(x) && (x.legs !== 'knee' || out.filter((o) => o.legs === 'knee').length < 2))
+      if (m) { out.push(m); for (const gg of groupsWorked(m.name)) sets.set(gg, (sets.get(gg) || 0) + 3) }
     }
   }
   return out
 }
 
-function buildCompoundDay(dayNum: number, location: Location, c: Constraints, goal: WorkoutInputs['goal'], offset: number, coreFocus: boolean, styles: Set<TrainingStyle>): GymDay | HomeDay {
+function buildCompoundDay(dayNum: number, location: Location, c: Constraints, goal: WorkoutInputs['goal'], offset: number, coreFocus: boolean, styles: Set<TrainingStyle>, zone: 'lower' | 'upper' = 'lower'): GymDay | HomeDay {
   const level = c.skillLevel
   const lifts = MAIN_LIFTS[location][level]
-  const lowerOk = lifts.lower.filter((n) => mainSafe(n, c.injuries))
-  const upperOk = lifts.upper.filter((n) => mainSafe(n, c.injuries))
-  const lowerIdx = (dayNum - 1) % lifts.lower.length
-  const lowerName = lowerOk.length ? (lowerOk.includes(lifts.lower[lowerIdx]) ? lifts.lower[lowerIdx] : lowerOk[(dayNum - 1) % lowerOk.length]) : undefined
-  const upperName = level >= 2 && upperOk.length ? upperOk[(dayNum - 1) % upperOk.length] : undefined
-  const mains = [lowerName, upperName].filter((n): n is string => !!n)
-    .map((n) => ATOMIC_LIBRARY.find((e) => e.name === n)).filter((e): e is AtomicExercise => !!e)
-  const combos = pickCombos(level, c.injuries, level === 1 ? 3 : 4, offset)
+  const list = (zone === 'upper' ? lifts.upper : lifts.lower).filter((n) => mainSafe(n, c.injuries))
+  const nMains = level === 1 ? 1 : 2
+  // Rotate which lift leads, session to session (squat → hinge → glutes; press → row → shoulders).
+  const lead = Math.floor((dayNum - 1) / 2)
+  const mainNames = list.length ? Array.from({ length: Math.min(nMains, list.length) }, (_, k) => list[(lead + k) % list.length]) : []
+  const mains = mainNames.map((n) => ATOMIC_LIBRARY.find((e) => e.name === n)).filter((e): e is AtomicExercise => !!e)
   const setsToday = (sets: number) => (c.deload ? deloadSets(sets) : sets)
-  const mainScheme = (e: AtomicExercise) => { const r = repRange(level, goal, 'compound', isBodyweight(e)); c.tracked?.set(e.name, r); return schemeText(setsToday(r.sets), r) }
+  const mainRange = (e: AtomicExercise) => repRange(level, goal, 'compound', isBodyweight(e))
+  const mainSets = new Map<BodyGroup, number>()
+  for (const e of mains) for (const g of groupsWorked(e.name)) mainSets.set(g, (mainSets.get(g) || 0) + mainRange(e).sets)
+  const wantCombos = level === 1 ? 3 : 4
+  const combos = pickCombos(level, c.injuries, wantCombos, offset, zone, mainSets)
+  // Lower day short on combos (rest rule kept the upper halves light)? Fill with
+  // legs-only moves (hip thrust, leg curl, step-up…) so the session stays full.
+  const legOnly = zone === 'lower' && combos.length < wantCombos
+    ? pick(filterLibrary(c, ['glutes', 'hamstrings', 'quads']).filter((e) => e.movementPattern !== 'compound' && e.movementPattern !== 'cardio' && !mainNames.includes(e.name)
+      && familyOf(e) !== 'knee' && groupsWorked(e.name).every((g) => g === 'legs') && !/chair|couch|in place|kick(boxing)?s? \(|pulsating|explosive/i.test(e.name)), [], wantCombos - combos.length, offset + 3, c.postpartum)
+    : []
+  const mainScheme = (e: AtomicExercise) => { const r = mainRange(e); c.tracked?.set(e.name, r); return schemeText(setsToday(r.sets), r) }
+  const accScheme = (e: AtomicExercise) => { const r = repRange(level, goal, 'accessory', isBodyweight(e)); c.tracked?.set(e.name, r); return schemeText(setsToday(r.sets), r) }
   // Combos: moderate weight, 10–15 reps (12–15 for fat loss), 3 sets.
   const comboScheme = (m: ComboMove) => { const r = { ...repRange(level, goal, 'accessory', false), sets: 3 }; c.tracked?.set(m.name, r); return schemeText(setsToday(r.sets), r) }
-  const focus = lowerName ? LOWER_FOCUS[lifts.lower.indexOf(lowerName)] : 'Upper'
-  const title = `Compound · ${focus} Focus`
+  const focus = zone === 'upper' ? 'Upper Body' : mainNames[0] ? `${LOWER_FOCUS[lifts.lower.indexOf(mainNames[0])] || 'Legs'} Focus` : 'Lower Body'
+  const title = `Compound · ${focus}`
   const repLevel = c.lowFuelToday ? (Math.max(1, level - 1) as SkillLevel) : level
 
   if (location === 'home') {
@@ -516,7 +536,8 @@ function buildCompoundDay(dayNum: number, location: Location, c: Constraints, go
       exercises: [
         ...mains.map((e) => ({ name: e.name, duration: mainScheme(e), imageUrl: e.imageUrl })),
         ...combos.map((m) => ({ name: m.name, duration: comboScheme(m) })),
-        ...core.map((e) => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl })),
+        ...legOnly.map((e) => ({ name: e.name, duration: accScheme(e), imageUrl: e.imageUrl })),
+        ...core.map((e) => ({ name: e.name, duration: coreSets(c), imageUrl: e.imageUrl })),
         ...finishers,
       ],
     }
@@ -531,6 +552,7 @@ function buildCompoundDay(dayNum: number, location: Location, c: Constraints, go
     accessory: [
       ...mains.map((e) => ({ name: e.name, reps: mainScheme(e), cue: e.cue, imageUrl: e.imageUrl, kind: 'main' as const })),
       ...combos.map((m) => ({ name: m.name, reps: comboScheme(m), cue: m.cue, kind: 'combo' as const })),
+      ...legOnly.map((e) => ({ name: e.name, reps: accScheme(e), cue: e.cue, imageUrl: e.imageUrl, kind: 'lift' as const })),
     ],
     ab: { upper: toAbExerciseShim(upperAb), lower: toAbExerciseShim(lowerAb), scheme: AB_SCHEME[repLevel], ...(bonusAb ? { bonus: toAbExerciseShim(bonusAb) } : {}) },
     cardio: cardioFinisherFor(c, goal, styles),
@@ -541,7 +563,12 @@ function buildCompoundDay(dayNum: number, location: Location, c: Constraints, go
 // longer as her level goes up, a bit longer for fat loss, lighter on a
 // no-food-yet day.
 function homeCardio(c: Constraints, goal: WorkoutInputs['goal'], offset: number): { name: string; duration: string; imageUrl?: string }[] {
-  const cardioPool = filterLibrary(c).filter((e) => e.movementPattern === 'cardio')
+  // 2026-11-09 (Asa: cardio matches her level): moves AT her level first, then
+  // one level down only if needed — an advanced woman never gets "March in Place".
+  const all = filterLibrary(c).filter((e) => e.movementPattern === 'cardio')
+  const atLevel = all.filter((e) => e.skillLevel === c.skillLevel)
+  const oneDown = all.filter((e) => e.skillLevel === c.skillLevel - 1)
+  const cardioPool = atLevel.length >= 3 ? atLevel : [...atLevel, ...oneDown].length ? [...atLevel, ...oneDown] : all
   const count = c.lowFuelToday ? 1 : c.skillLevel
   const sec = (goal === 'lose' ? 60 : goal === 'recomp' ? 50 : 40) + (c.skillLevel - 1) * 10
   return pick(cardioPool, [], Math.max(1, count + 1), offset + 8, c.postpartum).map((f) => ({ name: f.name, duration: `${sec} sec`, imageUrl: f.imageUrl }))
@@ -605,7 +632,7 @@ function buildHomeDay(dayNum: number, targetMuscles: MuscleGroup[], title: strin
     return schemeText(c.deload ? deloadSets(r.sets) : r.sets, r)
   }
   // Every home session ends on cardio, scaled to her level (2026-11-04).
-  const exercises = [...main.map((e) => ({ name: e.name, duration: homeReps(e), imageUrl: e.imageUrl })), ...core.map((e) => ({ name: e.name, duration: '30 sec', imageUrl: e.imageUrl })), ...homeCardio(c, goal, offset)]
+  const exercises = [...main.map((e) => ({ name: e.name, duration: homeReps(e), imageUrl: e.imageUrl })), ...core.map((e) => ({ name: e.name, duration: coreSets(c), imageUrl: e.imageUrl })), ...homeCardio(c, goal, offset)]
 
   return { dayNum, title, exercises }
 }
@@ -695,7 +722,7 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
     const homeDays: HomeDay[] = Array.from({ length: days }, (_, i) => {
       const muscles = dayMuscles(i)
       const isCoreOnly = i === 0 && overrideMuscles !== undefined && overrideMuscles.length === 0 && inp.overrideAreas?.includes('core')
-      if (!classic && !isOverrideDay(i)) return buildCompoundDay(i + 1, 'home', c, inp.goal, pickWeek + i, coreFocus && i === 0, styles) as HomeDay
+      if (!classic && !isOverrideDay(i)) return buildCompoundDay(i + 1, 'home', c, inp.goal, pickWeek + i, coreFocus && i === 0, styles, template[i % template.length] === 'compound_upper' ? 'upper' : 'lower') as HomeDay
       const day = buildHomeDay(i + 1, isCoreOnly ? [] : muscles, `Day ${i + 1}: ${dayTitle(i, muscles)}`, c, inp.goal, pickWeek + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, styles, isCoreOnly)
       return day
     })
@@ -712,7 +739,7 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
     base.gymDays = Array.from({ length: days }, (_, i) => {
       const muscles = dayMuscles(i)
       const isCoreOnly = i === 0 && overrideMuscles !== undefined && overrideMuscles.length === 0 && inp.overrideAreas?.includes('core')
-      if (!classic && !isOverrideDay(i)) return buildCompoundDay(i + 1, 'gym', c, inp.goal, pickWeek + i, coreFocus && i === 0, styles) as GymDay
+      if (!classic && !isOverrideDay(i)) return buildCompoundDay(i + 1, 'gym', c, inp.goal, pickWeek + i, coreFocus && i === 0, styles, template[i % template.length] === 'compound_upper' ? 'upper' : 'lower') as GymDay
       return buildGymDay(i + 1, isCoreOnly ? [] : muscles, dayTitle(i, muscles), c, inp.goal, pickWeek + i, i === 0 ? inp.minutesAvailable : undefined, coreFocus && i === 0, styles, isCoreOnly, straight)
     })
   }
