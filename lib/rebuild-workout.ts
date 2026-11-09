@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { generateWorkout, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
+import { generateWorkout, type TrainingStyle, type FocusArea, type WorkoutInputs, type WorkoutProgram } from '@/lib/workout'
+import { ENGINE_VERSION } from '@/lib/workout-assembly'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { parseStoredGoal } from '@/lib/goals'
 import { parseStoredTrainingStyles } from '@/lib/training-styles'
@@ -51,5 +52,25 @@ export async function regenerateWorkoutFromIntake(
     ? await svc.from('challenge_workout_plans').update(payload).eq('id', existing.id)
     : await svc.from('challenge_workout_plans').insert(payload)
 
-  return { error }
+  return { error, program }
+}
+
+// Existing accounts (2026-11-09): a saved week built by an older engine is
+// rebuilt once from her stored intake — no new questions. Her progress lives
+// elsewhere (workouts done, streaks, set logs, food) and is never touched, and
+// the day count stays the same, so her place in the week doesn't move.
+export async function ensureCurrentPlan(
+  svc: SupabaseClient,
+  enrollment: { id: string; name?: string | null },
+  userId: string,
+  intake: Record<string, unknown> | null | undefined,
+  stored: WorkoutProgram | null,
+): Promise<WorkoutProgram | null> {
+  if (!stored || !intake || stored.engine === ENGINE_VERSION) return stored
+  try {
+    const { error, program } = await regenerateWorkoutFromIntake(svc, enrollment, userId, intake)
+    return error ? stored : program
+  } catch {
+    return stored // never block her day over this
+  }
 }

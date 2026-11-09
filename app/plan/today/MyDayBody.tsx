@@ -1,4 +1,5 @@
 import { planFromForm, PLAN_STOPS, EXTRA_SNACKS } from '@/lib/day-plan'
+import { ensureCurrentPlan } from '@/lib/rebuild-workout'
 import { getRestPick } from '@/lib/rest-rule-server'
 import { whyLines, selfTalkForDay } from '@/lib/payoff'
 import StartFresh from '@/components/StartFresh'
@@ -51,7 +52,7 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
     svc.from('challenge_nutrition_plans').select('meals, calories, protein_g, day_targets').eq('enrollment_id', enrollment.id).eq('week_number', 1).maybeSingle(),
     svc.from('challenge_progress').select('measurements, logged_on').eq('enrollment_id', enrollment.id).eq('note', '__daily__'),
     getApprovedTodayAdjustment(enrollment.id as string, todayIso),
-    svc.from('challenge_intake').select('form_data, weight_lbs').eq('enrollment_id', enrollment.id).maybeSingle(),
+    svc.from('challenge_intake').select('*').eq('enrollment_id', enrollment.id).maybeSingle(),
     // Real numbers for the slim nutrition row below (Whoop-mockup match) — the
     // same challenge_food_log table FoodLog itself reads client-side, queried
     // here server-side so the glance row never has to wait on a second
@@ -129,7 +130,8 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   const eatingOutToday = isEatingOutToday(todayMeals?.eatOut, todayAdjustment)
 
   // Today's workout — same rotation as the session player (by # workouts finished).
-  const program = (workoutPlan?.plan as WorkoutProgram) || null
+  // Existing accounts: a week saved by an older engine is rebuilt once from her intake (lib/rebuild-workout.ts).
+  const program = await ensureCurrentPlan(svc, enrollment as { id: string; name?: string | null }, user.id, intakeRow as Record<string, unknown> | null, (workoutPlan?.plan as WorkoutProgram) || null)
   const numDays = program ? (program.track === 'home' ? (program.home?.days.length || 1) : (program.gymDays?.length || 1)) : 1
   const completed = (doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).length
   // workoutDoneToday/todaysWorkoutAction/workoutSimplifiedToday now computed

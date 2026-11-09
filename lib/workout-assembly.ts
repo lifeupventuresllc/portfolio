@@ -637,6 +637,11 @@ function buildHomeDay(dayNum: number, targetMuscles: MuscleGroup[], title: strin
   return { dayNum, title, exercises }
 }
 
+// Bump when the engine changes what a saved week looks like: saved plans built
+// by an older engine are rebuilt from her intake the next time she opens the
+// app (lib/rebuild-workout.ts ensureCurrentPlan). 2026-11-09: rest rule.
+export const ENGINE_VERSION = '2026-11-09-rest'
+
 export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
   const level = inp.level as SkillLevel
   const week = inp.weekNumber || 1
@@ -681,7 +686,7 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
 
   const base: WorkoutProgram = {
     name: inp.name || 'Your', track: inp.track, level, levelLabel: LEVEL_LABEL[level], goal: inp.goal,
-    weekNumber: week, daysPerWeek: days,
+    weekNumber: week, daysPerWeek: days, engine: ENGINE_VERSION,
   }
   base.injuryNotes = injuryNotes(injuries)
   if (inp.targets && inp.targets.length) base.targetNote = inp.targets.map((m) => m[0].toUpperCase() + m.slice(1)).join(' · ')

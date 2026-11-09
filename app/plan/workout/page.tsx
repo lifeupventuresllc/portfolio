@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { ensureCurrentPlan } from '@/lib/rebuild-workout'
 import { getRestPick } from '@/lib/rest-rule-server'
 import { restDayLine, REST_DAY_TITLE } from '@/lib/rest-rule'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
@@ -84,7 +85,8 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
   }
 
   // "Today" = the next day in her week, rotating by how many workouts she's finished.
-  let program = workoutPlan.plan as WorkoutProgram
+  // Existing accounts: a week saved by an older engine is rebuilt once from her intake (lib/rebuild-workout.ts).
+  let program = (await ensureCurrentPlan(svc, enrollment as { id: string; name?: string | null }, user.id, intake as Record<string, unknown> | null, workoutPlan.plan as WorkoutProgram)) as WorkoutProgram
 
   // She told the daily check-in she's somewhere different than her stored program's
   // track (e.g. plan says gym, she said home today) — regenerate a TODAY-ONLY session

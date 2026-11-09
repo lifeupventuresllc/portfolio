@@ -107,6 +107,7 @@ export interface HomeDay { dayNum: number; title: string; exercises: { name: str
 export interface WorkoutProgram {
   name: string; track: 'gym' | 'home'; level: Level; levelLabel: string; goal: string
   weekNumber: number; daysPerWeek: number
+  engine?: string          // which version of the workout engine built it (lib/workout-assembly.ts ENGINE_VERSION)
   gymDays?: GymDay[]
   injuryNotes?: string[]
   targetNote?: string
