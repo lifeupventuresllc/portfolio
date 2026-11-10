@@ -238,9 +238,11 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
   // ---------- warm-up / cool-down ----------
   if (block.kind !== 'exercise') {
     return (
-      <div className="wf-page relative flex flex-col" style={{ color: INK }}>
+      // With today's Gym/Home setup on the first screen, the photo gets
+      // smaller and the screen can scroll, so Start is never cut off.
+      <div className="wf-page relative flex flex-col" style={{ color: INK, overflowY: bi === 0 && setup ? 'auto' : undefined }}>
         {style}{top}{menuSheet}
-        <div className="relative flex-1 min-h-[180px]"><Media idx={bi} /></div>
+        <div className={`relative flex-1 ${bi === 0 && setup ? 'min-h-[110px]' : 'min-h-[180px]'}`}><Media idx={bi} /></div>
         <div key={bi} className="wf-in shrink-0 flex flex-col gap-4 px-5 -mt-10 relative">
           <h1 className="nf-head" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 52, lineHeight: 0.9, textTransform: 'uppercase' }}>
             {block.kind === 'warmup' ? 'Warm up first.' : 'Cool down.'}
