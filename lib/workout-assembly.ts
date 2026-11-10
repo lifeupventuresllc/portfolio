@@ -18,7 +18,7 @@
 // ============================================================
 import { ATOMIC_LIBRARY, isExerciseSafe, type AtomicExercise, type Location, type EquipmentTag, type MuscleGroup, type SkillLevel, type MovementPattern, type IntensityLevel } from './exercise-library'
 import { weekTemplate, trainStyleFrom, isClassicStyle, DAY_TITLE, type DayKind } from './week-template'
-import { combosFor, MAIN_LIFTS, type ComboMove } from './combo-moves'
+import { combosFor, MAIN_LIFTS, type ComboMove, type ComboWeight } from './combo-moves'
 import { groupsWorked, type BodyGroup } from './muscle-tags'
 import { HARD_SETS } from './rest-rule'
 import type { Injury, Equip, Muscle } from './workout-exercises'
@@ -122,6 +122,7 @@ interface Constraints {
   // Her real current capacity (see WorkoutInputs.activityLevel) — cardio
   // duration reads this, never skillLevel; incline still reads skillLevel.
   activityLevel?: WorkoutInputs['activityLevel']
+  weights?: WorkoutInputs['weights']
   // The nutrition -> workout half of the connection (see WorkoutInputs.
   // lowFuelToday) — nothing logged today, already past early afternoon.
   lowFuelToday?: boolean
@@ -479,8 +480,11 @@ const LOWER_FOCUS = ['Squat', 'Deadlift', 'Glutes']
 const MAIN_AVOID: Partial<Record<Injury, RegExp>> = { shoulder: /Shoulder Press|Overhead|Arnold/, knee: /Back Squat|Bulgarian/, wrist: /Push-Up/ }
 const mainSafe = (name: string, injuries: Injury[]) => !isContraindicated(name, injuries) && !injuries.some((i) => MAIN_AVOID[i]?.test(name))
 
-function pickCombos(level: SkillLevel, injuries: Injury[], count: number, offset: number, zone: 'lower' | 'upper', startSets: Map<BodyGroup, number>): ComboMove[] {
-  const pool = combosFor(level, injuries, zone)
+function pickCombos(level: SkillLevel, injuries: Injury[], count: number, offset: number, zone: 'lower' | 'upper', startSets: Map<BodyGroup, number>, weight: ComboWeight = 'dumbbell', onlyThisWeight = false): ComboMove[] {
+  // Today's weight first; the other kind only fills in if her level/injuries leave too few
+  // (never when she only has one kind of weight).
+  const own = combosFor(level, injuries, zone, weight)
+  const pool = onlyThisWeight ? own : [...own, ...combosFor(level, injuries, zone, weight === 'dumbbell' ? 'kettlebell' : 'dumbbell')]
   const out: ComboMove[] = []
   const groups = rotate(zone === 'upper' ? UPPER_COMBO_ORDER : COMBO_ORDER, offset)
   const sets = new Map(startSets)
@@ -490,7 +494,8 @@ function pickCombos(level: SkillLevel, injuries: Injury[], count: number, offset
   for (let round = 0; out.length < count && round < 3; round++) {
     for (const g of groups) {
       if (out.length >= count) break
-      const options = rotate(pool.filter((m) => m.group === g && !out.includes(m)), offset + round)
+      const mine = rotate(own.filter((m) => m.group === g && !out.includes(m)), offset + round)
+      const options = round < 2 ? mine : [...mine, ...rotate(pool.filter((m) => m.group === g && !out.includes(m) && !mine.includes(m)), offset + round)]
       const m = options.find((x) => fits(x) && (x.legs !== 'knee' || out.filter((o) => o.legs === 'knee').length < 2))
       if (m) { out.push(m); for (const gg of groupsWorked(m.name)) sets.set(gg, (sets.get(gg) || 0) + 3) }
     }
@@ -512,7 +517,14 @@ function buildCompoundDay(dayNum: number, location: Location, c: Constraints, go
   const mainSets = new Map<BodyGroup, number>()
   for (const e of mains) for (const g of groupsWorked(e.name)) mainSets.set(g, (mainSets.get(g) || 0) + mainRange(e).sets)
   const wantCombos = level === 1 ? 3 : 4
-  const combos = pickCombos(level, c.injuries, wantCombos, offset, zone, mainSets)
+  // Dumbbell or kettlebell day: her pick, or (both / not asked yet at the gym)
+  // alternate every lower+upper pair, so one week has some of each.
+  const weight: ComboWeight = c.weights === 'dumbbell' || c.weights === 'kettlebell' ? c.weights
+    : (c.weights === 'both' || location === 'gym') && lead % 2 === 1 ? 'kettlebell' : 'dumbbell'
+  // Combo moves level up (or down) with her Easy/Hard taps, the same as every
+  // other move: combos are logged under the 'compound' pattern (set-effort route).
+  const comboLevel = c.progressionOverrides?.compound?.skillLevel ?? level
+  const combos = pickCombos(comboLevel, c.injuries, wantCombos, offset, zone, mainSets, weight, c.weights === 'dumbbell' || c.weights === 'kettlebell')
   // Lower day short on combos (rest rule kept the upper halves light)? Fill with
   // legs-only moves (hip thrust, leg curl, step-up…) so the session stays full.
   const legOnly = zone === 'lower' && combos.length < wantCombos
@@ -640,7 +652,7 @@ function buildHomeDay(dayNum: number, targetMuscles: MuscleGroup[], title: strin
 // Bump when the engine changes what a saved week looks like: saved plans built
 // by an older engine are rebuilt from her intake the next time she opens the
 // app (lib/rebuild-workout.ts ensureCurrentPlan). 2026-11-09: rest rule.
-export const ENGINE_VERSION = '2026-11-09-rest'
+export const ENGINE_VERSION = '2026-11-10-kettlebell'
 
 export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
   const level = inp.level as SkillLevel
@@ -652,7 +664,7 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
   const pickWeek = blockStartWeek(week)
   const deload = isDeloadWeek(week)
   const tracked = new Map<string, RepRange>()
-  const c: Constraints = { location, skillLevel: level, injuries, postpartum: !!inp.postpartum, progressionOverrides: inp.progressionOverrides, activityLevel: inp.activityLevel, lowFuelToday: inp.lowFuelToday, deload, tracked }
+  const c: Constraints = { location, weights: inp.weights, skillLevel: level, injuries, postpartum: !!inp.postpartum, progressionOverrides: inp.progressionOverrides, activityLevel: inp.activityLevel, lowFuelToday: inp.lowFuelToday, deload, tracked }
   const days = Math.min(Math.max(Math.round(inp.daysPerWeek || 3), 1), 6)
   const coreFocus = inp.focusArea === 'core' || !!inp.overrideAreas?.includes('core')
   // Real bug found live, 2026-09-04: every caller used to pass just

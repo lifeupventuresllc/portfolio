@@ -15,6 +15,7 @@ import { computeLowFuelToday } from '@/lib/workout-assembly'
 import { getRecentlyTrainedMuscles, getExerciseSessions } from '@/lib/progression'
 import { parseStoredGoal } from '@/lib/goals'
 import { parseStoredTrainingStyles } from '@/lib/training-styles'
+import { weightsFor } from '@/lib/weight-tags'
 
 export const dynamic = 'force-dynamic'
 
@@ -154,10 +155,14 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
       getRecentlyTrainedMuscles(enrollment.id as string),
       getExerciseSessions(enrollment.id as string, (enrollment.created_at as string) || new Date().toISOString()),
     ])
+    const trackToday = trackOverride || (intake.training_location === 'home' ? 'home' : 'gym')
     program = generateWorkout({
       name: (enrollment.name as string) || 'Your', sex,
-      track: trackOverride || (intake.training_location === 'home' ? 'home' : 'gym'),
+      track: trackToday,
       level, goal,
+      // Dumbbell / kettlebell days (2026-11-10): gym switches between them,
+      // home uses what she has; "Switch" on the workout wins for today.
+      weights: weightsFor(intake.form_data as { home_kettlebells?: boolean } | null, trackToday, todayAdjustment?.workoutChange?.weightOverride),
       daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyles, focusArea,
       overrideAreas: focusOverride?.length ? focusOverride : undefined,
       progressionOverrides,
@@ -274,11 +279,16 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
   const askQuickstartGoal = !!fd.quickstart_built && !fd.quickstart_goal_answered
   const isGuest = !!user.is_anonymous
 
+  // "Today I'm at: Gym | Home" + "Kettlebell day · Switch" (2026-11-10, Asa) —
+  // shown on her first workout screen, today only.
+  const homeKb = (intake?.form_data as { home_kettlebells?: boolean } | null)?.home_kettlebells
+  const setup = intake ? { where: program.track as 'gym' | 'home', homeKb: typeof homeKb === 'boolean' ? homeKb : null } : undefined
+
   return (
     // Full screen (2026-10-29): cancels the layout's tab-bar padding, since
     // the tab bar is hidden here.
     <div className="min-h-[100dvh] px-4 pt-0" style={{ background: '#021F16', marginBottom: 'calc(-4.5rem - env(safe-area-inset-bottom))' }}>
-      <WorkoutPlayer program={program} firstName={firstName} hasRealName={hasRealName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} askQuickstartGoal={askQuickstartGoal} isGuest={isGuest} />
+      <WorkoutPlayer program={program} firstName={firstName} hasRealName={hasRealName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} askQuickstartGoal={askQuickstartGoal} isGuest={isGuest} setup={setup} />
       {/* "Training somewhere different today? Tell Coach" now lives in the
           workout's ⋯ menu (2026-10-29: full-screen workout, nothing below it). */}
     </div>

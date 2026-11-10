@@ -9,6 +9,7 @@ import { howToFor, cueOrHowTo } from './exercise-howto'
 import { NOT_EXACT_ON_SCREEN } from './exercise-images'
 import { DELOAD_CUE, deloadSets } from './double-progression'
 import { ATOMIC_LIBRARY } from './exercise-library'
+import { weightLabel, type WeightTag } from './weight-tags'
 
 const isCore = (name: string) => !!ATOMIC_LIBRARY.find((e) => e.name === name && e.movementPattern.startsWith('core_'))
 
@@ -24,6 +25,7 @@ export interface Move {
   seconds?: number        // a timed move ("40 sec") instead of reps
   eachSide?: boolean
   progressCue?: string    // double progression: "Go up a weight today." — small gold line under the reps
+  weight?: WeightTag      // what she grabs: Dumbbells / Kettlebell / No weights … (2026-11-10)
 }
 
 export interface Block {
@@ -65,6 +67,12 @@ const move = (name: string, scheme: string, cue?: string, imageUrl?: string, ext
 }
 
 export function buildBlocks(program: WorkoutProgram, dayIdx: number): Block[] {
+  // Every move carries one weight tag so she knows what to grab.
+  return buildBlocksRaw(program, dayIdx).map((b) => b.kind !== 'exercise' ? b
+    : { ...b, moves: b.moves.map((m) => { const w = weightLabel(m.name); return w ? { ...m, weight: w } : m }) })
+}
+
+function buildBlocksRaw(program: WorkoutProgram, dayIdx: number): Block[] {
   const blocks: Block[] = []
   // Double progression (2026-10-30): a tracked lift shows HER target number
   // on every set, not the bottom of the printed range.

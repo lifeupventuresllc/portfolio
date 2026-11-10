@@ -26,6 +26,8 @@ const FULL: MuscleGroup[] = ['quads', 'glutes', 'hamstrings', 'back', 'shoulders
 // One part of a move's name → the muscles that part works. First match wins.
 const RULES: [RegExp, MuscleGroup[]][] = [
   [/burpee|man maker|clean|snatch|thruster/i, FULL],
+  [/get-?up/i, FULL],
+  [/halo|around the world/i, ['shoulders', 'core']],
   [/leg raise|knee raise|knee tuck|hanging|flutter|scissor/i, ['core']],
   [/back extension|hyperextension|superman/i, ['back', 'glutes']],
   [/tricep|skull/i, ['triceps']],

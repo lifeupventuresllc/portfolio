@@ -21,6 +21,15 @@ const MONO = "var(--font-jbmono), 'JetBrains Mono', monospace"
 const pill = { fontFamily: MONO, fontWeight: 700, letterSpacing: '.1em' } as const
 const FALLBACK = ['/images/app/pexels-8846586.jpg', '/images/app/pexels-8402239.jpg', '/images/app/pexels-7746282.jpg']
 
+// What she grabs (2026-11-10): one small tag on every move.
+const KB_BLUE = '#7FC8FF'
+const weightColor = (w: string) => (w === 'Kettlebell' ? KB_BLUE : w === 'No weights' ? MINT : w === 'Dumbbells' ? GOLD : INK)
+function WeightTag({ w }: { w?: string }) {
+  if (!w) return null
+  const c = weightColor(w)
+  return <span className="inline-block shrink-0 rounded-full px-2 py-0.5 normal-case" style={{ ...pill, fontStyle: 'normal', fontSize: 10.5, letterSpacing: '.08em', lineHeight: 1.4, color: c, border: `1px solid ${c}88`, background: 'rgba(2,31,22,.7)', textTransform: 'uppercase' }}>{w}</span>
+}
+
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 const repText = (m: Move, round: number) => {
   if (m.seconds) return m.seconds >= 120 ? `${Math.round(m.seconds / 60)} min` : `${m.seconds} sec`
@@ -64,8 +73,9 @@ function Circles({ total, done, active }: { total: number; done: number; active:
   )
 }
 
-export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onProgress, onClose, menu, levelLabel }: {
+export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onProgress, onClose, menu, levelLabel, setup }: {
   blocks: Block[]
+  setup?: ReactNode           // "Today I'm at: Gym | Home" + weight switch — first screen only (2026-11-10)
   levelLabel?: string         // 'Beginner' — a small label on each exercise (2026-11-05), never in the move's name
   onFinish: () => void
   onEffort: (names: string[], effort: Effort, setIndex: number) => void
@@ -239,6 +249,7 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
             {(block.lines || []).map((l, k) => <li key={k} className="flex gap-2.5"><span style={{ color: GOLD }}>•</span>{l}</li>)}
           </ul>
           <p className="text-[15px]" style={{ color: MUTE }}>{block.kind === 'warmup' ? 'Easy pace. Just get warm.' : 'Slow breaths. You earned this.'}</p>
+          {bi === 0 && setup}
         </div>
         <div className="px-5 pb-6 pt-4">
           <button onClick={done} className="rw-cta nf-press w-full h-16 rounded-full uppercase" style={{ ...pill, fontSize: 17, background: GOLD, color: BG }}>
@@ -300,6 +311,7 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
                   </span>
                   <span className="shrink-0 flex flex-col items-end gap-0.5">
                     <span style={{ ...pill, fontSize: 13, color: INK }}>{repText(m, round).toUpperCase()}</span>
+                    <WeightTag w={m.weight} />
                     {m.progressCue && <span className="text-[12px] font-semibold text-right" style={{ color: GOLD }}>{m.progressCue}</span>}
                   </span>
                 </div>
@@ -318,7 +330,12 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
             </div>
           ) : (
             <div className="flex flex-col gap-1">
-              {(block.abs || levelLabel) && block.kind === 'exercise' && <span style={{ ...pill, fontSize: 11, letterSpacing: '.16em', color: MUTE }}>{block.abs && <span style={{ color: GOLD }}>ABS{levelLabel ? ' · ' : ''}</span>}{levelLabel?.toUpperCase()}</span>}
+              {(block.abs || levelLabel || single.weight) && block.kind === 'exercise' && (
+                <span className="flex items-center gap-2 flex-wrap">
+                  {(block.abs || levelLabel) && <span style={{ ...pill, fontSize: 11, letterSpacing: '.16em', color: MUTE }}>{block.abs && <span style={{ color: GOLD }}>ABS{levelLabel ? ' · ' : ''}</span>}{levelLabel?.toUpperCase()}</span>}
+                  <WeightTag w={single.weight} />
+                </span>
+              )}
               <h1 className="nf-head text-balance" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: single.name.length > 24 ? 40 : 50, lineHeight: 0.9, textTransform: 'uppercase' }}>{single.name}</h1>
             </div>
           )}

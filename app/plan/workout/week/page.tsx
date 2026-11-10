@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { weightsFor } from '@/lib/weight-tags'
 import { localDateISO } from '@/lib/localdate'
 import { getRestPick } from '@/lib/rest-rule-server'
 import { restDayLine } from '@/lib/rest-rule'
@@ -67,6 +68,7 @@ export default async function WorkoutWeekPage() {
       name: (enrollment.name as string) || 'Your', sex, track: intake.training_location === 'home' ? 'home' : 'gym',
       level, goal, daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyles, focusArea,
       activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
+      weights: weightsFor(intake.form_data as { home_kettlebells?: boolean } | null, intake.training_location === 'home' ? 'home' : 'gym'),
     })
   }
 

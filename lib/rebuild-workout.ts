@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { weightsFor } from '@/lib/weight-tags'
 import { generateWorkout, type TrainingStyle, type FocusArea, type WorkoutInputs, type WorkoutProgram } from '@/lib/workout'
 import { ENGINE_VERSION } from '@/lib/workout-assembly'
 import type { Level, Injury } from '@/lib/workout-exercises'
@@ -39,6 +40,7 @@ export async function regenerateWorkoutFromIntake(
     trainingStyles,
     focusArea,
     activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
+    weights: weightsFor(formData as { home_kettlebells?: boolean } | null, track === 'home' ? 'home' : 'gym'),
   })
 
   const payload = {

@@ -26,9 +26,16 @@ export interface ComboMove {
   legs: 'knee' | 'hip' | 'none'
   avoid: Injury[]          // injuries that swap it out
   cue: string
+  weight: ComboWeight      // what she holds (2026-11-10: dumbbell or kettlebell days)
 }
 
-const c = (name: string, level: SkillLevel, group: ComboGroup, legs: ComboMove['legs'], avoid: Injury[], cue: string): ComboMove => ({ name, level, group, legs, avoid, cue })
+/** The weight a combo uses. Kettlebell moves always say "Kettlebell" in the name. */
+export type ComboWeight = 'dumbbell' | 'kettlebell'
+/** What weights she wants: one kind, or both (alternating days). */
+export type WeightChoice = ComboWeight | 'both'
+
+const c = (name: string, level: SkillLevel, group: ComboGroup, legs: ComboMove['legs'], avoid: Injury[], cue: string): ComboMove => ({ name, level, group, legs, avoid, cue, weight: 'dumbbell' })
+const k = (name: string, level: SkillLevel, group: ComboGroup, legs: ComboMove['legs'], avoid: Injury[], cue: string): ComboMove => ({ name, level, group, legs, avoid, cue, weight: 'kettlebell' })
 
 export const COMBO_MOVES: ComboMove[] = [
   // Lower body + arms
@@ -84,12 +91,43 @@ export const COMBO_MOVES: ComboMove[] = [
   // Lower body + arms / shoulders (rounding out Asa's list of 36)
   c('Goblet Squat + Press Out', 1, 'shoulders', 'knee', ['knee'], 'Hold one dumbbell at your chest, squat, and press it straight out in front at the bottom.'),
   c('Glute Bridge + Triceps Extension', 1, 'chest', 'hip', ['elbow'], 'Hold a bridge, lower the dumbbells to your ears and press back up.'),
+
+  // 2026-11-10 (Asa's screenshots): renegade rows step up by level — knees first, then toes.
+  c('Kneeling Renegade Row', 1, 'back', 'none', ['wrist', 'shoulder'], 'On hands and knees, hands on two dumbbells under your shoulders. Row one to your ribs, set it down, row the other. Keep your hips still.'),
+  c('Renegade Row', 2, 'back', 'none', ['wrist', 'shoulder', 'lower_back'], 'High plank on your toes, hands on two dumbbells, feet wide. Row one to your ribs, set it down, then the other. Hips stay level.'),
+  c('Tall-Kneeling Halo + Overhead Triceps Extension', 1, 'arms', 'none', ['elbow', 'shoulder'], 'Kneel tall, squeeze your glutes. Circle one dumbbell around your head, then lower it behind your head and press it back up.'),
+  c('Dumbbell Gorilla Row', 2, 'back', 'none', ['lower_back'], 'Wide stance, hinge low with flat back, dumbbells between your feet. Row one to your ribs while the other stays down, then switch.'),
+
+  // ---- KETTLEBELL moves (2026-11-10): her kettlebell days. One bell unless it says "Double". ----
+  // Lower body days
+  k('Kettlebell Goblet Squat + Curl', 1, 'arms', 'knee', ['knee', 'elbow'], 'Hold the bell by the horns at your chest. Squat, stand tall, then curl the bell from your hips to your chest.'),
+  k('Kettlebell Deadlift + Upright Row', 1, 'back', 'hip', ['lower_back', 'shoulder'], 'Bell between your feet. Hinge and deadlift it up, then pull it to chest height with elbows high.'),
+  k('Kettlebell Glute Bridge + Chest Press', 1, 'chest', 'hip', ['wrist'], 'On your back, hold the bell by the horns over your chest. Bridge your hips up and press the bell up together.'),
+  k('Kettlebell Goblet Squat + Press Out', 1, 'shoulders', 'knee', ['knee'], 'Hold the bell at your chest, squat, and press it straight out in front at the bottom. Pull it back in and stand.'),
+  k('Kettlebell Swing + Goblet Squat', 2, 'full', 'hip', ['lower_back', 'knee'], 'Hike the bell back and snap your hips to swing it to chest height. Catch it at your chest and squat.'),
+  k('Kettlebell Clean + Press', 2, 'shoulders', 'hip', ['shoulder', 'wrist', 'lower_back'], 'Swing the bell up to rest on your forearm at your shoulder, then press it overhead. Switch sides each set.'),
+  k('Kettlebell Reverse Lunge + Press', 2, 'shoulders', 'knee', ['knee', 'shoulder'], 'Bell at your shoulder. Step back into a lunge, stand, then press the bell overhead.'),
+  k('Kettlebell Single-Leg Deadlift + Row', 2, 'back', 'hip', ['lower_back', 'ankle'], 'Bell in one hand. Hinge on the opposite leg, back leg reaching back, row the bell to your ribs, then stand.'),
+  k('Kettlebell Lunge + Halo', 2, 'core', 'knee', ['knee', 'shoulder'], 'Lunge, hold the bottom, circle the bell around your head once, then stand.'),
+  k('Kettlebell Clean + Squat + Press', 3, 'full', 'knee', ['knee', 'shoulder', 'wrist', 'lower_back'], 'Clean the bell to your shoulder, front squat, and press overhead as you stand.'),
+  k('Kettlebell Swing + High Pull', 3, 'back', 'hip', ['lower_back', 'shoulder'], 'Swing the bell up with your hips, then pull it to your chin with your elbow high. Let it swing back.'),
+  k('Kettlebell Turkish Get-Up', 3, 'full', 'knee', ['shoulder', 'wrist', 'knee'], 'Lying down, bell locked out overhead. Stand up one step at a time with your eyes on the bell, then reverse it slowly.'),
+  k('Double Kettlebell Front Squat + Press', 3, 'shoulders', 'knee', ['knee', 'shoulder', 'wrist'], 'Two bells at your shoulders. Front squat, stand, and press both overhead.'),
+  // Upper body days (no leg work)
+  k('Kettlebell Halo + Bent-Over Row', 1, 'back', 'none', ['shoulder', 'lower_back'], 'Circle the bell around your head, then hinge forward and row it to your ribs with one hand. Switch sides.'),
+  k('Kettlebell Floor Press + Pullover', 1, 'chest', 'none', ['shoulder', 'wrist'], 'On the floor, press the bell up by the horns, then lower it behind your head and pull it back over.'),
+  k('Kettlebell Curl + Press', 1, 'shoulders', 'none', ['shoulder', 'elbow'], 'Curl the bell to your shoulder, then press it overhead. Switch sides each set.'),
+  k('Kettlebell Curl + Overhead Triceps Extension', 1, 'arms', 'none', ['elbow', 'shoulder'], 'Curl the bell by the horns, then hold it behind your head and press it up.'),
+  k('Kettlebell Gorilla Row', 2, 'back', 'none', ['lower_back'], 'Two bells between your feet, wide stance, flat back. Row one bell to your ribs, set it down, row the other.'),
+  k('Kettlebell Around the World + Overhead Press', 2, 'shoulders', 'none', ['shoulder', 'lower_back'], 'Pass the bell around your waist hand to hand, then press it overhead. Switch the direction each set.'),
+  k('Kettlebell Floor Press + Skull Crusher', 2, 'chest', 'none', ['elbow', 'wrist'], 'On the floor, press the bell up by the horns, then bend only your elbows to lower it by your forehead and press back.'),
+  k('Double Kettlebell Gorilla Row + Press', 3, 'full', 'none', ['lower_back', 'shoulder'], 'Gorilla row both bells, stand, clean them to your shoulders and press overhead.'),
 ]
 
-/** Combos she can do at her level, minus any that load what hurts.
+/** Combos she can do at her level, minus any that load what hurts (and, given a weight, only that kind).
  *  zone 'upper' = no leg work at all (upper-body days); 'lower' = leg combos. */
-export function combosFor(level: SkillLevel, injuries: Injury[], zone?: 'lower' | 'upper'): ComboMove[] {
-  return COMBO_MOVES.filter((m) => m.level <= level && !m.avoid.some((a) => injuries.includes(a)) && !isContraindicated(m.name, injuries)
+export function combosFor(level: SkillLevel, injuries: Injury[], zone?: 'lower' | 'upper', weight?: ComboWeight): ComboMove[] {
+  return COMBO_MOVES.filter((m) => m.level <= level && (!weight || m.weight === weight) && !m.avoid.some((a) => injuries.includes(a)) && !isContraindicated(m.name, injuries)
     && (!zone || (zone === 'upper' ? m.legs === 'none' : m.legs !== 'none')))
 }
 

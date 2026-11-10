@@ -19,6 +19,9 @@ export interface WorkoutInputs {
   sex?: 'male' | 'female' | 'other'
   track: 'gym' | 'home'
   level: Level
+  // 2026-11-10: weights she uses on compound days. Unset = gym alternates
+  // dumbbell / kettlebell days, home = dumbbells (until the intake asks).
+  weights?: 'dumbbell' | 'kettlebell' | 'both'
   // 'recomp' = both "Lose fat" and "Build & tone" selected together (see
   // lib/goals.ts) — a real body-recomposition goal, not a UI glitch.
   goal: 'lose' | 'gain' | 'maintain' | 'recomp'

@@ -9,6 +9,8 @@ import QuickstartGoalAsk from '@/components/QuickstartGoalAsk'
 import WorkoutMusicPlayer from '@/components/WorkoutMusicPlayer'
 import RewardDrop from '@/components/RewardDrop'
 import WorkoutFlow from '@/components/WorkoutFlow'
+import TodaySetup from '@/components/TodaySetup'
+import { dayWeight } from '@/lib/weight-tags'
 import { buildBlocks, trimBlocksToTarget } from '@/lib/workout-blocks'
 import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { dayLabels } from '@/lib/workout-steps'
@@ -16,7 +18,7 @@ import type { WorkoutProgram } from '@/lib/workout'
 import { hapticTap } from '@/lib/haptics'
 import { unlockAudioContext } from '@/lib/countdown-beep'
 
-export default function WorkoutPlayer({ program, firstName, hasRealName = true, startDay = 0, targetMinutes, askQuickstartGoal = false, isGuest = false }: {
+export default function WorkoutPlayer({ program, firstName, hasRealName = true, startDay = 0, targetMinutes, askQuickstartGoal = false, isGuest = false, setup }: {
   program: WorkoutProgram
   firstName: string
   // Real bug found live: "there" (firstName's fallback for a nameless guest
@@ -36,6 +38,8 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
   askQuickstartGoal?: boolean
   // Anonymous guest — finish screen offers "Save my plan" (/plan/save).
   isGuest?: boolean
+  // Today I'm at Gym | Home + dumbbell/kettlebell switch (2026-11-10).
+  setup?: { where: 'gym' | 'home'; homeKb: boolean | null }
 }) {
   const router = useRouter()
   const labels = dayLabels(program)
@@ -197,6 +201,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
         onClose={() => { savedRef.current.finally(() => router.push('/plan')) }}
         menu={elsewhere}
         levelLabel={program.levelLabel}
+        setup={setup ? <TodaySetup where={setup.where} homeKb={setup.homeKb} weightToday={dayWeight(program.track === 'home' ? program.home?.days[dayIdx] : program.gymDays?.[dayIdx])} /> : undefined}
       />
       {/* Music: one small pill, top right under the menu button, through
           every screen of the workout (stays mounted, so songs don't restart). */}

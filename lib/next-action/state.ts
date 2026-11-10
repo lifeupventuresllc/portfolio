@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/server'
+import { weightsFor } from '@/lib/weight-tags'
 import { getRestPick } from '@/lib/rest-rule-server'
 import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import { computeLowFuelToday } from '@/lib/workout-assembly'
@@ -156,6 +157,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
       activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
       lowFuelToday: computeLowFuelToday(caloriesSoFar, localHourNumber(tz)),
       recentlyTrainedMuscles,
+      weights: weightsFor(intake.form_data as { home_kettlebells?: boolean } | null, trackOverride || (intake.training_location === 'home' ? 'home' : 'gym'), effectiveTodayAdjustment?.workoutChange?.weightOverride),
     })
     // Only ever an INSERT here (an existing row already got its own real
     // update via /plan/workout's own regeneration path when she visits it —
