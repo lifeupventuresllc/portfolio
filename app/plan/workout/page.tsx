@@ -16,6 +16,10 @@ import { getRecentlyTrainedMuscles, getExerciseSessions } from '@/lib/progressio
 import { parseStoredGoal } from '@/lib/goals'
 import { parseStoredTrainingStyles } from '@/lib/training-styles'
 import { weightsFor } from '@/lib/weight-tags'
+import { applyAlwaysSwaps, readAlwaysSwaps } from '@/lib/always-swaps'
+import { pickWeight } from '@/lib/weight-picker'
+import { buildBlocks } from '@/lib/workout-blocks'
+import { getLastWeights } from '@/lib/progression'
 
 export const dynamic = 'force-dynamic'
 
@@ -173,6 +177,9 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
     })
   }
 
+  // Swap → "Always" (2026-11-12): moves she can't do at her gym/home never come back.
+  program = applyAlwaysSwaps(program, readAlwaysSwaps(intake?.form_data))
+
   // Anchor rotation to her PERMANENT plan's day count, not the (possibly track-swapped)
   // program being shown today — her position in the push-pull sequence shouldn't shift
   // just because today's session is on a different track. generateHome/generateGym now
@@ -281,14 +288,30 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
 
   // "Today I'm at: Gym | Home" + "Kettlebell day · Switch" (2026-11-10, Asa) —
   // shown on her first workout screen, today only.
+  // The weight to use on every move (2026-11-12, "like Fitbod"): her last
+  // logged weight, moved a step when double progression says so; a start
+  // weight from her level + body weight the first time (lib/weight-picker.ts).
+  const lastWeights = await getLastWeights(enrollment.id as string)
+  const person = { level, bodyweightLb: Number(intake?.weight_lbs) || undefined, sex: (intake?.sex === 'male' ? 'male' : 'female') as 'male' | 'female' }
+  const weights: Record<string, number> = {}
+  const dayCount = program.track === 'home' ? (program.home?.days.length || 0) : (program.gymDays?.length || 0)
+  for (let d = 0; d < dayCount; d++) for (const b of buildBlocks(program, d)) for (const m of b.moves) {
+    if (m.name in weights) continue
+    const w = pickWeight(m.name, person, lastWeights[m.name], program.progression?.[m.name]?.cue)
+    if (w) weights[m.name] = w
+  }
+  program = { ...program, weights }
+
   const homeKb = (intake?.form_data as { home_kettlebells?: boolean } | null)?.home_kettlebells
   const setup = intake ? { where: program.track as 'gym' | 'home', homeKb: typeof homeKb === 'boolean' ? homeKb : null } : undefined
+  // What Swap needs to pick safe moves she can do where she is today.
+  const swapCtx = { location: program.track as 'gym' | 'home', level, injuries, person }
 
   return (
     // Full screen (2026-10-29): cancels the layout's tab-bar padding, since
     // the tab bar is hidden here.
     <div className="min-h-[100dvh] px-4 pt-0" style={{ background: '#021F16', marginBottom: 'calc(-4.5rem - env(safe-area-inset-bottom))' }}>
-      <WorkoutPlayer program={program} firstName={firstName} hasRealName={hasRealName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} askQuickstartGoal={askQuickstartGoal} isGuest={isGuest} setup={setup} />
+      <WorkoutPlayer program={program} firstName={firstName} hasRealName={hasRealName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} askQuickstartGoal={askQuickstartGoal} isGuest={isGuest} setup={setup} swapCtx={swapCtx} />
       {/* "Training somewhere different today? Tell Coach" now lives in the
           workout's ⋯ menu (2026-10-29: full-screen workout, nothing below it). */}
     </div>

@@ -141,12 +141,34 @@ export function immediateAdjustment(effort: Effort): { repCue: string; restBumpS
 // Deliberately does NOT touch progression_state: an untapped set is not an
 // effort signal, and must not reset the Easy/Hard streaks there.
 export async function logSetDone(enrollmentId: string, userId: string, exerciseName: string,
-  movementPattern: MovementPattern, muscleGroups: string[], setIndex: number): Promise<void> {
+  movementPattern: MovementPattern, muscleGroups: string[], setIndex: number, weightLb?: number): Promise<void> {
   const svc = createServiceClient()
-  await svc.from('workout_set_logs').insert({
+  const row = {
     enrollment_id: enrollmentId, user_id: userId, exercise_name: exerciseName,
     movement_pattern: movementPattern, muscle_groups: muscleGroups, effort: 'right', set_index: setIndex,
-  })
+  }
+  // The weight she used (migration 052). Until 052 is run the column doesn't
+  // exist, so the set is still saved — just without the weight.
+  if (weightLb) {
+    const { error } = await svc.from('workout_set_logs').insert({ ...row, weight_lb: weightLb })
+    if (!error) return
+  }
+  await svc.from('workout_set_logs').insert(row)
+}
+
+// The last weight she used on each move (migration 052) — where today's
+// suggested weight starts (lib/weight-picker.ts). Empty before 052 is run.
+export async function getLastWeights(enrollmentId: string): Promise<Record<string, number>> {
+  const svc = createServiceClient()
+  const { data, error } = await svc.from('workout_set_logs').select('exercise_name, weight_lb')
+    .eq('enrollment_id', enrollmentId).not('weight_lb', 'is', null).order('created_at', { ascending: false }).limit(2000)
+  if (error || !data) return {}
+  const out: Record<string, number> = {}
+  for (const r of data as { exercise_name: string; weight_lb: number | string }[]) {
+    const w = Number(r.weight_lb)
+    if (!(r.exercise_name in out) && w > 0) out[r.exercise_name] = w
+  }
+  return out
 }
 
 // Her real sessions per exercise name, ready for generateWorkout's

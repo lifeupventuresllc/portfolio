@@ -17,7 +17,7 @@ export type WeightTag = 'Dumbbells' | 'Kettlebell' | 'Barbell' | 'Machine' | 'Ba
 /** The one tag for a move, or null when we don't know the move (treadmill, warm-up lines). */
 export function weightLabel(name: string): WeightTag | null {
   const combo = COMBO_MOVES.find((m) => m.name === name)
-  if (combo) return combo.weight === 'kettlebell' ? 'Kettlebell' : 'Dumbbells'
+  if (combo) return combo.weight === 'kettlebell' ? 'Kettlebell' : /^push-up \+ shoulder tap$/i.test(name) ? 'No weights' : 'Dumbbells'
   const e = ATOMIC_LIBRARY.find((x) => x.name === name)
   if (!e) return /treadmill|bike|rower|stair|elliptical/i.test(name) ? 'Machine' : null
   const eq = e.equipment

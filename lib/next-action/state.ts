@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { weightsFor } from '@/lib/weight-tags'
+import { applyAlwaysSwaps, readAlwaysSwaps } from '@/lib/always-swaps'
 import { getRestPick } from '@/lib/rest-rule-server'
 import { generateWorkout, type WorkoutProgram, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import { computeLowFuelToday } from '@/lib/workout-assembly'
@@ -159,6 +160,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
       recentlyTrainedMuscles,
       weights: weightsFor(intake.form_data as { home_kettlebells?: boolean } | null, trackOverride || (intake.training_location === 'home' ? 'home' : 'gym'), effectiveTodayAdjustment?.workoutChange?.weightOverride),
     })
+    program = applyAlwaysSwaps(program, readAlwaysSwaps(intake.form_data))
     // Only ever an INSERT here (an existing row already got its own real
     // update via /plan/workout's own regeneration path when she visits it —
     // this engine isn't the place to overwrite an already-published plan

@@ -8,7 +8,7 @@ import EffortTap from '@/components/EffortTap'
 import QuickstartGoalAsk from '@/components/QuickstartGoalAsk'
 import WorkoutMusicPlayer from '@/components/WorkoutMusicPlayer'
 import RewardDrop from '@/components/RewardDrop'
-import WorkoutFlow from '@/components/WorkoutFlow'
+import WorkoutFlow, { type SwapCtx } from '@/components/WorkoutFlow'
 import TodaySetup from '@/components/TodaySetup'
 import { dayWeight } from '@/lib/weight-tags'
 import { buildBlocks, trimBlocksToTarget } from '@/lib/workout-blocks'
@@ -18,7 +18,7 @@ import type { WorkoutProgram } from '@/lib/workout'
 import { hapticTap } from '@/lib/haptics'
 import { unlockAudioContext } from '@/lib/countdown-beep'
 
-export default function WorkoutPlayer({ program, firstName, hasRealName = true, startDay = 0, targetMinutes, askQuickstartGoal = false, isGuest = false, setup }: {
+export default function WorkoutPlayer({ program, firstName, hasRealName = true, startDay = 0, targetMinutes, askQuickstartGoal = false, isGuest = false, setup, swapCtx }: {
   program: WorkoutProgram
   firstName: string
   // Real bug found live: "there" (firstName's fallback for a nameless guest
@@ -40,6 +40,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
   isGuest?: boolean
   // Today I'm at Gym | Home + dumbbell/kettlebell switch (2026-11-10).
   setup?: { where: 'gym' | 'home'; homeKb: boolean | null }
+  swapCtx?: SwapCtx
 }) {
   const router = useRouter()
   const labels = dayLabels(program)
@@ -187,11 +188,11 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
           }
           if (askQuickstartGoal && !goalHidden) setShowGoal(true)
         }}
-        onSetDone={(names, setIndex) => {
+        onSetDone={(names, setIndex, weights) => {
           for (const exerciseName of names) {
             fetch('/api/plan/workout/set-effort', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ exerciseName, done: true, setIndex }),
+              body: JSON.stringify({ exerciseName, done: true, setIndex, weightLb: weights?.[exerciseName] }),
             }).catch(() => {})
           }
         }}
@@ -201,6 +202,10 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
         onClose={() => { savedRef.current.finally(() => router.push('/plan')) }}
         menu={elsewhere}
         levelLabel={program.levelLabel}
+        swapCtx={swapCtx}
+        onAlwaysSwap={(from, to) => {
+          fetch('/api/plan/workout/always-swap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from, to }) }).catch(() => {})
+        }}
         setup={setup ? <TodaySetup where={setup.where} homeKb={setup.homeKb} weightToday={dayWeight(program.track === 'home' ? program.home?.days[dayIdx] : program.gymDays?.[dayIdx])} /> : undefined}
       />
       {/* Music: one small pill, top right under the menu button, through

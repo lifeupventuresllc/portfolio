@@ -4,7 +4,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import { hapticTap } from '@/lib/haptics'
 import { playCountdownBeep } from '@/lib/countdown-beep'
-import type { Block, Move } from '@/lib/workout-blocks'
+import { withWeight, type Block, type Move } from '@/lib/workout-blocks'
+import { stepWeight, weightUnit, formatLb, pickWeight, type WeightPerson } from '@/lib/weight-picker'
+import { swapOptionsFor, type SwapWhy } from '@/lib/swap-options'
+import { exerciseVideo } from '@/lib/exercise-videos'
+import { NOT_EXACT_ON_SCREEN } from '@/lib/exercise-images'
+import type { Injury } from '@/lib/workout-exercises'
 import type { Effort } from '@/components/SetEffortTap'
 
 // The workout screen (2026-10-29, Asa's spec): ONE exercise at a time, full
@@ -81,19 +86,39 @@ function Circles({ total, done, active }: { total: number; done: number; active:
   )
 }
 
-export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onProgress, onClose, menu, levelLabel, setup }: {
+export interface SwapCtx { location: 'gym' | 'home'; level: number; injuries: Injury[]; person: WeightPerson }
+
+export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, onSetDone, onProgress, onClose, menu, levelLabel, setup, swapCtx, onAlwaysSwap }: {
   blocks: Block[]
+  swapCtx?: SwapCtx           // Swap (2026-11-12): what she can do where she is today
+  onAlwaysSwap?: (from: string, to: string) => void
   setup?: ReactNode           // "Today I'm at: Gym | Home" + weight switch — first screen only (2026-11-10)
   levelLabel?: string         // 'Beginner' — a small label on each exercise (2026-11-05), never in the move's name
   onFinish: () => void
   onEffort: (names: string[], effort: Effort, setIndex: number) => void
   // Double progression: every Done on a rep set is logged (0-based set index),
   // so a finished session can be told apart from a cut-short one.
-  onSetDone?: (names: string[], setIndex: number) => void
+  onSetDone?: (names: string[], setIndex: number, weights?: Record<string, number>) => void
   onProgress?: (doneExercises: number, totalExercises: number) => void
   onClose: () => void
   menu?: ReactNode            // day switch / music / trained elsewhere, tucked behind "⋯"
 }) {
+  // Her own copy of today's moves, so a Swap changes this workout right away.
+  // A new workout (Gym/Home switch, another day) starts fresh.
+  const sig = blocksProp.map((b) => b.moves.map((m) => m.name).join('|')).join('/')
+  const [blocks, setBlocks] = useState(blocksProp)
+  const sigRef = useRef(sig)
+  useEffect(() => { if (sig !== sigRef.current) { sigRef.current = sig; setBlocks(blocksProp); setLbs({}) } }, [sig]) // eslint-disable-line react-hooks/exhaustive-deps
+  // The weight she's using — starts at the app's pick, she taps + or − if hers is different.
+  const [lbs, setLbs] = useState<Record<string, number>>({})
+  const lbOf = (m: Move) => lbs[m.name] ?? m.weightLb
+  const bump = (m: Move, dir: 1 | -1) => { const w = lbOf(m); if (!w || !m.weightKind) return; hapticTap(); setLbs((x) => ({ ...x, [m.name]: stepWeight(w, m.weightKind!, dir) })) }
+  // Swap sheet
+  const [swapOpen, setSwapOpen] = useState(false)
+  const [swapIdx, setSwapIdx] = useState<number | null>(null)
+  const [why, setWhy] = useState<SwapWhy>('taken')
+  const [keep, setKeep] = useState<'today' | 'always'>('today')
+  const [toast, setToast] = useState<string | null>(null)
   const [bi, setBi] = useState(0)
   const [round, setRound] = useState(0)        // circles filled on this screen
   const [phase, setPhase] = useState<'work' | 'rest'>('work')
@@ -153,8 +178,11 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
     hapticTap(30)
     window.dispatchEvent(new Event('luf-music-start'))
     if (block.kind !== 'exercise') { next(); return }
-    const counted = block.moves.filter((m) => !m.seconds).map((m) => m.name)
-    if (counted.length) onSetDone?.(counted, round)
+    const countedMoves = block.moves.filter((m) => !m.seconds)
+    const counted = countedMoves.map((m) => m.name)
+    const used: Record<string, number> = {}
+    for (const m of countedMoves) { const w = lbOf(m); if (w) used[m.name] = w }
+    if (counted.length) onSetDone?.(counted, round, used)
     const filled = round + 1
     setRound(filled)
     setTimer(null)
@@ -219,8 +247,95 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
     onEffort(block.moves.map((m) => m.name), e, round - 1)
   }
 
+  function openSwap() {
+    hapticTap(); setWhy('taken'); setKeep('today')
+    setSwapIdx(block && block.moves.length === 1 ? 0 : null); setSwapOpen(true)
+  }
+  function pickSwap(name: string, cue: string | undefined, imageUrl: string | undefined) {
+    if (!block || swapIdx == null) return
+    const old = block.moves[swapIdx]
+    const lb = swapCtx ? pickWeight(name, swapCtx.person) ?? undefined : undefined
+    const fresh = withWeight({ name, cue, imageUrl: imageUrl && !NOT_EXACT_ON_SCREEN.has(name) ? imageUrl : undefined, videoUrl: exerciseVideo(name), reps: old.reps, seconds: old.seconds }, lb)
+    setBlocks((bs) => bs.map((b, i) => i !== bi ? b : { ...b, moves: b.moves.map((m, k) => (k === swapIdx ? fresh : m)) }))
+    const always = keep === 'always' && canAlways(old)
+    if (always) onAlwaysSwap?.(old.name, name)
+    hapticTap(40); setSwapOpen(false)
+    setToast(always ? `Swapped. You won’t get ${old.name} again.` : 'Swapped for today.')
+    setTimeout(() => setToast(null), 2600)
+  }
+  // The treadmill finisher isn't a saved move, so it swaps for today only.
+  const canAlways = (m: Move) => m.name !== 'Incline Treadmill Walk'
+
   if (!block) return null
   const pair = block.moves.length > 1
+  const swapMove = swapIdx != null ? block.moves[swapIdx] : null
+  const swapOpts = swapOpen && swapMove && swapCtx
+    ? swapOptionsFor(swapMove.name, { ...swapCtx, exclude: blocks.flatMap((b) => b.moves.map((m) => m.name)), why })
+    : []
+  const chip = (on: boolean) => ({ border: `1px solid ${on ? GOLD : 'rgba(237,231,218,.18)'}`, background: on ? 'rgba(229,169,60,.12)' : 'transparent', color: on ? GOLD : INK })
+  const swapSheet = swapOpen ? (
+    <>
+      <div className="absolute inset-0 z-30" style={{ background: 'rgba(1,10,7,.6)' }} onClick={() => setSwapOpen(false)} />
+      <div role="dialog" aria-label="Swap this move" className="absolute inset-x-0 bottom-0 z-40 rounded-t-[26px] px-5 pt-5 flex flex-col gap-3 max-h-[88%] overflow-y-auto"
+        style={{ background: '#04261B', borderTop: '1px solid rgba(237,231,218,.14)', paddingBottom: 'calc(20px + env(safe-area-inset-bottom))' }}>
+        {!swapMove ? (
+          <>
+            <h2 style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 28, lineHeight: 0.95, textTransform: 'uppercase' }}>Swap which one?</h2>
+            {block.moves.map((m, k) => (
+              <button key={k} onClick={() => { hapticTap(); setSwapIdx(k) }} className="nf-press w-full text-left rounded-2xl px-4 py-3.5 text-[16px] font-bold" style={{ background: 'rgba(237,231,218,.06)', border: '1px solid rgba(237,231,218,.14)', color: INK }}>{k + 1}. {m.name}</button>
+            ))}
+          </>
+        ) : (
+          <>
+            <h2 style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 28, lineHeight: 0.95, textTransform: 'uppercase' }}>Swap {swapMove.name}</h2>
+            <span className="text-[14px]" style={{ color: MUTE }}>What&apos;s going on?</span>
+            <div className="flex gap-2 flex-wrap" role="group" aria-label="Why swap">
+              {([['taken', 'Taken'], ['none', 'Not here'], ['hurts', 'It hurts']] as [SwapWhy, string][]).map(([w, label]) => (
+                <button key={w} aria-pressed={why === w} onClick={() => { hapticTap(); setWhy(w); setKeep(w === 'none' && canAlways(swapMove) ? 'always' : 'today') }}
+                  className="rounded-full px-3.5 py-2 text-[14px] font-semibold" style={chip(why === w)}>{label}</button>
+              ))}
+            </div>
+            {swapOpts.length ? swapOpts.map((o) => (
+              <button key={o.name} onClick={() => pickSwap(o.name, o.cue, o.imageUrl)} className="nf-press w-full text-left rounded-2xl px-4 py-3 flex flex-col gap-1" style={{ background: 'rgba(237,231,218,.06)', border: '1px solid rgba(237,231,218,.14)', color: INK }}>
+                <span className="flex items-center justify-between gap-3"><b className="text-[16px] leading-tight">{o.name}</b><WeightTag w={o.tag || undefined} /></span>
+                {o.cue && <span className="text-[13px] leading-snug" style={{ color: MUTE }}>{o.cue}</span>}
+              </button>
+            )) : <span className="text-[14px]" style={{ color: MUTE }}>No good swap for this one. You can skip it instead.</span>}
+            {canAlways(swapMove) && (
+              <div className="flex gap-1 p-1 rounded-full" role="group" aria-label="How long" style={{ background: 'rgba(237,231,218,.06)', border: '1px solid rgba(237,231,218,.14)' }}>
+                {([['today', 'Just today'], ['always', 'Always']] as ['today' | 'always', string][]).map(([k, label]) => (
+                  <button key={k} aria-pressed={keep === k} onClick={() => { hapticTap(); setKeep(k) }} className="flex-1 h-10 rounded-full text-[14px] font-bold"
+                    style={{ background: keep === k ? INK : 'transparent', color: keep === k ? BG : INK }}>{label}</button>
+                ))}
+              </div>
+            )}
+            {keep === 'always' && canAlways(swapMove) && <span className="text-[12px]" style={{ color: MUTE }}>{swapMove.name} won&apos;t show up in your workouts again.</span>}
+          </>
+        )}
+        <button onClick={() => setSwapOpen(false)} className="self-center text-[14px] underline underline-offset-4 py-1" style={{ color: MUTE }}>Cancel</button>
+      </div>
+    </>
+  ) : null
+  const toastEl = toast ? (
+    <div className="absolute inset-x-4 z-50 rounded-2xl px-4 py-3 text-center text-[14px] font-bold" role="status" style={{ top: 'calc(64px + env(safe-area-inset-top))', background: INK, color: BG }}>{toast}</div>
+  ) : null
+  const weightBox = (m: Move, compact?: boolean, label?: string) => {
+    const w = lbOf(m)
+    if (!w || !m.weightKind) return null
+    const btn = { width: compact ? 36 : 42, height: compact ? 36 : 42, border: '1px solid rgba(237,231,218,.18)', background: 'rgba(237,231,218,.06)', color: INK }
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-2xl" style={{ padding: compact ? '6px 8px 6px 12px' : '8px 10px 8px 14px', background: 'rgba(237,231,218,.05)', border: '1px solid rgba(237,231,218,.14)' }}>
+        <span className="flex flex-col min-w-0">
+          <span className="text-[12px]" style={{ color: MUTE }}>{label || 'Use this weight'}</span>
+          <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: compact ? 22 : 28, lineHeight: 1 }}>{formatLb(w)} <span style={{ fontSize: compact ? 14 : 16 }}>{weightUnit(m.weightKind).toUpperCase()}</span></span>
+        </span>
+        <span className="flex gap-1.5 shrink-0">
+          <button onClick={() => bump(m, -1)} aria-label={`Less weight for ${m.name}`} className="nf-press rounded-full text-[20px] font-extrabold" style={btn}>−</button>
+          <button onClick={() => bump(m, 1)} aria-label={`More weight for ${m.name}`} className="nf-press rounded-full text-[20px] font-extrabold" style={btn}>+</button>
+        </span>
+      </div>
+    )
+  }
   const single = block.moves[0]
   const timed = !pair && !!single?.seconds
 
@@ -307,7 +422,7 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
   // ---------- one exercise, or two back to back ----------
   return (
     <div className="wf-page relative flex flex-col" style={{ color: INK }}>
-      {style}{top}{menuSheet}
+      {style}{top}{menuSheet}{swapSheet}{toastEl}
       <div key={bi} className="wf-in flex-1 min-h-0 flex flex-col">
         {pair ? (
           <div className="flex flex-col flex-1 min-h-[240px]">
@@ -337,6 +452,7 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
             <div className="flex flex-col gap-1">
               <span style={{ ...pill, fontSize: 12, letterSpacing: '.16em', color: GOLD }}>{block.abs ? 'ABS' : 'SUPERSET'}{levelLabel ? <span style={{ color: MUTE }}> · {levelLabel.toUpperCase()}</span> : null}</span>
               <h1 className="nf-head" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 40, lineHeight: 0.92, textTransform: 'uppercase' }}>Do these back to back.</h1>
+              {block.moves.map((m, k) => <div key={k} className="mt-1.5">{weightBox(m, true, `${k + 1}. ${m.name}`)}</div>)}
             </div>
           ) : (
             <div className="flex flex-col gap-1">
@@ -361,6 +477,7 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
             )}
           </div>
           {/* Double progression: one short gold line under the reps ("Go up a weight today."). */}
+          {!pair && weightBox(single)}
           {!pair && single.progressCue && <p className="text-[14px] font-semibold leading-snug" style={{ color: GOLD, margin: '-6px 0 0' }}>{single.progressCue}</p>}
           {!pair && single.cue && <p className="text-[15px] leading-snug" style={{ color: MUTE, margin: 0 }}>{single.cue}</p>}
           {pair && <p className="text-[15px]" style={{ color: MUTE, margin: 0 }}>{block.restSec > 0 ? `Then rest ${block.restSec} seconds.` : 'Then you’re done.'}</p>}
@@ -377,9 +494,14 @@ export default function WorkoutFlow({ blocks, onFinish, onEffort, onSetDone, onP
           <div className="flex items-center justify-between min-h-[40px]">
             {canBack ? backBtn : <span />}
             {/* Never the thing that finishes a workout (a skipped last step must not log "done"). */}
-            {bi + 1 < blocks.length && (
-              <button onClick={() => { hapticTap(); next() }} className="text-[13px] underline underline-offset-4" style={{ color: 'rgba(237,231,218,.5)' }}>Skip this one</button>
-            )}
+            <span className="flex items-center gap-4">
+              {swapCtx && (
+                <button onClick={openSwap} className="nf-press inline-flex items-center gap-1.5 text-[14px] font-bold px-3.5 py-2 rounded-full" style={{ color: GOLD, border: '1.5px solid rgba(229,169,60,.55)' }}>⇄ Swap</button>
+              )}
+              {bi + 1 < blocks.length && (
+                <button onClick={() => { hapticTap(); next() }} className="text-[13px] underline underline-offset-4" style={{ color: 'rgba(237,231,218,.5)' }}>Skip this one</button>
+              )}
+            </span>
           </div>
         </div>
       </div>

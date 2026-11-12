@@ -59,7 +59,9 @@ export async function POST(request: NextRequest) {
     const muscleGroups = musclesWorked(exerciseName)
 
     if (isDone) {
-      await logSetDone(enrollment.id as string, user.id, exerciseName, movementPattern, muscleGroups, setIndex)
+      const rawWeight = Number(body.weightLb)
+      const weightLb = Number.isFinite(rawWeight) && rawWeight > 0 && rawWeight < 1000 ? rawWeight : undefined
+      await logSetDone(enrollment.id as string, user.id, exerciseName, movementPattern, muscleGroups, setIndex, weightLb)
       return NextResponse.json({ ok: true })
     }
     const state = await logSetEffort(enrollment.id as string, user.id, exerciseName, movementPattern, muscleGroups, effort, setIndex)

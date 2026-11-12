@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { weightsFor } from '@/lib/weight-tags'
+import { applyAlwaysSwaps, readAlwaysSwaps } from '@/lib/always-swaps'
 import { localDateISO } from '@/lib/localdate'
 import { getRestPick } from '@/lib/rest-rule-server'
 import { restDayLine } from '@/lib/rest-rule'
@@ -70,6 +71,7 @@ export default async function WorkoutWeekPage() {
       activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
       weights: weightsFor(intake.form_data as { home_kettlebells?: boolean } | null, intake.training_location === 'home' ? 'home' : 'gym'),
     })
+    program = applyAlwaysSwaps(program, readAlwaysSwaps(intake.form_data))
   }
 
   const days = program.track === 'home' ? (program.home?.days || []).map((d) => ({ title: d.title, muscles: undefined as string | undefined }))

@@ -121,4 +121,6 @@ export interface WorkoutProgram {
   progression?: Record<string, ExerciseTarget>
   // Every 6th week: same moves, half the sets.
   deload?: boolean
+  // The weight she should use today, per move name (lib/weight-picker.ts, 2026-11-12).
+  weights?: Record<string, number>
 }

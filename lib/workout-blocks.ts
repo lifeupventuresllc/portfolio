@@ -10,6 +10,7 @@ import { NOT_EXACT_ON_SCREEN } from './exercise-images'
 import { DELOAD_CUE, deloadSets } from './double-progression'
 import { ATOMIC_LIBRARY } from './exercise-library'
 import { weightLabel, type WeightTag } from './weight-tags'
+import { weightKind, weightUnit, formatLb, type WeightKind } from './weight-picker'
 
 const isCore = (name: string) => !!ATOMIC_LIBRARY.find((e) => e.name === name && e.movementPattern.startsWith('core_'))
 
@@ -26,6 +27,8 @@ export interface Move {
   eachSide?: boolean
   progressCue?: string    // double progression: "Go up a weight today." — small gold line under the reps
   weight?: WeightTag      // what she grabs: Dumbbells / Kettlebell / No weights … (2026-11-10)
+  weightLb?: number       // the weight to use today (lib/weight-picker.ts, 2026-11-12)
+  weightKind?: WeightKind // dumbbell pair / one dumbbell / kettlebell / bar / machine — for + and −
 }
 
 export interface Block {
@@ -69,7 +72,22 @@ const move = (name: string, scheme: string, cue?: string, imageUrl?: string, ext
 export function buildBlocks(program: WorkoutProgram, dayIdx: number): Block[] {
   // Every move carries one weight tag so she knows what to grab.
   return buildBlocksRaw(program, dayIdx).map((b) => b.kind !== 'exercise' ? b
-    : { ...b, moves: b.moves.map((m) => { const w = weightLabel(m.name); return w ? { ...m, weight: w } : m }) })
+    : { ...b, moves: b.moves.map((m) => withWeight(m, program.weights?.[m.name])) })
+}
+
+/** Weight tag + today's weight. "Go up a weight today" names the new number. */
+export function withWeight(m: Move, lb?: number): Move {
+  const tag = weightLabel(m.name)
+  const kind = weightKind(m.name)
+  const out: Move = { ...m, ...(tag ? { weight: tag } : {}) }
+  if (kind && lb) {
+    out.weightLb = lb
+    out.weightKind = kind
+    const unit = weightUnit(kind)
+    if (out.progressCue && /go up (a|two) weights?/i.test(out.progressCue)) out.progressCue = `Go up today: ${formatLb(lb)} ${unit}.`
+    else if (out.progressCue && /drop a little weight/i.test(out.progressCue)) out.progressCue = `A little lighter today: ${formatLb(lb)} ${unit}.`
+  }
+  return out
 }
 
 function buildBlocksRaw(program: WorkoutProgram, dayIdx: number): Block[] {
