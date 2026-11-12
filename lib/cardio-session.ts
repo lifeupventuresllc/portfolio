@@ -38,6 +38,9 @@ export function generateCardioSession(track: 'home' | 'gym', level: Level, injur
     }
   }
 
+  // Two DIFFERENT ab moves (2026-11-12: a rest day showed "1. Crunch, 2. Crunch").
+  const abUpper = pickAb('upper', level, offset, false, injuries)
+  const abLower = pickAb('lower', level, offset + 1, false, injuries, [abUpper.name])
   return {
     dayNum: 0,
     title: 'Cardio & Conditioning',
@@ -45,7 +48,7 @@ export function generateCardioSession(track: 'home' | 'gym', level: Level, injur
     warmup: ['Arm Circles – 60 sec', 'Torso Twists – 60 sec', 'Leg Swings / Hip Circles – 60 sec'],
     supersets: [],
     accessory: [],
-    ab: { upper: pickAb('upper', level, offset, false, injuries), lower: pickAb('lower', level, offset + 1, false, injuries), scheme: '3x15' },
+    ab: { upper: abUpper, lower: abLower, scheme: '3x15' },
     cardio: {
       title: 'Cardio & Conditioning',
       mode: 'compound',
