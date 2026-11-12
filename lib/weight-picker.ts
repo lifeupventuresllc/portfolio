@@ -15,8 +15,8 @@ import { weightLabel } from './weight-tags'
 export type WeightKind = 'db' | 'db1' | 'kb' | 'bar' | 'machine'
 
 // What a normal gym and home set actually have.
-const DB_STEPS = [3, 5, 8, 10, 12, 15, 17.5, 20, 22.5, 25, 27.5, 30, 35, 40, 45, 50, 55, 60, 65, 70]
-const KB_STEPS = [9, 13, 18, 26, 35, 44, 53, 62, 70] // 4, 6, 8, 12, 16, 20, 24, 28, 32 kg
+const DB_STEPS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70] // Asa 2026-11-12: steps of 5 only
+const KB_STEPS = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70] // steps of 5, like a home kettlebell set in lb
 
 /** Moves done with ONE dumbbell held in both hands (goblet squat, pullover…). */
 const ONE_DB = /goblet|lunge \+ twist|glute bridge \+ pullover|weighted toe touch|sumo squat \(db\)|woodchop|press out|single-arm|one-arm|dumbbell hip thrust/i
