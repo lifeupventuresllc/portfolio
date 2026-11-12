@@ -18,12 +18,20 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'Bodyweight Squats': '/videos/exercises/bodyweight-squats.mp4', // 8837221
   'Lunges in Place': '/videos/exercises/lunges-in-place.mp4', // 7746661
   'Banded Tabletop Kickbacks': '/videos/exercises/banded-tabletop-kickbacks.mp4', // 8893533 (from 2 s)
-  'Crunch': '/videos/exercises/crunch.mp4', // 8893527
   'DB Bicep Curl (supinated)': '/videos/exercises/db-bicep-curl-supinated.mp4', // 8837210
   'DB Lateral Raise': '/videos/exercises/db-lateral-raise.mp4', // 8836968 (from 1 s)
   'Single-Arm DB Row': '/videos/exercises/single-arm-db-row.mp4', // 8893530 (from 2 s)
   'Donkey Kick': '/videos/exercises/donkey-kick.mp4', // 6297119
   'Skater Jumps': '/videos/exercises/skater-jumps.mp4', // 5149332
+
+  // 2026-11-12: Asa's own AI videos (same woman every clip, HeyGen, 12 s,
+  // 1280x720 landscape, sound removed). Landscape clips show the whole body
+  // on the phone (components/WorkoutFlow.tsx Media). Checked frame by frame.
+  'Crunch': '/videos/exercises/crunch.mp4',
+  'Floor Leg Raise': '/videos/exercises/floor-leg-raise.mp4',
+  'Lying Leg Raise': '/videos/exercises/floor-leg-raise.mp4',   // same move: straight legs up to 90°, back flat
+  'Leg Raises (Floor)': '/videos/exercises/floor-leg-raise.mp4', // same move
+  'Incline Treadmill Walk': '/videos/exercises/incline-treadmill-walk.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {

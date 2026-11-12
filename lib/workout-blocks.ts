@@ -126,7 +126,7 @@ function buildBlocksRaw(program: WorkoutProgram, dayIdx: number): Block[] {
     } else {
       const mins = firstNum(day.cardio.mins || '') || 10
       const how = [day.cardio.speed && `speed ${day.cardio.speed}`, day.cardio.incline && `incline ${day.cardio.incline}`].filter(Boolean).join(', ')
-      blocks.push({ kind: 'exercise', rounds: 1, restSec: 0, moves: [{ name: day.cardio.title, cue: [how, day.cardio.note].filter(Boolean).join('. '), reps: [0], seconds: mins * 60 }] })
+      blocks.push({ kind: 'exercise', rounds: 1, restSec: 0, moves: [{ name: day.cardio.title, cue: [how, day.cardio.note].filter(Boolean).join('. '), videoUrl: exerciseVideo(day.cardio.title), reps: [0], seconds: mins * 60 }] })
     }
   }
   return blocks

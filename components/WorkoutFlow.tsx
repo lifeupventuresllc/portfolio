@@ -38,10 +38,18 @@ const repText = (m: Move, round: number) => {
 }
 
 function Media({ m, idx, tall }: { m?: Move; idx: number; tall?: boolean }) {
+  // Wide (landscape) clips — Asa's AI videos, 2026-11-12 — would lose her
+  // head and feet when cropped to a tall phone screen. Show the whole clip,
+  // with a soft blurred copy filling the space behind it.
+  const [wide, setWide] = useState(false)
   return (
     <div className="relative w-full overflow-hidden" style={{ height: tall ? '100%' : '100%', background: '#0B2E22' }}>
       {m?.videoUrl ? (
-        <video src={m.videoUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" />
+        <>
+          {wide && <video key={m.videoUrl + '-bg'} src={m.videoUrl} autoPlay loop muted playsInline aria-hidden className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'blur(22px) brightness(.55)', transform: 'scale(1.15)' }} />}
+          <video key={m.videoUrl} src={m.videoUrl} autoPlay loop muted playsInline onLoadedMetadata={(e) => setWide(e.currentTarget.videoWidth > e.currentTarget.videoHeight)}
+            className={`absolute inset-0 w-full h-full ${wide ? 'object-contain' : 'object-cover'}`} />
+        </>
       ) : m?.imageUrl || !m ? (
         <Image src={m?.imageUrl || FALLBACK[idx % FALLBACK.length]} alt={m?.name || ''} fill sizes="(max-width: 480px) 100vw, 480px" className="object-cover rw-photo" style={{ objectPosition: 'center 25%' }} priority />
       ) : (
