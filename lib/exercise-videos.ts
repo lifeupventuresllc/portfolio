@@ -32,6 +32,10 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'Lying Leg Raise': '/videos/exercises/floor-leg-raise.mp4',   // same move: straight legs up to 90°, back flat
   'Leg Raises (Floor)': '/videos/exercises/floor-leg-raise.mp4', // same move
   'Incline Treadmill Walk': '/videos/exercises/incline-treadmill-walk.mp4',
+
+  // 2026-11-13: Higgsfield (Seedance 2.5) videos, 9:16 720x1280, 8 s, no sound.
+  // Woman A / Woman B reference photos so it's the same woman every time.
+  'Bicep Curl + Shoulder Press': '/videos/exercises/bicep-curl-shoulder-press.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {
