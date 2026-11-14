@@ -58,6 +58,7 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'DB Incline Chest Press': '/videos/exercises/db-incline-chest-press.mp4',
   'Hammer Curl + Overhead Triceps Extension': '/videos/exercises/hammer-curl-overhead-triceps-extension.mp4',
   'Weighted Toe Touch': '/videos/exercises/weighted-toe-touch.mp4',
+  'Dead Bug': '/videos/exercises/dead-bug.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {
