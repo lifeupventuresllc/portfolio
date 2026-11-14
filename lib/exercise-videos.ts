@@ -50,6 +50,7 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'Lunge + Twist': '/videos/exercises/lunge-twist.mp4',
   'Glute Bridge Single-Leg Lift': '/videos/exercises/glute-bridge-single-leg-lift.mp4',
   'Jumping Jacks': '/videos/exercises/jumping-jacks.mp4', // replaced the Pexels clip (same woman now)
+  'DB Bent-Over Row': '/videos/exercises/db-bent-over-row.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {
