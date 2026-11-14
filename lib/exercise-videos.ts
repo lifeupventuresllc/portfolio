@@ -59,6 +59,7 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'Hammer Curl + Overhead Triceps Extension': '/videos/exercises/hammer-curl-overhead-triceps-extension.mp4',
   'Weighted Toe Touch': '/videos/exercises/weighted-toe-touch.mp4',
   'Dead Bug': '/videos/exercises/dead-bug.mp4',
+  'Seated Leg Curl': '/videos/exercises/seated-leg-curl.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {
