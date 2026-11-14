@@ -62,7 +62,9 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'Seated Leg Curl': '/videos/exercises/seated-leg-curl.mp4',
   'Chest Press + Pullover': '/videos/exercises/chest-press-pullover.mp4',
   // 2026-11-14 wave 2 (moves 31-71)
+  'Kettlebell Halo + Bent-Over Row': '/videos/exercises/kettlebell-halo-bent-over-row.mp4',
   'Kettlebell Curl + Press': '/videos/exercises/kettlebell-curl-press.mp4',
+  'Dumbbell Hip Thrust': '/videos/exercises/dumbbell-hip-thrust.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {
