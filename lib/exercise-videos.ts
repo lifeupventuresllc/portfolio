@@ -61,6 +61,8 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'Dead Bug': '/videos/exercises/dead-bug.mp4',
   'Seated Leg Curl': '/videos/exercises/seated-leg-curl.mp4',
   'Chest Press + Pullover': '/videos/exercises/chest-press-pullover.mp4',
+  // 2026-11-14 wave 2 (moves 31-71)
+  'Kettlebell Curl + Press': '/videos/exercises/kettlebell-curl-press.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {
