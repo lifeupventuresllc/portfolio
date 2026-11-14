@@ -43,17 +43,17 @@ const repText = (m: Move, round: number) => {
 }
 
 function Media({ m, idx, tall }: { m?: Move; idx: number; tall?: boolean }) {
-  // Wide (landscape) clips — Asa's AI videos, 2026-11-12 — would lose her
-  // head and feet when cropped to a tall phone screen. Show the whole clip,
+  // Every move video shows the WHOLE clip, head to feet (2026-11-13, Asa: "the
+  // video gets cropped off... I want the video to be in the frame"). Tall
+  // 9:16 clips were cropped by object-cover; now every clip is object-contain
   // with a soft blurred copy filling the space behind it.
-  const [wide, setWide] = useState(false)
+  const vid = !!m?.videoUrl
   return (
     <div className="relative w-full overflow-hidden" style={{ height: tall ? '100%' : '100%', background: '#0B2E22' }}>
       {m?.videoUrl ? (
         <>
-          {wide && <video key={m.videoUrl + '-bg'} src={m.videoUrl} autoPlay loop muted playsInline aria-hidden className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'blur(22px) brightness(.55)', transform: 'scale(1.15)' }} />}
-          <video key={m.videoUrl} src={m.videoUrl} autoPlay loop muted playsInline onLoadedMetadata={(e) => setWide(e.currentTarget.videoWidth > e.currentTarget.videoHeight)}
-            className={`absolute inset-0 w-full h-full ${wide ? 'object-contain' : 'object-cover'}`} />
+          <video key={m.videoUrl + '-bg'} src={m.videoUrl} autoPlay loop muted playsInline aria-hidden className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'blur(22px) brightness(.55)', transform: 'scale(1.15)' }} />
+          <video key={m.videoUrl} src={m.videoUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-contain" />
         </>
       ) : m?.imageUrl || !m ? (
         <Image src={m?.imageUrl || FALLBACK[idx % FALLBACK.length]} alt={m?.name || ''} fill sizes="(max-width: 480px) 100vw, 480px" className="object-cover rw-photo" style={{ objectPosition: 'center 25%' }} priority />
@@ -62,7 +62,10 @@ function Media({ m, idx, tall }: { m?: Move; idx: number; tall?: boolean }) {
         // different move (2026-10-29, Asa: "the exact workout picture").
         <div className="absolute inset-0" style={{ background: 'radial-gradient(70% 60% at 50% 40%, rgba(229,169,60,.16), transparent 70%), linear-gradient(170deg, #0B3B2B, #021F16 75%)' }} />
       )}
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(2,31,22,.55) 0%, rgba(2,31,22,0) 25%, rgba(2,31,22,0) 60%, rgba(2,31,22,.95) 100%)' }} />
+      {/* Lighter fade on videos so her head and feet stay visible. */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: vid
+        ? 'linear-gradient(180deg, rgba(2,31,22,.35) 0%, rgba(2,31,22,0) 12%, rgba(2,31,22,0) 88%, rgba(2,31,22,.6) 100%)'
+        : 'linear-gradient(180deg, rgba(2,31,22,.55) 0%, rgba(2,31,22,0) 25%, rgba(2,31,22,0) 60%, rgba(2,31,22,.95) 100%)' }} />
     </div>
   )
 }
