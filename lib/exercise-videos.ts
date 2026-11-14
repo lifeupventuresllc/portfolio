@@ -36,6 +36,8 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   // 2026-11-13: Higgsfield (Seedance 2.5) videos, 9:16 720x1280, 8 s, no sound.
   // Woman A / Woman B reference photos so it's the same woman every time.
   'Bicep Curl + Shoulder Press': '/videos/exercises/bicep-curl-shoulder-press.mp4',
+  'Bicycle Crunch': '/videos/exercises/bicycle-crunch.mp4',
+  'Goblet Squat': '/videos/exercises/goblet-squat.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {
