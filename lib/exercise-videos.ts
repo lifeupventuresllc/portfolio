@@ -38,6 +38,10 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'Bicep Curl + Shoulder Press': '/videos/exercises/bicep-curl-shoulder-press.mp4',
   'Bicycle Crunch': '/videos/exercises/bicycle-crunch.mp4',
   'Goblet Squat': '/videos/exercises/goblet-squat.mp4',
+  'Running in Place (Low)': '/videos/exercises/running-in-place-low.mp4',
+  'March in Place': '/videos/exercises/march-in-place.mp4',
+  'Reverse Lunge + Shoulder Press': '/videos/exercises/reverse-lunge-shoulder-press.mp4',
+  'Squat + Bicep Curl': '/videos/exercises/squat-bicep-curl.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {
