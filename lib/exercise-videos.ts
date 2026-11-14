@@ -53,6 +53,8 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'DB Bent-Over Row': '/videos/exercises/db-bent-over-row.mp4',
   'Reclined Leg Raise': '/videos/exercises/reclined-leg-raise.mp4',
   'Kettlebell Floor Press + Pullover': '/videos/exercises/kettlebell-floor-press-pullover.mp4',
+  'DB Shoulder Press': '/videos/exercises/db-shoulder-press.mp4',
+  'DB Incline Chest Press': '/videos/exercises/db-incline-chest-press.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {
