@@ -6,6 +6,7 @@ import { hapticTap } from '@/lib/haptics'
 import { createClient, clearLocalSession } from '@/lib/supabase/client'
 import NewFlow, { NewBuilding, NewReveal, NEVER, type LifeStage } from './NewFlow'
 import SaveGate from './SaveGate'
+import WelcomeVideo, { WELCOME_SEEN_KEY } from '@/components/WelcomeVideo'
 
 type Targets = { calories: number; protein_g: number; carbs_g: number; fats_g: number; bmr: number; tdee: number }
 
@@ -161,6 +162,9 @@ function ConversationalIntakeInner() {
   const [firstWorkout, setFirstWorkout] = useState<string | null>(null)
   const [track, setTrack] = useState<string | null>(null)
   const [phase, setPhase] = useState<'quiz' | 'building' | 'done'>('quiz')
+  // Welcome video plays once, while her first plan builds (2026-11-14, Asa).
+  const [introSeen, setIntroSeen] = useState(true)
+  useEffect(() => { try { setIntroSeen(!!localStorage.getItem(WELCOME_SEEN_KEY)) } catch { /* storage blocked: skip the video */ } }, [])
   const [targets, setTargets] = useState<Targets | null>(null)
   const [error, setError] = useState('')
 
@@ -325,6 +329,11 @@ function ConversationalIntakeInner() {
   const opt = (active: boolean) => `w-full text-left px-5 py-4 rounded-2xl border font-semibold transition-all duration-200 ${active ? 'bg-charcoal bg-gradient-to-br from-gold/20 to-charcoal border-gold scale-[1.01] text-gold' : 'bg-charcoal border-smoke hover:border-gold/50 hover:bg-charcoal/70 text-white'}`
   const input = 'w-full px-4 py-3.5 bg-obsidian border border-smoke rounded-xl text-white focus:outline-none focus:border-gold transition-colors'
   const primaryBtn = 'w-full bg-gold text-obsidian px-8 py-4 font-bold text-sm uppercase tracking-wider rounded-2xl transition-all duration-500 hover:scale-[1.02] disabled:opacity-40'
+  // ---------- WELCOME VIDEO while her first plan builds (once per phone) ----------
+  if (tier === 'required' && !editMode && !introSeen && (phase === 'building' || phase === 'done')) {
+    return <WelcomeVideo src="/videos/welcome-video.mp4" ready={phase === 'done' && !!targets} onDone={() => setIntroSeen(true)} />
+  }
+
   // ---------- BUILDING moment ----------
   if (phase === 'building') {
     if (tier === 'required') return <NewBuilding name={f.name.trim().split(' ')[0]} />

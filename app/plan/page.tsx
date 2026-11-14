@@ -8,7 +8,6 @@ import DashboardVideoFeed from '@/components/DashboardVideoFeed'
 import FeedEngagementRail from '@/components/FeedEngagementRail'
 import HomeSwipe from '@/components/HomeSwipe'
 import StartPlanBar from '@/components/StartPlanBar'
-import WelcomeVideo from '@/components/WelcomeVideo'
 import MyDayBody from './today/MyDayBody'
 import { getFeedVideos } from '@/lib/feed-videos'
 
@@ -134,7 +133,8 @@ export default async function PlanDashboard() {
   //  - has a plan -> Screen 1 is her My Day, opening on Progress (changed
   //    2026-10-26, see heroNode below), swipe up to Screen 2, the feed with a small
   //    "Your win for today" bar at the bottom (components/HomeSwipe.tsx).
-  //  - no plan yet -> a one-time welcome video, then straight to the feed, whose
+  //  - no plan yet -> straight to the feed (the welcome video now plays while her
+  //    first plan builds, app/plan/intake/page.tsx, 2026-11-14), whose
   //    bottom bar says "Start your plan" (components/StartPlanBar.tsx).
   // Calories, progress, lbs-to-go, the header card, chat, the menu and gear used
   // to be layered on here; none of them are on either screen now. They live
@@ -173,7 +173,6 @@ export default async function PlanDashboard() {
       ) : (
         <div className="flex-1 min-h-0 relative">
           {feedLayer}
-          <WelcomeVideo src="/videos/welcome-video.mp4" />
         </div>
       )}
     </div>
