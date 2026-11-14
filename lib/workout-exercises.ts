@@ -129,7 +129,7 @@ const AB_POOL_BASE: AbExercise[] = [
   { name: 'Lower Belly Knee Tuck', zone: 'lower', minLevel: 1, priority: true, cue: 'Lying on back, knees bent, curl the hips up drawing knees toward the chest, lower with control.' },
   { name: 'Reclined Leg Raise', zone: 'lower', minLevel: 1, priority: true, cue: 'Recline on hands behind you, knees bent, raise and lower bent legs with control.' },
   { name: 'Straight-Leg Reclined Raise', zone: 'lower', minLevel: 3, priority: true, cue: 'Recline on hands behind you, legs straight, raise and lower fully extended for a much harder hold.' },
-  { name: 'Weighted Toe Touch', zone: 'upper', minLevel: 1, priority: true, cue: 'Lying on back, knees bent, reach one weighted hand toward the opposite foot in a side crunch.' },
+  { name: 'Weighted Toe Touch', zone: 'upper', minLevel: 1, priority: true, cue: 'Lie on your back, legs straight up. Reach the weight up toward your toes, then lower slowly.' },
   { name: 'Weighted V-Up Toe Touch', zone: 'upper', minLevel: 3, weighted: true, priority: true, cue: 'Lying flat, legs straight up, full V-up reaching a dumbbell straight overhead to the toes.' },
   { name: 'Floor Leg Raise', zone: 'lower', minLevel: 1, priority: true, cue: 'Lying on the floor, raise straight legs to a controlled leg raise.' },
   { name: 'Bench Pike Raise', zone: 'lower', minLevel: 3, priority: true, cue: 'Hips at the edge of a bench, raise straight legs into a full pike, lower with control — much harder leverage than the floor version.' },
