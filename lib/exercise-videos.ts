@@ -22,7 +22,8 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'Donkey Kick': '/videos/exercises/donkey-kick.mp4', // 6297119
   'Skater Jumps': '/videos/exercises/skater-jumps.mp4', // 5149332
 
-  // 2026-11-12: Asa's own AI videos (same woman every clip, HeyGen, 12 s,
+  // 2026-11-12: Asa's own AI videos (HeyGen, 12 s; Crunch + Floor Leg Raise redone
+  // 2026-11-13 in Higgsfield with the new Woman A; treadmill still HeyGen,
   // 1280x720 landscape, sound removed). Landscape clips show the whole body
   // on the phone (components/WorkoutFlow.tsx Media). Checked frame by frame.
   'Crunch': '/videos/exercises/crunch.mp4',
