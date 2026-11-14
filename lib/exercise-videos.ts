@@ -42,6 +42,10 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'March in Place': '/videos/exercises/march-in-place.mp4',
   'Reverse Lunge + Shoulder Press': '/videos/exercises/reverse-lunge-shoulder-press.mp4',
   'Squat + Bicep Curl': '/videos/exercises/squat-bicep-curl.mp4',
+  'Romanian Deadlift (DB)': '/videos/exercises/romanian-deadlift-db.mp4',
+  'Slow Sit-Up': '/videos/exercises/slow-sit-up.mp4',
+  'Glute Bridge': '/videos/exercises/glute-bridge.mp4',
+  'Kettlebell Glute Bridge + Chest Press': '/videos/exercises/kettlebell-glute-bridge-chest-press.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {
