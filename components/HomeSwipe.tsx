@@ -20,7 +20,8 @@ import { TODAY_EVENT } from '@/components/ProgressViewToggle'
 // 2026-10-26 (Asa: progress first): Screen 1 is now her My Day, which can be
 // taller than the phone, so it scrolls on its own. The swipe up to the feed
 // only takes over once she's at the bottom of it (or it already fits).
-const SNAP_FRACTION = 0.33 // let go past a third of the way and it commits
+const SNAP_FRACTION = 0.2 // let go past a fifth of the way and it commits (2026-11-14: was a third, felt stuck)
+const FLICK_SPEED = 0.45 // px/ms — a quick flick up commits even if it's short
 const DRAG_SLOP = 8 // px before a press counts as a drag, not a tap
 
 export default function HomeSwipe({ hero, children }: { hero: ReactNode; children: ReactNode }) {
@@ -33,6 +34,7 @@ export default function HomeSwipe({ hero, children }: { hero: ReactNode; childre
   const feedRef = useRef<HTMLDivElement | null>(null)
   const startY = useRef<number | null>(null)
   const movedRef = useRef(false)
+  const lastMove = useRef<{ y: number; t: number; v: number }>({ y: 0, t: 0, v: 0 })
   const wheelLock = useRef(false)
 
   const router = useRouter()
@@ -76,9 +78,21 @@ export default function HomeSwipe({ hero, children }: { hero: ReactNode; childre
     startY.current = y
     movedRef.current = false
     armed.current = atBottom()
+    lastMove.current = { y, t: performance.now(), v: 0 }
   }
   const move = (y: number) => {
-    if (pane !== 0 || startY.current === null || !armed.current) return false
+    if (pane !== 0 || startY.current === null) return false
+    const now = performance.now()
+    const lm = lastMove.current
+    const dt = Math.max(1, now - lm.t)
+    lastMove.current = { y, t: now, v: (lm.y - y) / dt } // + = moving up
+    // 2026-11-14 (Asa: "not seamless"): one continuous swipe — scroll My Day
+    // down, and the moment it hits the bottom the same finger starts pulling
+    // the feed up. No lifting the finger and swiping again.
+    if (!armed.current) {
+      if (y < lm.y && atBottom()) { armed.current = true; startY.current = y }
+      return false
+    }
     const dy = y - startY.current
     if (!movedRef.current && Math.abs(dy) < DRAG_SLOP) return false
     if (!movedRef.current && dy > 0) { armed.current = false; return false } // scrolling back up
@@ -92,7 +106,7 @@ export default function HomeSwipe({ hero, children }: { hero: ReactNode; childre
     armed.current = false
     if (!movedRef.current) return
     const h = wrapRef.current?.clientHeight || 600
-    if (-dragY > h * SNAP_FRACTION) go(1)
+    if (-dragY > h * SNAP_FRACTION || (lastMove.current.v > FLICK_SPEED && -dragY > 24)) go(1)
     else { setDragY(0); setDragging(false) }
     // movedRef stays true until the click that follows this release has been
     // swallowed (see onClickCapture) — cleared on the next press.
@@ -186,19 +200,26 @@ export default function HomeSwipe({ hero, children }: { hero: ReactNode; childre
           <div ref={heroScrollRef} className="flex-1 min-h-0 overflow-y-auto" style={{ touchAction: 'pan-y', overscrollBehavior: 'none' }}>
             {hero}
           </div>
-          <button
-            type="button"
-            onClick={() => go(1)}
-            className="nf-press shrink-0 flex flex-col items-center gap-1 pt-2 pb-2"
-            aria-label="Swipe up for your feed"
-          >
-            {/* bounce on the wrapper, rotate on the inner: animate-bounce's own
-                transform would otherwise wipe out the rotation (chevron read as an "L") */}
-            <span aria-hidden className="block animate-bounce mb-0.5">
-              <span className="block w-3 h-3 rotate-45 border-l-[2.5px] border-t-[2.5px] border-[#E5A93C] opacity-90" />
-            </span>
-            <span style={{ fontFamily: "var(--font-jbmono), monospace", fontSize: 10, fontWeight: 700, letterSpacing: '.14em', color: 'rgba(237,231,218,.72)' }}>SWIPE UP FOR YOUR FEED</span>
-          </button>
+          {/* 2026-11-14 (Asa): the way to the feed lit up and moving, so she
+              knows there's more past this page. Gold glowing pill, two
+              stacked chevrons rising, tap works too. */}
+          <style>{`@keyframes hsGlow{0%,100%{box-shadow:0 0 0 0 rgba(229,169,60,.0),0 0 14px rgba(229,169,60,.25)}50%{box-shadow:0 0 0 6px rgba(229,169,60,.12),0 0 26px rgba(229,169,60,.55)}}@keyframes hsRise{0%{transform:translateY(6px);opacity:0}40%{opacity:1}100%{transform:translateY(-6px);opacity:0}}.hs-cue{animation:hsGlow 1.8s ease-in-out infinite}.hs-chev{animation:hsRise 1.4s ease-out infinite}.hs-chev2{animation-delay:.25s}@media (prefers-reduced-motion: reduce){.hs-cue,.hs-chev{animation:none}}`}</style>
+          <div className="shrink-0 flex justify-center pt-2 pb-3">
+            <button
+              type="button"
+              onClick={() => go(1)}
+              className="hs-cue nf-press flex items-center gap-2.5 rounded-full px-5 py-2.5"
+              style={{ background: 'rgba(229,169,60,.14)', border: '1.5px solid rgba(229,169,60,.7)' }}
+              aria-label="Swipe up for your feed"
+            >
+              <span aria-hidden className="relative block w-3.5 h-4">
+                {/* bounce/rise on the wrapper, rotate on the inner (a shared transform would wipe the rotation) */}
+                <span className="hs-chev absolute inset-x-0 top-0 block"><span className="block w-3 h-3 rotate-45 border-l-[2.5px] border-t-[2.5px] border-[#E5A93C]" /></span>
+                <span className="hs-chev hs-chev2 absolute inset-x-0 top-1.5 block"><span className="block w-3 h-3 rotate-45 border-l-[2.5px] border-t-[2.5px] border-[#E5A93C]" /></span>
+              </span>
+              <span style={{ fontFamily: "var(--font-jbmono), monospace", fontSize: 12, fontWeight: 700, letterSpacing: '.14em', color: '#E5A93C' }}>SWIPE UP FOR YOUR FEED</span>
+            </button>
+          </div>
         </div>
 
         {/* Screen 2 — the live feed, unchanged */}
