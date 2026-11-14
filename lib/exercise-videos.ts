@@ -9,7 +9,6 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   // Pexels video ID (https://www.pexels.com/video/<id>/), trimmed to 8 s, muted.
   'Push-Up': '/videos/exercises/push-up.mp4', // 8456715
   'Regular Push-Ups': '/videos/exercises/push-up.mp4', // 8456715
-  'Jumping Jacks': '/videos/exercises/jumping-jacks.mp4', // 7746545
   'High Knees': '/videos/exercises/high-knees.mp4', // 8456713
   'Mountain Climbers': '/videos/exercises/mountain-climbers.mp4', // 8401255
   'High-Intensity Mountain Climbers': '/videos/exercises/mountain-climbers.mp4', // 8401255
@@ -49,6 +48,8 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'Butt Kicks': '/videos/exercises/butt-kicks.mp4', // replaced the Pexels clip (same woman now)
   'Glute Bridge + Pullover': '/videos/exercises/glute-bridge-pullover.mp4',
   'Lunge + Twist': '/videos/exercises/lunge-twist.mp4',
+  'Glute Bridge Single-Leg Lift': '/videos/exercises/glute-bridge-single-leg-lift.mp4',
+  'Jumping Jacks': '/videos/exercises/jumping-jacks.mp4', // replaced the Pexels clip (same woman now)
 }
 
 export function exerciseVideo(name: string): string | undefined {
