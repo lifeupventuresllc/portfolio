@@ -29,6 +29,7 @@ export interface Move {
   weight?: WeightTag      // what she grabs: Dumbbells / Kettlebell / No weights … (2026-11-10)
   weightLb?: number       // the weight to use today (lib/weight-picker.ts, 2026-11-12)
   weightKind?: WeightKind // dumbbell pair / one dumbbell / kettlebell / bar / machine — for + and −
+  pyramid?: boolean       // step-up sets: one weight heavier and 2 fewer reps each set (2026-11-14)
 }
 
 export interface Block {
@@ -71,8 +72,23 @@ const move = (name: string, scheme: string, cue?: string, imageUrl?: string, ext
 
 export function buildBlocks(program: WorkoutProgram, dayIdx: number): Block[] {
   // Every move carries one weight tag so she knows what to grab.
-  return buildBlocksRaw(program, dayIdx).map((b) => b.kind !== 'exercise' ? b
+  const blocks = buildBlocksRaw(program, dayIdx).map((b) => b.kind !== 'exercise' ? b
     : { ...b, moves: b.moves.map((m) => withWeight(m, program.weights?.[m.name])) })
+  // Step-up sets (ascending pyramid, 2026-11-14): the day's FIRST weighted
+  // compound lift, intermediate+ (repRange sets the flag), never a deload week.
+  // Set 1 = target + 4 reps at her base weight, set 2 = target + 2 one weight
+  // up, set 3+ = target two weights up. Double progression still runs on the
+  // last set's number, so when that hits the top the whole ladder goes up a weight.
+  if (!program.deload) {
+    const i = blocks.findIndex((b) => b.kind === 'exercise' && b.moves.length === 1 && b.rounds >= 3
+      && !!b.moves[0].weightKind && !b.moves[0].seconds && !!program.progression?.[b.moves[0].name]?.pyramid)
+    if (i >= 0) {
+      const b = blocks[i], m = b.moves[0], t = program.progression![m.name]
+      const reps = Array.from({ length: b.rounds }, (_, k) => Math.min(20, t.reps + (k === 0 ? 4 : k === 1 ? 2 : 0)))
+      blocks[i] = { ...b, moves: [{ ...m, pyramid: true, reps, progressCue: m.progressCue || 'Each set: one weight heavier, fewer reps.' }] }
+    }
+  }
+  return blocks
 }
 
 /** Weight tag + today's weight. "Go up a weight today" names the new number. */

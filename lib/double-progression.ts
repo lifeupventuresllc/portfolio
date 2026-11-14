@@ -19,7 +19,7 @@ export type Effort = 'easy' | 'right' | 'hard'
 export type LiftRole = 'compound' | 'accessory'
 export type Goal = 'lose' | 'gain' | 'maintain' | 'recomp'
 
-export interface RepRange { lo: number; hi: number; sets: number; bodyweight: boolean }
+export interface RepRange { lo: number; hi: number; sets: number; bodyweight: boolean; pyramid?: boolean }
 
 export const BLOCK_WEEKS = 6
 /** Week 6, 12, 18… of training: same moves, half the sets. */
@@ -42,8 +42,11 @@ export function repRange(level: number, goal: Goal, role: LiftRole, bodyweight: 
   if (bodyweight) return { lo: BODYWEIGHT_LO, hi: BODYWEIGHT_HI, sets, bodyweight }
   const lose = goal === 'lose'
   if (role === 'accessory') return lose ? { lo: 12, hi: 15, sets, bodyweight } : { lo: 10, hi: 15, sets, bodyweight }
-  if (lose) return { lo: 10, hi: 15, sets, bodyweight }
-  return beginner ? { lo: 8, hi: 12, sets, bodyweight } : { lo: 6, hi: 10, sets, bodyweight }
+  // Step-up sets (2026-11-14, Asa): intermediate+ only, weighted compound lifts.
+  // Beginners keep straight sets their first level to learn the move.
+  const pyramid = !beginner
+  if (lose) return { lo: 10, hi: 15, sets, bodyweight, pyramid }
+  return beginner ? { lo: 8, hi: 12, sets, bodyweight } : { lo: 6, hi: 10, sets, bodyweight, pyramid }
 }
 
 export const schemeText = (sets: number, r: RepRange) => `${sets} × ${r.lo}–${r.hi}`
@@ -112,12 +115,12 @@ export function replay(r: RepRange, sessions: ExerciseSession[]): ProgressState 
   return { ...s, target: Math.max(r.lo, Math.min(r.hi, s.target)) }
 }
 
-export interface ExerciseTarget { reps: number; cue?: string; lo: number; hi: number }
+export interface ExerciseTarget { reps: number; cue?: string; lo: number; hi: number; pyramid?: boolean }
 
 /** What the screen shows for one exercise this week. */
 export function targetFor(r: RepRange, sessions: ExerciseSession[], week: number): ExerciseTarget {
   const s = replay(r, sessions)
-  return { reps: s.target, cue: isDeloadWeek(week) ? DELOAD_CUE : s.cue, lo: r.lo, hi: r.hi }
+  return { reps: s.target, cue: isDeloadWeek(week) ? DELOAD_CUE : s.cue, lo: r.lo, hi: r.hi, ...(r.pyramid ? { pyramid: true } : {}) }
 }
 
 // ---- logged rows → sessions ----

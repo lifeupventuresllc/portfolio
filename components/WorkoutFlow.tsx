@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { hapticTap } from '@/lib/haptics'
 import { playCountdownBeep } from '@/lib/countdown-beep'
 import { withWeight, type Block, type Move } from '@/lib/workout-blocks'
-import { stepWeight, weightUnit, formatLb, pickWeight, type WeightPerson } from '@/lib/weight-picker'
+import { stepWeight, weightUnit, formatLb, pickWeight, pyramidWeight, type WeightPerson } from '@/lib/weight-picker'
 import { swapOptionsFor, type SwapWhy } from '@/lib/swap-options'
 import { exerciseVideo } from '@/lib/exercise-videos'
 import { NOT_EXACT_ON_SCREEN } from '@/lib/exercise-images'
@@ -117,7 +117,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
   // The weight she's using — starts at the app's pick, she taps + or − if hers is different.
   const [lbs, setLbs] = useState<Record<string, number>>({})
   const lbOf = (m: Move) => lbs[m.name] ?? m.weightLb
-  const bump = (m: Move, dir: 1 | -1) => { const w = lbOf(m); if (!w || !m.weightKind) return; hapticTap(); setLbs((x) => ({ ...x, [m.name]: stepWeight(w, m.weightKind!, dir) })) }
+  const bump = (m: Move, dir: 1 | -1) => { const w = lbOf(m); if (!w || !m.weightKind) return; hapticTap(); setLbs((x) => ({ ...x, [m.name]: stepWeight(w, m.weightKind!, dir, m.name) })) }
   // Swap sheet
   const [swapOpen, setSwapOpen] = useState(false)
   const [swapIdx, setSwapIdx] = useState<number | null>(null)
@@ -135,6 +135,8 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
   const exercises = blocks.filter((b) => b.kind === 'exercise')
   const exNo = blocks.slice(0, bi + 1).filter((b) => b.kind === 'exercise').length
   const lastRound = block ? round + 1 >= block.rounds : true
+  // Step-up sets: this set's weight = her base, one or two weights heavier (2026-11-14).
+  const setLb = (m: Move) => { const w = lbOf(m); return w && m.pyramid && m.weightKind ? pyramidWeight(w, m.weightKind, Math.min(round, (block?.rounds ?? 1) - 1), m.name) : w }
 
   // Full screen: the page itself never scrolls mid-workout (the layout's
   // tab-bar padding below would otherwise peek in and push the top bar off).
@@ -186,7 +188,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
     const countedMoves = block.moves.filter((m) => !m.seconds)
     const counted = countedMoves.map((m) => m.name)
     const used: Record<string, number> = {}
-    for (const m of countedMoves) { const w = lbOf(m); if (w) used[m.name] = w }
+    for (const m of countedMoves) { const w = setLb(m); if (w) used[m.name] = w }
     if (counted.length) onSetDone?.(counted, round, used)
     const filled = round + 1
     setRound(filled)
@@ -325,7 +327,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
     <div className="absolute inset-x-4 z-50 rounded-2xl px-4 py-3 text-center text-[14px] font-bold" role="status" style={{ top: 'calc(64px + env(safe-area-inset-top))', background: INK, color: BG }}>{toast}</div>
   ) : null
   const weightBox = (m: Move, compact?: boolean, label?: string) => {
-    const w = lbOf(m)
+    const w = setLb(m)
     if (!w || !m.weightKind) return null
     const btn = { width: compact ? 36 : 42, height: compact ? 36 : 42, border: '1px solid rgba(237,231,218,.18)', background: 'rgba(237,231,218,.06)', color: INK }
     return (

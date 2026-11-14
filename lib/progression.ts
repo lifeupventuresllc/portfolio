@@ -160,15 +160,20 @@ export async function logSetDone(enrollmentId: string, userId: string, exerciseN
 // suggested weight starts (lib/weight-picker.ts). Empty before 052 is run.
 export async function getLastWeights(enrollmentId: string): Promise<Record<string, number>> {
   const svc = createServiceClient()
-  const { data, error } = await svc.from('workout_set_logs').select('exercise_name, weight_lb')
+  const { data, error } = await svc.from('workout_set_logs').select('exercise_name, weight_lb, set_index')
     .eq('enrollment_id', enrollmentId).not('weight_lb', 'is', null).order('created_at', { ascending: false }).limit(2000)
   if (error || !data) return {}
+  // Her last FIRST-set weight (step-up sets climb within a session; the next
+  // session starts from set 1, not the heaviest set). Any set if no set 1 was logged.
   const out: Record<string, number> = {}
-  for (const r of data as { exercise_name: string; weight_lb: number | string }[]) {
+  const any: Record<string, number> = {}
+  for (const r of data as { exercise_name: string; weight_lb: number | string; set_index: number | null }[]) {
     const w = Number(r.weight_lb)
-    if (!(r.exercise_name in out) && w > 0) out[r.exercise_name] = w
+    if (!(w > 0)) continue
+    if (!(r.exercise_name in any)) any[r.exercise_name] = w
+    if (!(r.exercise_name in out) && (r.set_index ?? 0) === 0) out[r.exercise_name] = w
   }
-  return out
+  return { ...any, ...out }
 }
 
 // Her real sessions per exercise name, ready for generateWorkout's

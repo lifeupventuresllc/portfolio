@@ -15,8 +15,10 @@ import { weightLabel } from './weight-tags'
 export type WeightKind = 'db' | 'db1' | 'kb' | 'bar' | 'machine'
 
 // What a normal gym and home set actually have.
-const DB_STEPS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70] // Asa 2026-11-12: steps of 5 only
-const KB_STEPS = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70] // steps of 5, like a home kettlebell set in lb
+// 2026-11-14 (Asa: "use what the big apps use"): the real light dumbbells a gym
+// and a home set have (3, 8, 12) so a beginner woman never jumps 5 → 10 (double).
+const DB_STEPS = [3, 5, 8, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]
+const KB_STEPS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70] // steps of 5, like a home kettlebell set in lb
 
 /** Moves done with ONE dumbbell held in both hands (goblet squat, pullover…). */
 const ONE_DB = /goblet|lunge \+ twist|glute bridge \+ pullover|weighted toe touch|sumo squat \(db\)|woodchop|press out|single-arm|one-arm|dumbbell hip thrust/i
@@ -56,21 +58,23 @@ function baseWeight(name: string, kind: WeightKind): number {
     if (/kickback|tricep|curl/.test(n)) return 15
     return 25 // other cable moves
   }
+  // 2026-11-14: beginner women's starts lowered to the common app/ACE ranges
+  // (arms 5, chest/rows 8-10, legs 10 each hand) — 10-15 lb was too heavy day one.
   if (kind === 'kb') {
-    if (/get-up|halo|around the world|windmill|leg lift/.test(n)) return 9
-    if (/press|curl|row|skull|triceps|pullover|high pull/.test(n)) return 13
-    return 18 // swings, deadlifts, squats, bridges
+    if (/get-up|halo|around the world|windmill|leg lift|march/.test(n)) return 5
+    if (/press|curl|row|skull|triceps|pullover|high pull/.test(n)) return 10
+    return 15 // swings, deadlifts, squats, bridges
   }
   // dumbbells — lightest part first, so a combo never starts too heavy for its weak link
-  if (/lateral|front raise|arm raise|reverse fly|rear delt|upright row|\bfly\b|y-raise|t-raise/.test(n)) return kind === 'db1' ? 8 : 5
-  if (/toe touch|woodchop|t-up|overhead march/.test(n)) return 5
-  if (/renegade|burpee|man maker|thruster|surrender/.test(n)) return 8
-  if (/curl|triceps|tricep|kickback|skull|arnold|shoulder press|overhead press|halo/.test(n)) return kind === 'db1' ? 15 : 10
-  if (/chest press|bench|floor press|pullover/.test(n)) return kind === 'db1' ? 15 : 12
-  if (/hip thrust/.test(n)) return 25
-  if (/press$/.test(n)) return 10
-  if (/row/.test(n)) return 15
-  return kind === 'db1' ? 20 : 15 // squats, lunges, deadlifts, hip thrusts
+  if (/lateral|front raise|arm raise|reverse fly|rear delt|upright row|\bfly\b|y-raise|t-raise/.test(n)) return kind === 'db1' ? 5 : 3
+  if (/toe touch|woodchop|t-up|overhead march|postpartum/.test(n)) return 5
+  if (/renegade|burpee|man maker|thruster|surrender|gorilla/.test(n)) return 5
+  if (/curl|triceps|tricep|kickback|skull|arnold|shoulder press|overhead press|halo/.test(n)) return kind === 'db1' ? 10 : 5
+  if (/chest press|bench|floor press|pullover/.test(n)) return kind === 'db1' ? 10 : 8
+  if (/hip thrust/.test(n)) return 20
+  if (/press$/.test(n)) return 8
+  if (/row/.test(n)) return 10
+  return kind === 'db1' ? 15 : 10 // squats, lunges, deadlifts, hip thrusts
 }
 
 const stepsFor = (kind: WeightKind) => (kind === 'kb' ? KB_STEPS : kind === 'db' || kind === 'db1' ? DB_STEPS : null)
@@ -83,9 +87,10 @@ export function snapWeight(lb: number, kind: WeightKind): number {
 }
 
 /** One step heavier (dir 1) or lighter (dir −1). */
-export function stepWeight(lb: number, kind: WeightKind, dir: 1 | -1): number {
+export function stepWeight(lb: number, kind: WeightKind, dir: 1 | -1, name = ''): number {
   const steps = stepsFor(kind)
-  if (!steps) return Math.max(kind === 'bar' ? 20 : 5, lb + dir * 5)
+  // Bar and machine: +5 lb (StrongLifts / Fitbod women's standard); leg press +10.
+  if (!steps) return Math.max(kind === 'bar' ? 20 : 5, lb + dir * (/leg press/i.test(name) ? 10 : 5))
   const i = steps.indexOf(snapWeight(lb, kind))
   return steps[Math.min(steps.length - 1, Math.max(0, i + dir))]
 }
@@ -94,7 +99,7 @@ export interface WeightPerson { level: number; bodyweightLb?: number; sex?: 'fem
 
 /** Her first weight for a move she's never logged. */
 export function startWeight(name: string, kind: WeightKind, p: WeightPerson): number {
-  const levelX = p.level >= 3 ? 1.7 : p.level === 2 ? 1.35 : 1
+  const levelX = p.level >= 3 ? 2 : p.level === 2 ? 1.5 : 1
   const bodyX = p.bodyweightLb ? Math.min(1.25, Math.max(0.85, Math.sqrt(p.bodyweightLb / 150))) : 1
   // Women only. Body weight helps legs and hips more than arms, so it only
   // nudges lower-body moves; arms and shoulders start from level alone.
@@ -119,8 +124,15 @@ export function pickWeight(name: string, p: WeightPerson, last?: number, cue?: s
   if (!last) return startWeight(name, kind, p) // first time: start weight is today's weight (no jump on day one)
   let w = snapWeight(last, kind)
   const steps = stepsFromCue(cue)
-  for (let i = 0; i < Math.abs(steps); i++) w = stepWeight(w, kind, steps > 0 ? 1 : -1)
+  for (let i = 0; i < Math.abs(steps); i++) w = stepWeight(w, kind, steps > 0 ? 1 : -1, name)
   return w
 }
 
 export const formatLb = (lb: number) => (Number.isInteger(lb) ? String(lb) : lb.toFixed(1))
+
+/** Step-up (ascending pyramid) sets: the weight for set k — one step heavier each set, at most two steps. */
+export function pyramidWeight(base: number, kind: WeightKind, setIdx: number, name = ''): number {
+  let w = base
+  for (let i = 0; i < Math.min(2, Math.max(0, setIdx)); i++) w = stepWeight(w, kind, 1, name)
+  return w
+}
