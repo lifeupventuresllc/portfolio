@@ -42,7 +42,7 @@ const repText = (m: Move, round: number) => {
   return `${n} reps${m.eachSide ? ' each side' : ''}`
 }
 
-function Media({ m, idx, tall }: { m?: Move; idx: number; tall?: boolean }) {
+function Media({ m, idx, tall, fill }: { m?: Move; idx: number; tall?: boolean; fill?: boolean }) {
   // Every move video shows the WHOLE clip, head to feet (2026-11-13, Asa: "the
   // video gets cropped off... I want the video to be in the frame"). Tall
   // 9:16 clips were cropped by object-cover; now every clip is object-contain
@@ -52,8 +52,9 @@ function Media({ m, idx, tall }: { m?: Move; idx: number; tall?: boolean }) {
     <div className="relative w-full overflow-hidden" style={{ height: tall ? '100%' : '100%', background: '#0B2E22' }}>
       {m?.videoUrl ? (
         <>
-          <video key={m.videoUrl + '-bg'} src={m.videoUrl} autoPlay loop muted playsInline aria-hidden className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'blur(22px) brightness(.55)', transform: 'scale(1.15)' }} />
-          <video key={m.videoUrl} src={m.videoUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-contain" />
+          {!fill && <video key={m.videoUrl + '-bg'} src={m.videoUrl} autoPlay loop muted playsInline aria-hidden className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'blur(22px) brightness(.55)', transform: 'scale(1.15)' }} />}
+          {/* fill = the tall single-move box (2026-11-13, Asa picked "Taller box"): edge to edge, head to about the shins. */}
+          <video key={m.videoUrl} src={m.videoUrl} autoPlay loop muted playsInline className={`absolute inset-0 w-full h-full ${fill ? 'object-cover' : 'object-contain'}`} style={fill ? { objectPosition: 'center 30%' } : undefined} />
         </>
       ) : m?.imageUrl || !m ? (
         <Image src={m?.imageUrl || FALLBACK[idx % FALLBACK.length]} alt={m?.name || ''} fill sizes="(max-width: 480px) 100vw, 480px" className="object-cover rw-photo" style={{ objectPosition: 'center 25%' }} priority />
@@ -64,7 +65,8 @@ function Media({ m, idx, tall }: { m?: Move; idx: number; tall?: boolean }) {
       )}
       {/* Lighter fade on videos so her head and feet stay visible. */}
       <div className="absolute inset-0 pointer-events-none" style={{ background: vid
-        ? 'linear-gradient(180deg, rgba(2,31,22,.35) 0%, rgba(2,31,22,0) 12%, rgba(2,31,22,0) 88%, rgba(2,31,22,.6) 100%)'
+        ? (fill ? 'linear-gradient(180deg, rgba(2,31,22,.45) 0%, rgba(2,31,22,0) 14%, rgba(2,31,22,0) 82%, rgba(2,31,22,1) 100%)'
+          : 'linear-gradient(180deg, rgba(2,31,22,.35) 0%, rgba(2,31,22,0) 12%, rgba(2,31,22,0) 88%, rgba(2,31,22,.6) 100%)')
         : 'linear-gradient(180deg, rgba(2,31,22,.55) 0%, rgba(2,31,22,0) 25%, rgba(2,31,22,0) 60%, rgba(2,31,22,.95) 100%)' }} />
     </div>
   )
@@ -423,10 +425,11 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
   }
 
   // ---------- one exercise, or two back to back ----------
+  const tallVid = !pair && !!single?.videoUrl
   return (
-    <div className="wf-page relative flex flex-col" style={{ color: INK }}>
+    <div className="wf-page relative flex flex-col" style={{ color: INK, overflowY: tallVid ? 'auto' : undefined }}>
       {style}{top}{menuSheet}{swapSheet}{toastEl}
-      <div key={bi} className="wf-in flex-1 min-h-0 flex flex-col">
+      <div key={bi} className={`wf-in flex flex-col ${tallVid ? 'shrink-0' : 'flex-1 min-h-0'}`}>
         {pair ? (
           <div className="flex flex-col flex-1 min-h-[240px]">
             {block.moves.map((m, k) => (
@@ -447,7 +450,9 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
             ))}
           </div>
         ) : (
-          <div className="relative flex-1 min-h-[200px]"><Media m={single} idx={bi} /></div>
+          tallVid
+            ? <div className="relative shrink-0" style={{ height: '64dvh' }}><Media m={single} idx={bi} fill /></div>
+            : <div className="relative flex-1 min-h-[200px]"><Media m={single} idx={bi} /></div>
         )}
 
         <div className="shrink-0 flex flex-col gap-3.5 px-5 pt-4">
