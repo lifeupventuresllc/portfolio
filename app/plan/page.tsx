@@ -173,7 +173,7 @@ export default async function PlanDashboard() {
       ) : (
         <div className="flex-1 min-h-0 relative">
           {feedLayer}
-          {videos[0] && <WelcomeVideo src={videos[0].url} />}
+          <WelcomeVideo src="/videos/welcome-video.mp4" />
         </div>
       )}
     </div>
