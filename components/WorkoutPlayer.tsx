@@ -154,14 +154,15 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
   const elsewhere = (
     <>
       <span style={{ ...pill, fontSize: 11, color: MUTE }}>TODAY</span>
-      <div className="flex flex-col gap-1">
+      {/* 2026-11-14 (Asa): the menu ran off the bottom of the phone — days in two columns so it all fits. */}
+      <div className="grid grid-cols-2 gap-1">
         {labels.map((l, d) => (
-          <button key={d} onClick={() => selectDay(d)} className="w-full text-left px-3 py-3 rounded-xl text-base font-medium"
+          <button key={d} onClick={() => selectDay(d)} className="w-full text-left px-3 py-2.5 rounded-xl text-[15px] font-medium leading-tight"
             style={{ background: d === dayIdx ? 'rgba(229,169,60,.15)' : 'transparent', color: d === dayIdx ? GOLD : 'rgba(237,231,218,.8)' }}>{l}</button>
         ))}
       </div>
       {/* Bigger and stacked so it reads mid-workout (2026-11-06 test: text too small). */}
-      <div className="flex flex-col items-start gap-1 pt-2 text-[16px]" style={{ color: 'rgba(237,231,218,.85)' }}>
+      <div className="flex flex-col items-start gap-0 pt-1 text-[16px]" style={{ color: 'rgba(237,231,218,.85)' }}>
         <button onClick={() => router.push('/plan/workout/week')} className="py-2 underline underline-offset-4">My week</button>
         <a href="/plan/preferences" className="py-2 underline underline-offset-4">Switch Home / Gym</a>
         <a href="/plan/coach" className="py-2 underline underline-offset-4">Training somewhere different? Tell Coach</a>

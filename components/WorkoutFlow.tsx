@@ -360,7 +360,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
     </div>
   )
   const menuSheet = menu && menuOpen ? (
-    <div className="absolute inset-x-4 z-30 rounded-[20px] p-3 flex flex-col gap-2" style={{ top: 'calc(62px + env(safe-area-inset-top))', background: 'rgba(2,31,22,.96)', border: '1px solid rgba(237,231,218,.14)' }}>{menu}</div>
+    <div className="absolute inset-x-4 z-30 rounded-[20px] p-3 flex flex-col gap-2 overflow-y-auto overscroll-contain" style={{ top: 'calc(62px + env(safe-area-inset-top))', maxHeight: 'calc(100dvh - 76px - env(safe-area-inset-top) - env(safe-area-inset-bottom))', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', background: 'rgba(2,31,22,.96)', border: '1px solid rgba(237,231,218,.14)' }}>{menu}</div>
   ) : null
 
   const style = <style>{`.wf-page{margin:0 -16px;height:100dvh;overflow:hidden;padding-bottom:env(safe-area-inset-bottom)}.wf-in{animation:wfIn .38s cubic-bezier(.2,1,.3,1) both}@keyframes wfIn{from{transform:translateX(48px);opacity:0}to{transform:none;opacity:1}}.wf-fill{animation:wfFill .35s ease}@keyframes wfFill{0%{transform:scale(.6)}60%{transform:scale(1.18)}100%{transform:scale(1)}}@media (prefers-reduced-motion: reduce){.wf-in,.wf-fill{animation:none}}`}</style>
