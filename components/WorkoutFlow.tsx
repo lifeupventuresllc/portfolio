@@ -427,9 +427,9 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
   // ---------- one exercise, or two back to back ----------
   const tallVid = !pair && !!single?.videoUrl
   return (
-    <div className="wf-page relative flex flex-col" style={{ color: INK, overflowY: tallVid ? 'auto' : undefined }}>
+    <div className="wf-page relative flex flex-col" style={{ color: INK }}>
       {style}{top}{menuSheet}{swapSheet}{toastEl}
-      <div key={bi} className={`wf-in flex flex-col ${tallVid ? 'shrink-0' : 'flex-1 min-h-0'}`}>
+      <div key={bi} className="wf-in flex flex-col flex-1 min-h-0">
         {pair ? (
           <div className="flex flex-col flex-1 min-h-[240px]">
             {block.moves.map((m, k) => (
@@ -451,11 +451,11 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
           </div>
         ) : (
           tallVid
-            ? <div className="relative shrink-0" style={{ height: '64dvh' }}><Media m={single} idx={bi} fill /></div>
+            ? <div className="relative flex-1 min-h-[180px]" style={{ marginTop: 'calc(60px + env(safe-area-inset-top))' }}><Media m={single} idx={bi} /></div>
             : <div className="relative flex-1 min-h-[200px]"><Media m={single} idx={bi} /></div>
         )}
 
-        <div className="shrink-0 flex flex-col gap-3.5 px-5 pt-4">
+        <div className={`shrink-0 flex flex-col px-5 ${tallVid ? 'gap-2.5 pt-3' : 'gap-3.5 pt-4'}`}>
           {pair ? (
             <div className="flex flex-col gap-1">
               <span style={{ ...pill, fontSize: 12, letterSpacing: '.16em', color: GOLD }}>{block.abs ? 'ABS' : 'SUPERSET'}{levelLabel ? <span style={{ color: MUTE }}> · {levelLabel.toUpperCase()}</span> : null}</span>
@@ -470,7 +470,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
                   <WeightTag w={single.weight} />
                 </span>
               )}
-              <h1 className="nf-head text-balance" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: single.name.length > 24 ? 40 : 50, lineHeight: 0.9, textTransform: 'uppercase' }}>{single.name}</h1>
+              <h1 className="nf-head text-balance" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: tallVid ? (single.name.length > 24 ? 32 : 40) : single.name.length > 24 ? 40 : 50, lineHeight: 0.9, textTransform: 'uppercase' }}>{single.name}</h1>
             </div>
           )}
           <div className="flex items-center gap-4 flex-wrap">
@@ -491,7 +491,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
           {pair && <p className="text-[15px]" style={{ color: MUTE, margin: 0 }}>{block.restSec > 0 ? `Then rest ${block.restSec} seconds.` : 'Then you’re done.'}</p>}
         </div>
 
-        <div className="px-5 pb-6 pt-4 flex flex-col gap-2">
+        <div className={`shrink-0 px-5 flex flex-col gap-2 ${tallVid ? 'pb-3 pt-3' : 'pb-6 pt-4'}`}>
           {timed && timer == null ? (
             <button onClick={() => { hapticTap(); setTimer(single.seconds!) }} className="rw-cta nf-press w-full rounded-full uppercase" style={{ ...pill, height: 76, fontSize: 19, background: GOLD, color: BG }}>Start</button>
           ) : (
