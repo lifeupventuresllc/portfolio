@@ -56,6 +56,7 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'Kettlebell Floor Press + Pullover': '/videos/exercises/kettlebell-floor-press-pullover.mp4',
   'DB Shoulder Press': '/videos/exercises/db-shoulder-press.mp4',
   'DB Incline Chest Press': '/videos/exercises/db-incline-chest-press.mp4',
+  'Hammer Curl + Overhead Triceps Extension': '/videos/exercises/hammer-curl-overhead-triceps-extension.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {
