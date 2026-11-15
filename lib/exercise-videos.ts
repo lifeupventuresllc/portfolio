@@ -65,6 +65,13 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'Kettlebell Halo + Bent-Over Row': '/videos/exercises/kettlebell-halo-bent-over-row.mp4',
   'Kettlebell Curl + Press': '/videos/exercises/kettlebell-curl-press.mp4',
   'Dumbbell Hip Thrust': '/videos/exercises/dumbbell-hip-thrust.mp4',
+  'Romanian Deadlift (Barbell)': '/videos/exercises/romanian-deadlift-barbell.mp4',
+  'Curl + Arnold Press': '/videos/exercises/curl-arnold-press.mp4',
+  'Push-Up + Shoulder Tap': '/videos/exercises/push-up-shoulder-tap.mp4',
+  'Kneeling Renegade Row': '/videos/exercises/kneeling-renegade-row.mp4',
+  'Barbell Hip Thrust': '/videos/exercises/barbell-hip-thrust.mp4',
+  'Running in Place (Moderate)': '/videos/exercises/running-in-place-moderate.mp4',
+  'Cable Pull-Through': '/videos/exercises/cable-pull-through.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {
