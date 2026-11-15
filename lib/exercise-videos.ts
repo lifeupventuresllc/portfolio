@@ -72,6 +72,14 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'Barbell Hip Thrust': '/videos/exercises/barbell-hip-thrust.mp4',
   'Running in Place (Moderate)': '/videos/exercises/running-in-place-moderate.mp4',
   'Cable Pull-Through': '/videos/exercises/cable-pull-through.mp4',
+  'Lateral Toe Touches (Skater Style)': '/videos/exercises/lateral-toe-touches-skater-style.mp4',
+  'Cable Glute Kickback': '/videos/exercises/cable-glute-kickback.mp4',
+  'KB Standing Marches': '/videos/exercises/kb-standing-marches.mp4',
+  'Kettlebell Curl + Overhead Triceps Extension': '/videos/exercises/kettlebell-curl-overhead-triceps-extension.mp4',
+  'Lat Pulldown': '/videos/exercises/lat-pulldown.mp4',
+  'Squat + Shoulder Press': '/videos/exercises/squat-shoulder-press.mp4',
+  'Romanian Deadlift + Bent-Over Row': '/videos/exercises/romanian-deadlift-bent-over-row.mp4',
+  'Glute Bridge + Triceps Extension': '/videos/exercises/glute-bridge-triceps-extension.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {
