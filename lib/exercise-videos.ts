@@ -80,6 +80,13 @@ export const EXERCISE_VIDEOS: Record<string, string> = {
   'Squat + Shoulder Press': '/videos/exercises/squat-shoulder-press.mp4',
   'Romanian Deadlift + Bent-Over Row': '/videos/exercises/romanian-deadlift-bent-over-row.mp4',
   'Glute Bridge + Triceps Extension': '/videos/exercises/glute-bridge-triceps-extension.mp4',
+  'DB Flat Bench Press': '/videos/exercises/db-flat-bench-press.mp4',
+  'Curtsy Lunge + Shoulder Press': '/videos/exercises/curtsy-lunge-shoulder-press.mp4',
+  'Squat + Front Raise': '/videos/exercises/squat-front-raise.mp4',
+  'Reverse Lunge + Bicep Curl': '/videos/exercises/reverse-lunge-bicep-curl.mp4',
+  'Squat + Curl + Press': '/videos/exercises/squat-curl-press.mp4',
+  'Oblique Toe Touches': '/videos/exercises/oblique-toe-touches.mp4',
+  'KB Half Around the World': '/videos/exercises/kb-half-around-the-world.mp4',
 }
 
 export function exerciseVideo(name: string): string | undefined {
