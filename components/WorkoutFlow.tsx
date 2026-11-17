@@ -53,8 +53,8 @@ function Media({ m, idx, tall, fill }: { m?: Move; idx: number; tall?: boolean; 
       {m?.videoUrl ? (
         <>
           {!fill && <video key={m.videoUrl + '-bg'} src={m.videoUrl} autoPlay loop muted playsInline aria-hidden className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'blur(22px) brightness(.55)', transform: 'scale(1.15)' }} />}
-          {/* fill = the tall single-move box (2026-11-13, Asa picked "Taller box"): edge to edge, head to about the shins. */}
-          <video key={m.videoUrl} src={m.videoUrl} autoPlay loop muted playsInline className={`absolute inset-0 w-full h-full ${fill ? 'object-cover' : 'object-contain'}`} style={fill ? { objectPosition: 'center 40%' } : undefined} />
+          {/* fill = full-screen video (2026-11-17, Asa picked Option C): runs from the very top of the screen behind the top icons, pinned to the top so her head and the weights never get cut, light fade only at the very bottom. */}
+          <video key={m.videoUrl} src={m.videoUrl} autoPlay loop muted playsInline className={`absolute inset-0 w-full h-full ${fill ? 'object-cover' : 'object-contain'}`} style={fill ? { objectPosition: 'center top' } : undefined} />
         </>
       ) : m?.imageUrl || !m ? (
         <Image src={m?.imageUrl || FALLBACK[idx % FALLBACK.length]} alt={m?.name || ''} fill sizes="(max-width: 480px) 100vw, 480px" className="object-cover rw-photo" style={{ objectPosition: 'center 25%' }} priority />
@@ -65,7 +65,7 @@ function Media({ m, idx, tall, fill }: { m?: Move; idx: number; tall?: boolean; 
       )}
       {/* Lighter fade on videos so her head and feet stay visible. */}
       <div className="absolute inset-0 pointer-events-none" style={{ background: vid
-        ? (fill ? 'linear-gradient(180deg, rgba(2,31,22,.25) 0%, rgba(2,31,22,0) 12%, rgba(2,31,22,0) 85%, rgba(2,31,22,.55) 100%)'
+        ? (fill ? 'linear-gradient(180deg, rgba(2,31,22,.18) 0%, rgba(2,31,22,0) 8%, rgba(2,31,22,0) 90%, rgba(2,31,22,1) 100%)'
           : 'linear-gradient(180deg, rgba(2,31,22,.35) 0%, rgba(2,31,22,0) 12%, rgba(2,31,22,0) 88%, rgba(2,31,22,.6) 100%)')
         : 'linear-gradient(180deg, rgba(2,31,22,.55) 0%, rgba(2,31,22,0) 25%, rgba(2,31,22,0) 60%, rgba(2,31,22,.95) 100%)' }} />
     </div>
@@ -453,7 +453,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
           </div>
         ) : (
           tallVid
-            ? <div className="relative flex-1 min-h-[180px] mx-3 overflow-hidden" style={{ marginTop: 'calc(60px + env(safe-area-inset-top))', borderRadius: 26, boxShadow: '0 12px 32px rgba(0,0,0,.4)', isolation: 'isolate', transform: 'translateZ(0)' }}><Media m={single} idx={bi} fill /></div>
+            ? <div className="relative flex-1 min-h-[180px] overflow-hidden"><Media m={single} idx={bi} fill /></div>
             : <div className="relative flex-1 min-h-[200px]"><Media m={single} idx={bi} /></div>
         )}
 
