@@ -55,11 +55,15 @@ export async function POST(request: NextRequest) {
   // entirely (not defaulted) when she doesn't tap one, so "no data" stays distinct
   // from "logged as normal."
   const effort = Number.isFinite(Number(body.effort)) && [1, 2, 3].includes(Number(body.effort)) ? Number(body.effort) : undefined
-  const measurements = { workout: !!body.workout, nutrition: !!body.nutrition, ...(effort !== undefined ? { effort } : {}) }
+  let measurements: Record<string, unknown> = { workout: !!body.workout, nutrition: !!body.nutrition, ...(effort !== undefined ? { effort } : {}) }
   const today = localDateISO()
 
   const { data: existing } = await svc.from('challenge_progress')
-    .select('id').eq('enrollment_id', enrollment.id).eq('note', '__daily__').eq('logged_on', today).maybeSingle()
+    .select('id, measurements').eq('enrollment_id', enrollment.id).eq('note', '__daily__').eq('logged_on', today).maybeSingle()
+  // HIIT day (2026-11-17, lib/hiit.ts): its own flag, added on top of whatever
+  // today already has. Counts for her streak and week, never as a lifting
+  // workout (the lifting rotation counts `workout` only).
+  if (body.hiit === true) measurements = { ...((existing?.measurements as Record<string, unknown> | null) || { workout: false, nutrition: false }), hiit: true }
   if (existing) {
     await svc.from('challenge_progress').update({ measurements }).eq('id', existing.id)
   } else {

@@ -18,7 +18,7 @@ import type { WorkoutProgram } from '@/lib/workout'
 import { hapticTap } from '@/lib/haptics'
 import { unlockAudioContext } from '@/lib/countdown-beep'
 
-export default function WorkoutPlayer({ program, firstName, hasRealName = true, startDay = 0, targetMinutes, askQuickstartGoal = false, isGuest = false, setup, swapCtx, favorites }: {
+export default function WorkoutPlayer({ program, firstName, hasRealName = true, startDay = 0, targetMinutes, askQuickstartGoal = false, isGuest = false, setup, swapCtx, favorites, hiit = false }: {
   program: WorkoutProgram
   firstName: string
   // Real bug found live: "there" (firstName's fallback for a nameless guest
@@ -42,6 +42,8 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
   setup?: { where: 'gym' | 'home'; homeKb: boolean | null }
   swapCtx?: SwapCtx
   favorites?: string[]
+  // HIIT day (lib/hiit.ts): saved as hiit, so it counts toward her week but never moves her lifting rotation.
+  hiit?: boolean
 }) {
   const router = useRouter()
   const labels = dayLabels(program)
@@ -108,7 +110,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
       // Pre-mark today's workout celebration so the dashboard shows ✅ without re-confetti.
       localStorage.setItem('luf_celebrated_workout-' + today, '1')
     } catch { /* ignore */ }
-    savedRef.current = fetch('/api/plan/daily', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workout: true }) })
+    savedRef.current = fetch('/api/plan/daily', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(hiit ? { hiit: true } : { workout: true }) })
       .catch(() => {})
       .finally(() => broadcastRefresh())
   }

@@ -46,7 +46,8 @@ export function spread(n: number, slots: number): number[] {
 export function buildWeek(inp: {
   monday: string                     // ISO date of this Monday
   todayIdx: number                   // 0 = Monday … 6 = Sunday
-  doneIsos: Set<string>              // days she finished a workout
+  doneIsos: Set<string>              // days she finished a workout (lifts or HIIT)
+  hiitIsos?: Set<string>             // of those, the HIIT days
   goal: number                       // workouts this week
   todayTitle: string | null          // today's workout title (null = rest pick)
   todayMoves: string[]
@@ -61,7 +62,7 @@ export function buildWeek(inp: {
     return { label, date: Number(iso.slice(8)), iso, isToday: k === inp.todayIdx, kind: 'rest' as PlanDayKind, title: 'Rest day', note: REST_NOTES[k % REST_NOTES.length], moves: [] }
   })
   let doneCount = 0
-  days.forEach((d, k) => { if (inp.doneIsos.has(d.iso)) { doneCount++; d.kind = 'done'; d.title = 'Workout done'; d.note = k === inp.todayIdx ? 'Today. You did it.' : 'You showed up.' } })
+  days.forEach((d, k) => { if (inp.doneIsos.has(d.iso)) { doneCount++; d.kind = 'done'; d.title = inp.hiitIsos?.has(d.iso) ? 'HIIT done' : 'Workout done'; d.note = k === inp.todayIdx ? 'Today. You did it.' : 'You showed up.' } })
   let left = Math.max(0, inp.goal - doneCount)
   let j = 0
   const today = days[inp.todayIdx]
@@ -83,7 +84,8 @@ export function buildWeek(inp: {
   }
   // One optional HIIT a week (workout-system step 4): the first rest day from
   // today on, never on the light week.
-  if (inp.hiitMinutes && !inp.light) {
+  const hiitThisWeek = days.some((d) => inp.hiitIsos?.has(d.iso))
+  if (inp.hiitMinutes && !inp.light && !hiitThisWeek) {
     const d = days.slice(inp.todayIdx).find((x) => x.kind === 'rest')
     if (d) { d.hiit = true; d.note = `Optional: ${inp.hiitMinutes} min HIIT.` }
   }

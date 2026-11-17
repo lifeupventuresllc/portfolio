@@ -1,24 +1,19 @@
 import { redirect } from 'next/navigation'
 import { readFavorites } from '@/lib/favorites'
+import { buildLiveProgram } from '@/lib/live-program'
 import { ensureCurrentPlan } from '@/lib/rebuild-workout'
 import { getRestPick } from '@/lib/rest-rule-server'
 import { restDayLine, REST_DAY_TITLE } from '@/lib/rest-rule'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import WorkoutPlayer from '@/components/WorkoutPlayer'
 import QuickstartWorkout from '@/components/QuickstartWorkout'
-import { generateWorkout, pickFocusDayIndex, applyProgressiveOverload, type WorkoutProgram, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
-import { getProgressionOverrides } from '@/lib/progression'
+import { pickFocusDayIndex, applyProgressiveOverload, type WorkoutProgram, type FocusArea } from '@/lib/workout'
 import { generateCardioSession } from '@/lib/cardio-session'
 import { generateHiitSession } from '@/lib/hiit'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
-import { localDateISO, addDaysISO, currentWeekNumber, getTimezone, localHourNumber } from '@/lib/localdate'
+import { localDateISO, addDaysISO, getTimezone, localHourNumber } from '@/lib/localdate'
 import { computeLowFuelToday } from '@/lib/workout-assembly'
-import { getRecentlyTrainedMuscles, getExerciseSessions } from '@/lib/progression'
-import { parseStoredGoal } from '@/lib/goals'
-import { parseStoredTrainingStyles } from '@/lib/training-styles'
-import { weightsFor } from '@/lib/weight-tags'
-import { applyAlwaysSwaps, readAlwaysSwaps } from '@/lib/always-swaps'
 import { pickWeight } from '@/lib/weight-picker'
 import { buildBlocks } from '@/lib/workout-blocks'
 import { getLastWeights } from '@/lib/progression'
@@ -133,55 +128,18 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
   // Regenerating from her real intake + a real current week number on every
   // visit makes that genuinely true, while a same-day chat override still
   // wins for today specifically via trackOverride/overrideAreas below.
+  // Her plan as of right now — the SAME builder My Plan uses (lib/live-program.ts,
+  // 2026-11-17), so the moves My Plan lists are the moves she gets here.
+  // Real current week (6-week blocks), logged history, favorites, always-swaps;
+  // a same-day chat override (track/focus/weight) still wins for today.
   if (intake) {
-    // Real bug found live, 2026-09-03: this silently downgraded 'recomp'
-    // (both "Lose fat" and "Build & tone" selected — see lib/goals.ts) back
-    // to a plain 'lose' plan on every single regeneration, right at the one
-    // real-time call site that rebuilds her workout on every visit —
-    // undoing the fix at intake time before it ever reached the engine.
-    const goal = parseStoredGoal(intake.goal as string | null)
-    const sex = (intake.sex === 'male' ? 'male' : intake.sex === 'other' ? 'other' : 'female') as 'male' | 'female' | 'other'
-    const postpartum = !!(intake.form_data as { postpartum?: boolean } | null)?.postpartum
-    // Real bug found live, 2026-09-04: this only ever read the single
-    // `training_style` (styles[0]), dropping any others she'd picked —
-    // same shape as the goal bug above, same fix pattern (lib/training-styles.ts).
-    const formDataStyles = intake.form_data as { training_style?: TrainingStyle; training_styles?: string[] } | null
-    const trainingStyles = Array.from(parseStoredTrainingStyles(formDataStyles?.training_styles, formDataStyles?.training_style))
-    const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
-    const weekNumber = currentWeekNumber((enrollment.created_at as string) || new Date().toISOString())
-    // Layer three (lib/progression.ts) — real logged set-effort history,
-    // per movement pattern. This is the ONE place her actual dynamic
-    // skill/intensity state reaches the assembly engine for her real,
-    // displayed session (as opposed to a preview/PDF render elsewhere that
-    // doesn't need to reflect live progression).
-    // Double progression (lib/double-progression.ts): her real finished
-    // sessions per exercise → each lift's target reps + cue for today.
-    const [progressionOverrides, recentlyTrainedMuscles, exerciseHistory] = await Promise.all([
-      getProgressionOverrides(enrollment.id as string),
-      getRecentlyTrainedMuscles(enrollment.id as string),
-      getExerciseSessions(enrollment.id as string, (enrollment.created_at as string) || new Date().toISOString()),
-    ])
-    const trackToday = trackOverride || (intake.training_location === 'home' ? 'home' : 'gym')
-    program = generateWorkout({
-      favorites: readFavorites(intake.form_data),
-      name: (enrollment.name as string) || 'Your', sex,
-      track: trackToday,
-      level, goal,
-      // Dumbbell / kettlebell days (2026-11-10): gym switches between them,
-      // home uses what she has; "Switch" on the workout wins for today.
-      weights: weightsFor(intake.form_data as { home_kettlebells?: boolean } | null, trackToday, todayAdjustment?.workoutChange?.weightOverride),
-      daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyles, focusArea,
-      overrideAreas: focusOverride?.length ? focusOverride : undefined,
-      progressionOverrides,
-      activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],
-      lowFuelToday,
-      recentlyTrainedMuscles,
-      exerciseHistory,
+    program = await buildLiveProgram({
+      enrollment: enrollment as { id: string; name?: string | null; created_at?: string | null },
+      intake: intake as Record<string, unknown>,
+      trackOverride, focusOverride: focusOverride?.length ? focusOverride : undefined,
+      weightOverride: todayAdjustment?.workoutChange?.weightOverride, lowFuelToday,
     })
   }
-
-  // Swap → "Always" (2026-11-12): moves she can't do at her gym/home never come back.
-  program = applyAlwaysSwaps(program, readAlwaysSwaps(intake?.form_data))
 
   // Anchor rotation to her PERMANENT plan's day count, not the (possibly track-swapped)
   // program being shown today — her position in the push-pull sequence shouldn't shift
@@ -329,7 +287,7 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
     // Full screen (2026-10-29): cancels the layout's tab-bar padding, since
     // the tab bar is hidden here.
     <div className="min-h-[100dvh] px-4 pt-0" style={{ background: '#021F16', marginBottom: 'calc(-4.5rem - env(safe-area-inset-bottom))' }}>
-      <WorkoutPlayer program={program} firstName={firstName} hasRealName={hasRealName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} askQuickstartGoal={askQuickstartGoal} isGuest={isGuest} setup={setup} favorites={readFavorites(intake?.form_data)} swapCtx={swapCtx} />
+      <WorkoutPlayer program={program} firstName={firstName} hasRealName={hasRealName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} askQuickstartGoal={askQuickstartGoal} isGuest={isGuest} setup={setup} hiit={searchParams?.hiit === '1'} favorites={readFavorites(intake?.form_data)} swapCtx={swapCtx} />
       {/* "Training somewhere different today? Tell Coach" now lives in the
           workout's ⋯ menu (2026-10-29: full-screen workout, nothing below it). */}
     </div>

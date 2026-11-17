@@ -17,6 +17,7 @@ import ProgressNew, { type DayDot } from './ProgressNew'
 import { buildWeek, blockFor } from '@/lib/week-plan'
 import { getStrength } from '@/lib/strength'
 import { hiitMinutes } from '@/lib/hiit'
+import { buildLiveProgram } from '@/lib/live-program'
 import { REST_DAY_TITLE } from '@/lib/rest-rule'
 import { streakDetail } from '@/lib/streak'
 import { loadDrops, shieldDatesFrom, winsFrom } from '@/lib/reward-drop'
@@ -232,7 +233,10 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   ])
   const calByDay = new Map<string, number>()
   for (const f of weekFood || []) calByDay.set(f.logged_on as string, (calByDay.get(f.logged_on as string) || 0) + (Number(f.calories) || 0))
-  const workoutDays = new Set((doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout).map((r) => r.logged_on as string))
+  // A HIIT day (lib/hiit.ts) counts toward her weekly goal and the week view,
+  // but NOT toward her lifting rotation (`completed` above stays lifts only).
+  const hiitDays = new Set((doneRows || []).filter((r) => (r.measurements as { hiit?: boolean } | null)?.hiit).map((r) => r.logged_on as string))
+  const workoutDays = new Set((doneRows || []).filter((r) => (r.measurements as { workout?: boolean } | null)?.workout || hiitDays.has(r.logged_on as string)).map((r) => r.logged_on as string))
   // "On target" = she logged food that day and landed within about 10% of
   // her number — never counts a day she logged nothing.
   const onTarget = (iso: string) => { const c = calByDay.get(iso) || 0; return !!flatCalTarget && c >= flatCalTarget * 0.8 && c <= flatCalTarget * 1.1 }
@@ -254,17 +258,32 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   // ---- My Plan (2026-11-17, workout-system step 1): her week + 6-week block ----
   const block = blockFor(currentWeekNumber(enrollment.created_at || (intakeRow?.created_at as string) || new Date().toISOString()))
   const cleanTitle = (t: string) => t.replace(/^Day \d+:\s*/, '')
+  // Moves come from the SAME builder the workout screen uses (lib/live-program.ts),
+  // so "see moves" = what she gets when she taps Start.
+  const live = intakeRow && program
+    ? await buildLiveProgram({
+        enrollment: enrollment as { id: string; name?: string | null; created_at?: string | null }, intake: intakeRow as Record<string, unknown>,
+        trackOverride: todayAdjustment?.workoutChange?.trackOverride, focusOverride: todayAdjustment?.workoutChange?.focusOverride,
+        weightOverride: todayAdjustment?.workoutChange?.weightOverride,
+      }).catch(() => program)
+    : program
   const dayAt = (i: number) => {
-    if (!program) return { title: 'Workout', moves: [] as string[] }
-    const k = ((i % numDays) + numDays) % numDays
-    if (program.track === 'home') { const d = program.home?.days[k]; return { title: cleanTitle(d?.title || 'Workout'), moves: (d?.exercises || []).map((e) => e.name) } }
-    const d = program.gymDays?.[k]; return { title: cleanTitle(d?.title || 'Workout'), moves: (d?.supersets || []).flatMap((s) => [s.push.name, s.pull.name]) }
+    const p = live || program
+    if (!p) return { title: 'Workout', moves: [] as string[] }
+    const n = (p.track === 'home' ? p.home?.days.length : p.gymDays?.length) || numDays || 1
+    const k = ((i % n) + n) % n
+    const strip = (names: string[]) => Array.from(new Set(names.filter(Boolean)))
+    if (p.track === 'home') { const d = p.home?.days[k]; return { title: cleanTitle(d?.title || 'Workout'), moves: strip((d?.exercises || []).map((e) => e.name)) } }
+    const d = p.gymDays?.[k]
+    return { title: cleanTitle(d?.title || 'Workout'), moves: strip([...(d?.supersets || []).flatMap((s) => [s.push.name, s.pull.name]), ...(d?.accessory || []).map((a) => a.name), ...(d?.ab ? [d.ab.upper.name, d.ab.lower.name] : [])]) }
   }
+  // Today's day of her plan = the one the workout screen opens (rest rule may skip ahead).
+  const todayPlanIdx = !effectiveFocusArea && restPick && !restPick.rest ? restPick.index : startDay
   const todayIsRestPick = !todayWorkout || todayWorkout.title === REST_DAY_TITLE
   const planDays = buildWeek({
-    monday, todayIdx: mealIdx, doneIsos: workoutDays, goal: workoutsGoal,
-    todayTitle: todayIsRestPick ? null : cleanTitle(todayWorkout!.title), todayMoves: dayAt(startDay).moves,
-    next: (j) => dayAt(startDay + j), light: block.light, hiitMinutes: hiitMinutes((program?.level || 1) as 1 | 2 | 3),
+    monday, todayIdx: mealIdx, doneIsos: workoutDays, hiitIsos: hiitDays, goal: workoutsGoal,
+    todayTitle: todayIsRestPick ? null : cleanTitle(todayWorkout!.title), todayMoves: dayAt(todayPlanIdx).moves,
+    next: (j) => dayAt(todayPlanIdx + j), light: block.light, hiitMinutes: hiitMinutes((program?.level || 1) as 1 | 2 | 3),
   })
   const startWeight = Number(intakeRow?.weight_lbs) || null
   const lastWeight = Number(lastWeigh?.weight_lbs) || null
