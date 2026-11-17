@@ -5,6 +5,8 @@ import { hapticTap } from '@/lib/haptics'
 import type { Drop } from '@/lib/reward-drop'
 import WinsShelf from '@/components/WinsShelf'
 import { ShieldIcon, FlameIcon } from '@/components/RewardCards'
+import Link from 'next/link'
+import type { PlanDay, PlanBlock } from '@/lib/week-plan'
 
 // My Day → Progress (2026-10-25, Asa: the old garden/HUD "feels like a video
 // game" — same simple look as the new intake). Her real week at a glance:
@@ -16,13 +18,14 @@ export type DayDot = { label: string; iso: string; workout: boolean; foodOnTarge
 
 const HEAD = "var(--font-barlow), 'Barlow Condensed', sans-serif"
 const MONO = "var(--font-jbmono), 'JetBrains Mono', monospace"
-const INK = '#EDE7DA', GOLD = '#E5A93C', MUTE = 'rgba(237,231,218,.72)'
+const INK = '#EDE7DA', GOLD = '#E5A93C', MUTE = 'rgba(237,231,218,.72)', APP = '#021F16'
 // Punchier color (rewards-plan.md §4): hot gold for the numbers that are
 // hers, emerald for done, a deeper card. Base stays calm.
 const HOT = '#FFB21E', EMERALD = '#1EE38A', CARD = '#0A3124'
+const SOFT = "var(--font-fraunces), 'Fraunces', Georgia, serif"
 
-export default function ProgressNew({ days, workoutsDone, workoutsGoal, weightChange, startWeight, foodDays, streak, why, wins = [], shields = 0 }: {
-  days: DayDot[]; workoutsDone: number; workoutsGoal: number
+export default function ProgressNew({ days, planDays, block, workoutsDone, workoutsGoal, weightChange, startWeight, foodDays, streak, why, wins = [], shields = 0 }: {
+  days: DayDot[]; planDays?: PlanDay[]; block?: PlanBlock; workoutsDone: number; workoutsGoal: number
   weightChange: number | null; startWeight: number | null
   foodDays: number; streak: number; why: { title: string; line: string; lines?: { why: string; talk: string }[] } | null
   wins?: Drop[]; shields?: number
@@ -33,11 +36,14 @@ export default function ProgressNew({ days, workoutsDone, workoutsGoal, weightCh
   return (
     <div className="flex flex-col gap-3.5 pb-6">
       <div className="px-1">
-        <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.16em', color: GOLD }}>THIS WEEK</span>
+        <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.16em', color: GOLD }}>THIS WEEK{block ? ` · BLOCK ${block.block} · WEEK ${block.week} OF ${block.total}` : ''}</span>
         <h1 className="nf-head" style={{ margin: '4px 0 0', fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 60, lineHeight: 0.86, textTransform: 'uppercase', color: INK }}>
           <span className="rw-glow-once" style={{ color: HOT }}>{workoutsDone} of {workoutsGoal}</span><br />workouts
         </h1>
+        {planDays && <p style={{ margin: '8px 0 0', fontFamily: SOFT, fontStyle: 'italic', fontSize: 17, color: MUTE }}>{block?.light ? 'Light week. Same moves, easier sets.' : 'Your week, planned for you.'}</p>}
       </div>
+
+      {planDays && block ? <MyPlan days={planDays} block={block} /> : (<>
 
       <div className="grid grid-cols-7 gap-1.5">
         {days.map((d, i) => {
@@ -54,6 +60,8 @@ export default function ProgressNew({ days, workoutsDone, workoutsGoal, weightCh
         })}
       </div>
       <p className="px-1 text-sm -mt-1" style={{ color: 'rgba(237,231,218,.85)' }}>{days[sel]?.text}</p>
+
+      </>)}
 
       <div className="rounded-[22px] px-4 py-3.5 flex justify-between items-center gap-3" style={{ background: CARD, border: '1px solid rgba(255,178,30,.18)' }}>
         <span className="flex flex-col gap-0.5">
@@ -134,5 +142,74 @@ function WhyCard({ why }: { why: { title: string; line: string; lines?: { why: s
       </span>
       <span className="text-[13px]" style={{ opacity: 0.8 }}>{why.line}</span>
     </button>
+  )
+}
+
+// My Plan (2026-11-17, workout-system step 1; Asa: "more stylistic for a
+// woman… keep the font size, keep the coloring"). Her 6-week block as a
+// string of beads, then Monday to Sunday as soft rows. Tap a day to see its
+// moves. Same fonts and colors as the rest of Progress, plus a soft italic
+// serif for the small lines.
+function MyPlan({ days, block }: { days: PlanDay[]; block: PlanBlock }) {
+  const [open, setOpen] = useState<number | null>(null)
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="px-1 pt-1">
+        <div className="relative flex items-center justify-between" style={{ height: 22 }}>
+          <span className="absolute left-2 right-2 top-1/2" style={{ height: 2, background: 'linear-gradient(90deg, rgba(30,227,138,.6), rgba(255,178,30,.5) 50%, rgba(237,231,218,.18))', transform: 'translateY(-50%)' }} aria-hidden />
+          {Array.from({ length: block.total }, (_, i) => {
+            const w = i + 1, past = w < block.week, now = w === block.week, light = w === block.total
+            return (
+              <span key={i} className="relative rounded-full" aria-label={`Week ${w}${now ? ', this week' : ''}${light ? ', light week' : ''}`}
+                style={{ width: now ? 22 : 14, height: now ? 22 : 14, background: past ? EMERALD : now ? `radial-gradient(circle at 35% 35%, #FFE3A3, ${HOT} 60%)` : APP,
+                  border: past || now ? 'none' : light ? '1.5px dashed rgba(237,231,218,.55)' : '1.5px solid rgba(237,231,218,.3)',
+                  boxShadow: now ? '0 0 0 5px rgba(255,178,30,.18), 0 0 16px rgba(255,178,30,.7)' : past ? '0 0 8px rgba(30,227,138,.5)' : 'none' }} />
+            )
+          })}
+        </div>
+        <div className="flex justify-between mt-1.5" style={{ fontFamily: SOFT, fontStyle: 'italic', fontSize: 13, color: MUTE }}>
+          <span>week 1</span><span style={{ color: HOT }}>you&apos;re here</span><span>light week</span>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        {days.map((d, i) => {
+          const isOpen = open === i && d.moves.length > 0
+          const today = d.kind === 'today', done = d.kind === 'done', rest = d.kind === 'rest'
+          return (
+            <div key={d.iso} className="rounded-[24px] overflow-hidden" style={{
+              background: today ? 'radial-gradient(120% 140% at 0% 0%, rgba(255,178,30,.2), rgba(255,178,30,.05) 60%)' : done ? 'rgba(30,227,138,.08)' : rest ? 'transparent' : 'rgba(237,231,218,.05)',
+              border: today ? `2px solid ${HOT}` : done ? '1px solid rgba(30,227,138,.4)' : rest ? '1px dashed rgba(237,231,218,.16)' : '1px solid rgba(237,231,218,.12)',
+              boxShadow: today ? '0 8px 26px rgba(255,178,30,.18)' : 'none' }}>
+              <div className="flex items-center gap-3 px-3 py-2.5">
+                <button type="button" onClick={() => { if (!d.moves.length) return; hapticTap(); setOpen(isOpen ? null : i) }} aria-expanded={d.moves.length ? isOpen : undefined}
+                  className="flex flex-1 min-w-0 items-center gap-3 text-left" style={{ color: INK, cursor: d.moves.length ? 'pointer' : 'default' }}>
+                  <span className="shrink-0 rounded-full flex flex-col items-center justify-center" style={{ width: 46, height: 46,
+                    background: done ? `radial-gradient(circle at 35% 30%, #7DF5BC, ${EMERALD} 70%)` : today ? `radial-gradient(circle at 35% 30%, #FFE3A3, ${HOT} 70%)` : 'rgba(237,231,218,.07)',
+                    color: done || today ? APP : INK }}>
+                    <span style={{ fontFamily: MONO, fontSize: 9.5, fontWeight: 700, letterSpacing: '.08em', lineHeight: 1 }}>{d.label}</span>
+                    <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 19, lineHeight: 1 }}>{done ? '✓' : d.date}</span>
+                  </span>
+                  <span className="flex flex-col min-w-0">
+                    <span className="truncate" style={{ fontWeight: 700, fontSize: 16, lineHeight: 1.2, color: rest ? MUTE : INK }}>{d.title}</span>
+                    <span style={{ fontFamily: SOFT, fontStyle: 'italic', fontSize: 14, lineHeight: 1.3, color: MUTE }}>{d.note}{d.moves.length ? (isOpen ? ' · hide moves' : ' · see moves') : ''}</span>
+                  </span>
+                </button>
+                {today ? (
+                  <Link href="/plan/workout" onClick={() => hapticTap()} className="nf-press shrink-0 rounded-full px-4 py-2.5" style={{ background: HOT, color: APP, fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.1em' }}>START</Link>
+                ) : rest ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden className="shrink-0"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" fill="rgba(237,231,218,.35)" /></svg>
+                ) : null}
+              </div>
+              {isOpen && (
+                <div className="flex flex-wrap gap-1.5 px-3 pb-3">
+                  {d.moves.map((m, k) => <span key={k} className="rounded-full px-3 py-1.5 text-[13px] font-semibold" style={{ background: 'rgba(237,231,218,.08)', color: INK }}>{m}</span>)}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }

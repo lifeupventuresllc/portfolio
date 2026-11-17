@@ -14,9 +14,11 @@ import ClientMenu from '@/components/ClientMenu'
 import RebuildPlanButton from '@/components/RebuildPlanButton'
 import { WinBarWorkout } from '@/components/WinBar'
 import ProgressNew, { type DayDot } from './ProgressNew'
+import { buildWeek, blockFor } from '@/lib/week-plan'
+import { REST_DAY_TITLE } from '@/lib/rest-rule'
 import { streakDetail } from '@/lib/streak'
 import { loadDrops, shieldDatesFrom, winsFrom } from '@/lib/reward-drop'
-import { getTimezone, localMondayIndex, localDateISO, localDayNumber } from '@/lib/localdate'
+import { getTimezone, localMondayIndex, localDateISO, localDayNumber, currentWeekNumber } from '@/lib/localdate'
 import { affirmationForDay } from '@/lib/affirmations'
 import { assessLifePattern, messageForPattern } from '@/lib/fos/pattern'
 import { assessStructuralPattern, messageForStructural } from '@/lib/fos/plan-evolution'
@@ -34,7 +36,7 @@ import type { WeekPlan } from '@/lib/meal-plan'
 //  - where="home": "HEY MAYA" + streak on top, toggle always opens on
 //    Progress (Today one tap away), fits inside Home's swipe screen.
 // Only for someone with a finished intake; both pages handle the rest.
-export type MyDayEnrollment = { id: string; name?: string | null; tier?: string | null }
+export type MyDayEnrollment = { id: string; name?: string | null; tier?: string | null; created_at?: string | null }
 
 export default async function MyDayBody({ enrollment, user, where, searchParams }: {
   enrollment: MyDayEnrollment
@@ -246,6 +248,21 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   const workoutsDone = days.filter((d) => d.workout).length
   const workoutsGoal = Math.max(workoutsDone, program?.daysPerWeek || numDays || 3)
   const foodDays = days.filter((d) => d.foodOnTarget).length
+  // ---- My Plan (2026-11-17, workout-system step 1): her week + 6-week block ----
+  const block = blockFor(currentWeekNumber(enrollment.created_at || (intakeRow?.created_at as string) || new Date().toISOString()))
+  const cleanTitle = (t: string) => t.replace(/^Day \d+:\s*/, '')
+  const dayAt = (i: number) => {
+    if (!program) return { title: 'Workout', moves: [] as string[] }
+    const k = ((i % numDays) + numDays) % numDays
+    if (program.track === 'home') { const d = program.home?.days[k]; return { title: cleanTitle(d?.title || 'Workout'), moves: (d?.exercises || []).map((e) => e.name) } }
+    const d = program.gymDays?.[k]; return { title: cleanTitle(d?.title || 'Workout'), moves: (d?.supersets || []).flatMap((s) => [s.push.name, s.pull.name]) }
+  }
+  const todayIsRestPick = !todayWorkout || todayWorkout.title === REST_DAY_TITLE
+  const planDays = buildWeek({
+    monday, todayIdx: mealIdx, doneIsos: workoutDays, goal: workoutsGoal,
+    todayTitle: todayIsRestPick ? null : cleanTitle(todayWorkout!.title), todayMoves: dayAt(startDay).moves,
+    next: (j) => dayAt(startDay + j), light: block.light,
+  })
   const startWeight = Number(intakeRow?.weight_lbs) || null
   const lastWeight = Number(lastWeigh?.weight_lbs) || null
   const weightChange = startWeight && lastWeight ? Math.round((lastWeight - startWeight) * 10) / 10 : null
@@ -331,7 +348,7 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
 
         <ProgressViewToggle
           {...(home ? { initialTab: 'garden' as const, remember: false } : {})}
-          garden={<div className="flex flex-col"><ProgressNew days={days} workoutsDone={workoutsDone} workoutsGoal={workoutsGoal} weightChange={weightChange} startWeight={startWeight} foodDays={foodDays} streak={streak} why={why} wins={wins} shields={shields} /><StartFresh /></div>}
+          garden={<div className="flex flex-col"><ProgressNew days={days} planDays={planDays} block={block} workoutsDone={workoutsDone} workoutsGoal={workoutsGoal} weightChange={weightChange} startWeight={startWeight} foodDays={foodDays} streak={streak} why={why} wins={wins} shields={shields} /><StartFresh /></div>}
           plan={
             // Today (2026-10-25, Asa: "two things today" felt like effort and
             // work) — not a to-do list: everything is already handled for her.
