@@ -7,6 +7,7 @@ import WinsShelf from '@/components/WinsShelf'
 import { ShieldIcon, FlameIcon } from '@/components/RewardCards'
 import Link from 'next/link'
 import type { PlanDay, PlanBlock } from '@/lib/week-plan'
+import type { LiftTrend } from '@/lib/strength'
 
 // My Day → Progress (2026-10-25, Asa: the old garden/HUD "feels like a video
 // game" — same simple look as the new intake). Her real week at a glance:
@@ -24,8 +25,8 @@ const INK = '#EDE7DA', GOLD = '#E5A93C', MUTE = 'rgba(237,231,218,.72)', APP = '
 const HOT = '#FFB21E', EMERALD = '#1EE38A', CARD = '#0A3124'
 const SOFT = "var(--font-fraunces), 'Fraunces', Georgia, serif"
 
-export default function ProgressNew({ days, planDays, block, workoutsDone, workoutsGoal, weightChange, startWeight, foodDays, streak, why, wins = [], shields = 0 }: {
-  days: DayDot[]; planDays?: PlanDay[]; block?: PlanBlock; workoutsDone: number; workoutsGoal: number
+export default function ProgressNew({ days, planDays, block, lifts, workoutsDone, workoutsGoal, weightChange, startWeight, foodDays, streak, why, wins = [], shields = 0 }: {
+  days: DayDot[]; planDays?: PlanDay[]; block?: PlanBlock; lifts?: LiftTrend[]; workoutsDone: number; workoutsGoal: number
   weightChange: number | null; startWeight: number | null
   foodDays: number; streak: number; why: { title: string; line: string; lines?: { why: string; talk: string }[] } | null
   wins?: Drop[]; shields?: number
@@ -62,6 +63,8 @@ export default function ProgressNew({ days, planDays, block, workoutsDone, worko
       <p className="px-1 text-sm -mt-1" style={{ color: 'rgba(237,231,218,.85)' }}>{days[sel]?.text}</p>
 
       </>)}
+
+      {lifts && <Strength lifts={lifts} />}
 
       <div className="rounded-[22px] px-4 py-3.5 flex justify-between items-center gap-3" style={{ background: CARD, border: '1px solid rgba(255,178,30,.18)' }}>
         <span className="flex flex-col gap-0.5">
@@ -197,6 +200,8 @@ function MyPlan({ days, block }: { days: PlanDay[]; block: PlanBlock }) {
                 </button>
                 {today ? (
                   <Link href="/plan/workout" onClick={() => hapticTap()} className="nf-press shrink-0 rounded-full px-4 py-2.5" style={{ background: HOT, color: APP, fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.1em' }}>START</Link>
+                ) : rest && d.hiit && d.isToday ? (
+                  <Link href="/plan/workout?hiit=1" onClick={() => hapticTap()} className="nf-press shrink-0 rounded-full px-4 py-2.5" style={{ border: `1.5px solid ${HOT}`, color: HOT, fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '.1em' }}>HIIT</Link>
                 ) : rest ? (
                   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden className="shrink-0"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" fill="rgba(237,231,218,.35)" /></svg>
                 ) : null}
@@ -210,6 +215,65 @@ function MyPlan({ days, block }: { days: PlanDay[]; block: PlanBlock }) {
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// Strength (2026-11-17, workout-system step 2): each lift's heaviest set per
+// workout, drawn as a soft line. Real numbers only (workout_set_logs.weight_lb).
+function Spark({ pts }: { pts: number[] }) {
+  const W = 96, H = 34, lo = Math.min(...pts), hi = Math.max(...pts), span = hi - lo || 1
+  const xy = pts.map((v, i) => [pts.length === 1 ? W / 2 : 3 + (i * (W - 6)) / (pts.length - 1), H - 4 - ((v - lo) / span) * (H - 8)])
+  const d = xy.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ')
+  const last = xy[xy.length - 1]
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden className="shrink-0">
+      {pts.length > 1 && <path d={`${d} L${last[0].toFixed(1)} ${H} L${xy[0][0].toFixed(1)} ${H} Z`} fill="rgba(255,178,30,.12)" />}
+      {pts.length > 1 && <path d={d} fill="none" stroke={HOT} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+      <circle cx={last[0]} cy={last[1]} r="4" fill={HOT} stroke={APP} strokeWidth="1.5" />
+    </svg>
+  )
+}
+
+function Strength({ lifts }: { lifts: LiftTrend[] }) {
+  const [all, setAll] = useState(false)
+  const shown = all ? lifts.slice(0, 12) : lifts.slice(0, 3)
+  const gained = lifts.reduce((t, l) => t + Math.max(0, l.now - l.start), 0)
+  return (
+    <div className="rounded-[24px] px-4 py-4 flex flex-col gap-3" style={{ background: CARD, border: '1px solid rgba(255,178,30,.18)' }}>
+      <div className="flex items-end justify-between gap-3">
+        <span className="flex flex-col">
+          <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: MUTE }}>STRENGTH</span>
+          <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 34, lineHeight: 1.05, color: gained > 0 ? HOT : INK, textTransform: 'uppercase' }}>
+            {lifts.length ? (gained > 0 ? `+${Math.round(gained)} LB` : 'Building') : 'Starts soon'}
+          </span>
+          <span style={{ fontFamily: SOFT, fontStyle: 'italic', fontSize: 14, color: MUTE }}>
+            {lifts.length ? (gained > 0 ? 'added across your lifts' : 'same weights, more reps first') : 'Lift with a weight and your strength shows here.'}
+          </span>
+        </span>
+      </div>
+      {shown.map((l) => {
+        const up = l.now - l.start
+        return (
+          <div key={l.name} className="flex flex-col gap-1.5 pt-2.5" style={{ borderTop: '1px solid rgba(237,231,218,.08)' }}>
+            <div className="flex items-center gap-3">
+              <span className="flex flex-col min-w-0 flex-1">
+                <span className="truncate" style={{ fontWeight: 700, fontSize: 15, color: INK }}>{l.name}</span>
+                <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, color: up > 0 ? EMERALD : MUTE }}>
+                  {l.points.length === 1 ? `${l.now} lb` : `${l.start} → ${l.now} lb`}{up > 0 ? `  +${up}` : ''}
+                </span>
+              </span>
+              <Spark pts={l.points.map((p) => p.lb)} />
+            </div>
+            {l.stuck && <span style={{ fontFamily: SOFT, fontStyle: 'italic', fontSize: 13.5, lineHeight: 1.35, color: GOLD }}>Same weight 3 workouts in a row. That&apos;s normal. Push for one more rep each set. When you hit the top, the app moves you up.</span>}
+          </div>
+        )
+      })}
+      {lifts.length > 3 && (
+        <button type="button" onClick={() => { hapticTap(); setAll((x) => !x) }} className="self-start text-[14px] font-semibold underline underline-offset-4" style={{ color: INK }}>
+          {all ? 'Show less' : `See all ${Math.min(lifts.length, 12)} lifts`}
+        </button>
+      )}
     </div>
   )
 }

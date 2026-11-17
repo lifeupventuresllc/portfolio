@@ -8,6 +8,7 @@ import { withWeight, type Block, type Move } from '@/lib/workout-blocks'
 import { stepWeight, weightUnit, formatLb, pickWeight, pyramidWeight, type WeightPerson } from '@/lib/weight-picker'
 import { swapOptionsFor, type SwapWhy } from '@/lib/swap-options'
 import { exerciseVideo } from '@/lib/exercise-videos'
+import { favoritesFirst } from '@/lib/favorites'
 import { NOT_EXACT_ON_SCREEN } from '@/lib/exercise-images'
 import type { Injury } from '@/lib/workout-exercises'
 import type { Effort } from '@/components/SetEffortTap'
@@ -94,8 +95,10 @@ function Circles({ total, done, active }: { total: number; done: number; active:
 
 export interface SwapCtx { location: 'gym' | 'home'; level: number; injuries: Injury[]; person: WeightPerson }
 
-export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, onSetDone, onProgress, onClose, menu, levelLabel, setup, swapCtx, onAlwaysSwap }: {
+export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, onSetDone, onProgress, onClose, menu, levelLabel, setup, swapCtx, onAlwaysSwap, favorites, onFavorite }: {
   blocks: Block[]
+  favorites?: string[]        // her hearted moves (lib/favorites.ts, 2026-11-17)
+  onFavorite?: (name: string, on: boolean) => void
   swapCtx?: SwapCtx           // Swap (2026-11-12): what she can do where she is today
   onAlwaysSwap?: (from: string, to: string) => void
   setup?: ReactNode           // "Today I'm at: Gym | Home" + weight switch — first screen only (2026-11-10)
@@ -113,6 +116,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
   // A new workout (Gym/Home switch, another day) starts fresh.
   const sig = blocksProp.map((b) => b.moves.map((m) => m.name).join('|')).join('/')
   const [blocks, setBlocks] = useState(blocksProp)
+  const [favs, setFavs] = useState<Set<string>>(() => new Set(favorites || []))
   const sigRef = useRef(sig)
   useEffect(() => { if (sig !== sigRef.current) { sigRef.current = sig; setBlocks(blocksProp); setLbs({}) } }, [sig]) // eslint-disable-line react-hooks/exhaustive-deps
   // The weight she's using — starts at the app's pick, she taps + or − if hers is different.
@@ -276,9 +280,23 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
 
   if (!block) return null
   const pair = block.moves.length > 1
+  // Hearts (2026-11-17): tap to favorite a move; her favorites come first in Swap
+  // and get picked first in future workouts.
+  const toggleFav = (name: string) => {
+    hapticTap()
+    const on = !favs.has(name)
+    setFavs((s) => { const n = new Set(s); if (on) n.add(name); else n.delete(name); return n })
+    onFavorite?.(name, on)
+  }
+  const heart = (name: string, size = 40) => (
+    <button type="button" onClick={() => toggleFav(name)} aria-pressed={favs.has(name)} aria-label={favs.has(name) ? `Remove ${name} from favorites` : `Add ${name} to favorites`}
+      className="nf-press shrink-0 rounded-full flex items-center justify-center" style={{ width: size, height: size, background: 'rgba(2,31,22,.6)', border: '1px solid rgba(237,231,218,.22)' }}>
+      <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" aria-hidden><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.6 4.5c2.1 0 3.6 1.2 5.4 3.2 1.8-2 3.3-3.2 5.4-3.2 3.6 0 5.7 3.8 4.2 7.2C19.5 16.4 12 21 12 21z" fill={favs.has(name) ? '#FF6B8A' : 'none'} stroke={favs.has(name) ? '#FF6B8A' : INK} strokeWidth="2" strokeLinejoin="round" /></svg>
+    </button>
+  )
   const swapMove = swapIdx != null ? block.moves[swapIdx] : null
   const swapOpts = swapOpen && swapMove && swapCtx
-    ? swapOptionsFor(swapMove.name, { ...swapCtx, exclude: blocks.flatMap((b) => b.moves.map((m) => m.name)), why })
+    ? favoritesFirst(swapOptionsFor(swapMove.name, { ...swapCtx, exclude: blocks.flatMap((b) => b.moves.map((m) => m.name)), why }), favs)
     : []
   const chip = (on: boolean) => ({ border: `1px solid ${on ? GOLD : 'rgba(237,231,218,.18)'}`, background: on ? 'rgba(229,169,60,.12)' : 'transparent', color: on ? GOLD : INK })
   const swapSheet = swapOpen ? (
@@ -305,7 +323,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
             </div>
             {swapOpts.length ? swapOpts.map((o) => (
               <button key={o.name} onClick={() => pickSwap(o.name, o.cue, o.imageUrl)} className="nf-press w-full text-left rounded-2xl px-4 py-3 flex flex-col gap-1" style={{ background: 'rgba(237,231,218,.06)', border: '1px solid rgba(237,231,218,.14)', color: INK }}>
-                <span className="flex items-center justify-between gap-3"><b className="text-[16px] leading-tight">{o.name}</b><WeightTag w={o.tag || undefined} /></span>
+                <span className="flex items-center justify-between gap-3"><b className="text-[16px] leading-tight">{favs.has(o.name) && <span aria-label="Favorite" style={{ color: '#FF6B8A' }}>♥ </span>}{o.name}</b><WeightTag w={o.tag || undefined} /></span>
                 {o.cue && <span className="text-[13px] leading-snug" style={{ color: MUTE }}>{o.cue}</span>}
               </button>
             )) : <span className="text-[14px]" style={{ color: MUTE }}>No good swap for this one. You can skip it instead.</span>}
@@ -458,7 +476,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
                     {m.cue && <span className="block mt-1 normal-case" style={{ fontFamily: 'var(--font-inter), Inter, system-ui, sans-serif', fontStyle: 'normal', fontWeight: 500, fontSize: 13, lineHeight: 1.3, color: INK, textShadow: '0 1px 3px rgba(0,0,0,.6)' }}>{m.cue}</span>}
                   </span>
                   <span className="shrink-0 flex flex-col items-end gap-0.5">
-                    <span style={{ ...pill, fontSize: 13, color: INK }}>{repText(m, round).toUpperCase()}</span>
+                    <span className="flex items-center gap-2"><span style={{ ...pill, fontSize: 13, color: INK }}>{repText(m, round).toUpperCase()}</span>{heart(m.name, 32)}</span>
                     {vidWeight(m) || <WeightTag w={m.weight} />}
                     {m.progressCue && <span className="text-[12px] font-semibold text-right" style={{ color: GOLD }}>{m.progressCue}</span>}
                   </span>
@@ -485,7 +503,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
                   <WeightTag w={single.weight} />
                 </span>
               )}
-              <h1 className="nf-head text-balance" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: tallVid ? (single.name.length > 24 ? 32 : 40) : single.name.length > 24 ? 40 : 50, lineHeight: 0.9, textTransform: 'uppercase' }}>{single.name}</h1>
+              <div className="flex items-start gap-3"><h1 className="nf-head text-balance" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: tallVid ? (single.name.length > 24 ? 32 : 40) : single.name.length > 24 ? 40 : 50, lineHeight: 0.9, textTransform: 'uppercase', flex: 1, minWidth: 0 }}>{single.name}</h1>{block.kind === 'exercise' && heart(single.name)}</div>
             </div>
           )}
           <div className="flex items-center gap-4 flex-wrap">

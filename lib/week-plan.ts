@@ -20,6 +20,8 @@ export interface PlanDay {
   title: string        // "Compound · Lower Body" or "Rest day"
   note: string         // short line under the title
   moves: string[]      // tap a day → these
+  hiit?: boolean       // optional HIIT offered on this rest day (lib/hiit.ts)
+  isToday?: boolean
 }
 export interface PlanBlock { block: number; week: number; total: number; light: boolean }
 
@@ -50,12 +52,13 @@ export function buildWeek(inp: {
   todayMoves: string[]
   next: (j: number) => { title: string; moves: string[] }  // her plan's rotation from today: 0 = today's day, 1 = the one after
   light?: boolean
+  hiitMinutes?: number               // offer one optional HIIT on the first rest day from today
 }): PlanDay[] {
   const LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
   const isoAt = (k: number) => { const d = new Date(inp.monday + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + k); return d.toISOString().slice(0, 10) }
   const days: PlanDay[] = LABELS.map((label, k) => {
     const iso = isoAt(k)
-    return { label, date: Number(iso.slice(8)), iso, kind: 'rest' as PlanDayKind, title: 'Rest day', note: REST_NOTES[k % REST_NOTES.length], moves: [] }
+    return { label, date: Number(iso.slice(8)), iso, isToday: k === inp.todayIdx, kind: 'rest' as PlanDayKind, title: 'Rest day', note: REST_NOTES[k % REST_NOTES.length], moves: [] }
   })
   let doneCount = 0
   days.forEach((d, k) => { if (inp.doneIsos.has(d.iso)) { doneCount++; d.kind = 'done'; d.title = 'Workout done'; d.note = k === inp.todayIdx ? 'Today. You did it.' : 'You showed up.' } })
@@ -77,6 +80,12 @@ export function buildWeek(inp: {
     const d = days[futureStart + p]
     const w = inp.next(j); j++
     d.kind = 'later'; d.title = w.title; d.moves = w.moves; d.note = 'Planned for you.'
+  }
+  // One optional HIIT a week (workout-system step 4): the first rest day from
+  // today on, never on the light week.
+  if (inp.hiitMinutes && !inp.light) {
+    const d = days.slice(inp.todayIdx).find((x) => x.kind === 'rest')
+    if (d) { d.hiit = true; d.note = `Optional: ${inp.hiitMinutes} min HIIT.` }
   }
   return days
 }

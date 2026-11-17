@@ -15,6 +15,8 @@ import RebuildPlanButton from '@/components/RebuildPlanButton'
 import { WinBarWorkout } from '@/components/WinBar'
 import ProgressNew, { type DayDot } from './ProgressNew'
 import { buildWeek, blockFor } from '@/lib/week-plan'
+import { getStrength } from '@/lib/strength'
+import { hiitMinutes } from '@/lib/hiit'
 import { REST_DAY_TITLE } from '@/lib/rest-rule'
 import { streakDetail } from '@/lib/streak'
 import { loadDrops, shieldDatesFrom, winsFrom } from '@/lib/reward-drop'
@@ -220,12 +222,13 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   const isoAdd = (iso: string, n: number) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10) }
   const monday = isoAdd(todayIso, -mealIdx)
   const sunday = isoAdd(monday, 6)
-  const [{ data: weekFood }, { data: lastWeigh }, rewardStore] = await Promise.all([
+  const [{ data: weekFood }, { data: lastWeigh }, rewardStore, lifts] = await Promise.all([
     svc.from('challenge_food_log').select('calories, logged_on').eq('enrollment_id', enrollment.id).gte('logged_on', monday).lte('logged_on', sunday),
     svc.from('challenge_progress').select('weight_lbs').eq('enrollment_id', enrollment.id).not('weight_lbs', 'is', null).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     // Reward Drops (rewards-plan.md phase 3): her wins shelf + banked streak
     // shields. Empty until migration 047 runs — never an error.
     loadDrops(svc, enrollment.id as string),
+    getStrength(svc, enrollment.id as string).catch(() => []),
   ])
   const calByDay = new Map<string, number>()
   for (const f of weekFood || []) calByDay.set(f.logged_on as string, (calByDay.get(f.logged_on as string) || 0) + (Number(f.calories) || 0))
@@ -261,7 +264,7 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
   const planDays = buildWeek({
     monday, todayIdx: mealIdx, doneIsos: workoutDays, goal: workoutsGoal,
     todayTitle: todayIsRestPick ? null : cleanTitle(todayWorkout!.title), todayMoves: dayAt(startDay).moves,
-    next: (j) => dayAt(startDay + j), light: block.light,
+    next: (j) => dayAt(startDay + j), light: block.light, hiitMinutes: hiitMinutes((program?.level || 1) as 1 | 2 | 3),
   })
   const startWeight = Number(intakeRow?.weight_lbs) || null
   const lastWeight = Number(lastWeigh?.weight_lbs) || null
@@ -348,7 +351,7 @@ export default async function MyDayBody({ enrollment, user, where, searchParams 
 
         <ProgressViewToggle
           {...(home ? { initialTab: 'garden' as const, remember: false } : {})}
-          garden={<div className="flex flex-col"><ProgressNew days={days} planDays={planDays} block={block} workoutsDone={workoutsDone} workoutsGoal={workoutsGoal} weightChange={weightChange} startWeight={startWeight} foodDays={foodDays} streak={streak} why={why} wins={wins} shields={shields} /><StartFresh /></div>}
+          garden={<div className="flex flex-col"><ProgressNew days={days} planDays={planDays} block={block} lifts={lifts} workoutsDone={workoutsDone} workoutsGoal={workoutsGoal} weightChange={weightChange} startWeight={startWeight} foodDays={foodDays} streak={streak} why={why} wins={wins} shields={shields} /><StartFresh /></div>}
           plan={
             // Today (2026-10-25, Asa: "two things today" felt like effort and
             // work) — not a to-do list: everything is already handled for her.

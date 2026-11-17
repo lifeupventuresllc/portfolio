@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { readFavorites } from '@/lib/favorites'
 import { ensureCurrentPlan } from '@/lib/rebuild-workout'
 import { getRestPick } from '@/lib/rest-rule-server'
 import { restDayLine, REST_DAY_TITLE } from '@/lib/rest-rule'
@@ -8,6 +9,7 @@ import QuickstartWorkout from '@/components/QuickstartWorkout'
 import { generateWorkout, pickFocusDayIndex, applyProgressiveOverload, type WorkoutProgram, type TrainingStyle, type FocusArea, type WorkoutInputs } from '@/lib/workout'
 import { getProgressionOverrides } from '@/lib/progression'
 import { generateCardioSession } from '@/lib/cardio-session'
+import { generateHiitSession } from '@/lib/hiit'
 import type { Level, Injury } from '@/lib/workout-exercises'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { localDateISO, addDaysISO, currentWeekNumber, getTimezone, localHourNumber } from '@/lib/localdate'
@@ -161,6 +163,7 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
     ])
     const trackToday = trackOverride || (intake.training_location === 'home' ? 'home' : 'gym')
     program = generateWorkout({
+      favorites: readFavorites(intake.form_data),
       name: (enrollment.name as string) || 'Your', sex,
       track: trackToday,
       level, goal,
@@ -242,7 +245,7 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
   // ~48h (by level) before it's worked hard again. Skip ahead to the next day
   // whose groups have rested; if none has, today is a rest day (easy cardio +
   // core). A focus she just asked for (chat or preferences) still wins.
-  if (!focusOverride?.length && searchParams?.focusUpdated !== '1' && todayAdjustment?.workoutChange?.contentSwap !== 'cardio') {
+  if (!focusOverride?.length && searchParams?.focusUpdated !== '1' && searchParams?.hiit !== '1' && todayAdjustment?.workoutChange?.contentSwap !== 'cardio') {
     const doneToday = (doneRows || []).some((r) => r.logged_on === today && (r.measurements as { workout?: boolean } | null)?.workout)
     const pick = await getRestPick(enrollment.id as string, program, startDay, level, doneToday)
     if (pick?.rest) {
@@ -274,6 +277,21 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
     } else if (program.gymDays) {
       const gymDays = [...program.gymDays]
       gymDays[startDay] = { ...generateCardioSession('gym', level, injuries, offset), dayNum: gymDays[startDay]?.dayNum ?? startDay + 1 }
+      program = { ...program, gymDays }
+    }
+  }
+
+  // HIIT day (2026-11-17, My Plan's "Optional HIIT" on a rest day): today's
+  // slot becomes short intervals, today only (lib/hiit.ts).
+  if (searchParams?.hiit === '1') {
+    const offset = completed + startDay
+    if (program.track === 'home' && program.home) {
+      const days = [...program.home.days]
+      days[startDay] = { ...generateHiitSession('home', level, injuries, offset), dayNum: days[startDay]?.dayNum ?? startDay + 1 }
+      program = { ...program, home: { ...program.home, days } }
+    } else if (program.gymDays) {
+      const gymDays = [...program.gymDays]
+      gymDays[startDay] = { ...generateHiitSession('gym', level, injuries, offset), dayNum: gymDays[startDay]?.dayNum ?? startDay + 1 }
       program = { ...program, gymDays }
     }
   }
@@ -311,7 +329,7 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
     // Full screen (2026-10-29): cancels the layout's tab-bar padding, since
     // the tab bar is hidden here.
     <div className="min-h-[100dvh] px-4 pt-0" style={{ background: '#021F16', marginBottom: 'calc(-4.5rem - env(safe-area-inset-bottom))' }}>
-      <WorkoutPlayer program={program} firstName={firstName} hasRealName={hasRealName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} askQuickstartGoal={askQuickstartGoal} isGuest={isGuest} setup={setup} swapCtx={swapCtx} />
+      <WorkoutPlayer program={program} firstName={firstName} hasRealName={hasRealName} startDay={startDay} targetMinutes={todayAdjustment?.workoutChange?.toMinutes} askQuickstartGoal={askQuickstartGoal} isGuest={isGuest} setup={setup} favorites={readFavorites(intake?.form_data)} swapCtx={swapCtx} />
       {/* "Training somewhere different today? Tell Coach" now lives in the
           workout's ⋯ menu (2026-10-29: full-screen workout, nothing below it). */}
     </div>

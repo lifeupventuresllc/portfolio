@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { readFavorites } from '@/lib/favorites'
 import { weightsFor } from '@/lib/weight-tags'
 import { applyAlwaysSwaps, readAlwaysSwaps } from '@/lib/always-swaps'
 import { localDateISO } from '@/lib/localdate'
@@ -66,6 +67,7 @@ export default async function WorkoutWeekPage() {
     const focusArea = ((intake.form_data as { focus_area?: FocusArea } | null)?.focus_area || 'overall') as FocusArea
     const weekNumber = currentWeekNumber((enrollment.created_at as string) || new Date().toISOString())
     program = generateWorkout({
+      favorites: readFavorites(intake.form_data),
       name: (enrollment.name as string) || 'Your', sex, track: intake.training_location === 'home' ? 'home' : 'gym',
       level, goal, daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyles, focusArea,
       activityLevel: intake.activity_level as WorkoutInputs['activityLevel'],

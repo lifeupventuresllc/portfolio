@@ -256,6 +256,16 @@ export function balancePairs(moves: AtomicExercise[]): AtomicExercise[] {
   return out
 }
 
+// Her favorite moves for the program being built right now (set at the top of
+// generateProgram, which is synchronous). A favorite only jumps the line among
+// moves that already fit the day's muscles (2026-11-17, lib/favorites.ts).
+let FAVS: ReadonlySet<string> = new Set()
+const favFirst = <T extends { name: string }>(list: T[], fits: (x: T) => boolean = () => true): T[] => {
+  if (!FAVS.size) return list
+  const top = list.filter((x) => FAVS.has(x.name) && fits(x))
+  return top.length ? [...top, ...list.filter((x) => !top.includes(x))] : list
+}
+
 function pick(pool: AtomicExercise[], targetMuscles: MuscleGroup[], count: number, offset: number, postpartum: boolean, excludeNames: string[] = []): AtomicExercise[] {
   const fresh = pool.filter((e) => !excludeNames.includes(e.name))
   // Real bug caught in testing: a plain non-postpartum request was still
@@ -274,7 +284,7 @@ function pick(pool: AtomicExercise[], targetMuscles: MuscleGroup[], count: numbe
     if (at !== bt) return bt - at
     return a.freeWeight === b.freeWeight ? 0 : a.freeWeight ? -1 : 1
   }
-  const ranked = rotate([...fresh].sort(sortFn), offset)
+  const ranked = favFirst(rotate([...fresh].sort(sortFn), offset), (e) => targetMuscles.some((m) => e.muscleGroups.includes(m)))
   if (ranked.length >= count) return ranked.slice(0, count)
   // Ran out of fresh options at this exact filter — fall back to the full
   // pool (still injury/skill/location-safe) rather than return short.
@@ -494,7 +504,7 @@ function pickCombos(level: SkillLevel, injuries: Injury[], count: number, offset
   for (let round = 0; out.length < count && round < 3; round++) {
     for (const g of groups) {
       if (out.length >= count) break
-      const mine = rotate(own.filter((m) => m.group === g && !out.includes(m)), offset + round)
+      const mine = favFirst(rotate(own.filter((m) => m.group === g && !out.includes(m)), offset + round))
       const options = round < 2 ? mine : [...mine, ...rotate(pool.filter((m) => m.group === g && !out.includes(m) && !mine.includes(m)), offset + round)]
       const m = options.find((x) => fits(x) && (x.legs !== 'knee' || out.filter((o) => o.legs === 'knee').length < 2))
       if (m) { out.push(m); for (const gg of groupsWorked(m.name)) sets.set(gg, (sets.get(gg) || 0) + 3) }
@@ -510,7 +520,9 @@ function buildCompoundDay(dayNum: number, location: Location, c: Constraints, go
   const nMains = level === 1 ? 1 : 2
   // Rotate which lift leads, session to session (squat → hinge → glutes; press → row → shoulders).
   const lead = Math.floor((dayNum - 1) / 2)
-  const mainNames = list.length ? Array.from({ length: Math.min(nMains, list.length) }, (_, k) => list[(lead + k) % list.length]) : []
+  const rotated = list.length ? Array.from({ length: list.length }, (_, k) => list[(lead + k) % list.length]) : []
+  // Her favorite main lifts lead when they're on today's list (lib/favorites.ts).
+  const mainNames = favFirst(rotated.map((name) => ({ name }))).map((x) => x.name).slice(0, Math.min(nMains, list.length))
   const mains = mainNames.map((n) => ATOMIC_LIBRARY.find((e) => e.name === n)).filter((e): e is AtomicExercise => !!e)
   const setsToday = (sets: number) => (c.deload ? deloadSets(sets) : sets)
   const mainRange = (e: AtomicExercise) => repRange(level, goal, 'compound', isBodyweight(e))
@@ -657,6 +669,7 @@ export const ENGINE_VERSION = '2026-11-10-kettlebell'
 export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
   const level = inp.level as SkillLevel
   const week = inp.weekNumber || 1
+  FAVS = new Set(inp.favorites || [])
   const injuries = inp.injuries || []
   const location: Location = inp.track
   // Double progression (2026-10-30): picks key off the FIRST week of her

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { readFavorites } from '@/lib/favorites'
 import { weightsFor } from '@/lib/weight-tags'
 import { generateWorkout, type TrainingStyle, type FocusArea, type WorkoutInputs, type WorkoutProgram } from '@/lib/workout'
 import { ENGINE_VERSION } from '@/lib/workout-assembly'
@@ -31,6 +32,7 @@ export async function regenerateWorkoutFromIntake(
   const focusArea = (formData?.focus_area || 'overall') as FocusArea
 
   const program = generateWorkout({
+      favorites: readFavorites(intake.form_data),
     name: enrollment.name || 'Your',
     sex, track, level, goal,
     daysPerWeek: Number(intake.days_per_week) || 3,

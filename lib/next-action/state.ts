@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/server'
+import { readFavorites } from '@/lib/favorites'
 import { weightsFor } from '@/lib/weight-tags'
 import { applyAlwaysSwaps, readAlwaysSwaps } from '@/lib/always-swaps'
 import { getRestPick } from '@/lib/rest-rule-server'
@@ -151,6 +152,7 @@ export async function getUserState(enrollmentId: string, todayISO: string, overr
     // assembly.ts) so every caller means the identical thing by it.
     const caloriesSoFar = (foodToday || []).reduce((sum, r) => sum + (Number(r.calories) || 0), 0)
     program = generateWorkout({
+      favorites: readFavorites(intake.form_data),
       name: (enrollment!.name as string) || 'Your', sex, track: trackOverride || (intake.training_location === 'home' ? 'home' : 'gym'),
       level, goal, daysPerWeek: Number(intake.days_per_week) || 3, weekNumber, injuries, postpartum, trainingStyles, focusArea,
       overrideAreas: focusOverride?.length ? focusOverride : undefined,

@@ -146,7 +146,7 @@ function buildBlocksRaw(program: WorkoutProgram, dayIdx: number): Block[] {
   for (const x of day.accessory) {
     const a = move(x.name, x.reps, x.cue, x.imageUrl)
     // Heavy main lifts get a longer rest (Compound movements style).
-    blocks.push({ kind: 'exercise', moves: [withTarget(a.m)], rounds: a.sets, restSec: x.kind === 'main' ? 90 : x.kind === 'combo' || x.kind === 'lift' ? 60 : 45 })
+    blocks.push({ kind: 'exercise', moves: [withTarget(a.m)], rounds: a.sets, restSec: x.kind === 'main' ? 90 : x.kind === 'combo' || x.kind === 'lift' ? 60 : x.kind === 'hiit' ? 20 : 45 })
   }
   if (day.ab) {
     const list = [day.ab.upper, day.ab.lower, ...(day.ab.bonus ? [day.ab.bonus] : [])]

@@ -18,7 +18,7 @@ import type { WorkoutProgram } from '@/lib/workout'
 import { hapticTap } from '@/lib/haptics'
 import { unlockAudioContext } from '@/lib/countdown-beep'
 
-export default function WorkoutPlayer({ program, firstName, hasRealName = true, startDay = 0, targetMinutes, askQuickstartGoal = false, isGuest = false, setup, swapCtx }: {
+export default function WorkoutPlayer({ program, firstName, hasRealName = true, startDay = 0, targetMinutes, askQuickstartGoal = false, isGuest = false, setup, swapCtx, favorites }: {
   program: WorkoutProgram
   firstName: string
   // Real bug found live: "there" (firstName's fallback for a nameless guest
@@ -41,6 +41,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
   // Today I'm at Gym | Home + dumbbell/kettlebell switch (2026-11-10).
   setup?: { where: 'gym' | 'home'; homeKb: boolean | null }
   swapCtx?: SwapCtx
+  favorites?: string[]
 }) {
   const router = useRouter()
   const labels = dayLabels(program)
@@ -204,6 +205,10 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
         menu={elsewhere}
         levelLabel={program.levelLabel}
         swapCtx={swapCtx}
+        favorites={favorites}
+        onFavorite={(name, on) => {
+          fetch('/api/plan/workout/favorite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, on }) }).catch(() => {})
+        }}
         onAlwaysSwap={(from, to) => {
           fetch('/api/plan/workout/always-swap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from, to }) }).catch(() => {})
         }}

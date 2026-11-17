@@ -64,6 +64,8 @@ export interface WorkoutInputs {
   // weekly calendar. Muscles she's touched recently sort to the back of
   // the priority order, not excluded outright.
   recentlyTrainedMuscles?: MuscleGroup[]
+  // Her hearted moves (lib/favorites.ts, 2026-11-17): picked first when they fit the day.
+  favorites?: string[]
   // New, 2026-09-01 rebuild: a stated time budget now genuinely changes how
   // MANY exercises get assembled (see countForMinutes in workout-assembly.ts)
   // — the old fixed-template system had no such concept; the operator route
@@ -100,7 +102,7 @@ export interface GymDay {
   // calf pick, never assumed by array position (that assumption is exactly
   // what caused a real bug: core-only days had no calf work but the PDF
   // still labeled slots 0/1 "CALVES" regardless of what filled them).
-  accessory: { name: string; reps: string; cue: string; imageUrl?: string; kind: 'calves' | 'bonus' | 'core' | 'main' | 'combo' | 'lift' }[]
+  accessory: { name: string; reps: string; cue: string; imageUrl?: string; kind: 'calves' | 'bonus' | 'core' | 'main' | 'combo' | 'lift' | 'hiit' }[]
   // Goal-driven, not automatic: undefined when the day's goal/focus doesn't
   // call for it (see buildGymDay in lib/workout-assembly.ts).
   ab?: { upper: AbExercise; lower: AbExercise; scheme: string; bonus?: AbExercise }
