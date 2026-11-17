@@ -42,7 +42,7 @@ const repText = (m: Move, round: number) => {
   return `${n} reps${m.eachSide ? ' each side' : ''}`
 }
 
-function Media({ m, idx, tall, fill }: { m?: Move; idx: number; tall?: boolean; fill?: boolean }) {
+function Media({ m, idx, tall, fill, half, pos }: { m?: Move; idx: number; tall?: boolean; fill?: boolean; half?: boolean; pos?: string }) {
   // Every move video shows the WHOLE clip, head to feet (2026-11-13, Asa: "the
   // video gets cropped off... I want the video to be in the frame"). Tall
   // 9:16 clips were cropped by object-cover; now every clip is object-contain
@@ -54,7 +54,7 @@ function Media({ m, idx, tall, fill }: { m?: Move; idx: number; tall?: boolean; 
         <>
           {!fill && <video key={m.videoUrl + '-bg'} src={m.videoUrl} autoPlay loop muted playsInline aria-hidden className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'blur(22px) brightness(.55)', transform: 'scale(1.15)' }} />}
           {/* fill = full-screen video (2026-11-17, Asa picked Option C): runs from the very top of the screen behind the top icons, pinned to the top so her head and the weights never get cut, light fade only at the very bottom. */}
-          <video key={m.videoUrl} src={m.videoUrl} autoPlay loop muted playsInline className={`absolute inset-0 w-full h-full ${fill ? 'object-cover' : 'object-contain'}`} style={fill ? { objectPosition: 'center top' } : undefined} />
+          <video key={m.videoUrl} src={m.videoUrl} autoPlay loop muted playsInline className={`absolute inset-0 w-full h-full ${fill ? 'object-cover' : 'object-contain'}`} style={fill ? { objectPosition: pos || 'center top' } : undefined} />
         </>
       ) : m?.imageUrl || !m ? (
         <Image src={m?.imageUrl || FALLBACK[idx % FALLBACK.length]} alt={m?.name || ''} fill sizes="(max-width: 480px) 100vw, 480px" className="object-cover rw-photo" style={{ objectPosition: 'center 25%' }} priority />
@@ -65,7 +65,8 @@ function Media({ m, idx, tall, fill }: { m?: Move; idx: number; tall?: boolean; 
       )}
       {/* Lighter fade on videos so her head and feet stay visible. */}
       <div className="absolute inset-0 pointer-events-none" style={{ background: vid
-        ? (fill ? 'linear-gradient(180deg, rgba(2,31,22,.18) 0%, rgba(2,31,22,0) 8%, rgba(2,31,22,0) 90%, rgba(2,31,22,1) 100%)'
+        ? (half ? 'linear-gradient(180deg, rgba(2,31,22,.18) 0%, rgba(2,31,22,0) 12%, rgba(2,31,22,0) 55%, rgba(2,31,22,.75) 100%)'
+          : fill ? 'linear-gradient(180deg, rgba(2,31,22,.18) 0%, rgba(2,31,22,0) 8%, rgba(2,31,22,0) 90%, rgba(2,31,22,1) 100%)'
           : 'linear-gradient(180deg, rgba(2,31,22,.35) 0%, rgba(2,31,22,0) 12%, rgba(2,31,22,0) 88%, rgba(2,31,22,.6) 100%)')
         : 'linear-gradient(180deg, rgba(2,31,22,.55) 0%, rgba(2,31,22,0) 25%, rgba(2,31,22,0) 60%, rgba(2,31,22,.95) 100%)' }} />
     </div>
@@ -326,6 +327,19 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
   const toastEl = toast ? (
     <div className="absolute inset-x-4 z-50 rounded-2xl px-4 py-3 text-center text-[14px] font-bold" role="status" style={{ top: 'calc(64px + env(safe-area-inset-top))', background: INK, color: BG }}>{toast}</div>
   ) : null
+  // Small weight −/+ that sits on a superset video (2026-11-17).
+  const vidWeight = (m: Move) => {
+    const w = setLb(m)
+    if (!w || !m.weightKind) return null
+    const b = { width: 34, height: 34, background: 'rgba(2,31,22,.75)', border: '1px solid rgba(237,231,218,.3)', color: INK }
+    return (
+      <span className="flex items-center gap-1.5">
+        <button onClick={() => bump(m, -1)} aria-label={`Less weight for ${m.name}`} className="nf-press rounded-full text-[18px] font-extrabold" style={b}>−</button>
+        <span style={{ ...pill, fontSize: 13, color: INK, textShadow: '0 1px 3px rgba(0,0,0,.7)' }}>{formatLb(w)} {weightUnit(m.weightKind).toUpperCase()}</span>
+        <button onClick={() => bump(m, 1)} aria-label={`More weight for ${m.name}`} className="nf-press rounded-full text-[18px] font-extrabold" style={b}>+</button>
+      </span>
+    )
+  }
   const weightBox = (m: Move, compact?: boolean, label?: string) => {
     const w = setLb(m)
     if (!w || !m.weightKind) return null
@@ -436,7 +450,8 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
           <div className="flex flex-col flex-1 min-h-[240px]">
             {block.moves.map((m, k) => (
               <div key={k} className="relative flex-1 min-h-0" style={{ borderBottom: k < block.moves.length - 1 ? `2px solid ${BG}` : undefined }}>
-                <Media m={m} idx={bi + k} />
+                {/* 2026-11-17 (Asa picked "top and bottom, full"): each move fills its half edge to edge, weight −/+ on the video. */}
+                <Media m={m} idx={bi + k} fill half pos="center 20%" />
                 <div className="absolute left-4 right-4 bottom-2.5 flex items-end justify-between gap-3">
                   <span className="min-w-0" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: block.moves.length > 2 ? 22 : 28, lineHeight: 0.95, textTransform: 'uppercase' }}>
                     <span style={{ color: GOLD }}>{k + 1}.</span> {m.name}
@@ -444,7 +459,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
                   </span>
                   <span className="shrink-0 flex flex-col items-end gap-0.5">
                     <span style={{ ...pill, fontSize: 13, color: INK }}>{repText(m, round).toUpperCase()}</span>
-                    <WeightTag w={m.weight} />
+                    {vidWeight(m) || <WeightTag w={m.weight} />}
                     {m.progressCue && <span className="text-[12px] font-semibold text-right" style={{ color: GOLD }}>{m.progressCue}</span>}
                   </span>
                 </div>
@@ -457,12 +472,10 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
             : <div className="relative flex-1 min-h-[200px]"><Media m={single} idx={bi} /></div>
         )}
 
-        <div className={`shrink-0 flex flex-col px-5 ${tallVid ? 'gap-2.5 pt-3' : 'gap-3.5 pt-4'}`}>
+        <div className={`shrink-0 flex flex-col px-5 ${tallVid || pair ? 'gap-2.5 pt-3' : 'gap-3.5 pt-4'}`}>
           {pair ? (
             <div className="flex flex-col gap-1">
-              <span style={{ ...pill, fontSize: 12, letterSpacing: '.16em', color: GOLD }}>{block.abs ? 'ABS' : 'SUPERSET'}{levelLabel ? <span style={{ color: MUTE }}> · {levelLabel.toUpperCase()}</span> : null}</span>
-              <h1 className="nf-head" style={{ margin: 0, fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 40, lineHeight: 0.92, textTransform: 'uppercase' }}>Do these back to back.</h1>
-              {block.moves.map((m, k) => <div key={k} className="mt-1.5">{weightBox(m, true, `${k + 1}. ${m.name}`)}</div>)}
+              <span style={{ ...pill, fontSize: 12, letterSpacing: '.16em', color: GOLD }}>{block.abs ? 'ABS' : 'SUPERSET'} · DO BACK TO BACK{levelLabel ? <span style={{ color: MUTE }}> · {levelLabel.toUpperCase()}</span> : null}</span>
             </div>
           ) : (
             <div className="flex flex-col gap-1">
@@ -493,7 +506,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
           {pair && <p className="text-[15px]" style={{ color: MUTE, margin: 0 }}>{block.restSec > 0 ? `Then rest ${block.restSec} seconds.` : 'Then you’re done.'}</p>}
         </div>
 
-        <div className={`shrink-0 px-5 flex flex-col gap-2 ${tallVid ? 'pb-3 pt-3' : 'pb-6 pt-4'}`}>
+        <div className={`shrink-0 px-5 flex flex-col gap-2 ${tallVid || pair ? 'pb-3 pt-3' : 'pb-6 pt-4'}`}>
           {timed && timer == null ? (
             <button onClick={() => { hapticTap(); setTimer(single.seconds!) }} className="rw-cta nf-press w-full rounded-full uppercase" style={{ ...pill, height: 76, fontSize: 19, background: GOLD, color: BG }}>Start</button>
           ) : (
