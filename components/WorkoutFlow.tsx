@@ -82,9 +82,9 @@ function Media({ m, idx, tall, fill, half, padTop, padBot }: { m?: Move; idx: nu
 // more than "fill the space" — so floor moves zoom in, standing moves fill the
 // height, and nothing of her is ever cut. A soft blurred copy fills any edge
 // the video doesn't cover. Clips without a box show whole.
-// A lying-down / floor move (her body wider than tall): in a superset half the
-// move name would cover her, so she gets framed above it. Standing moves keep
-// their size (a short box can't hold a standing body above the name).
+// A lying-down / floor move (her body wider than tall). Two standing moves go
+// side by side; any other pair stacks top/bottom, and every stacked half frames
+// her ABOVE the move name + how-to (2026-11-17 live check: the text covered her).
 const lyingDown = (url?: string) => { const [t, b, l, r] = bodyBoxFor(url); return (r - l) * 9 > (b - t) * 16 }
 
 function FramedVideo({ src, padTop = 0, padBot = 0 }: { src: string; padTop?: number; padBot?: number }) {
@@ -585,7 +585,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
             ) : (
               <div key={k} className="relative flex-1 min-h-0" style={{ borderBottom: k < block.moves.length - 1 ? `2px solid ${BG}` : undefined }}>
                 {/* 2026-11-17 (Asa picked "top and bottom, full"): each move fills its half edge to edge, weight −/+ on the video. */}
-                <Media m={m} idx={bi + k} fill half padTop={k === 0 ? 58 : 0} {...(lyingDown(m.videoUrl) ? { padBot: (m.weightKind ? 84 : 52) + (m.cue ? 32 : 0) } : {})} />
+                <Media m={m} idx={bi + k} fill half padTop={k === 0 ? 58 : 0} padBot={m.cue ? 96 : m.weightKind ? 84 : 52} />
                 <div className="absolute left-4 right-4 bottom-2.5 flex items-end justify-between gap-3">
                   <span className="min-w-0" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: block.moves.length > 2 ? 22 : 28, lineHeight: 0.95, textTransform: 'uppercase' }}>
                     <span style={{ color: GOLD }}>{k + 1}.</span> {m.name}
