@@ -44,7 +44,7 @@ const repText = (m: Move, round: number) => {
   return `${n} reps${m.eachSide ? ' each side' : ''}`
 }
 
-function Media({ m, idx, tall, fill, half }: { m?: Move; idx: number; tall?: boolean; fill?: boolean; half?: boolean }) {
+function Media({ m, idx, tall, fill, half, padTop, padBot }: { m?: Move; idx: number; tall?: boolean; fill?: boolean; half?: boolean; padTop?: number; padBot?: number }) {
   // Every move video shows the WHOLE clip, head to feet (2026-11-13, Asa: "the
   // video gets cropped off... I want the video to be in the frame"). Tall
   // 9:16 clips were cropped by object-cover; now every clip is object-contain
@@ -57,7 +57,7 @@ function Media({ m, idx, tall, fill, half }: { m?: Move; idx: number; tall?: boo
           {!fill && <video key={m.videoUrl + '-bg'} src={m.videoUrl} autoPlay loop muted playsInline aria-hidden className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'blur(22px) brightness(.55)', transform: 'scale(1.15)' }} />}
           {/* fill = full-screen single move and each superset half (2026-11-17, Asa: "it's important to see the person's full body"):
               the video zooms in only as far as her WHOLE body still fits, centered on her (lib/video-body.ts). */}
-          {fill ? <FramedVideo key={m.videoUrl} src={m.videoUrl} />
+          {fill ? <FramedVideo key={m.videoUrl} src={m.videoUrl} padTop={padTop} padBot={padBot} />
             : <video key={m.videoUrl} src={m.videoUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-contain" />}
         </>
       ) : m?.imageUrl || !m ? (
@@ -82,7 +82,12 @@ function Media({ m, idx, tall, fill, half }: { m?: Move; idx: number; tall?: boo
 // more than "fill the space" — so floor moves zoom in, standing moves fill the
 // height, and nothing of her is ever cut. A soft blurred copy fills any edge
 // the video doesn't cover. Clips without a box show whole.
-function FramedVideo({ src }: { src: string }) {
+// A lying-down / floor move (her body wider than tall): in a superset half the
+// move name would cover her, so she gets framed above it. Standing moves keep
+// their size (a short box can't hold a standing body above the name).
+const lyingDown = (url?: string) => { const [t, b, l, r] = bodyBoxFor(url); return (r - l) * 9 > (b - t) * 16 }
+
+function FramedVideo({ src, padTop = 0, padBot = 0 }: { src: string; padTop?: number; padBot?: number }) {
   const wrap = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState<{ W: number; H: number } | null>(null)
   const [nat, setNat] = useState({ w: 9, h: 16 })
@@ -101,13 +106,17 @@ function FramedVideo({ src }: { src: string }) {
     const [t, b, l, r] = bodyBoxFor(src)
     const { W, H } = size, vw = nat.w, vh = nat.h
     const cover = Math.max(W / vw, H / vh)
-    const s = Math.min(W / Math.max(0.05, (r - l) * vw), H / Math.max(0.05, (b - t) * vh), cover)
+    // Her body fits in the clear space between the top icons (padTop) and the move name / panel (padBot).
+    const avail = Math.max(40, H - padTop - padBot)
+    const s = Math.min(W / Math.max(0.05, (r - l) * vw), avail / Math.max(0.05, (b - t) * vh), cover)
     const dw = vw * s, dh = vh * s
-    const place = (box: number, d: number, mid: number) => {
-      if (d <= box) return (box - d) / 2
-      return Math.min(0, Math.max(box - d, box / 2 - mid * d))
+    // Center her in the space, then slide to cover the edges only if she still stays fully in it.
+    const place = (box: number, d: number, mid: number, lo: number, hi: number, bt: number, bb: number) => {
+      const want = lo + (hi - lo) / 2 - mid * d
+      const snap = Math.min(Math.max(want, Math.min(0, box - d)), Math.max(0, box - d))
+      return snap + bt * d >= lo - 0.5 && snap + bb * d <= hi + 0.5 ? snap : want
     }
-    frame = { position: 'absolute', left: place(W, dw, (l + r) / 2), top: place(H, dh, (t + b) / 2), width: dw, height: dh, maxWidth: 'none' }
+    frame = { position: 'absolute', left: place(W, dw, (l + r) / 2, 0, W, l, r), top: place(H, dh, (t + b) / 2, padTop, H - padBot, t, b), width: dw, height: dh, maxWidth: 'none' }
   }
   return (
     <div ref={wrap} className="absolute inset-0 overflow-hidden">
@@ -516,7 +525,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
             {block.moves.map((m, k) => (
               <div key={k} className="relative flex-1 min-h-0" style={{ borderBottom: k < block.moves.length - 1 ? `2px solid ${BG}` : undefined }}>
                 {/* 2026-11-17 (Asa picked "top and bottom, full"): each move fills its half edge to edge, weight −/+ on the video. */}
-                <Media m={m} idx={bi + k} fill half />
+                <Media m={m} idx={bi + k} fill half padTop={k === 0 ? 58 : 0} {...(lyingDown(m.videoUrl) ? { padBot: m.cue ? 84 : 52 } : {})} />
                 <div className="absolute left-4 right-4 bottom-2.5 flex items-end justify-between gap-3">
                   <span className="min-w-0" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: block.moves.length > 2 ? 22 : 28, lineHeight: 0.95, textTransform: 'uppercase' }}>
                     <span style={{ color: GOLD }}>{k + 1}.</span> {m.name}
@@ -533,7 +542,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
           </div>
         ) : (
           tallVid
-            ? <div className="relative flex-1 min-h-[180px] overflow-hidden"><Media m={single} idx={bi} fill /></div>
+            ? <div className="relative flex-1 min-h-[180px] overflow-hidden"><Media m={single} idx={bi} fill padTop={62} padBot={14} /></div>
             : <div className="relative flex-1 min-h-[200px]"><Media m={single} idx={bi} /></div>
         )}
 
