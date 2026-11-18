@@ -193,7 +193,9 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [bi, setBi] = useState(startAt)
   // Pick up where she left off (2026-11-17): the player remembers this screen.
-  useEffect(() => { onStep?.(bi) }, [bi]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Skip the first run: opening the screen must not overwrite the saved spot before the player reads it.
+  const stepSeen = useRef(false)
+  useEffect(() => { if (!stepSeen.current) { stepSeen.current = true; return } onStep?.(bi) }, [bi]) // eslint-disable-line react-hooks/exhaustive-deps
   const [round, setRound] = useState(0)        // circles filled on this screen
   const [phase, setPhase] = useState<'work' | 'rest'>('work')
   const [rest, setRest] = useState(0)
