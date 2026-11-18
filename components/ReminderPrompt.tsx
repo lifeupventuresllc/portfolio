@@ -50,7 +50,7 @@ export default function ReminderPrompt({ trigger }: { trigger: boolean }) {
   if (!show) return null
   return (
     <div className="mb-2 flex items-center gap-2 rounded-xl border border-white/15 bg-black/30 px-3 py-2" style={{ fontFamily: 'var(--font-poppins)' }}>
-      <span className="flex-1 text-white/85 text-[12px] font-semibold">{msg || 'Want a daily reminder?'}</span>
+      <span className="flex-1 text-white/85 text-[12px] font-semibold">{msg || 'Want a friendly check-in if you miss a day?'}</span>
       {!msg.startsWith('Reminders on') && (
         <>
           <button onClick={yes} disabled={busy} className="rounded-full px-3 h-[26px] text-[11px] font-bold disabled:opacity-60" style={{ background: '#E5A93C', color: '#0A0A0F' }}>{busy ? '…' : 'Yes'}</button>

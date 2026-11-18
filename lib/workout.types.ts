@@ -127,5 +127,6 @@ export interface WorkoutProgram {
   weights?: Record<string, number>
   // Gentle start (lib/gentle-start.ts): one set fewer, longer rest, no step-up sets.
   gentle?: boolean
+  daysAway?: number // days since her last workout (welcome-back line, lib/gentle-start.ts)
   lighter?: boolean // last workout felt too hard: every weight one step lighter today
 }

@@ -12,7 +12,8 @@ import RewardDrop from '@/components/RewardDrop'
 import WorkoutFlow, { type SwapCtx } from '@/components/WorkoutFlow'
 import TodaySetup from '@/components/TodaySetup'
 import { dayWeight } from '@/lib/weight-tags'
-import { buildBlocks, trimBlocksToTarget } from '@/lib/workout-blocks'
+import { buildBlocks, trimBlocksToTarget, estimateBlocksMinutes } from '@/lib/workout-blocks'
+import ReminderPrompt from '@/components/ReminderPrompt'
 import { broadcastRefresh, localTodayISO } from '@/lib/useLiveRefresh'
 import { dayLabels } from '@/lib/workout-steps'
 import type { WorkoutProgram } from '@/lib/workout'
@@ -69,6 +70,32 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
       if (at && at.date === localTodayISO() && at.sig === sig && at.bi > 0 && at.bi < total) setResumeAt(at.bi)
     } catch { /* ignore */ }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Plain words about today, on the warm-up screen (2026-11-17, spec #7 + #9):
+  // what she's doing, how long, and why it's easier when it is.
+  const nMoves = blocks.filter((b) => b.kind === 'exercise').length
+  const intro = [
+    (program.daysAway ?? 0) >= 5 ? 'Welcome back. No catching up needed.' : '',
+    `Today: ${nMoves} moves, about ${estimateBlocksMinutes(blocks)} minutes.`,
+    program.lighter ? 'Last one felt too hard, so every weight is one step lighter.'
+      : program.gentle && !hiit ? 'Easy start: fewer sets and more rest.' : '',
+  ].filter(Boolean).join(' ')
+  // Sets she logged this workout, so the finish screen can offer the ones she
+  // forgot to tap Done on (2026-11-17, spec #2: "make skipped logs easy to fix").
+  const loggedRef = useRef<Set<string>>(new Set())
+  const [fixed, setFixed] = useState<Set<string>>(new Set())
+  const logForgotten = (m: { name: string; weightLb?: number }, rounds: number) => {
+    hapticTap()
+    setFixed((x) => new Set(x).add(m.name))
+    for (let i = 0; i < rounds; i++) {
+      fetch('/api/plan/workout/set-effort', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exerciseName: m.name, done: true, setIndex: i, weightLb: m.weightLb }),
+      }).catch(() => {})
+    }
+  }
+  const forgotten = loggedRef.current.size === 0 ? [] : blocks.filter((b) => b.kind === 'exercise')
+    .flatMap((b) => b.moves.filter((m) => !m.seconds && !loggedRef.current.has(m.name)).map((m) => ({ m, rounds: b.rounds })))
+    .slice(0, 6)
   const saveStep = (bi: number) => {
     try { localStorage.setItem('luf_workout_at', JSON.stringify({ date: localTodayISO(), sig, bi })) } catch { /* ignore */ }
   }
@@ -155,6 +182,22 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
             other side of the action. */}
         <RewardDrop saved={savedRef.current} />
         {!hiit && <div className="w-full mt-6"><EffortTap after={savedRef.current} /></div>}
+        {forgotten.length > 0 && (
+          <div className="w-full mt-6 text-left rounded-[22px] px-4 py-4" style={{ background: 'rgba(237,231,218,.05)', border: '1px solid rgba(237,231,218,.14)' }}>
+            <p className="text-[16px] font-bold">Did these too? Tap to log them.</p>
+            <div className="flex flex-col gap-2 mt-3">
+              {forgotten.map(({ m, rounds }) => (
+                <button key={m.name} disabled={fixed.has(m.name)} onClick={() => logForgotten(m, rounds)}
+                  className="nf-press flex items-center justify-between gap-3 h-12 rounded-full px-4 text-[15px] font-semibold"
+                  style={{ border: `1.5px solid ${fixed.has(m.name) ? '#1EE38A' : 'rgba(237,231,218,.25)'}`, color: INK }}>
+                  <span className="truncate">{m.name}</span>
+                  <span className="shrink-0" style={{ ...pill, fontSize: 12, color: fixed.has(m.name) ? '#1EE38A' : GOLD }}>{fixed.has(m.name) ? 'LOGGED' : `${rounds} SETS`}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {!isGuest && <div className="w-full mt-6"><ReminderPrompt trigger /></div>}
         {isGuest && !saveHidden && (
           <div className="w-full mt-6 rounded-[22px] px-5 py-5" style={{ background: 'rgba(229,169,60,.12)', border: '1px solid rgba(229,169,60,.4)' }}>
             <p className="text-base font-bold">You did it. Tomorrow&apos;s is made for you.</p>
@@ -199,6 +242,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
         startAt={resumeAt}
         onStep={saveStep}
         calibrate={!!program.gentle && !hiit}
+        intro={intro}
         blocks={blocks}
         onFinish={finish}
         onEffort={(names, effort, setIndex) => {
@@ -211,6 +255,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
           if (askQuickstartGoal && !goalHidden) setShowGoal(true)
         }}
         onSetDone={(names, setIndex, weights) => {
+          for (const n of names) loggedRef.current.add(n)
           for (const exerciseName of names) {
             fetch('/api/plan/workout/set-effort', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },

@@ -2,7 +2,7 @@
 // Asa's spec: "the coach must read her actual calibration, logs, and
 // feedback before giving any advice"). Read-only; one short block of text.
 import { createServiceClient } from '@/lib/supabase/server'
-import { gentleFrom, GENTLE_WORKOUTS } from './gentle-start'
+import { gentleFrom, GENTLE_WORKOUTS, WELCOME_BACK_DAYS } from './gentle-start'
 import { trendsFrom } from './strength'
 import { localDateISO, addDaysISO } from './localdate'
 
@@ -13,7 +13,7 @@ export function describeTraining(input: {
   sets: { exercise_name: string; weight_lb: number | string | null; logged_on: string; effort?: string | null }[]
   today: string
 }): string {
-  const { gentle, lighter, done } = gentleFrom(input.daily)
+  const { gentle, lighter, done, daysAway } = gentleFrom(input.daily, input.today)
   const lines: string[] = []
   const days = input.daily
     .filter((r) => (r.measurements as { workout?: boolean } | null)?.workout === true)
@@ -28,6 +28,7 @@ export function describeTraining(input: {
   if (feels.length) lines.push(`How her last workouts felt (newest first): ${feels.join(', ')}.`)
   if (gentle) lines.push(lighter
     ? 'Her last workout felt too hard, so today is gentle and every weight is one step lighter.'
+    : daysAway >= WELCOME_BACK_DAYS ? `She is coming back after ${daysAway} days: today is a gentle restart (one set fewer, longer rest). No catching up, no guilt.`
     : `She is in the gentle start (first ${GENTLE_WORKOUTS} workouts): one set fewer and longer rest.`)
   const trends = trendsFrom(input.sets).slice(0, 5)
   for (const t of trends) lines.push(`${t.name}: now ${t.now} lb (started ${t.start} lb${t.stuck ? ', same weight 3 workouts in a row' : ''}).`)

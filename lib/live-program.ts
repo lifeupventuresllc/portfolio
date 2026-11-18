@@ -55,5 +55,6 @@ export async function buildLiveProgram(opts: {
   })
   const out = applyAlwaysSwaps(program, readAlwaysSwaps(fd))
   // Gentle start: first 4 workouts, or right after one that felt too hard.
-  return start.gentle ? { ...out, gentle: true, ...(start.lighter ? { lighter: true } : {}) } : out
+  const withAway = start.daysAway ? { ...out, daysAway: start.daysAway } : out
+  return start.gentle ? { ...withAway, gentle: true, ...(start.lighter ? { lighter: true } : {}) } : withAway
 }

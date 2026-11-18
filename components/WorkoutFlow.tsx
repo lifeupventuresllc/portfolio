@@ -127,6 +127,18 @@ function FramedVideo({ src, padTop = 0, padBot = 0 }: { src: string; padTop?: nu
   )
 }
 
+// "Hold weight at chest, sit straight down, knees over toes, drive through heels."
+// → up to 3 short tips. Splits on sentences, then commas / semicolons; joins
+// the tail so nothing is lost.
+export function formTips(cue: string): string[] {
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+  const parts = cue.split(/(?<=\.)\s+|[,;]\s+|\s+[—–-]\s+/).map((s) => s.replace(/\.$/, '').trim()).filter((s) => s.length > 2)
+  if (parts.length <= 1) return [cue.trim()]
+  const out = parts.slice(0, 2)
+  out.push(parts.slice(2).join(', '))
+  return out.filter(Boolean).map(cap).slice(0, 3)
+}
+
 function Circles({ total, done, active }: { total: number; done: number; active: boolean }) {
   return (
     <div className="flex items-center gap-2" aria-label={`${done} of ${total} done`}>
@@ -148,8 +160,9 @@ function Circles({ total, done, active }: { total: number; done: number; active:
 
 export interface SwapCtx { location: 'gym' | 'home'; level: number; injuries: Injury[]; person: WeightPerson }
 
-export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, onSetDone, onProgress, onClose, menu, levelLabel, setup, swapCtx, onAlwaysSwap, favorites, onFavorite, calibrate, startAt = 0, onStep }: {
+export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, onSetDone, onProgress, onClose, menu, levelLabel, setup, swapCtx, onAlwaysSwap, favorites, onFavorite, calibrate, startAt = 0, onStep, intro }: {
   blocks: Block[]
+  intro?: string              // plain words about today, on the warm-up screen (2026-11-17)
   startAt?: number            // reopen on this screen (she left mid-workout today)
   onStep?: (bi: number) => void
   calibrate?: boolean         // gentle start (lib/gentle-start.ts): find her weights — Easy after a set goes one up
@@ -499,6 +512,9 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
             {(block.lines || []).map((l, k) => <li key={k} className="flex gap-2.5"><span style={{ color: GOLD }}>•</span>{l}</li>)}
           </ul>
           <p className="text-[15px]" style={{ color: MUTE }}>{block.kind === 'warmup' ? 'Easy pace. Just get warm.' : 'Slow breaths. You earned this.'}</p>
+          {block.kind === 'warmup' && intro && (
+            <p className="text-[15px] leading-snug rounded-2xl px-4 py-3" style={{ margin: 0, color: INK, background: 'rgba(229,169,60,.1)', border: '1px solid rgba(229,169,60,.35)' }}>{intro}</p>
+          )}
           {bi === 0 && setup}
         </div>
         <div className="px-5 pb-6 pt-4">
@@ -628,7 +644,13 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
             <p className="text-[13px] leading-snug" style={{ color: MUTE, margin: '-4px 0 0' }}>Pick a weight where the last 2 reps feel hard but doable.</p>
           )}
           {!pair && single.progressCue && <p className="text-[14px] font-semibold leading-snug" style={{ color: GOLD, margin: '-6px 0 0' }}>{single.progressCue}</p>}
-          {!pair && single.cue && (!tallVid || howOpen) && <p className="text-[15px] leading-snug" style={{ color: MUTE, margin: 0 }}>{single.cue}</p>}
+          {!pair && single.cue && tallVid && howOpen && (
+            // Form tips (2026-11-17, spec #5): the how-to split into 2–3 short tips.
+            <ul className="flex flex-col gap-1.5 text-[15px] leading-snug" style={{ margin: 0, padding: 0, listStyle: 'none', color: MUTE }}>
+              {formTips(single.cue).map((t, k) => <li key={k} className="flex gap-2"><span style={{ color: GOLD }}>•</span>{t}</li>)}
+            </ul>
+          )}
+          {!pair && single.cue && !tallVid && <p className="text-[15px] leading-snug" style={{ color: MUTE, margin: 0 }}>{single.cue}</p>}
           {pair && <p className="text-[15px]" style={{ color: MUTE, margin: 0 }}>{block.restSec > 0 ? `Then rest ${block.restSec} seconds.` : 'Then you’re done.'}</p>}
         </div>
 

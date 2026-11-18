@@ -83,6 +83,13 @@ export async function GET(request: NextRequest) {
         : { title: 'Start a streak today', body, url: '/plan' }
     }
 
+    // Gone quiet 3+ days (2026-11-17, spec #10): a friendly check-in, never
+    // streak pressure — no catching up, today starts fresh and lighter.
+    const seen = s.enrollment_id ? Array.from(shownByEnrollment.get(s.enrollment_id as string) || []).sort() : []
+    const lastSeen = seen[seen.length - 1]
+    const quietDays = lastSeen ? Math.round((Date.parse(localToday) - Date.parse(lastSeen)) / 86400000) : 0
+    if (quietDays >= 3) payload = { title: 'Hey, just checking in 💛', body: 'No catching up needed. Today starts fresh with a short, easy workout.', url: '/plan/workout' }
+
     let assessment: Awaited<ReturnType<typeof assessLifePattern>> | null = null
     if (s.enrollment_id) {
       assessment = await assessLifePattern(s.enrollment_id as string, localToday)
