@@ -402,14 +402,14 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
     <div className="absolute inset-x-4 z-50 rounded-2xl px-4 py-3 text-center text-[14px] font-bold" role="status" style={{ top: 'calc(64px + env(safe-area-inset-top))', background: INK, color: BG }}>{toast}</div>
   ) : null
   // Small weight −/+ that sits on a superset video (2026-11-17).
-  const vidWeight = (m: Move) => {
+  const vidWeight = (m: Move, short?: boolean) => {
     const w = setLb(m)
     if (!w || !m.weightKind) return null
     const b = { width: 34, height: 34, background: 'rgba(2,31,22,.75)', border: '1px solid rgba(237,231,218,.3)', color: INK }
     return (
       <span className="flex items-center gap-1.5">
         <button onClick={() => bump(m, -1)} aria-label={`Less weight for ${m.name}`} className="nf-press rounded-full text-[18px] font-extrabold" style={b}>−</button>
-        <span style={{ ...pill, fontSize: 13, color: INK, textShadow: '0 1px 3px rgba(0,0,0,.7)' }}>{formatLb(w)} {weightUnit(m.weightKind).toUpperCase()}</span>
+        <span style={{ ...pill, fontSize: 13, color: INK, textShadow: '0 1px 3px rgba(0,0,0,.7)' }}>{short ? `${formatLb(w)} LB` : `${formatLb(w)} ${weightUnit(m.weightKind).toUpperCase()}`}</span>
         <button onClick={() => bump(m, 1)} aria-label={`More weight for ${m.name}`} className="nf-press rounded-full text-[18px] font-extrabold" style={b}>+</button>
       </span>
     )
@@ -516,16 +516,30 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
 
   // ---------- one exercise, or two back to back ----------
   const tallVid = !pair && !!single?.videoUrl
+  const side = !!pair && block.moves.length === 2 && block.moves.every((m) => !!m.videoUrl && !lyingDown(m.videoUrl))
   return (
     <div className="wf-page relative flex flex-col" style={{ color: INK }}>
       {style}{top}{menuSheet}{swapSheet}{toastEl}
       <div key={bi} className="wf-in flex flex-col flex-1 min-h-0">
         {pair ? (
-          <div className="flex flex-col flex-1 min-h-[240px]">
-            {block.moves.map((m, k) => (
+          <div className={`flex ${side ? 'flex-row' : 'flex-col'} flex-1 min-h-[240px]`}>
+            {block.moves.map((m, k) => side ? (
+              // Two standing moves (2026-11-17): side by side, two tall boxes, so each woman shows big, head to feet.
+              <div key={k} className="relative flex-1 min-w-0" style={{ borderRight: k === 0 ? `2px solid ${BG}` : undefined }}>
+                <Media m={m} idx={bi + k} fill half padTop={58} padBot={m.progressCue ? 118 : 100} />
+                <div className="absolute left-3 right-3 bottom-2.5 flex flex-col items-start gap-1.5">
+                  <span style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: 21, lineHeight: 0.95, textTransform: 'uppercase' }}>
+                    <span style={{ color: GOLD }}>{k + 1}.</span> {m.name}
+                  </span>
+                  <span className="flex items-center gap-2"><span style={{ ...pill, fontSize: 12, color: INK }}>{repText(m, round).toUpperCase()}</span>{heart(m.name, 30)}</span>
+                  {vidWeight(m, true) || <WeightTag w={m.weight} />}
+                  {m.progressCue && <span className="text-[12px] font-semibold" style={{ color: GOLD }}>{m.progressCue}</span>}
+                </div>
+              </div>
+            ) : (
               <div key={k} className="relative flex-1 min-h-0" style={{ borderBottom: k < block.moves.length - 1 ? `2px solid ${BG}` : undefined }}>
                 {/* 2026-11-17 (Asa picked "top and bottom, full"): each move fills its half edge to edge, weight −/+ on the video. */}
-                <Media m={m} idx={bi + k} fill half padTop={k === 0 ? 58 : 0} {...(lyingDown(m.videoUrl) ? { padBot: m.cue ? 84 : 52 } : {})} />
+                <Media m={m} idx={bi + k} fill half padTop={k === 0 ? 58 : 0} {...(lyingDown(m.videoUrl) ? { padBot: (m.weightKind ? 84 : 52) + (m.cue ? 32 : 0) } : {})} />
                 <div className="absolute left-4 right-4 bottom-2.5 flex items-end justify-between gap-3">
                   <span className="min-w-0" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: block.moves.length > 2 ? 22 : 28, lineHeight: 0.95, textTransform: 'uppercase' }}>
                     <span style={{ color: GOLD }}>{k + 1}.</span> {m.name}
