@@ -14,7 +14,8 @@ import type { Level, Injury } from '@/lib/workout-exercises'
 import { getApprovedTodayAdjustment } from '@/lib/fos/context'
 import { localDateISO, addDaysISO, getTimezone, localHourNumber } from '@/lib/localdate'
 import { computeLowFuelToday } from '@/lib/workout-assembly'
-import { pickWeight } from '@/lib/weight-picker'
+import { pickWeight, stepWeight, weightKind } from '@/lib/weight-picker'
+import { homeWeightsOf } from '@/lib/weight-tags'
 import { buildBlocks } from '@/lib/workout-blocks'
 import { getLastWeights } from '@/lib/progression'
 
@@ -273,13 +274,15 @@ export default async function WorkoutSession({ searchParams }: { searchParams?: 
   const dayCount = program.track === 'home' ? (program.home?.days.length || 0) : (program.gymDays?.length || 0)
   for (let d = 0; d < dayCount; d++) for (const b of buildBlocks(program, d)) for (const m of b.moves) {
     if (m.name in weights) continue
-    const w = pickWeight(m.name, person, lastWeights[m.name], program.progression?.[m.name]?.cue)
+    let w = pickWeight(m.name, person, lastWeights[m.name], program.progression?.[m.name]?.cue)
+    // Her last workout felt too hard (lib/gentle-start.ts): one weight lighter today.
+    const k = weightKind(m.name)
+    if (w && k && program.lighter) w = stepWeight(w, k, -1, m.name)
     if (w) weights[m.name] = w
   }
   program = { ...program, weights }
 
-  const homeKb = (intake?.form_data as { home_kettlebells?: boolean } | null)?.home_kettlebells
-  const setup = intake ? { where: program.track as 'gym' | 'home', homeKb: typeof homeKb === 'boolean' ? homeKb : null } : undefined
+  const setup = intake ? { where: program.track as 'gym' | 'home', homeWeights: homeWeightsOf(intake.form_data as { home_kettlebells?: boolean } | null) } : undefined
   // What Swap needs to pick safe moves she can do where she is today.
   const swapCtx = { location: program.track as 'gym' | 'home', level, injuries, person }
 

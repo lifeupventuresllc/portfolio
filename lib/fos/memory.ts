@@ -133,6 +133,7 @@ export async function generateReply(input: {
   events: FosEvent[]
   goalContext?: string | null
   name?: string | null
+  training?: string | null // her real logged numbers (lib/training-context.ts)
 }): Promise<string | null> {
   if (!anthropicConfigured()) return null
   try {
@@ -143,7 +144,7 @@ export async function generateReply(input: {
       system: GENERATE_SYSTEM,
       messages: [{
         role: 'user',
-        content: `${input.name ? `NAME: ${input.name}\n\n` : ''}SHE SAID: ${input.herMessage}\n\nDECISION: ${input.decision}\n\nPROFILE:\n${describeProfile(input.profile)}\n\nRECENT:\n${describeEvents(input.events)}${input.goalContext ? `\n\nGOAL CONTEXT:\n${input.goalContext}` : ''}`,
+        content: `${input.name ? `NAME: ${input.name}\n\n` : ''}SHE SAID: ${input.herMessage}\n\nDECISION: ${input.decision}\n\nPROFILE:\n${describeProfile(input.profile)}\n\nRECENT:\n${describeEvents(input.events)}${input.goalContext ? `\n\nGOAL CONTEXT:\n${input.goalContext}` : ''}${input.training ? `\n\nHER TRAINING (real logged numbers: use these, never guess):\n${input.training}` : ''}`,
       }],
     })
     const block = msg.content.find((b) => b.type === 'text')
@@ -224,6 +225,7 @@ export async function answerGeneralQuestion(input: {
   profile: FosProfile | null
   events: FosEvent[]
   name?: string | null
+  training?: string | null // her real logged numbers (lib/training-context.ts)
   todayContext?: string | null
 }): Promise<string | null> {
   if (!anthropicConfigured()) return null
@@ -235,7 +237,7 @@ export async function answerGeneralQuestion(input: {
       system: ANSWER_SYSTEM,
       messages: [{
         role: 'user',
-        content: `${input.name ? `NAME: ${input.name}\n\n` : ''}SHE ASKED: ${input.herMessage}\n\nPROFILE:\n${describeProfile(input.profile)}\n\nRECENT:\n${describeEvents(input.events)}${input.todayContext ? `\n\nTODAY:\n${input.todayContext}` : ''}`,
+        content: `${input.name ? `NAME: ${input.name}\n\n` : ''}SHE ASKED: ${input.herMessage}\n\nPROFILE:\n${describeProfile(input.profile)}\n\nRECENT:\n${describeEvents(input.events)}${input.todayContext ? `\n\nTODAY:\n${input.todayContext}` : ''}${input.training ? `\n\nHER TRAINING (real logged numbers: use these, never guess):\n${input.training}` : ''}`,
       }],
     })
     const block = msg.content.find((b) => b.type === 'text')

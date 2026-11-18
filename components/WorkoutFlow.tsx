@@ -148,8 +148,11 @@ function Circles({ total, done, active }: { total: number; done: number; active:
 
 export interface SwapCtx { location: 'gym' | 'home'; level: number; injuries: Injury[]; person: WeightPerson }
 
-export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, onSetDone, onProgress, onClose, menu, levelLabel, setup, swapCtx, onAlwaysSwap, favorites, onFavorite }: {
+export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, onSetDone, onProgress, onClose, menu, levelLabel, setup, swapCtx, onAlwaysSwap, favorites, onFavorite, calibrate, startAt = 0, onStep }: {
   blocks: Block[]
+  startAt?: number            // reopen on this screen (she left mid-workout today)
+  onStep?: (bi: number) => void
+  calibrate?: boolean         // gentle start (lib/gentle-start.ts): find her weights — Easy after a set goes one up
   favorites?: string[]        // her hearted moves (lib/favorites.ts, 2026-11-17)
   onFavorite?: (name: string, on: boolean) => void
   swapCtx?: SwapCtx           // Swap (2026-11-12): what she can do where she is today
@@ -182,10 +185,19 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
   const [why, setWhy] = useState<SwapWhy>('taken')
   const [keep, setKeep] = useState<'today' | 'always'>('today')
   const [toast, setToast] = useState<string | null>(null)
-  const [bi, setBi] = useState(0)
+  useEffect(() => {
+    if (!startAt) return
+    setToast('Picked up where you left off.')
+    const t = setTimeout(() => setToast(null), 2600)
+    return () => clearTimeout(t)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const [bi, setBi] = useState(startAt)
+  // Pick up where she left off (2026-11-17): the player remembers this screen.
+  useEffect(() => { onStep?.(bi) }, [bi]) // eslint-disable-line react-hooks/exhaustive-deps
   const [round, setRound] = useState(0)        // circles filled on this screen
   const [phase, setPhase] = useState<'work' | 'rest'>('work')
   const [rest, setRest] = useState(0)
+  const [weightNote, setWeightNote] = useState<string | null>(null) // "Next set: 10 lb" after an Easy/Hard tap
   const [asked, setAsked] = useState(false)    // Easy/Hard answered for this rest
   const [timer, setTimer] = useState<number | null>(null) // a timed move counting down
   const [menuOpen, setMenuOpen] = useState(false)
@@ -312,6 +324,22 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
     hapticTap()
     setAsked(true)
     setRest((r) => Math.max(5, r + (e === 'hard' ? 20 : e === 'easy' ? -10 : 0)))
+    // The weight fixes itself for the next set (2026-11-17): Hard → one step
+    // lighter; Easy → one step heavier while she's still finding her weights.
+    // Her Done saves the weight she used, so the next workout starts there.
+    const dir = e === 'hard' ? -1 : e === 'easy' && calibrate ? 1 : 0
+    if (dir && round < block.rounds) {
+      const changed: string[] = []
+      const next: Record<string, number> = {}
+      for (const m of block.moves) {
+        const w = lbOf(m)
+        if (!w || !m.weightKind || m.pyramid) continue
+        const to = stepWeight(w, m.weightKind, dir as 1 | -1, m.name)
+        if (to !== w) { next[m.name] = to; changed.push(`${formatLb(to)} lb`) }
+      }
+      if (changed.length) { setLbs((x) => ({ ...x, ...next })); setWeightNote(`Next set: ${changed.join(' + ')}`) }
+      else setWeightNote(null)
+    } else setWeightNote(null)
     onEffort(block.moves.map((m) => m.name), e, round - 1)
   }
 
@@ -503,7 +531,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
               </div>
             </div>
           ) : (
-            <span className="text-[14px]" style={{ color: MUTE }}>Got it. Rest set for you.</span>
+            <span className="text-[14px]" style={{ color: MUTE }}>{weightNote ? <>Got it. <b style={{ color: GOLD }}>{weightNote}</b></> : 'Got it. Rest set for you.'}</span>
           )}
         </div>
         <div className="pb-6 pt-4 flex flex-col gap-3">
@@ -594,6 +622,9 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
               {single.cue && <button type="button" onClick={() => { hapticTap(); setHowOpen((x) => !x) }} aria-expanded={howOpen} className="ml-auto text-[14px] font-semibold underline underline-offset-4" style={{ color: MUTE }}>{howOpen ? 'Hide how to' : 'How to'}</button>}
             </div>
           ) : weightBox(single))}
+          {!pair && calibrate && round === 0 && !!single.weightKind && !single.seconds && (
+            <p className="text-[13px] leading-snug" style={{ color: MUTE, margin: '-4px 0 0' }}>Pick a weight where the last 2 reps feel hard but doable.</p>
+          )}
           {!pair && single.progressCue && <p className="text-[14px] font-semibold leading-snug" style={{ color: GOLD, margin: '-6px 0 0' }}>{single.progressCue}</p>}
           {!pair && single.cue && (!tallVid || howOpen) && <p className="text-[15px] leading-snug" style={{ color: MUTE, margin: 0 }}>{single.cue}</p>}
           {pair && <p className="text-[15px]" style={{ color: MUTE, margin: 0 }}>{block.restSec > 0 ? `Then rest ${block.restSec} seconds.` : 'Then you’re done.'}</p>}

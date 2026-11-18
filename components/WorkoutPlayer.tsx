@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Confetti from '@/components/Confetti'
 import QuickFeedback from '@/components/QuickFeedback'
 import EffortTap from '@/components/EffortTap'
+import type { HomeWeights } from '@/lib/weight-tags'
 import QuickstartGoalAsk from '@/components/QuickstartGoalAsk'
 import WorkoutMusicPlayer from '@/components/WorkoutMusicPlayer'
 import RewardDrop from '@/components/RewardDrop'
@@ -39,7 +40,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
   // Anonymous guest — finish screen offers "Save my plan" (/plan/save).
   isGuest?: boolean
   // Today I'm at Gym | Home + dumbbell/kettlebell switch (2026-11-10).
-  setup?: { where: 'gym' | 'home'; homeKb: boolean | null }
+  setup?: { where: 'gym' | 'home'; homeWeights: HomeWeights | null }
   swapCtx?: SwapCtx
   favorites?: string[]
   // HIIT day (lib/hiit.ts): saved as hiit, so it counts toward her week but never moves her lifting rotation.
@@ -58,6 +59,19 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
   // 2026-10-29: the day as screens — one exercise (or two back to back) each.
   const blocks = (() => { const b = buildBlocks(program, dayIdx); return targetMinutes ? trimBlocksToTarget(b, targetMinutes) : b })()
   const total = blocks.length
+  // Pick up where she left off (2026-11-17): today's workout, same day, same
+  // moves → reopen on the screen she was on. Read after mount (no SSR storage).
+  const sig = `${dayIdx}:` + blocks.map((b) => b.moves.map((m) => m.name).join('|')).join('/')
+  const [resumeAt, setResumeAt] = useState(0)
+  useEffect(() => {
+    try {
+      const at = JSON.parse(localStorage.getItem('luf_workout_at') || 'null') as { date: string; sig: string; bi: number } | null
+      if (at && at.date === localTodayISO() && at.sig === sig && at.bi > 0 && at.bi < total) setResumeAt(at.bi)
+    } catch { /* ignore */ }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const saveStep = (bi: number) => {
+    try { localStorage.setItem('luf_workout_at', JSON.stringify({ date: localTodayISO(), sig, bi })) } catch { /* ignore */ }
+  }
 
   // Real bug found live: the countdown beep's AudioContext only ever got
   // created/resumed from inside the countdown's own setInterval tick, never
@@ -107,6 +121,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
     const today = localTodayISO()
     try {
       localStorage.setItem('luf_workout_progress', JSON.stringify({ date: today, i: total, total, done: true }))
+      localStorage.removeItem('luf_workout_at')
       // Pre-mark today's workout celebration so the dashboard shows ✅ without re-confetti.
       localStorage.setItem('luf_celebrated_workout-' + today, '1')
     } catch { /* ignore */ }
@@ -139,7 +154,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
             after this workout's save lands — the reward is always on the
             other side of the action. */}
         <RewardDrop saved={savedRef.current} />
-        <div className="w-full mt-6"><EffortTap /></div>
+        {!hiit && <div className="w-full mt-6"><EffortTap after={savedRef.current} /></div>}
         {isGuest && !saveHidden && (
           <div className="w-full mt-6 rounded-[22px] px-5 py-5" style={{ background: 'rgba(229,169,60,.12)', border: '1px solid rgba(229,169,60,.4)' }}>
             <p className="text-base font-bold">You did it. Tomorrow&apos;s is made for you.</p>
@@ -180,7 +195,10 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
   return (
     <>
       <WorkoutFlow
-        key={dayIdx}
+        key={`${dayIdx}-${resumeAt}`}
+        startAt={resumeAt}
+        onStep={saveStep}
+        calibrate={!!program.gentle && !hiit}
         blocks={blocks}
         onFinish={finish}
         onEffort={(names, effort, setIndex) => {
@@ -214,7 +232,7 @@ export default function WorkoutPlayer({ program, firstName, hasRealName = true, 
         onAlwaysSwap={(from, to) => {
           fetch('/api/plan/workout/always-swap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from, to }) }).catch(() => {})
         }}
-        setup={setup ? <TodaySetup where={setup.where} homeKb={setup.homeKb} weightToday={dayWeight(program.track === 'home' ? program.home?.days[dayIdx] : program.gymDays?.[dayIdx])} /> : undefined}
+        setup={setup ? <TodaySetup where={setup.where} homeWeights={setup.homeWeights} weightToday={dayWeight(program.track === 'home' ? program.home?.days[dayIdx] : program.gymDays?.[dayIdx])} /> : undefined}
       />
       {/* Music: one small pill, top right under the menu button, through
           every screen of the workout (stays mounted, so songs don't restart). */}

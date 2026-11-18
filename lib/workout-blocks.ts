@@ -79,6 +79,16 @@ export function buildBlocks(program: WorkoutProgram, dayIdx: number): Block[] {
   // Set 1 = target + 4 reps at her base weight, set 2 = target + 2 one weight
   // up, set 3+ = target two weights up. Double progression still runs on the
   // last set's number, so when that hits the top the whole ladder goes up a weight.
+  // Gentle start (lib/gentle-start.ts): her first workouts, or the one after
+  // "Too hard" — one set fewer (never under 2), 30 sec more rest, no step-up sets.
+  if (program.gentle) {
+    return blocks.map((b) => b.kind !== 'exercise' ? b : {
+      ...b,
+      rounds: b.rounds >= 3 ? b.rounds - 1 : b.rounds,
+      restSec: b.restSec > 0 ? b.restSec + 30 : 0,
+      moves: b.moves.map((m) => ({ ...m, reps: m.reps.slice(0, b.rounds >= 3 ? b.rounds - 1 : b.rounds) })),
+    })
+  }
   if (!program.deload) {
     const i = blocks.findIndex((b) => b.kind === 'exercise' && b.moves.length === 1 && b.rounds >= 3
       && !!b.moves[0].weightKind && !b.moves[0].seconds && !!program.progression?.[b.moves[0].name]?.pyramid)

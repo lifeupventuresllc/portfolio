@@ -513,11 +513,21 @@ function pickCombos(level: SkillLevel, injuries: Injury[], count: number, offset
   return out
 }
 
+// Home with no weights (2026-11-17, "never suggest anything outside her
+// equipment"): the main moves are bodyweight, easiest first for a beginner.
+const BODYWEIGHT_LIFTS: Record<SkillLevel, { lower: string[]; upper: string[] }> = {
+  1: { lower: ['Bodyweight Squats', 'Glute Bridge', 'Lunges in Place'], upper: ['Incline Push-Ups (Couch or Stairs)', 'Superman Hold', 'Tricep Dips (Chair)'] },
+  2: { lower: ['Bodyweight Squats', 'Glute Bridge', 'Lunges in Place'], upper: ['Knee Push-Ups', 'Reverse Snow Angels', 'Pike Push-Ups'] },
+  3: { lower: ['Explosive Bodyweight Squats', 'Glute Bridge', 'Hammy Sliders'], upper: ['Regular Push-Ups', 'Reverse Snow Angels', 'Pike Push-Ups'] },
+}
+
 function buildCompoundDay(dayNum: number, location: Location, c: Constraints, goal: WorkoutInputs['goal'], offset: number, coreFocus: boolean, styles: Set<TrainingStyle>, zone: 'lower' | 'upper' = 'lower'): GymDay | HomeDay {
   const level = c.skillLevel
-  const lifts = MAIN_LIFTS[location][level]
+  // No weights at home (2026-11-17): three bodyweight moves, no combos.
+  const noWeights = location === 'home' && c.weights === 'none'
+  const lifts = noWeights ? BODYWEIGHT_LIFTS[level] : MAIN_LIFTS[location][level]
   const list = (zone === 'upper' ? lifts.upper : lifts.lower).filter((n) => mainSafe(n, c.injuries))
-  const nMains = level === 1 ? 1 : 2
+  const nMains = noWeights ? 3 : level === 1 ? 1 : 2
   // Rotate which lift leads, session to session (squat → hinge → glutes; press → row → shoulders).
   const lead = Math.floor((dayNum - 1) / 2)
   const rotated = list.length ? Array.from({ length: list.length }, (_, k) => list[(lead + k) % list.length]) : []
@@ -536,10 +546,10 @@ function buildCompoundDay(dayNum: number, location: Location, c: Constraints, go
   // Combo moves level up (or down) with her Easy/Hard taps, the same as every
   // other move: combos are logged under the 'compound' pattern (set-effort route).
   const comboLevel = c.progressionOverrides?.compound?.skillLevel ?? level
-  const combos = pickCombos(comboLevel, c.injuries, wantCombos, offset, zone, mainSets, weight, c.weights === 'dumbbell' || c.weights === 'kettlebell')
+  const combos = noWeights ? [] : pickCombos(comboLevel, c.injuries, wantCombos, offset, zone, mainSets, weight, c.weights === 'dumbbell' || c.weights === 'kettlebell')
   // Lower day short on combos (rest rule kept the upper halves light)? Fill with
   // legs-only moves (hip thrust, leg curl, step-up…) so the session stays full.
-  const legOnly = zone === 'lower' && combos.length < wantCombos
+  const legOnly = !noWeights && zone === 'lower' && combos.length < wantCombos
     ? pick(filterLibrary(c, ['glutes', 'hamstrings', 'quads']).filter((e) => e.movementPattern !== 'compound' && e.movementPattern !== 'cardio' && !mainNames.includes(e.name)
       && familyOf(e) !== 'knee' && groupsWorked(e.name).every((g) => g === 'legs') && !/chair|couch|in place|kick(boxing)?s? \(|pulsating|explosive/i.test(e.name)), [], wantCombos - combos.length, offset + 3, c.postpartum)
     : []
@@ -677,7 +687,7 @@ export function generateProgram(inp: WorkoutInputs): WorkoutProgram {
   const pickWeek = blockStartWeek(week)
   const deload = isDeloadWeek(week)
   const tracked = new Map<string, RepRange>()
-  const c: Constraints = { location, weights: inp.weights, skillLevel: level, injuries, postpartum: !!inp.postpartum, progressionOverrides: inp.progressionOverrides, activityLevel: inp.activityLevel, lowFuelToday: inp.lowFuelToday, deload, tracked }
+  const c: Constraints = { location, weights: inp.weights, ...(location === 'home' && inp.weights === 'none' ? { equipment: ['bodyweight'] as EquipmentTag[] } : {}), skillLevel: level, injuries, postpartum: !!inp.postpartum, progressionOverrides: inp.progressionOverrides, activityLevel: inp.activityLevel, lowFuelToday: inp.lowFuelToday, deload, tracked }
   const days = Math.min(Math.max(Math.round(inp.daysPerWeek || 3), 1), 6)
   const coreFocus = inp.focusArea === 'core' || !!inp.overrideAreas?.includes('core')
   // Real bug found live, 2026-09-04: every caller used to pass just

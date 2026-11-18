@@ -49,6 +49,8 @@ export async function POST(request: NextRequest) {
   const { user, enrollment, svc } = await resolve()
   if (!user || !enrollment || !svc) return NextResponse.json({ error: 'Not enrolled.' }, { status: 401 })
   const body = await request.json()
+  // 2026-11-17: the end-of-workout tap is now Too easy (1) / Just right (2) / Too hard (3),
+  // read by lib/gentle-start.ts to shape her next workout. Older note:
   // effort is optional and 1-3 (1=easier than her usual, 2=normal, 3=tougher than
   // usual) — relative to HER OWN normal, not an absolute difficulty scale, same
   // baseline-relative philosophy as everything else in lib/fos/pattern.ts. Omitted
@@ -63,6 +65,8 @@ export async function POST(request: NextRequest) {
   // HIIT day (2026-11-17, lib/hiit.ts): its own flag, added on top of whatever
   // today already has. Counts for her streak and week, never as a lifting
   // workout (the lifting rotation counts `workout` only).
+  // The feel tap only adds its answer to today's row — never wipes the rest.
+  if (effort !== undefined && body.workout && existing) measurements = { ...((existing.measurements as Record<string, unknown> | null) || {}), workout: true, effort }
   if (body.hiit === true) measurements = { ...((existing?.measurements as Record<string, unknown> | null) || { workout: false, nutrition: false }), hiit: true }
   if (existing) {
     await svc.from('challenge_progress').update({ measurements }).eq('id', existing.id)

@@ -23,16 +23,19 @@ export async function POST(request: NextRequest) {
   if (!enrollment) return NextResponse.json({ error: 'Not enrolled.' }, { status: 401 })
   const eid = enrollment.id as string
 
-  const body = (await request.json().catch(() => null)) as { where?: unknown; weight?: unknown; homeKettlebells?: unknown } | null
+  const body = (await request.json().catch(() => null)) as { where?: unknown; weight?: unknown; homeKettlebells?: unknown; homeWeights?: unknown } | null
   const where = body?.where === 'gym' || body?.where === 'home' ? body.where : undefined
   const weight = body?.weight === 'dumbbell' || body?.weight === 'kettlebell' ? body.weight : undefined
-  const homeKettlebells = typeof body?.homeKettlebells === 'boolean' ? body.homeKettlebells : undefined
+  // "What do you have at home?" (2026-11-17): dumbbell / both / none. Kept in
+  // step with the older kettlebell yes/no so every reader agrees.
+  const homeWeights = body?.homeWeights === 'dumbbell' || body?.homeWeights === 'both' || body?.homeWeights === 'none' ? body.homeWeights : undefined
+  const homeKettlebells = homeWeights ? homeWeights === 'both' : typeof body?.homeKettlebells === 'boolean' ? body.homeKettlebells : undefined
   if (!where && !weight && homeKettlebells === undefined) return NextResponse.json({ error: 'Nothing to change.' }, { status: 400 })
 
   if (homeKettlebells !== undefined) {
     const { data: intake } = await svc.from('challenge_intake').select('form_data').eq('enrollment_id', eid).maybeSingle()
     if (intake) {
-      const form = { ...((intake.form_data as Record<string, unknown> | null) || {}), home_kettlebells: homeKettlebells }
+      const form = { ...((intake.form_data as Record<string, unknown> | null) || {}), home_kettlebells: homeKettlebells, ...(homeWeights ? { home_weights: homeWeights } : {}) }
       await svc.from('challenge_intake').update({ form_data: form }).eq('enrollment_id', eid)
     }
   }

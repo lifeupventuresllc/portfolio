@@ -6,6 +6,7 @@ import { recover, injurySafetyClause, type LifeSignal, type RecoveryPlan } from 
 import { parseSignal, parseSignalAI, detectWorkoutStyle, detectLocation, detectFocusAreas, detectEquipment, injuriesGenuinelyAddressed } from '@/lib/fos/parse'
 import { detectEatenFood } from '@/lib/food-estimate'
 import { getProfile, recentEvents, upsertProfile, mergeProfilePatch } from '@/lib/fos/context'
+import { getTrainingContext } from '@/lib/training-context'
 import { extractProfileFacts, generateReply, generateDeclineFollowUp, describeDecision, answerGeneralQuestion } from '@/lib/fos/memory'
 import { assessGoalDrift } from '@/lib/fos/goal-drift'
 import { detectPlanIntent } from '@/lib/fos/plan-intent'
@@ -785,7 +786,7 @@ export async function POST(request: NextRequest) {
       assessGoalDrift(eid, today),
     ])
     const [generated, extracted] = await Promise.all([
-      generateReply({ herMessage: message, decision: describeDecision(signal, plan) + eatOutContext, profile, events, goalContext: goalDrift?.note ?? null, name: (enrollment.name as string) || null }),
+      generateReply({ herMessage: message, decision: describeDecision(signal, plan) + eatOutContext, profile, events, goalContext: goalDrift?.note ?? null, name: (enrollment.name as string) || null, training: await getTrainingContext(eid) }),
       extractProfileFacts(message, profile),
     ])
     if (generated) reply = generated
@@ -824,7 +825,7 @@ export async function POST(request: NextRequest) {
     const todayContext = todayContextParts.join(' ')
     const events = await recentEvents(eid, addDaysISO(today, -60))
     const [answered, extracted] = await Promise.all([
-      answerGeneralQuestion({ herMessage: message, profile, events, name: (enrollment.name as string) || null, todayContext }),
+      answerGeneralQuestion({ herMessage: message, profile, events, name: (enrollment.name as string) || null, todayContext, training: await getTrainingContext(eid) }),
       extractProfileFacts(message, profile),
     ])
     if (answered) reply = answered

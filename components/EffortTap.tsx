@@ -1,56 +1,59 @@
 'use client'
 
 import { useState } from 'react'
+import { hapticTap } from '@/lib/haptics'
 
-// One optional tap on the workout-completion screen — the missing half of
-// "completion & intensity trend" (lib/fos/pattern.ts's detectDip only ever
-// saw did-she-show-up, never how it felt). Relative to HER OWN normal, not
-// an absolute 1-10 RPE scale — same baseline-relative philosophy as every
-// other signal in this app, and a single tap instead of a form (see
-// luf-reduce-her-input-principle). Never blocks her exit — "Back to my
-// week" works whether she taps this or not.
+// "How did that feel?" — one tap at the end of every workout (2026-11-17,
+// Asa's spec: Too easy / Just right / Too hard, fed into the next session).
+// Saved on today's row as effort 1 / 2 / 3; lib/gentle-start.ts reads it:
+// Too hard → the next workout is gentler and one weight lighter, Too easy
+// twice → the gentle start ends early. Never blocks her exit. Waits for the
+// workout save first so the two never race to create today's row.
 const OPTIONS = [
-  { value: 1, label: 'Easier than usual' },
-  { value: 2, label: 'About my normal' },
-  { value: 3, label: 'Tougher than usual' },
+  { value: 1, label: 'Too easy', then: 'Got it. We’ll step it up.' },
+  { value: 2, label: 'Just right', then: 'Perfect. Same plan next time.' },
+  { value: 3, label: 'Too hard', then: 'Got it. Next one is lighter.' },
 ] as const
 
-export default function EffortTap() {
+export default function EffortTap({ after }: { after?: Promise<unknown> }) {
   const [picked, setPicked] = useState<number | null>(null)
-  const [sending, setSending] = useState(false)
 
   async function tap(value: number) {
-    if (picked != null || sending) return
+    if (picked != null) return
+    hapticTap()
     setPicked(value)
-    setSending(true)
     try {
+      await after
       await fetch('/api/plan/daily', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workout: true, effort: value }),
       })
     } catch { /* best-effort — she already got her completion screen either way */ }
-    setSending(false)
   }
 
-  if (picked != null) {
-    return <p className="text-ivory/40 text-xs mt-4">Got it — noted.</p>
-  }
-
+  const chosen = OPTIONS.find((o) => o.value === picked)
   return (
-    <div className="mt-4">
-      <p className="text-ivory/50 text-xs mb-2">How did that feel, compared to usual?</p>
-      <div className="flex items-center justify-center gap-2 flex-wrap">
+    <div className="w-full">
+      <p className="text-[17px] font-bold mb-3">How did that feel?</p>
+      <div className="grid grid-cols-3 gap-2">
         {OPTIONS.map((o) => (
           <button
             key={o.value}
             onClick={() => tap(o.value)}
-            disabled={sending}
-            className="px-3 py-2 rounded-xl text-xs font-semibold border border-smoke text-ivory/70 hover:border-gold/50 active:scale-95 transition-all disabled:opacity-50"
+            disabled={picked != null}
+            aria-pressed={picked === o.value}
+            className="nf-press h-14 rounded-2xl text-[15px] font-bold transition-all"
+            style={{
+              border: `2px solid ${picked === o.value ? '#E5A93C' : 'rgba(237,231,218,.22)'}`,
+              background: picked === o.value ? 'rgba(229,169,60,.18)' : 'transparent',
+              color: '#EDE7DA', opacity: picked != null && picked !== o.value ? 0.4 : 1,
+            }}
           >
             {o.label}
           </button>
         ))}
       </div>
+      {chosen && <p className="text-[14px] mt-3" style={{ color: 'rgba(237,231,218,.72)' }}>{chosen.then}</p>}
     </div>
   )
 }

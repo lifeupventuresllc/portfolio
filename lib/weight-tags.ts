@@ -31,9 +31,20 @@ export function weightLabel(name: string): WeightTag | null {
 }
 
 /** What weights to build her compound days with today. */
-export function weightsFor(formData: { home_kettlebells?: boolean } | null | undefined, track: 'gym' | 'home', todayOverride?: ComboWeight): WorkoutInputs['weights'] {
+/** What she has at home (2026-11-17): her answer, or the older kettlebell yes/no. null = never asked. */
+export type HomeWeights = 'dumbbell' | 'both' | 'none'
+export function homeWeightsOf(formData: { home_kettlebells?: boolean; home_weights?: unknown } | null | undefined): HomeWeights | null {
+  const w = formData?.home_weights
+  if (w === 'dumbbell' || w === 'both' || w === 'none') return w
+  if (typeof formData?.home_kettlebells === 'boolean') return formData.home_kettlebells ? 'both' : 'dumbbell'
+  return null
+}
+
+export function weightsFor(formData: { home_kettlebells?: boolean; home_weights?: unknown } | null | undefined, track: 'gym' | 'home', todayOverride?: ComboWeight): WorkoutInputs['weights'] {
+  const home = track === 'home' ? homeWeightsOf(formData) : null
+  if (home === 'none') return 'none' // no weights at home: never a weighted move
   if (todayOverride) return todayOverride
-  if (track === 'home') return formData?.home_kettlebells ? 'both' : 'dumbbell'
+  if (track === 'home') return home === 'both' ? 'both' : 'dumbbell'
   return undefined // gym: alternate dumbbell / kettlebell days
 }
 

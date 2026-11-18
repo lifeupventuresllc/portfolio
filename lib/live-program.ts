@@ -12,6 +12,7 @@ import { parseStoredTrainingStyles } from './training-styles'
 import { weightsFor } from './weight-tags'
 import { applyAlwaysSwaps, readAlwaysSwaps } from './always-swaps'
 import { readFavorites } from './favorites'
+import { getGentleState } from './gentle-start'
 import type { Level, Injury } from './workout-exercises'
 
 export async function buildLiveProgram(opts: {
@@ -33,10 +34,11 @@ export async function buildLiveProgram(opts: {
   const focusArea = ((fd?.focus_area as FocusArea | undefined) || 'overall') as FocusArea
   const createdAt = enrollment.created_at || new Date().toISOString()
   const weekNumber = currentWeekNumber(createdAt)
-  const [progressionOverrides, recentlyTrainedMuscles, exerciseHistory] = await Promise.all([
+  const [progressionOverrides, recentlyTrainedMuscles, exerciseHistory, start] = await Promise.all([
     getProgressionOverrides(enrollment.id),
     getRecentlyTrainedMuscles(enrollment.id),
     getExerciseSessions(enrollment.id, createdAt),
+    getGentleState(enrollment.id),
   ])
   const track = opts.trackOverride || (intake.training_location === 'home' ? 'home' : 'gym')
   const program = generateWorkout({
@@ -51,5 +53,7 @@ export async function buildLiveProgram(opts: {
     recentlyTrainedMuscles,
     exerciseHistory,
   })
-  return applyAlwaysSwaps(program, readAlwaysSwaps(fd))
+  const out = applyAlwaysSwaps(program, readAlwaysSwaps(fd))
+  // Gentle start: first 4 workouts, or right after one that felt too hard.
+  return start.gentle ? { ...out, gentle: true, ...(start.lighter ? { lighter: true } : {}) } : out
 }

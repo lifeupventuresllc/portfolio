@@ -21,7 +21,7 @@ export interface WorkoutInputs {
   level: Level
   // 2026-11-10: weights she uses on compound days. Unset = gym alternates
   // dumbbell / kettlebell days, home = dumbbells (until the intake asks).
-  weights?: 'dumbbell' | 'kettlebell' | 'both'
+  weights?: 'dumbbell' | 'kettlebell' | 'both' | 'none' // none = home with no weights (bodyweight only)
   // 'recomp' = both "Lose fat" and "Build & tone" selected together (see
   // lib/goals.ts) — a real body-recomposition goal, not a UI glitch.
   goal: 'lose' | 'gain' | 'maintain' | 'recomp'
@@ -125,4 +125,7 @@ export interface WorkoutProgram {
   deload?: boolean
   // The weight she should use today, per move name (lib/weight-picker.ts, 2026-11-12).
   weights?: Record<string, number>
+  // Gentle start (lib/gentle-start.ts): one set fewer, longer rest, no step-up sets.
+  gentle?: boolean
+  lighter?: boolean // last workout felt too hard: every weight one step lighter today
 }
