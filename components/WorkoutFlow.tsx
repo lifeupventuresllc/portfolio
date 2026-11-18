@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react'
 import Image from 'next/image'
 import { hapticTap } from '@/lib/haptics'
 import { playCountdownBeep } from '@/lib/countdown-beep'
@@ -9,6 +9,7 @@ import { stepWeight, weightUnit, formatLb, pickWeight, pyramidWeight, type Weigh
 import { swapOptionsFor, type SwapWhy } from '@/lib/swap-options'
 import { exerciseVideo } from '@/lib/exercise-videos'
 import { favoritesFirst } from '@/lib/favorites'
+import { bodyBoxFor } from '@/lib/video-body'
 import { NOT_EXACT_ON_SCREEN } from '@/lib/exercise-images'
 import type { Injury } from '@/lib/workout-exercises'
 import type { Effort } from '@/components/SetEffortTap'
@@ -43,7 +44,7 @@ const repText = (m: Move, round: number) => {
   return `${n} reps${m.eachSide ? ' each side' : ''}`
 }
 
-function Media({ m, idx, tall, fill, half, pos }: { m?: Move; idx: number; tall?: boolean; fill?: boolean; half?: boolean; pos?: string }) {
+function Media({ m, idx, tall, fill, half }: { m?: Move; idx: number; tall?: boolean; fill?: boolean; half?: boolean }) {
   // Every move video shows the WHOLE clip, head to feet (2026-11-13, Asa: "the
   // video gets cropped off... I want the video to be in the frame"). Tall
   // 9:16 clips were cropped by object-cover; now every clip is object-contain
@@ -54,8 +55,10 @@ function Media({ m, idx, tall, fill, half, pos }: { m?: Move; idx: number; tall?
       {m?.videoUrl ? (
         <>
           {!fill && <video key={m.videoUrl + '-bg'} src={m.videoUrl} autoPlay loop muted playsInline aria-hidden className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'blur(22px) brightness(.55)', transform: 'scale(1.15)' }} />}
-          {/* fill = full-screen video (2026-11-17, Asa picked Option C): runs from the very top of the screen behind the top icons, pinned to the top so her head and the weights never get cut, light fade only at the very bottom. */}
-          <video key={m.videoUrl} src={m.videoUrl} autoPlay loop muted playsInline className={`absolute inset-0 w-full h-full ${fill ? 'object-cover' : 'object-contain'}`} style={fill ? { objectPosition: pos || 'center top' } : undefined} />
+          {/* fill = full-screen single move and each superset half (2026-11-17, Asa: "it's important to see the person's full body"):
+              the video zooms in only as far as her WHOLE body still fits, centered on her (lib/video-body.ts). */}
+          {fill ? <FramedVideo key={m.videoUrl} src={m.videoUrl} />
+            : <video key={m.videoUrl} src={m.videoUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-contain" />}
         </>
       ) : m?.imageUrl || !m ? (
         <Image src={m?.imageUrl || FALLBACK[idx % FALLBACK.length]} alt={m?.name || ''} fill sizes="(max-width: 480px) 100vw, 480px" className="object-cover rw-photo" style={{ objectPosition: 'center 25%' }} priority />
@@ -67,9 +70,50 @@ function Media({ m, idx, tall, fill, half, pos }: { m?: Move; idx: number; tall?
       {/* Lighter fade on videos so her head and feet stay visible. */}
       <div className="absolute inset-0 pointer-events-none" style={{ background: vid
         ? (half ? 'linear-gradient(180deg, rgba(2,31,22,.18) 0%, rgba(2,31,22,0) 12%, rgba(2,31,22,0) 55%, rgba(2,31,22,.75) 100%)'
-          : fill ? 'linear-gradient(180deg, rgba(2,31,22,.18) 0%, rgba(2,31,22,0) 8%, rgba(2,31,22,0) 90%, rgba(2,31,22,1) 100%)'
+          : fill ? 'linear-gradient(180deg, rgba(2,31,22,.18) 0%, rgba(2,31,22,0) 8%, rgba(2,31,22,0) 94%, rgba(2,31,22,.85) 100%)'
           : 'linear-gradient(180deg, rgba(2,31,22,.35) 0%, rgba(2,31,22,0) 12%, rgba(2,31,22,0) 88%, rgba(2,31,22,.6) 100%)')
         : 'linear-gradient(180deg, rgba(2,31,22,.55) 0%, rgba(2,31,22,0) 25%, rgba(2,31,22,0) 60%, rgba(2,31,22,.95) 100%)' }} />
+    </div>
+  )
+}
+
+// Her whole body, as big as it can be (2026-11-17). Scale = the largest that
+// still fits her body box (lib/video-body.ts) inside this space, but never
+// more than "fill the space" — so floor moves zoom in, standing moves fill the
+// height, and nothing of her is ever cut. A soft blurred copy fills any edge
+// the video doesn't cover. Clips without a box show whole.
+function FramedVideo({ src }: { src: string }) {
+  const wrap = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState<{ W: number; H: number } | null>(null)
+  const [nat, setNat] = useState({ w: 9, h: 16 })
+  useEffect(() => {
+    const el = wrap.current
+    if (!el) return
+    const read = () => setSize({ W: el.clientWidth, H: el.clientHeight })
+    read()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  let frame: CSSProperties = { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }
+  if (size && size.W > 0 && size.H > 0) {
+    const [t, b, l, r] = bodyBoxFor(src)
+    const { W, H } = size, vw = nat.w, vh = nat.h
+    const cover = Math.max(W / vw, H / vh)
+    const s = Math.min(W / Math.max(0.05, (r - l) * vw), H / Math.max(0.05, (b - t) * vh), cover)
+    const dw = vw * s, dh = vh * s
+    const place = (box: number, d: number, mid: number) => {
+      if (d <= box) return (box - d) / 2
+      return Math.min(0, Math.max(box - d, box / 2 - mid * d))
+    }
+    frame = { position: 'absolute', left: place(W, dw, (l + r) / 2), top: place(H, dh, (t + b) / 2), width: dw, height: dh, maxWidth: 'none' }
+  }
+  return (
+    <div ref={wrap} className="absolute inset-0 overflow-hidden">
+      <video src={src} autoPlay loop muted playsInline aria-hidden className="absolute inset-0 w-full h-full object-cover" style={{ filter: 'blur(22px) brightness(.55)', transform: 'scale(1.15)' }} />
+      <video src={src} autoPlay loop muted playsInline style={frame}
+        onLoadedMetadata={(e) => { const v = e.currentTarget; if (v.videoWidth && v.videoHeight) setNat({ w: v.videoWidth, h: v.videoHeight }) }} />
     </div>
   )
 }
@@ -137,6 +181,9 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
   const [timer, setTimer] = useState<number | null>(null) // a timed move counting down
   const [menuOpen, setMenuOpen] = useState(false)
   const block = blocks[bi]
+  // Single-move screen (2026-11-17, Asa picked B): the how-to line hides behind a tap so the video gets more room.
+  const [howOpen, setHowOpen] = useState(false)
+  useEffect(() => { setHowOpen(false) }, [bi])
   const exercises = blocks.filter((b) => b.kind === 'exercise')
   const exNo = blocks.slice(0, bi + 1).filter((b) => b.kind === 'exercise').length
   const lastRound = block ? round + 1 >= block.rounds : true
@@ -469,7 +516,7 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
             {block.moves.map((m, k) => (
               <div key={k} className="relative flex-1 min-h-0" style={{ borderBottom: k < block.moves.length - 1 ? `2px solid ${BG}` : undefined }}>
                 {/* 2026-11-17 (Asa picked "top and bottom, full"): each move fills its half edge to edge, weight −/+ on the video. */}
-                <Media m={m} idx={bi + k} fill half pos="center 20%" />
+                <Media m={m} idx={bi + k} fill half />
                 <div className="absolute left-4 right-4 bottom-2.5 flex items-end justify-between gap-3">
                   <span className="min-w-0" style={{ fontFamily: HEAD, fontStyle: 'italic', fontWeight: 800, fontSize: block.moves.length > 2 ? 22 : 28, lineHeight: 0.95, textTransform: 'uppercase' }}>
                     <span style={{ color: GOLD }}>{k + 1}.</span> {m.name}
@@ -518,9 +565,14 @@ export default function WorkoutFlow({ blocks: blocksProp, onFinish, onEffort, on
             )}
           </div>
           {/* Double progression: one short gold line under the reps ("Go up a weight today."). */}
-          {!pair && weightBox(single)}
+          {!pair && (tallVid ? (
+            <div className="flex items-center gap-3 min-h-[34px]">
+              {vidWeight(single)}
+              {single.cue && <button type="button" onClick={() => { hapticTap(); setHowOpen((x) => !x) }} aria-expanded={howOpen} className="ml-auto text-[14px] font-semibold underline underline-offset-4" style={{ color: MUTE }}>{howOpen ? 'Hide how to' : 'How to'}</button>}
+            </div>
+          ) : weightBox(single))}
           {!pair && single.progressCue && <p className="text-[14px] font-semibold leading-snug" style={{ color: GOLD, margin: '-6px 0 0' }}>{single.progressCue}</p>}
-          {!pair && single.cue && <p className="text-[15px] leading-snug" style={{ color: MUTE, margin: 0 }}>{single.cue}</p>}
+          {!pair && single.cue && (!tallVid || howOpen) && <p className="text-[15px] leading-snug" style={{ color: MUTE, margin: 0 }}>{single.cue}</p>}
           {pair && <p className="text-[15px]" style={{ color: MUTE, margin: 0 }}>{block.restSec > 0 ? `Then rest ${block.restSec} seconds.` : 'Then you’re done.'}</p>}
         </div>
 

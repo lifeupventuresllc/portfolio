@@ -1,0 +1,82 @@
+// Where she is in each move video (2026-11-17): her body's box across the
+// clip as [top, bottom, left, right], fractions of the frame, found with
+// Apple's body detection on 10 frames per clip (pose points + person box,
+// small padding). The workout screen zooms each video so this box fills as
+// much of the space as it can without ever cutting her off (see FramedVideo
+// in components/WorkoutFlow.tsx). A clip not listed shows whole.
+// Re-run when new clips are added: scratchpad body tool, or add by hand.
+export type BodyBox = [number, number, number, number]
+export const VIDEO_BODY: Record<string, BodyBox> = {
+  'banded-tabletop-kickbacks': [0, 0.749, 0, 1],
+  'barbell-hip-thrust': [0.283, 0.838, 0, 1],
+  'bicep-curl-shoulder-press': [0.005, 1, 0.117, 0.917],
+  'bicycle-crunch': [0.456, 0.749, 0, 1],
+  'bodyweight-squats': [0.269, 0.959, 0.273, 0.833],
+  'butt-kicks': [0.022, 0.952, 0.218, 0.855],
+  'cable-glute-kickback': [0.12, 0.916, 0, 1],
+  'cable-pull-through': [0.002, 0.971, 0.013, 0.903],
+  'chest-press-pullover': [0.317, 0.823, 0, 1],
+  'crunch': [0.349, 0.733, 0, 1],
+  'curl-arnold-press': [0, 1, 0.087, 0.87],
+  'curtsy-lunge-shoulder-press': [0, 0.985, 0.12, 0.848],
+  'db-bent-over-row': [0.184, 0.985, 0.223, 0.936],
+  'db-bicep-curl-supinated': [0, 1, 0.072, 1],
+  'db-flat-bench-press': [0.178, 0.751, 0, 0.892],
+  'db-incline-chest-press': [0.249, 0.912, 0.112, 1],
+  'db-lateral-raise': [0.076, 1, 0.016, 0.939],
+  'db-shoulder-press': [0.021, 1, 0.058, 0.924],
+  'dead-bug': [0.412, 0.735, 0, 1],
+  'donkey-kick': [0.194, 0.795, 0.078, 1],
+  'dumbbell-hip-thrust': [0.311, 0.774, 0, 1],
+  'floor-leg-raise': [0.146, 0.609, 0, 0.938],
+  'glute-bridge': [0.431, 0.749, 0, 0.994],
+  'glute-bridge-pullover': [0.34, 0.664, 0, 1],
+  'glute-bridge-single-leg-lift': [0.24, 0.736, 0.007, 0.997],
+  'glute-bridge-triceps-extension': [0.348, 0.768, 0, 1],
+  'goblet-squat': [0.075, 0.977, 0.251, 0.846],
+  'hammer-curl-overhead-triceps-extension': [0, 0.999, 0.166, 0.848],
+  'high-knees': [0.13, 0.956, 0.12, 0.762],
+  'incline-treadmill-walk': [0.068, 0.883, 0.059, 0.881],
+  'jumping-jacks': [0, 0.959, 0, 1],
+  'kb-half-around-the-world': [0.029, 1, 0.155, 0.843],
+  'kb-standing-marches': [0.052, 0.962, 0.181, 0.768],
+  'kettlebell-curl-overhead-triceps-extension': [0.001, 1, 0.227, 0.748],
+  'kettlebell-curl-press': [0, 1, 0.193, 0.807],
+  'kettlebell-floor-press-pullover': [0.286, 0.712, 0, 1],
+  'kettlebell-glute-bridge-chest-press': [0.294, 0.696, 0, 1],
+  'kettlebell-goblet-squat-curl': [0.057, 0.994, 0.194, 0.815],
+  'kettlebell-halo-bent-over-row': [0.024, 1, 0.209, 0.806],
+  'kneeling-renegade-row': [0.351, 0.751, 0.031, 1],
+  'lat-pulldown': [0, 1, 0.086, 1],
+  'lateral-toe-touches-skater-style': [0.038, 0.94, 0.231, 0.871],
+  'lunge-twist': [0.053, 1, 0.158, 0.972],
+  'lunges-in-place': [0.328, 0.957, 0.221, 1],
+  'march-in-place': [0.028, 1, 0.159, 0.836],
+  'mountain-climbers': [0.158, 1, 0.147, 0.747],
+  'oblique-toe-touches': [0.214, 0.767, 0.142, 0.996],
+  'plank-holds': [0.413, 0.906, 0.027, 1],
+  'push-up': [0.213, 0.67, 0.029, 1],
+  'push-up-shoulder-tap': [0.228, 0.839, 0.136, 0.873],
+  'reclined-leg-raise': [0.357, 0.804, 0, 0.962],
+  'reverse-lunge-bicep-curl': [0.019, 0.977, 0.191, 0.862],
+  'reverse-lunge-shoulder-press': [0, 0.993, 0.09, 0.869],
+  'romanian-deadlift-barbell': [0.048, 0.984, 0.104, 0.884],
+  'romanian-deadlift-bent-over-row': [0.02, 0.957, 0.05, 0.878],
+  'romanian-deadlift-db': [0.036, 0.966, 0.098, 0.882],
+  'running-in-place-low': [0, 0.945, 0.223, 0.739],
+  'running-in-place-moderate': [0.018, 0.985, 0.24, 0.746],
+  'seated-leg-curl': [0.193, 0.806, 0, 0.93],
+  'single-arm-db-row': [0.22, 0.883, 0, 0.907],
+  'slow-sit-up': [0.253, 0.866, 0, 1],
+  'squat-bicep-curl': [0.047, 0.995, 0.201, 0.813],
+  'squat-curl-press': [0, 0.995, 0.202, 0.814],
+  'squat-front-raise': [0.063, 0.967, 0.219, 0.802],
+  'squat-shoulder-press': [0, 0.994, 0.174, 0.827],
+  'weighted-toe-touch': [0.161, 0.797, 0, 0.967],
+}
+
+/** '/videos/exercises/goblet-squat.mp4' → its body box, or the whole frame. */
+export function bodyBoxFor(url?: string): BodyBox {
+  const slug = url?.split('/').pop()?.replace(/\.mp4$/, '') || ''
+  return VIDEO_BODY[slug] || [0, 1, 0, 1]
+}
